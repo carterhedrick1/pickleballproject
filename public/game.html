@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Pickleball Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .player-list {
+            margin: 20px 0;
+        }
+        .error {
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            color: #a94442;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            border: 1px solid #d6e9c6;
+            color: #3c763d;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .info {
+            background-color: #d9edf7;
+            border: 1px solid #bce8f1;
+            color: #31708f;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        #debug-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+        }
+        .button-group {
+            margin-top: 15px;
+        }
+        .danger {
+            background-color: #d9534f;
+        }
+        .danger:hover {
+            background-color: #c9302c;
+        }
+        .player-actions {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PicklePlay Scheduler</h1>
+        
+        <div id="status" style="display: none;"></div>
+        
+        <div id="gameDetails">
+            <h2>Game Details</h2>
+            <div id="loading">Loading game details...</div>
+            <div id="details" style="display: none;">
+                <p><strong>Location:</strong> <span id="location"></span></p>
+                <p><strong>Date:</strong> <span id="date"></span></p>
+                <p><strong>Time:</strong> <span id="time"></span></p>
+                <p><strong>Duration:</strong> <span id="duration"></span> minutes</p>
+                <p><strong>Message:</strong> <span id="message"></span></p>
+            </div>
+        </div>
+        
+        <div id="playerList" style="display: none;">
+            <h3>Players</h3>
+            <ul id="players"></ul>
+            <p><strong>Spots Available:</strong> <span id="spotsAvailable"></span></p>
+        </div>
+        
+        <div id="signupForm" style="display: none;">
+            <h3>Join This Game</h3>
+            <form id="joinForm">
+                <div class="form-group">
+                    <label for="playerName">Your Name:</label>
+                    <input type="text" id="playerName" name="playerName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phoneNumber">Phone Number:</label>
+                    <input type="tel" id="phoneNumber" name="phoneNumber" required>
+                </div>
+                
+                <button type="submit" id="joinButton">Count Me In!</button>
+            </form>
+        </div>
+        
+        <div id="playerActions" class="player-actions" style="display: none;">
+            <h3>Your Options</h3>
+            <p>If you've already signed up for this game and want to manage your registration, enter your phone number below:</p>
+            
+            <div class="form-group">
+                <label for="lookupPhone">Phone Number:</label>
+                <input type="tel" id="lookupPhone" name="lookupPhone" required>
+            </div>
+            
+            <button id="lookupRegistration">Find My Registration</button>
+            
+            <div id="registrationDetails" style="display: none; margin-top: 15px;">
+                <div id="confirmedPlayer" style="display: none;">
+                    <p>You are registered as: <strong id="playerNameDisplay"></strong></p>
+                    <div class="button-group">
+                        <button id="addToCalendarBtn">Add to Calendar</button>
+                        <button id="cancelSpotBtn" class="danger">Cancel My Spot</button>
+                    </div>
+                </div>
+                
+                <div id="waitlistedPlayer" style="display: none;">
+                    <p>You are on the waitlist at position: <strong id="waitlistPositionDisplay"></strong></p>
+                    <button id="leaveWaitlistBtn" class="danger">Leave Waitlist</button>
+                </div>
+                
+                <div id="notRegistered" style="display: none;">
+                    <p>You are not currently registered for this game.</p>
+                </div>
+            </div>
+        </div>
+        
+        <p><a href="/">Back to Homepage</a></p>
+        
+        <div id="debug-info"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusDiv = document.getElementById('status');
+            const debugInfo = document.getElementById('debug-info');
+            let gameData;
+            
+            // Get game ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('id');
+            
+            debugInfo.textContent = `Game ID from URL: ${gameId || 'None'}\nURL: ${window.location.href}`;
+            
+            if (!gameId) {
+                showStatus("Game not found. Please check your link. The URL should include an 'id' parameter.", 'error');
+                return;
+            }
+            
+            // Fetch game data
+            showStatus("Fetching game data...", 'info');
+            
+            fetch(`/api/games/${gameId}`)
+                .then(response => {
+                    debugInfo.textContent += `\nResponse status: ${response.status}`;
+                    if (!response.ok) {
+                        throw new Error(`Server responded with status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    gameData = data;
+                    debugInfo.textContent += `\nGame data received: ${JSON.stringify(gameData, null, 2)}`;
+                    
+                    // Display game details
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('details').style.display = 'block';
+                    document.getElementById('playerList').style.display = 'block';
+                    
+                    document.getElementById('location').textContent = gameData.location;
+                    document.getElementById('date').textContent = formatDate(gameData.date);
+                    document.getElementById('time').textContent = formatTime(gameData.time);
+                    document.getElementById('duration').textContent = gameData.duration;
+                    document.getElementById('message').textContent = gameData.message || "None";
+                    
+                    // Update player list
+                    updatePlayerList();
+                    
+                    // Show signup form for new players
+                    document.getElementById('signupForm').style.display = 'block';
+                    
+                    // Show player actions section for returning players
+                    document.getElementById('playerActions').style.display = 'block';
+                    
+                    showStatus("Game loaded successfully!", 'success');
+                    
+                    // Set up event handlers
+                    setupEventHandlers();
+                })
+                .catch(error => {
+                    console.error("Error fetching game:", error);
+                    debugInfo.textContent += `\nError: ${error.message}`;
+                    showStatus(`Game not found. Please check your link. Error: ${error.message}`, 'error');
+                });
+                
+            function updatePlayerList() {
+                const playersList = document.getElementById('players');
+                playersList.innerHTML = '';
+                
+                gameData.players.forEach(player => {
+                    const li = document.createElement('li');
+                    li.textContent = player.name + (player.isOrganizer ? ' (Organizer)' : '');
+                    playersList.appendChild(li);
+                });
+                
+                // Update spots available
+                const availableSpots = parseInt(gameData.totalPlayers) - gameData.players.length;
+                document.getElementById('spotsAvailable').textContent = availableSpots;
+                
+                // If game is full, show waitlist message
+                if (availableSpots <= 0) {
+                    showStatus("This game is currently full. You can still sign up for the waitlist.", 'info');
+                }
+            }
+            
+            function setupEventHandlers() {
+                // Set up join form submission
+                const joinForm = document.getElementById('joinForm');
+                joinForm.addEventListener('submit', event => {
+                    event.preventDefault();
+                    const playerName = document.getElementById('playerName').value;
+                    const phoneNumber = document.getElementById('phoneNumber').value;
+                    
+                    debugInfo.textContent += `\nAttempting to join game as: ${playerName}, ${phoneNumber}`;
+                    showStatus('Processing your request...', 'info');
+                    
+                    // Send the player data to the server
+                    fetch(`/api/games/${gameId}/players`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: playerName,
+                            phone: phoneNumber
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to join game');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        debugInfo.textContent += `\nJoin response: ${JSON.stringify(data, null, 2)}`;
+                        
+                        if (data.status === 'confirmed') {
+                            showStatus(`You're in! You are Player ${data.position} of ${data.totalPlayers}.`, 'success');
+                            // Clear the form
+                            document.getElementById('playerName').value = '';
+                            document.getElementById('phoneNumber').value = '';
+                        } else if (data.status === 'waitlist') {
+                            showStatus(`Game is full. You've been added to the waitlist at position #${data.position}.`, 'info');
+                            // Clear the form
+                            document.getElementById('playerName').value = '';
+                            document.getElementById('phoneNumber').value = '';
+                        }
+                        
+                        // Refresh the game data to update player list
+                        fetch(`/api/games/${gameId}`)
+                            .then(response => response.json())
+                            .then(updatedData => {
+                                gameData = updatedData;
+                                updatePlayerList();
+                            })
+                            .catch(error => {
+                                console.error('Error refreshing game data:', error);
+                            });
+                    })
+                    .catch(error => {
+                        console.error('Error joining game:', error);
+                        showStatus('Failed to join game. Please try again.', 'error');
+                    });
+                });
+                
+                // Set up player lookup
+                document.getElementById('lookupRegistration').addEventListener('click', () => {
+                    const phoneNumber = document.getElementById('lookupPhone').value;
+                    if (!phoneNumber) {
+                        showStatus('Please enter your phone number to find your registration.', 'error');
+                        return;
+                    }
+                    
+                    // Look for the player in the game data
+                    let found = false;
+                    
+                    // Check confirmed players
+                    for (let i = 0; i < gameData.players.length; i++) {
+                        if (gameData.players[i].phone === phoneNumber) {
+                            found = true;
+                            document.getElementById('registrationDetails').style.display = 'block';
+                            document.getElementById('confirmedPlayer').style.display = 'block';
+                            document.getElementById('waitlistedPlayer').style.display = 'none';
+                            document.getElementById('notRegistered').style.display = 'none';
+                            document.getElementById('playerNameDisplay').textContent = gameData.players[i].name;
+                            
+                            // Store player ID for cancellation
+                            document.getElementById('addToCalendarBtn').setAttribute('data-player-id', gameData.players[i].id);
+                            document.getElementById('cancelSpotBtn').setAttribute('data-player-id', gameData.players[i].id);
+                            break;
+                        }
+                    }
+                    
+                    // Check waitlist if not found in confirmed players
+                    if (!found) {
+                        for (let i = 0; i < gameData.waitlist.length; i++) {
+                            if (gameData.waitlist[i].phone === phoneNumber) {
+                                found = true;
+                                document.getElementById('registrationDetails').style.display = 'block';
+                                document.getElementById('confirmedPlayer').style.display = 'none';
+                                document.getElementById('waitlistedPlayer').style.display = 'block';
+                                document.getElementById('notRegistered').style.display = 'none';
+                                document.getElementById('waitlistPositionDisplay').textContent = `#${i + 1}`;
+                                
+                                // Store player ID for cancellation
+                                document.getElementById('leaveWaitlistBtn').setAttribute('data-player-id', gameData.waitlist[i].id);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // If not found in either list
+                    if (!found) {
+                        document.getElementById('registrationDetails').style.display = 'block';
+                        document.getElementById('confirmedPlayer').style.display = 'none';
+                        document.getElementById('waitlistedPlayer').style.display = 'none';
+                        document.getElementById('notRegistered').style.display = 'block';
+                    }
+                });
+                
+                // Handle Add to Calendar button
+                document.getElementById('addToCalendarBtn').addEventListener('click', () => {
+                    // Format the start and end times for calendar
+                    const startTime = new Date(`${gameData.date}T${gameData.time}`);
+                    const endTime = new Date(startTime.getTime() + parseInt(gameData.duration) * 60000);
+                    
+                    const startStr = formatIcsDate(startTime);
+                    const endStr = formatIcsDate(endTime);
+                    
+                    // Create Google Calendar URL
+                    const googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Pickleball at ${gameData.location}`)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(`Come join us for a game of pickleball! ${gameData.message || ''}`)}&location=${encodeURIComponent(gameData.location)}`;
+                    
+                    // Open Google Calendar in a new tab
+                    window.open(googleCalUrl, '_blank');
+                    
+                    debugInfo.textContent += `\nOpened calendar link: ${googleCalUrl}`;
+                });
+                
+                // Handle cancellation
+                document.getElementById('cancelSpotBtn').addEventListener('click', async () => {
+                    const playerId = document.getElementById('cancelSpotBtn').getAttribute('data-player-id');
+                    if (!playerId) return;
+                    
+                    try {
+                        showStatus('Processing your cancellation...', 'info');
+                        
+                        const response = await fetch(`/api/games/${gameId}/players/${playerId}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to cancel spot');
+                        }
+                        
+                        showStatus('Your spot has been canceled.', 'success');
+                        
+                        // Reset the form and hide details
+                        document.getElementById('lookupPhone').value = '';
+                        document.getElementById('registrationDetails').style.display = 'none';
+                        
+                        // Refresh the game data
+                        fetch(`/api/games/${gameId}`)
+                            .then(response => response.json())
+                            .then(updatedData => {
+                                gameData = updatedData;
+                                updatePlayerList();
+                            })
+                            .catch(error => {
+                                console.error('Error refreshing game data:', error);
+                            });
+                        
+                    } catch (error) {
+                        console.error('Error canceling spot:', error);
+                        showStatus('Failed to cancel your spot. Please try again.', 'error');
+                    }
+                });
+                
+                // Handle leaving waitlist
+                document.getElementById('leaveWaitlistBtn').addEventListener('click', async () => {
+                    const playerId = document.getElementById('leaveWaitlistBtn').getAttribute('data-player-id');
+                    if (!playerId) return;
+                    
+                    try {
+                        showStatus('Processing your request...', 'info');
+                        
+                        const response = await fetch(`/api/games/${gameId}/players/${playerId}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to leave waitlist');
+                        }
+                        
+                        showStatus('You have been removed from the waitlist.', 'success');
+                        
+                        // Reset the form and hide details
+                        document.getElementById('lookupPhone').value = '';
+                        document.getElementById('registrationDetails').style.display = 'none';
+                        
+                        // Refresh the game data
+                        fetch(`/api/games/${gameId}`)
+                            .then(response => response.json())
+                            .then(updatedData => {
+                                gameData = updatedData;
+                                updatePlayerList();
+                            })
+                            .catch(error => {
+                                console.error('Error refreshing game data:', error);
+                            });
+                        
+                    } catch (error) {
+                        console.error('Error leaving waitlist:', error);
+                        showStatus('Failed to leave the waitlist. Please try again.', 'error');
+                    }
+                });
+            }
+            
+            function formatDate(dateStr) {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            }
+            
+            function formatTime(timeStr) {
+                const [hours, minutes] = timeStr.split(':');
+                const hour = parseInt(hours);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const hour12 = hour % 12 || 12;
+                return `${hour12}:${minutes} ${ampm}`;
+            }
+            
+            function formatIcsDate(date) {
+                return date.toISOString().replace(/-|:|\.\d+/g, '');
+            }
+            
+            function showStatus(message, type) {
+                statusDiv.textContent = message;
+                statusDiv.className = type;
+                statusDiv.style.display = 'block';
+                
+                if (type === 'error') {
+                    document.getElementById('loading').style.display = 'none';
+                }
+                
+                // Auto-hide success messages after 5 seconds
+                if (type === 'success' || type === 'info') {
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 5000);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
