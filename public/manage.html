@@ -143,18 +143,37 @@
         }
         .player-actions button {
             margin-left: 5px;
-            padding: 5px 10px;
+            padding: 8px 12px;
             font-size: 14px;
+        }
+
+        /* Add these rules to enhance button spacing */
+        .button-blue {
+            background-color: #2196F3;
+        }
+
+        .button-blue:hover {
+            background-color: #0b7dda;
+        }
+
+        .button-red {
+            background-color: #f44336;
+        }
+
+        .button-red:hover {
+            background-color: #d32f2f;
         }
         .tabs {
             overflow: hidden;
             border: 1px solid #ccc;
             background-color: #f1f1f1;
             border-radius: 4px 4px 0 0;
+            display: flex; 
+            width: 100%;
         }
+
         .tab {
             background-color: inherit;
-            float: left;
             border: none;
             outline: none;
             cursor: pointer;
@@ -162,20 +181,18 @@
             transition: 0.3s;
             font-size: 17px;
             color: #555;
+            flex: 1;
+            text-align: center;
         }
+
         .tab:hover {
             background-color: #ddd;
         }
+
         .tab.active {
             background-color: #4CAF50;
             color: white;
-        }
-        .tabcontent {
-            display: none;
-            padding: 15px;
-            border: 1px solid #ccc;
-            border-top: none;
-            border-radius: 0 0 4px 4px;
+            font-weight: bold;
         }
         .share-section {
             margin-top: 20px;
@@ -184,6 +201,76 @@
             border-radius: 4px;
             border: 1px dashed #ccc;
         }
+
+        .tabcontent {
+            display: none;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            background-color: #fff;
+            min-height: 300px; /* Ensures enough space */
+        }
+
+        @media (max-width: 768px) {
+    .section {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #f9f9f9;
+    }
+    
+    .form-group {
+        margin-bottom: 12px;
+    }
+    
+    .player-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        margin-bottom: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #fff;
+    }
+
+    .player-info {
+        flex-grow: 1;
+    }
+    
+    .container {
+        padding: 15px;
+    }
+    
+    button[type="submit"] {
+        margin-top: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .player-actions {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .player-actions button {
+        margin-bottom: 5px;
+        margin-left: 0;
+        font-size: 14px;
+    }
+    
+    h2 {
+        font-size: 22px;
+        margin-bottom: 15px;
+    }
+    
+    h3 {
+        font-size: 18px;
+        margin-bottom: 10px;
+    }
+}
+        
     </style>
 </head>
 <body>
