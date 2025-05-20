@@ -376,16 +376,16 @@
         <div id="gameManagement" style="display: none;">
             <div class="mobile-tab-container">
                 <select id="tabSelector" class="mobile-tab-selector" onchange="openTabFromSelect(this.value)">
-                    <option value="Details">Game Details</option>
-                    <option value="Players" selected>Players</option>
+                    <option value="Details" selected>Game Details</option>
+                    <option value="Players">Players</option>
                     <option value="Communication">Communication</option>
                     <option value="Actions">Game Actions</option>
                 </select>
             </div>
 
             <div class="tabs desktop-only">
-                <button class="tab" onclick="openTab(event, 'Details')">Game Details</button>
-                <button class="tab active" onclick="openTab(event, 'Players')">Players</button>
+                <button class="tab active" onclick="openTab(event, 'Details')">Game Details</button>
+                <button class="tab" onclick="openTab(event, 'Players')">Players</button>
                 <button class="tab" onclick="openTab(event, 'Communication')">Communication</button>
                 <button class="tab" onclick="openTab(event, 'Actions')">Game Actions</button>
             </div>
@@ -452,7 +452,7 @@
             </div>
             
             <!-- Players Tab -->
-            <div id="Players" class="tabcontent">
+            <div id="Players" class="tabcontent" style="display: none;">
                 <h2>Player Management</h2>
                 
                 <div class="section">
