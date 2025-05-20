@@ -1,0 +1,1094 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Manage Pickleball Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px; /* Add this line */
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .button-red {
+            background-color: #f44336;
+        }
+        .button-red:hover {
+            background-color: #d32f2f;
+        }
+        .button-blue {
+            background-color: #2196F3;
+        }
+        .button-blue:hover {
+            background-color: #0b7dda;
+        }
+        .status {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            border: 1px solid #d6e9c6;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            color: #a94442;
+        }
+        .info {
+            background-color: #d9edf7;
+            border: 1px solid #bce8f1;
+            color: #31708f;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 5px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
+        .player-list {
+            margin-top: 15px;
+        }
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .player-info {
+            flex-grow: 1;
+        }
+        .player-actions {
+            display: flex;
+        }
+        .player-actions button {
+            margin-left: 5px;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        .tabs {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+            font-size: 17px;
+            color: #555;
+        }
+        .tab:hover {
+            background-color: #ddd;
+        }
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tabcontent {
+            display: none;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+        .share-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border: 1px dashed #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Game Management</h1>
+        
+        <div id="status" class="status" style="display: none;"></div>
+        
+        <div id="loading">Loading game details...</div>
+        
+        <div id="gameManagement" style="display: none;">
+            <div class="tabs">
+                <button class="tab active" onclick="openTab(event, 'Details')">Game Details</button>
+                <button class="tab" onclick="openTab(event, 'Players')">Players</button>
+                <button class="tab" onclick="openTab(event, 'Communication')">Communication</button>
+                <button class="tab" onclick="openTab(event, 'Actions')">Game Actions</button>
+            </div>
+            
+            <!-- Game Details Tab -->
+            <div id="Details" class="tabcontent" style="display: block;">
+                <h2>Edit Game Details</h2>
+                <form id="editForm">
+                    <div class="form-group">
+                        <label for="location">Location:</label>
+                        <input type="text" id="location" name="location" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="date">Date:</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="time">Start Time:</label>
+                        <input type="time" id="time" name="time" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="duration">Duration (minutes):</label>
+                        <input type="number" id="duration" name="duration" min="30" step="15" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="players">Number of Players:</label>
+                        <select id="players" name="players" required>
+                            <option value="4">4 Players</option>
+                            <option value="8">8 Players</option>
+                            <option value="12">12 Players</option>
+                            <option value="16">16 Players</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="message">Optional Message:</label>
+                        <textarea id="message" name="message" rows="3"></textarea>
+                    </div>
+                    
+                    <button type="submit">Update Game Details</button>
+                </form>
+                
+                <div class="share-section">
+                    <h3>Share Game Links</h3>
+                    <div class="form-group">
+                        <label for="playerLink">Player Registration Link:</label>
+                        <div style="display: flex;">
+                            <input type="text" id="playerLink" readonly>
+                            <button id="copyPlayerLink" class="button-blue" style="margin-left: 10px;">Copy</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="hostLink">Host Management Link (Keep private):</label>
+                        <div style="display: flex;">
+                            <input type="text" id="hostLink" readonly>
+                            <button id="copyHostLink" class="button-blue" style="margin-left: 10px;">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Players Tab -->
+            <div id="Players" class="tabcontent">
+                <h2>Player Management</h2>
+                
+                <div class="section">
+                    <h3>Current Players</h3>
+                    <p><strong>Spots Filled:</strong> <span id="playerCount">0</span>/<span id="totalPlayers">0</span></p>
+                    <div id="confirmedPlayers" class="player-list">
+                        <!-- Player list will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>Waitlist</h3>
+                    <p><strong>Players Waiting:</strong> <span id="waitlistCount">0</span></p>
+                    <div id="waitlistPlayers" class="player-list">
+                        <!-- Waitlist will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>Add Player Manually</h3>
+                    <form id="addPlayerForm">
+                        <div class="form-group">
+                            <label for="playerName">Player Name:</label>
+                            <input type="text" id="playerName" name="playerName" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="playerPhone">Phone Number (optional):</label>
+                            <input type="tel" id="playerPhone" name="playerPhone">
+                            <small>If provided, player will receive SMS notifications</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Add to:</label>
+                            <div>
+                                <input type="radio" id="addToConfirmed" name="addTo" value="add" checked>
+                                <label for="addToConfirmed" style="display:inline;">Confirmed Players</label>
+                                
+                                <input type="radio" id="addToWaitlist" name="addTo" value="waitlist" style="margin-left: 15px;">
+                                <label for="addToWaitlist" style="display:inline;">Waitlist</label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit">Add Player</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Communication Tab -->
+            <div id="Communication" class="tabcontent">
+                <h2>Send Announcements</h2>
+                
+                <div class="section">
+                    <h3>Send Custom Message</h3>
+                    <form id="announcementForm">
+                        <div class="form-group">
+                            <label for="announcementText">Message:</label>
+                            <textarea id="announcementText" name="announcementText" rows="4" required></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Send to:</label>
+                            <div>
+                                <input type="checkbox" id="sendToPlayers" name="sendToPlayers" checked>
+                                <label for="sendToPlayers" style="display:inline;">Confirmed Players</label>
+                                
+                                <input type="checkbox" id="sendToWaitlist" name="sendToWaitlist" style="margin-left: 15px;">
+                                <label for="sendToWaitlist" style="display:inline;">Waitlisted Players</label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit">Send Announcement</button>
+                    </form>
+                </div>
+                
+                <div class="section">
+                    <h3>Quick Messages</h3>
+                    <button id="sendReminder" class="button-blue">Send Game Reminder to All Players</button>
+                    <button id="sendLocationUpdate" class="button-blue">Send Court/Location Details</button>
+                </div>
+            </div>
+            
+            <!-- Game Actions Tab -->
+            <div id="Actions" class="tabcontent">
+                <h2>Game Actions</h2>
+                
+                <div class="section">
+                    <h3>Cancel Game</h3>
+                    <p>This will notify all players that the game has been cancelled.</p>
+                    <div class="form-group">
+                        <label for="cancellationReason">Reason for Cancellation:</label>
+                        <textarea id="cancellationReason" rows="3"></textarea>
+                    </div>
+                    <button id="cancelGameBtn" class="button-red">Cancel This Game</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modals -->
+        <div id="confirmModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h3 id="confirmTitle">Confirm Action</h3>
+                <p id="confirmMessage">Are you sure you want to proceed?</p>
+                <div>
+                    <button id="confirmYes" class="button-red">Yes</button>
+                    <button id="confirmNo">No</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="unauthorizedMessage" style="display: none;">
+            <div class="error">
+                <h3>Unauthorized Access</h3>
+                <p>You do not have permission to manage this game. Please check your URL or contact the organizer.</p>
+                <a href="/" class="button-blue">Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameData = null;
+        let gameId = '';
+        let hostToken = '';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get game ID and host token from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            gameId = urlParams.get('id');
+            hostToken = urlParams.get('token');
+            
+            if (!gameId || !hostToken) {
+                showUnauthorized();
+                return;
+            }
+            
+            // Fetch game data
+            fetchGameData();
+            
+            // Set up event listeners
+            setupEventListeners();
+        });
+        
+        // Function to open tabs
+        function openTab(evt, tabName) {
+            // Hide all tabcontent elements
+            const tabcontent = document.getElementsByClassName("tabcontent");
+            for (let i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            
+            // Remove "active" class from all tab buttons
+            const tablinks = document.getElementsByClassName("tab");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            
+            // Show the current tab and add "active" class to the button
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+        
+        async function fetchGameData() {
+            try {
+                const response = await fetch(`/api/games/${gameId}?token=${hostToken}`);
+                
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        showUnauthorized();
+                        return;
+                    }
+                    throw new Error('Failed to fetch game data');
+                }
+                
+                gameData = await response.json();
+                console.log('Game data:', gameData);
+                
+                // Show management interface
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('gameManagement').style.display = 'block';
+                
+                // Populate game details
+                populateGameDetails();
+                
+                // Populate player lists
+                updatePlayerLists();
+                
+                // Generate share links
+                populateShareLinks();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Error loading game: ' + error.message, 'error');
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        function setupEventListeners() {
+            // Edit game form
+            const editForm = document.getElementById('editForm');
+            if (editForm) {
+                editForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    updateGameDetails();
+                });
+            }
+            
+            // Add player form
+            const addPlayerForm = document.getElementById('addPlayerForm');
+            if (addPlayerForm) {
+                addPlayerForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    addPlayerManually();
+                });
+            }
+            
+            // Announcement form
+            const announcementForm = document.getElementById('announcementForm');
+            if (announcementForm) {
+                announcementForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    sendAnnouncement();
+                });
+            }
+            
+            // Quick message buttons
+            const sendReminderBtn = document.getElementById('sendReminder');
+            if (sendReminderBtn) {
+                sendReminderBtn.addEventListener('click', () => {
+                    sendQuickMessage('reminder');
+                });
+            }
+            
+            const sendLocationUpdateBtn = document.getElementById('sendLocationUpdate');
+            if (sendLocationUpdateBtn) {
+                sendLocationUpdateBtn.addEventListener('click', () => {
+                    sendQuickMessage('location');
+                });
+            }
+            
+            // Cancel game button
+            const cancelGameBtn = document.getElementById('cancelGameBtn');
+            if (cancelGameBtn) {
+                cancelGameBtn.addEventListener('click', () => {
+                    showConfirmModal(
+                        'Cancel Game', 
+                        'Are you sure you want to cancel this game? All players will be notified.', 
+                        cancelGame
+                    );
+                });
+            }
+            
+            // Copy link buttons
+            const copyPlayerLinkBtn = document.getElementById('copyPlayerLink');
+            if (copyPlayerLinkBtn) {
+                copyPlayerLinkBtn.addEventListener('click', () => {
+                    copyToClipboard('playerLink');
+                });
+            }
+            
+            const copyHostLinkBtn = document.getElementById('copyHostLink');
+            if (copyHostLinkBtn) {
+                copyHostLinkBtn.addEventListener('click', () => {
+                    copyToClipboard('hostLink');
+                });
+            }
+            
+            // Modal close button
+            const closeModalBtn = document.getElementsByClassName('close')[0];
+            if (closeModalBtn) {
+                closeModalBtn.addEventListener('click', closeModal);
+            }
+            
+            // Modal cancel button
+            const confirmNoBtn = document.getElementById('confirmNo');
+            if (confirmNoBtn) {
+                confirmNoBtn.addEventListener('click', closeModal);
+            }
+        }
+        
+        function populateGameDetails() {
+            // Fill the edit form with current values
+            document.getElementById('location').value = gameData.location;
+            document.getElementById('date').value = gameData.date;
+            document.getElementById('time').value = gameData.time;
+            document.getElementById('duration').value = gameData.duration;
+            document.getElementById('players').value = gameData.totalPlayers;
+            document.getElementById('message').value = gameData.message || '';
+            
+            // If game is cancelled, show a notice
+            if (gameData.cancelled) {
+                showStatus('This game has been cancelled. Reason: ' + (gameData.cancellationReason || 'No reason provided'), 'info');
+            }
+        }
+        
+        function updatePlayerLists() {
+            const confirmedPlayers = document.getElementById('confirmedPlayers');
+            const waitlistPlayers = document.getElementById('waitlistPlayers');
+            const playerCount = document.getElementById('playerCount');
+            const totalPlayers = document.getElementById('totalPlayers');
+            const waitlistCount = document.getElementById('waitlistCount');
+            
+            // Clear existing lists
+            confirmedPlayers.innerHTML = '';
+            waitlistPlayers.innerHTML = '';
+            
+            // Update counts
+            playerCount.textContent = gameData.players.length;
+            totalPlayers.textContent = gameData.totalPlayers;
+            waitlistCount.textContent = gameData.waitlist.length;
+            
+            // Populate confirmed players
+            gameData.players.forEach((player, index) => {
+                const playerItem = document.createElement('div');
+                playerItem.className = 'player-item';
+                
+                let playerInfo = `
+                    <div class="player-info">
+                        <strong>${player.name}</strong>
+                        ${player.isOrganizer ? ' (Organizer)' : ''}
+                        ${player.phone ? '<br>Phone: ' + player.phone : ''}
+                    </div>
+                `;
+                
+                let playerActions = '';
+                
+                // Don't allow removing the organizer
+                if (!player.isOrganizer) {
+                    playerActions = `
+                        <div class="player-actions">
+                            <button class="button-blue" onclick="moveToWaitlist('${player.id}')">Move to Waitlist</button>
+                            <button class="button-red" onclick="removePlayer('${player.id}')">Remove</button>
+                        </div>
+                    `;
+                }
+                
+                playerItem.innerHTML = playerInfo + playerActions;
+                confirmedPlayers.appendChild(playerItem);
+            });
+            
+            // Populate waitlist
+            gameData.waitlist.forEach((player, index) => {
+                const playerItem = document.createElement('div');
+                playerItem.className = 'player-item';
+                
+                playerItem.innerHTML = `
+                    <div class="player-info">
+                        <strong>${player.name}</strong>
+                        ${player.phone ? '<br>Phone: ' + player.phone : ''}
+                        <br><small>Position: #${index + 1}</small>
+                    </div>
+                    <div class="player-actions">
+                        <button class="button-blue" onclick="promoteToGame('${player.id}')">Promote to Game</button>
+                        <button class="button-red" onclick="removeWaitlisted('${player.id}')">Remove</button>
+                    </div>
+                `;
+                
+                waitlistPlayers.appendChild(playerItem);
+            });
+        }
+        
+        function populateShareLinks() {
+            const playerLink = document.getElementById('playerLink');
+            const hostLink = document.getElementById('hostLink');
+            
+            const baseUrl = window.location.origin;
+            
+            playerLink.value = `${baseUrl}/game.html?id=${gameId}`;
+            hostLink.value = `${baseUrl}/manage.html?id=${gameId}&token=${hostToken}`;
+        }
+        
+        async function updateGameDetails() {
+            try {
+                showStatus('Updating game details...', 'info');
+                
+                const updatedData = {
+                    location: document.getElementById('location').value,
+                    date: document.getElementById('date').value,
+                    time: document.getElementById('time').value,
+                    duration: document.getElementById('duration').value,
+                    totalPlayers: document.getElementById('players').value,
+                    message: document.getElementById('message').value,
+                    token: hostToken
+                };
+                
+                const response = await fetch(`/api/games/${gameId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updatedData)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to update game');
+                }
+                
+                const data = await response.json();
+                console.log('Game updated:', data);
+                
+                // Refresh game data
+                await fetchGameData();
+                
+                showStatus('Game details updated successfully! Players have been notified.', 'success');
+                
+            } catch (error) {
+                console.error('Error updating game:', error);
+                showStatus('Error updating game: ' + error.message, 'error');
+            }
+        }
+        
+        async function addPlayerManually() {
+            try {
+                const name = document.getElementById('playerName').value;
+                const phone = document.getElementById('playerPhone').value;
+                const action = document.querySelector('input[name="addTo"]:checked').value;
+                
+                showStatus('Adding player...', 'info');
+                
+                const response = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name,
+                        phone,
+                        action,
+                        token: hostToken
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to add player');
+                }
+                
+                const data = await response.json();
+                console.log('Player added:', data);
+                
+                // Reset form
+                document.getElementById('playerName').value = '';
+                document.getElementById('playerPhone').value = '';
+                
+                // Refresh game data
+                await fetchGameData();
+                
+                showStatus(`Player ${name} added successfully!`, 'success');
+                
+            } catch (error) {
+                console.error('Error adding player:', error);
+                showStatus('Error adding player: ' + error.message, 'error');
+            }
+        }
+        
+        async function moveToWaitlist(playerId) {
+            try {
+                showStatus('Moving player to waitlist...', 'info');
+                
+                // First find the player in the game data
+                const player = gameData.players.find(p => p.id === playerId);
+                if (!player) {
+                    throw new Error('Player not found');
+                }
+                
+                // Remove from confirmed
+                const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to remove player');
+                }
+                
+                // Add to waitlist
+                const addResponse = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: player.name,
+                        phone: player.phone,
+                        action: 'waitlist',
+                        token: hostToken
+                    })
+                });
+                
+                if (!addResponse.ok) {
+                    const errorData = await addResponse.json();
+                    throw new Error(errorData.error || 'Failed to add to waitlist');
+                }
+                
+                // Refresh game data
+                await fetchGameData();
+                
+                showStatus(`Player ${player.name} moved to waitlist`, 'success');
+                
+            } catch (error) {
+                console.error('Error moving player:', error);
+                showStatus('Error moving player: ' + error.message, 'error');
+            }
+        }
+        
+        async function promoteToGame(playerId) {
+            try {
+                showStatus('Promoting player to game...', 'info');
+                
+                // First find the player in the waitlist
+                const player = gameData.waitlist.find(p => p.id === playerId);
+                if (!player) {
+                    throw new Error('Player not found');
+                }
+                
+                // Remove from waitlist
+                const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to remove from waitlist');
+                }
+                
+                // Add to confirmed
+                const addResponse = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: player.name,
+                        phone: player.phone,
+                        action: 'add',
+                        token: hostToken
+                    })
+                });
+                
+                if (!addResponse.ok) {
+                    const errorData = await addResponse.json();
+                    throw new Error(errorData.error || 'Failed to add to game');
+                }
+                
+                // Refresh game data
+                await fetchGameData();
+                
+                showStatus(`Player ${player.name} promoted to game`, 'success');
+                
+            } catch (error) {
+                console.error('Error promoting player:', error);
+                showStatus('Error promoting player: ' + error.message, 'error');
+            }
+        }
+        
+        async function removePlayer(playerId) {
+            try {
+                // First find the player in the game data
+                const player = gameData.players.find(p => p.id === playerId);
+                if (!player) {
+                    throw new Error('Player not found');
+                }
+                
+                showConfirmModal(
+                    'Remove Player', 
+                    `Are you sure you want to remove ${player.name} from the game?`, 
+                    async () => {
+                        try {
+                            showStatus('Removing player...', 'info');
+                            
+                            const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
+                                method: 'DELETE'
+                            });
+                            
+                            if (!response.ok) {
+                                const errorData = await response.json();
+                                throw new Error(errorData.error || 'Failed to remove player');
+                            }
+                            
+                            // Refresh game data
+                            await fetchGameData();
+                            
+                            showStatus(`Player ${player.name} removed from game`, 'success');
+                            
+                        } catch (error) {
+                            console.error('Error removing player:', error);
+                            showStatus('Error removing player: ' + error.message, 'error');
+                        }
+                    }
+                );
+                
+            } catch (error) {
+                console.error('Error removing player:', error);
+                showStatus('Error removing player: ' + error.message, 'error');
+            }
+        }
+        
+        async function removeWaitlisted(playerId) {
+            try {
+                // First find the player in the waitlist
+                const player = gameData.waitlist.find(p => p.id === playerId);
+                if (!player) {
+                    throw new Error('Player not found');
+                }
+                
+                showConfirmModal(
+                    'Remove from Waitlist', 
+                    `Are you sure you want to remove ${player.name} from the waitlist?`, 
+                    async () => {
+                        try {
+                            showStatus('Removing from waitlist...', 'info');
+                            
+                            const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
+                                method: 'DELETE'
+                            });
+                            
+                            if (!response.ok) {
+                                const errorData = await response.json();
+                                throw new Error(errorData.error || 'Failed to remove from waitlist');
+                            }
+                            
+                            // Refresh game data
+                            await fetchGameData();
+                            
+                            showStatus(`Player ${player.name} removed from waitlist`, 'success');
+                            
+                        } catch (error) {
+                            console.error('Error removing from waitlist:', error);
+                            showStatus('Error removing from waitlist: ' + error.message, 'error');
+                        }
+                    }
+                );
+                
+            } catch (error) {
+                console.error('Error removing from waitlist:', error);
+                showStatus('Error removing from waitlist: ' + error.message, 'error');
+            }
+        }
+        
+        async function sendAnnouncement() {
+            try {
+                const message = document.getElementById('announcementText').value;
+                const sendToPlayers = document.getElementById('sendToPlayers').checked;
+                const sendToWaitlist = document.getElementById('sendToWaitlist').checked;
+                
+                if (!message) {
+                    throw new Error('Please enter a message');
+                }
+                
+                if (!sendToPlayers && !sendToWaitlist) {
+                    throw new Error('Please select at least one recipient group');
+                }
+                
+                showStatus('Sending announcement...', 'info');
+                
+                const response = await fetch(`/api/games/${gameId}/announcement?token=${hostToken}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message,
+                        includeConfirmed: sendToPlayers,
+                        includeWaitlist: sendToWaitlist,
+                        token: hostToken
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to send announcement');
+                }
+                
+                const data = await response.json();
+                console.log('Announcement sent:', data);
+                
+                // Reset form
+                document.getElementById('announcementText').value = '';
+                
+                showStatus(`Announcement sent to ${data.recipientCount} players`, 'success');
+                
+            } catch (error) {
+                console.error('Error sending announcement:', error);
+                showStatus('Error sending announcement: ' + error.message, 'error');
+            }
+        }
+        
+        function sendQuickMessage(type) {
+            let message = '';
+            
+            if (type === 'reminder') {
+                const date = new Date(gameData.date);
+                const formattedDate = date.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+                
+                message = `Reminder: Your pickleball game is on ${formattedDate} at ${formatTime(gameData.time)} at ${gameData.location}. Looking forward to seeing you there!`;
+            } else if (type === 'location') {
+                message = `Location details for our pickleball game: ${gameData.location}. Game starts at ${formatTime(gameData.time)}.`;
+            }
+            
+            // Pre-fill the announcement form
+            document.getElementById('announcementText').value = message;
+            document.getElementById('sendToPlayers').checked = true;
+            document.getElementById('sendToWaitlist').checked = false;
+            
+            // Switch to Communication tab
+            const tabEvent = { currentTarget: document.querySelector('.tab[onclick*="Communication"]') };
+            openTab(tabEvent, 'Communication');
+        }
+        
+        async function cancelGame() {
+            try {
+                const reason = document.getElementById('cancellationReason').value || 'No reason provided';
+                
+                showStatus('Cancelling game...', 'info');
+                
+                const response = await fetch(`/api/games/${gameId}?token=${hostToken}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        reason,
+                        token: hostToken
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to cancel game');
+                }
+                
+                const data = await response.json();
+                console.log('Game cancelled:', data);
+                
+                // Update UI to show game cancelled
+                gameData.cancelled = true;
+                gameData.cancellationReason = reason;
+                
+                showStatus('Game cancelled successfully! All players have been notified.', 'success');
+                
+                // Refresh after a short delay
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
+                
+            } catch (error) {
+                console.error('Error cancelling game:', error);
+                showStatus('Error cancelling game: ' + error.message, 'error');
+            }
+        }
+        
+        function formatTime(timeStr) {
+            if (!timeStr) return '';
+            const [hours, minutes] = timeStr.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const hour12 = hour % 12 || 12;
+            return `${hour12}:${minutes} ${ampm}`;
+        }
+        
+        function showConfirmModal(title, message, confirmAction) {
+            const modal = document.getElementById('confirmModal');
+            const confirmTitle = document.getElementById('confirmTitle');
+            const confirmMessage = document.getElementById('confirmMessage');
+            const confirmYes = document.getElementById('confirmYes');
+            
+            confirmTitle.textContent = title;
+            confirmMessage.textContent = message;
+            
+            // Set up the confirm action
+            confirmYes.onclick = () => {
+                confirmAction();
+                closeModal();
+            };
+            
+            modal.style.display = 'block';
+        }
+        
+        function closeModal() {
+            const modal = document.getElementById('confirmModal');
+            modal.style.display = 'none';
+        }
+        
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            element.select();
+            document.execCommand('copy');
+            
+            // Get the button that was clicked
+            const buttonId = 'copy' + elementId.charAt(0).toUpperCase() + elementId.slice(1);
+            const button = document.getElementById(buttonId);
+            
+            // Change text temporarily
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        function showUnauthorized() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('unauthorizedMessage').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
+```

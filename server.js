@@ -69,6 +69,10 @@ app.post('/api/games', (req, res) => {
     const gameData = req.body;
     const gameId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
     
+    // Generate a host management token
+    const hostToken = Math.random().toString(36).substring(2, 15) + 
+                      Math.random().toString(36).substring(2, 15);
+    
     // Initialize players array with organizer
     gameData.players = [
       { id: 'organizer', name: gameData.organizer || 'Organizer', isOrganizer: true }
@@ -77,13 +81,21 @@ app.post('/api/games', (req, res) => {
     // Initialize waitlist
     gameData.waitlist = [];
     
+    // Add host token to the game data
+    gameData.hostToken = hostToken;
+    
     // Store game in our "database"
     games[gameId] = gameData;
     
     console.log(`Game created with ID: ${gameId}`);
     console.log('Current games:', Object.keys(games));
     
-    res.status(201).json({ gameId });
+    res.status(201).json({ 
+      gameId,
+      hostToken,
+      playerLink: `/game.html?id=${gameId}`,
+      hostLink: `/manage.html?id=${gameId}&token=${hostToken}`
+    });
   } catch (error) {
     console.error('Error creating game:', error);
     res.status(500).json({ error: 'Failed to create game' });
@@ -416,6 +428,249 @@ app.post('/api/sms/webhook', express.urlencoded({ extended: false }), async (req
     const twiml = new twilio.twiml.MessagingResponse();
     twiml.message("Sorry, we encountered an error processing your request. Please try again later or contact the organizer.");
     res.type('text/xml').send(twiml.toString());
+  }
+});
+
+// Verify host token
+function verifyHostToken(gameId, token) {
+  const game = games[gameId];
+  if (!game) return false;
+  return game.hostToken === token;
+}
+
+// Host verification middleware
+function requireHostAuth(req, res, next) {
+  const gameId = req.params.id;
+  const hostToken = req.query.token || req.body.token;
+  
+  if (!verifyHostToken(gameId, hostToken)) {
+    return res.status(403).json({ error: 'Unauthorized. Invalid host token.' });
+  }
+  
+  next();
+}
+
+// Update game details (host only)
+app.put('/api/games/:id', requireHostAuth, async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const game = games[gameId];
+    
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    // Fields that can be updated
+    const updatableFields = ['location', 'date', 'time', 'duration', 'totalPlayers', 'message'];
+    let wasUpdated = false;
+    
+    updatableFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        game[field] = req.body[field];
+        wasUpdated = true;
+      }
+    });
+    
+    if (!wasUpdated) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+    
+    // If player count was reduced, move extra players to waitlist
+    if (req.body.totalPlayers && game.players.length > parseInt(req.body.totalPlayers)) {
+      const extraCount = game.players.length - parseInt(req.body.totalPlayers);
+      
+      // Skip the organizer (index 0)
+      for (let i = 0; i < extraCount; i++) {
+        const playerToMove = game.players.pop();
+        game.waitlist.unshift(playerToMove);
+      }
+    }
+    
+    // Notify players of game changes via SMS
+    const notificationPromises = [];
+    
+    game.players.forEach(player => {
+      if (player.phone && !player.isOrganizer) {
+        const message = `UPDATE: Your pickleball game at ${game.location} has been changed to ${formatDateForSMS(game.date)} at ${formatTimeForSMS(game.time)}. Check the game page for details.`;
+        notificationPromises.push(sendSMS(player.phone, message));
+      }
+    });
+    
+    // Wait for all notifications to be sent
+    const smsResults = await Promise.all(notificationPromises);
+    
+    res.json({ 
+      success: true, 
+      message: 'Game updated successfully',
+      smsResults
+    });
+  } catch (error) {
+    console.error('Error updating game:', error);
+    res.status(500).json({ error: 'Failed to update game' });
+  }
+});
+
+// Cancel game (host only)
+app.delete('/api/games/:id', requireHostAuth, async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const game = games[gameId];
+    const reason = req.body.reason || 'No reason provided';
+    
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    // Mark game as cancelled
+    game.cancelled = true;
+    game.cancellationReason = reason;
+    
+    // Notify all players via SMS
+    const notificationPromises = [];
+    
+    // Notify confirmed players
+    game.players.forEach(player => {
+      if (player.phone && !player.isOrganizer) {
+        const message = `CANCELLED: Your pickleball game at ${game.location} on ${formatDateForSMS(game.date)} has been cancelled. Reason: ${reason}`;
+        notificationPromises.push(sendSMS(player.phone, message));
+      }
+    });
+    
+    // Notify waitlisted players
+    game.waitlist.forEach(player => {
+      if (player.phone) {
+        const message = `CANCELLED: The pickleball game at ${game.location} that you were waitlisted for has been cancelled. Reason: ${reason}`;
+        notificationPromises.push(sendSMS(player.phone, message));
+      }
+    });
+    
+    // Wait for all notifications to be sent
+    const smsResults = await Promise.all(notificationPromises);
+    
+    res.json({ 
+      success: true, 
+      message: 'Game cancelled successfully',
+      smsResults
+    });
+  } catch (error) {
+    console.error('Error cancelling game:', error);
+    res.status(500).json({ error: 'Failed to cancel game' });
+  }
+});
+
+// Manual player management (host only)
+app.post('/api/games/:id/manual-player', requireHostAuth, async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const game = games[gameId];
+    
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    const { name, phone, action } = req.body; // action can be 'add' or 'waitlist'
+    
+    // Format phone number
+    const formattedPhone = phone ? formatPhoneNumber(phone) : null;
+    
+    // Generate a unique player ID
+    const playerId = Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+    const playerData = { id: playerId, name, phone: formattedPhone };
+    
+    let smsResult = null;
+    
+    if (action === 'add') {
+      // Add to confirmed players
+      game.players.push(playerData);
+      
+      // Send confirmation SMS if phone provided
+      if (formattedPhone) {
+        const gameDate = formatDateForSMS(game.date);
+        const gameTime = formatTimeForSMS(game.time);
+        const message = `You've been added to a Pickleball game at ${game.location} on ${gameDate} at ${gameTime} by the organizer. You are Player ${game.players.length} of ${game.totalPlayers}.`;
+        
+        smsResult = await sendSMS(formattedPhone, message);
+      }
+      
+      res.status(201).json({ 
+        status: 'added',
+        position: game.players.length,
+        playerId,
+        sms: smsResult
+      });
+    } else {
+      // Add to waitlist
+      game.waitlist.push(playerData);
+      
+      // Send waitlist SMS if phone provided
+      if (formattedPhone) {
+        const message = `You've been added to the waitlist for Pickleball at ${game.location} by the organizer. You are #${game.waitlist.length} on the waitlist.`;
+        
+        smsResult = await sendSMS(formattedPhone, message);
+      }
+      
+      res.status(201).json({ 
+        status: 'waitlisted',
+        position: game.waitlist.length,
+        playerId,
+        sms: smsResult
+      });
+    }
+  } catch (error) {
+    console.error('Error adding player manually:', error);
+    res.status(500).json({ error: 'Failed to add player' });
+  }
+});
+
+// Send announcement to all players (host only)
+app.post('/api/games/:id/announcement', requireHostAuth, async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const game = games[gameId];
+    
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    const { message } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    
+    // Send announcement to all players via SMS
+    const notificationPromises = [];
+    
+    // Send to confirmed players
+    game.players.forEach(player => {
+      if (player.phone && !player.isOrganizer) {
+        const smsMessage = `PICKLEBALL ANNOUNCEMENT: ${message} (Game at ${game.location} on ${formatDateForSMS(game.date)})`;
+        notificationPromises.push(sendSMS(player.phone, smsMessage));
+      }
+    });
+    
+    // Optionally send to waitlisted players
+    if (req.body.includeWaitlist) {
+      game.waitlist.forEach(player => {
+        if (player.phone) {
+          const smsMessage = `PICKLEBALL ANNOUNCEMENT: ${message} (Waitlisted game at ${game.location} on ${formatDateForSMS(game.date)})`;
+          notificationPromises.push(sendSMS(player.phone, smsMessage));
+        }
+      });
+    }
+    
+    // Wait for all notifications to be sent
+    const smsResults = await Promise.all(notificationPromises);
+    
+    res.json({ 
+      success: true, 
+      message: 'Announcement sent successfully',
+      recipientCount: notificationPromises.length,
+      smsResults
+    });
+  } catch (error) {
+    console.error('Error sending announcement:', error);
+    res.status(500).json({ error: 'Failed to send announcement' });
   }
 });
 

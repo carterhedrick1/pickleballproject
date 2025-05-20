@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PicklePlay Scheduler</title>
     <style>
         body {
@@ -38,6 +38,7 @@
             box-sizing: border-box;
             border: 1px solid #ddd;
             border-radius: 4px;
+            font-size: 16px; /* Prevents iOS zoom */
         }
         button {
             background-color: #4CAF50;
@@ -77,6 +78,44 @@
             border: 1px solid #ebccd1;
             color: #a94442;
         }
+
+                .link-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .save-suggestion {
+            font-style: italic;
+            color: #666;
+            margin-top: 5px;
+        }
+        .copy-btn {
+            background-color: #2196F3;
+        }
+        .copy-btn:hover {
+            background-color: #0b7dda;
+        }
+        .game-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .manage-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 15px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .manage-btn:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 <body>
@@ -91,6 +130,11 @@
             <div class="form-group">
                 <label for="location">Location:</label>
                 <input type="text" id="location" name="location" required>
+            </div>
+
+            <div class="form-group">
+                <label for="organizerName">Your Name (Organizer):</label>
+                <input type="text" id="organizerName" name="organizerName" required>
             </div>
             
             <div class="form-group">
@@ -124,112 +168,35 @@
             <button type="submit">Create Game</button>
         </form>
         
-        <div id="shareLink">
-            <h3>Share this link with players:</h3>
-            <div class="link-container">
-                <input type="text" id="gameLink" readonly>
-                <button id="copyLink">Copy</button>
-            </div>
+        <div id="shareLink" style="display: none;">
+    <h3>Your Game has been Created!</h3>
+    
+    <div class="link-group">
+        <h4>Player Registration Link</h4>
+        <p>Share this link with players to let them sign up:</p>
+        <div class="link-container">
+            <input type="text" id="gameLink" readonly>
+            <button id="copyLink" class="copy-btn">Copy</button>
         </div>
     </div>
+    
+    <div class="link-group">
+        <h4>Host Management Link</h4>
+        <p><strong>⚠️ Important:</strong> Save this link to manage your game. Anyone with this link can modify game details.</p>
+        <div class="link-container">
+            <input type="text" id="hostLink" readonly>
+            <button id="copyHostLink" class="copy-btn">Copy</button>
+        </div>
+        <p class="save-suggestion">Bookmark this link or save it somewhere safe!</p>
+    </div>
+</div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const gameForm = document.getElementById('gameForm');
-            const shareLink = document.getElementById('shareLink');
-            const gameLinkInput = document.getElementById('gameLink');
-            const copyLinkBtn = document.getElementById('copyLink');
-            const statusDiv = document.getElementById('status');
-            
-            // Set today's date as the default date
-            const today = new Date();
-            const dateInput = document.getElementById('date');
-            dateInput.valueAsDate = today;
-            
-            // Handle form submission
-            gameForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                try {
-                    // Get form data
-                    const gameData = {
-                        location: document.getElementById('location').value,
-                        date: document.getElementById('date').value,
-                        time: document.getElementById('time').value,
-                        duration: document.getElementById('duration').value,
-                        totalPlayers: document.getElementById('players').value,
-                        message: document.getElementById('message').value,
-                        organizer: 'You' // For now, hardcoded
-                    };
-                    
-                    console.log("Submitting game data:", gameData);
-                    showStatus('Creating game...', 'info');
-                    
-                    // Send data to the server
-                    const response = await fetch('/api/games', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(gameData)
-                    });
-                    
-                    console.log("Response status:", response.status);
-                    
-                    if (!response.ok) {
-                        let errorMessage = 'Failed to create game';
-                        try {
-                            const errorData = await response.json();
-                            errorMessage = errorData.error || errorMessage;
-                        } catch (e) {
-                            console.error("Error parsing error response:", e);
-                        }
-                        throw new Error(errorMessage);
-                    }
-                    
-                    const data = await response.json();
-                    console.log("Game created successfully:", data);
-                    showStatus('Game created successfully!', 'success');
-                    
-                    const gameId = data.gameId;
-                    
-                    // Generate shareable link
-                    const gameUrl = `${window.location.origin}/game.html?id=${gameId}`;
-                    gameLinkInput.value = gameUrl;
-                    
-                    // Show the share link section
-                    shareLink.style.display = 'block';
-                    
-                } catch (error) {
-                    console.error('Error creating game:', error);
-                    showStatus('Failed to create game: ' + error.message, 'error');
-                }
-            });
-            
-            // Copy link button
-            copyLinkBtn.addEventListener('click', () => {
-                gameLinkInput.select();
-                document.execCommand('copy');
-                copyLinkBtn.textContent = 'Copied!';
-                
-                setTimeout(() => {
-                    copyLinkBtn.textContent = 'Copy';
-                }, 2000);
-            });
-            
-            // Helper function to show status messages
-            function showStatus(message, type) {
-                statusDiv.textContent = message;
-                statusDiv.className = type;
-                statusDiv.style.display = 'block';
-                
-                if (type === 'success' || type === 'info') {
-                    setTimeout(() => {
-                        statusDiv.style.display = 'none';
-                    }, 5000);
-                }
-            }
-        });
-    </script>
+<div id="hostedGames" style="display: none;">
+    <h3>Games You've Created</h3>
+    <div id="gamesList"></div>
+</div>
+    </div>
+
+    <script src="/js/index.js"></script>
 </body>
 </html>
