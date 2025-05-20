@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function fetchGameData() {
         try {
-            console.log(`Fetching game data for ID: ${gameId}`);
             const response = await fetch(`/api/games/${gameId}`);
             
             if (!response.ok) {
@@ -24,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             gameData = await response.json();
-            console.log("Game data received:", gameData);
             displayGameData();
             
             // Set up event listeners after we have the data
@@ -34,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
             checkExistingSignup();
             
         } catch (error) {
-            console.error("Error fetching game data:", error);
             showError("Game not found. Please check your link.");
         }
     }
@@ -120,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const spotsAvailable = document.getElementById('spotsAvailable');
         
         if (!playersList || !spotsAvailable) {
-            console.error("Player list elements not found");
             return;
         }
         
@@ -222,7 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchGameData();
             
         } catch (error) {
-            console.error('Error joining game:', error);
             alert('Failed to join game. Please try again.');
         }
     }
@@ -318,7 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
             location.reload();
             
         } catch (error) {
-            console.error('Error canceling spot:', error);
             alert('Failed to cancel your spot. Please try again.');
         }
     }
@@ -347,7 +341,6 @@ document.addEventListener('DOMContentLoaded', () => {
             location.reload();
             
         } catch (error) {
-            console.error('Error removing from waitlist:', error);
             alert('Failed to remove from waitlist. Please try again.');
         }
     }
