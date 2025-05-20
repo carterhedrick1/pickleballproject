@@ -95,6 +95,77 @@
             border: 1px solid #ddd;
             border-radius: 4px;
         }
+
+        @media (max-width: 768px) {
+    /* Body and main container */
+    body {
+        padding: 0;
+        margin: 0;
+    }
+    
+    .container {
+        padding: 10px;
+        border-radius: 0;
+        max-width: 100%;
+        box-shadow: none;
+        margin: 0;
+    }
+    
+    /* Headings */
+    h1 {
+        margin-top: 10px;
+        margin-bottom: 15px;
+        font-size: 24px;
+    }
+    
+    h2, h3 {
+        font-size: 20px;
+        margin-bottom: 12px;
+    }
+    
+    /* Form elements */
+    .form-group {
+        margin-bottom: 10px;
+    }
+    
+    input {
+        padding: 10px;
+        font-size: 16px;
+    }
+    
+    button {
+        width: 100%;
+        padding: 12px 15px;
+        margin-right: 0;
+        margin-bottom: 8px;
+    }
+    
+    /* Player sections */
+    #gameDetails, #playerList, #signupForm, #confirmation, #waitlist {
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    
+    /* Error messages */
+    .error, .success, .info {
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    
+    /* Player lists */
+    .player-list {
+        margin: 10px 0;
+    }
+    
+    /* Copy button should not be full width */
+    .link-container {
+        display: flex;
+    }
+    
+    .link-container button {
+        width: auto;
+    }
+}
     </style>
 </head>
 <body>
