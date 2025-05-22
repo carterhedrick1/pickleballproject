@@ -167,6 +167,7 @@
     }
 }
     </style>
+    <link rel="stylesheet" href="/css/footer.css">
 </head>
 <body>
     <div class="container">
@@ -302,21 +303,44 @@
                 
             function updatePlayerList() {
                 const playersList = document.getElementById('players');
+                const spotsAvailable = document.getElementById('spotsAvailable');
+                
+                if (!playersList || !spotsAvailable) {
+                    return;
+                }
+                
+                // Clear existing list
                 playersList.innerHTML = '';
                 
-                gameData.players.forEach(player => {
+                // Check if there are any players
+                if (gameData.players.length === 0) {
+                    // No players yet - show helpful hint
                     const li = document.createElement('li');
-                    li.textContent = player.name + (player.isOrganizer ? ' (Organizer)' : '');
+                    li.style.fontStyle = 'italic';
+                    li.style.color = '#999';
+                    li.style.fontSize = '14px';
+                    li.textContent = 'None yet - be the first to join!';
                     playersList.appendChild(li);
-                });
+                } else {
+                    // Add players to list
+                    gameData.players.forEach(player => {
+                        const li = document.createElement('li');
+                        li.textContent = player.name + (player.isOrganizer ? ' (Organizer)' : '');
+                        playersList.appendChild(li);
+                    });
+                }
                 
                 // Update spots available
                 const availableSpots = parseInt(gameData.totalPlayers) - gameData.players.length;
-                document.getElementById('spotsAvailable').textContent = availableSpots;
+                spotsAvailable.textContent = availableSpots;
                 
-                // If game is full, show waitlist message
-                if (availableSpots <= 0) {
-                    showStatus("This game is currently full. You can still sign up for the waitlist.", 'info');
+                // If game is full, hide signup form only if user hasn't signed up yet
+                const signupForm = document.getElementById('signupForm');
+                const playerId = localStorage.getItem(`player_${gameId}`);
+                
+                // Check if user has already signed up before hiding the form
+                if (signupForm && availableSpots <= 0 && !hasUserSignedUp(playerId)) {
+                    signupForm.style.display = 'none';
                 }
             }
             
@@ -562,5 +586,6 @@
             }
         });
     </script>
+    <script src="/js/footer.js"></script>
 </body>
 </html>

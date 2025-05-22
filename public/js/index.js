@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             // Get form data
+            // Get form data
             const gameData = {
                 location: document.getElementById('location').value,
                 date: document.getElementById('date').value,
@@ -34,7 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 duration: document.getElementById('duration').value,
                 totalPlayers: document.getElementById('players').value,
                 message: document.getElementById('message').value,
-                organizer: document.getElementById('organizerName').value || 'You' // Get organizer name if available
+                organizer: document.getElementById('organizerName').value,
+                organizerPlaying: document.getElementById('organizerPlaying').checked
             };
             
             console.log("Submitting game data:", gameData);
@@ -91,6 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Clear the form
             gameForm.reset();
+            // Reset organizer playing checkbox to checked (default)
+document.getElementById('organizerPlaying').checked = true; 
             
             // Set date back to today
             if (dateInput) {

@@ -79,7 +79,7 @@
             color: #a94442;
         }
 
-                .link-group {
+        .link-group {
             margin-bottom: 20px;
             padding: 15px;
             border: 1px solid #ddd;
@@ -117,65 +117,91 @@
             background-color: #45a049;
         }
 
-        @media (max-width: 768px) {
-    /* Body and main container */
-    body {
-        padding: 0;
-        margin: 0;
-    }
-    
-    .container {
-        padding: 10px;
-        border-radius: 0;
-        max-width: 100%;
-        box-shadow: none;
-        margin: 0;
-    }
-    
-    /* Headings */
-    h1 {
-        margin-top: 10px;
-        margin-bottom: 15px;
-        font-size: 24px;
-    }
-    
-    h2 {
-        font-size: 20px;
-        margin-bottom: 12px;
-    }
-    
-    /* Form elements */
-    .form-group {
-        margin-bottom: 10px;
-    }
-    
-    input, select, textarea {
-        padding: 10px;
-        font-size: 16px;
-    }
-    
-    button {
-        width: 100%;
-        padding: 12px 15px;
-        margin-right: 0;
-        margin-bottom: 8px;
-    }
-    
-    /* Share link and game cards */
-    #shareLink {
-        margin-top: 15px;
-    }
-    
-    .link-group {
-        margin-bottom: 15px;
-        padding: 10px;
-    }
-    
-    .game-card {
-        padding: 8px;
-    }
+.checkbox-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
+
+.checkbox-inline input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.checkbox-inline label {
+    margin: 0;
+    font-weight: normal;
+    cursor: pointer;
+    flex: 1;
+    font-style: italic;
+    font-size: 14px;
+    color: #555;
+}
+
+        @media (max-width: 768px) {
+            /* Body and main container */
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            
+            .container {
+                padding: 10px;
+                border-radius: 0;
+                max-width: 100%;
+                box-shadow: none;
+                margin: 0;
+            }
+            
+            /* Headings */
+            h1 {
+                margin-top: 10px;
+                margin-bottom: 15px;
+                font-size: 24px;
+            }
+            
+            h2 {
+                font-size: 20px;
+                margin-bottom: 12px;
+            }
+            
+            /* Form elements */
+            .form-group {
+                margin-bottom: 10px;
+            }
+            
+            input, select, textarea {
+                padding: 10px;
+                font-size: 16px;
+            }
+            
+            button {
+                width: 100%;
+                padding: 12px 15px;
+                margin-right: 0;
+                margin-bottom: 8px;
+            }
+            
+            /* Share link and game cards */
+            #shareLink {
+                margin-top: 15px;
+            }
+            
+            .link-group {
+                margin-bottom: 15px;
+                padding: 10px;
+            }
+            
+            .game-card {
+                padding: 8px;
+            }
+
+
+        }
     </style>
+    <link rel="stylesheet" href="/css/footer.css">
 </head>
 <body>
     <div class="container">
@@ -195,6 +221,13 @@
                 <label for="organizerName">Your Name (Organizer):</label>
                 <input type="text" id="organizerName" name="organizerName" required>
             </div>
+
+            <div class="form-group">
+                <div class="checkbox-inline">
+                    <input type="checkbox" id="organizerPlaying" name="organizerPlaying" checked>
+                    <label for="organizerPlaying">I will be playing in this game (uncheck if organizing for others)</label>
+                </div>
+            </div>
             
             <div class="form-group">
                 <label for="date">Date:</label>
@@ -213,10 +246,8 @@
             
             <div class="form-group">
                 <label for="players">Number of Players:</label>
-                <select id="players" name="players" required>
-                    <option value="4">4 Players</option>
-                    <option value="8">8 Players</option>
-                </select>
+                <input type="number" id="players" name="players" value="4" min="1" max="50" required>
+                <small style="color: #666; font-size: 12px;">Enter any number from 1 to 50 players</small>
             </div>
             
             <div class="form-group">
@@ -228,34 +259,36 @@
         </form>
         
         <div id="shareLink" style="display: none;">
-    <h3>Your Game has been Created!</h3>
-    
-    <div class="link-group">
-        <h4>Player Registration Link</h4>
-        <p>Share this link with players to let them sign up:</p>
-        <div class="link-container">
-            <input type="text" id="gameLink" readonly>
-            <button id="copyLink" class="copy-btn">Copy</button>
+            <h3>Your Game has been Created!</h3>
+            
+            <div class="link-group">
+                <h4>Player Registration Link</h4>
+                <p>Share this link with players to let them sign up:</p>
+                <div class="link-container">
+                    <input type="text" id="gameLink" readonly>
+                    <button id="copyLink" class="copy-btn">Copy</button>
+                </div>
+            </div>
+            
+            <div class="link-group">
+                <h4>Host Management Link</h4>
+                <p><strong>⚠️ Important:</strong> Save this link to manage your game. Anyone with this link can modify game details.</p>
+                <div class="link-container">
+                    <input type="text" id="hostLink" readonly>
+                    <button id="copyHostLink" class="copy-btn">Copy</button>
+                </div>
+                <p class="save-suggestion">Bookmark this link or save it somewhere safe!</p>
+            </div>
         </div>
-    </div>
-    
-    <div class="link-group">
-        <h4>Host Management Link</h4>
-        <p><strong>⚠️ Important:</strong> Save this link to manage your game. Anyone with this link can modify game details.</p>
-        <div class="link-container">
-            <input type="text" id="hostLink" readonly>
-            <button id="copyHostLink" class="copy-btn">Copy</button>
-        </div>
-        <p class="save-suggestion">Bookmark this link or save it somewhere safe!</p>
-    </div>
-</div>
 
-<div id="hostedGames" style="display: none;">
-    <h3>Games You've Created</h3>
-    <div id="gamesList"></div>
-</div>
+        <div id="hostedGames" style="display: none;">
+            <h3>Games You've Created</h3>
+            <div id="gamesList"></div>
+        </div>
     </div>
 
     <script src="/js/index.js"></script>
+    <script src="/js/footer.js"></script>
+
 </body>
 </html>
