@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PicklePlay Demo - SMS Consent Process</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+        .demo-section {
+            border: 2px solid #4CAF50;
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        input[type="text"], input[type="tel"] {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        input[type="text"]:focus, input[type="tel"]:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        .consent-checkbox {
+            display: flex;
+            align-items: flex-start;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 4px;
+        }
+        .consent-checkbox input[type="checkbox"] {
+            margin-right: 12px;
+            margin-top: 2px;
+            transform: scale(1.2);
+        }
+        .consent-text {
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border: 1px solid #b8daff;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .privacy-section {
+            background-color: #f0f8f0;
+            padding: 20px;
+            border-radius: 4px;
+            margin-top: 25px;
+        }
+        .sample-messages {
+            background-color: #f8f9fa;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .message-example {
+            background-color: white;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .step {
+            margin: 15px 0;
+            padding: 10px 0;
+        }
+        .step-number {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PicklePlay Scheduler</h1>
+        <p class="subtitle">SMS Consent Process Demonstration</p>
+        
+        <div class="info-box">
+            <h2>How Our SMS Consent Process Works</h2>
+            <p>This page demonstrates exactly how players consent to receive SMS notifications when joining pickleball games through our platform.</p>
+        </div>
+        
+        <h2>Player Registration Flow</h2>
+        <p>When players click on a game link shared by organizers, they see this registration form:</p>
+        
+        <div class="demo-section">
+            <h3>🏓 Join Pickleball Game</h3>
+            <p><strong>Game:</strong> Oak Park Courts - Saturday, Jan 25 at 2:00 PM</p>
+            
+            <form id="demoForm">
+                <div class="form-group">
+                    <label for="playerName">Your Name:</label>
+                    <input type="text" id="playerName" name="playerName" placeholder="Enter your full name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phoneNumber">Phone Number:</label>
+                    <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="(555) 123-4567" required>
+                </div>
+                
+                <div class="consent-checkbox">
+                    <input type="checkbox" id="smsConsent" required>
+                    <label for="smsConsent" class="consent-text">
+                        <strong>SMS Consent Required:</strong> I agree to receive SMS notifications about my pickleball game registrations including confirmations, updates, and cancellations. Message frequency varies (typically 1-3 messages per game). Message and data rates may apply. Reply STOP to opt-out at any time or HELP for support. Privacy policy available at pickleplay.club/privacy.
+                    </label>
+                </div>
+                
+                <button type="submit">Count Me In!</button>
+            </form>
+        </div>
+        
+        <h2>SMS Consent Process Steps</h2>
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>Player provides phone number</strong> - Required field in registration form
+        </div>
+        <div class="step">
+            <span class="step-number">2</span>
+            <strong>Player checks consent box</strong> - Cannot submit without agreeing to SMS notifications
+        </div>
+        <div class="step">
+            <span class="step-number">3</span>
+            <strong>Player clicks "Count Me In!"</strong> - Explicit action to join and consent to SMS
+        </div>
+        <div class="step">
+            <span class="step-number">4</span>
+            <strong>Automatic SMS confirmation sent</strong> - Immediate confirmation of registration
+        </div>
+        
+        <h2>Sample SMS Messages We Send</h2>
+        <div class="sample-messages">
+            <p><strong>Confirmation Message:</strong></p>
+            <div class="message-example">
+                "You're confirmed for Pickleball at Oak Park Courts on Sat, Jan 25 at 2:00 PM! You are Player 3 of 8. Reply 9 to cancel."
+            </div>
+            
+            <p><strong>Waitlist Message:</strong></p>
+            <div class="message-example">
+                "You've been added to the waitlist for Pickleball at Oak Park Courts. You are #2 on the waitlist. We'll notify you if a spot opens up! Reply 9 to cancel."
+            </div>
+            
+            <p><strong>Update Message:</strong></p>
+            <div class="message-example">
+                "UPDATE: Your pickleball game at Oak Park Courts has been moved to 3:00 PM same date. All other details remain the same."
+            </div>
+            
+            <p><strong>Cancellation Message:</strong></p>
+            <div class="message-example">
+                "CANCELLED: Your pickleball game at Oak Park Courts on Sat, Jan 25 has been cancelled. Reason: Weather conditions."
+            </div>
+        </div>
+        
+        <div class="privacy-section">
+            <h2>Privacy & Data Protection</h2>
+            <ul>
+                <li><strong>No Third-Party Sharing:</strong> Phone numbers are NEVER shared with third parties or affiliates for marketing purposes</li>
+                <li><strong>Purpose-Limited:</strong> SMS only used for game-related notifications the user signed up for</li>
+                <li><strong>Easy Opt-Out:</strong> Users can reply STOP to any message to immediately opt-out</li>
+                <li><strong>Support Available:</strong> Users can reply HELP for assistance</li>
+                <li><strong>Transparent:</strong> All messaging practices disclosed during signup</li>
+            </ul>
+        </div>
+        
+        <div class="info-box">
+            <p><strong>Contact Information:</strong></p>
+            <p>For questions about SMS notifications or to opt-out: Reply STOP to any message or email support@pickleplay.club</p>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('demoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Demo Form - In the real app, this would register the player and send an SMS confirmation!');
+        });
+    </script>
+</body>
+</html>
