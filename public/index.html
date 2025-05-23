@@ -16,123 +16,126 @@
             max-width: 600px;
             margin: 0 auto;
             background: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-        h1 {
+        
+        /* Header styling */
+        .page-header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 25px;
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
             text-align: center;
+        }
+        
+        /* Form section */
+        .form-section {
+            padding: 30px;
+            background-color: #fff8e1;
+        }
+        
+        .section-title {
             color: #4CAF50;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4CAF50;
+            display: inline-block;
         }
+        
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
+        
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: bold;
-        }
-        input, select, textarea {
-            width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px; /* Prevents iOS zoom */
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+            color: #495057;
             font-size: 16px;
         }
-        button:hover {
-            background-color: #45a049;
-        }
-        #shareLink {
-            margin-top: 20px;
-            display: none;
-        }
-        .link-container {
-            display: flex;
-        }
-        #gameLink {
-            flex-grow: 1;
-            margin-right: 10px;
-        }
-        #status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        .success {
-            background-color: #dff0d8;
-            border: 1px solid #d6e9c6;
-            color: #3c763d;
-        }
-        .error {
-            background-color: #f2dede;
-            border: 1px solid #ebccd1;
-            color: #a94442;
-        }
-        .info {
-            background-color: #d9edf7;
-            border: 1px solid #bce8f1;
-            color: #31708f;
-        }
-
-        .link-group {
-            margin-bottom: 20px;
+        
+        input, select, textarea {
+            width: 100%;
             padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            box-sizing: border-box;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            background-color: white;
         }
-        .save-suggestion {
-            font-style: italic;
-            color: #666;
-            margin-top: 5px;
+        
+        input:focus, select:focus, textarea:focus {
+            border-color: #4CAF50;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
         }
-        .copy-btn {
-            background-color: #2196F3;
-        }
-        .copy-btn:hover {
-            background-color: #0b7dda;
-        }
-        .game-card {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .manage-btn {
-            background-color: #4CAF50;
+        
+        button {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
             color: white;
-            padding: 8px 15px;
-            text-decoration: none;
-            border-radius: 4px;
+            padding: 18px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+        }
+        
+        /* SMS info styling */
+        .sms-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border: 2px solid #2196f3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
             font-size: 14px;
+            color: #1565c0;
+            font-weight: 500;
         }
-        .manage-btn:hover {
-            background-color: #45a049;
-        }
-
+        
+        /* Checkbox styling */
         .checkbox-inline {
             display: flex;
-            align-items: center;
-            gap: 10px;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 15px;
+            background-color: rgba(255,255,255,0.8);
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
         }
 
         .checkbox-inline input[type="checkbox"] {
-            width: auto;
+            width: 20px;
+            height: 20px;
             margin: 0;
             padding: 0;
             flex-shrink: 0;
+            cursor: pointer;
         }
 
         .checkbox-inline label {
@@ -142,74 +145,162 @@
             flex: 1;
             font-style: italic;
             font-size: 14px;
-            color: #555;
+            color: #666;
+            line-height: 1.4;
+        }
+        
+        /* Status messages */
+        #status {
+            margin: 20px 30px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+        
+        .error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border: 2px solid #dc3545;
+            color: #721c24;
+        }
+        
+        .info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            border: 2px solid #17a2b8;
+            color: #0c5460;
         }
 
-        .sms-info {
-            background-color: #e7f3ff;
-            border: 1px solid #b8daff;
-            padding: 12px;
-            border-radius: 4px;
-            margin-top: 15px;
+        /* Share section styling */
+        .share-section {
+            padding: 30px;
+            background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+            border-top: 3px solid #4CAF50;
+        }
+        
+        .share-title {
+            color: #2e7d32;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 0 20px 0;
+            text-align: center;
+        }
+
+        .link-group {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 2px solid #4CAF50;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
+        }
+        
+        .link-group h4 {
+            color: #2e7d32;
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+        
+        .link-group p {
+            margin: 0 0 15px 0;
+            color: #666;
+        }
+        
+        .save-suggestion {
+            font-style: italic;
+            color: #666;
+            margin-top: 10px;
             font-size: 14px;
+        }
+        
+        .copy-btn {
+            background: linear-gradient(135deg, #2196F3 0%, #1976d2 100%);
+            padding: 12px 20px;
+            font-size: 14px;
+            width: auto;
+            margin-top: 0;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+        
+        .copy-btn:hover {
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+        }
+        
+        .link-container {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #gameLink {
+            flex-grow: 1;
+            margin: 0;
+        }
+        
+        .management-reminder {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #ffc107;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .management-reminder h4 {
+            color: #856404;
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+        
+        .management-reminder p {
+            color: #856404;
+            margin: 5px 0;
         }
 
         @media (max-width: 768px) {
-            /* Body and main container */
             body {
                 padding: 0;
                 margin: 0;
             }
             
             .container {
-                padding: 10px;
                 border-radius: 0;
-                max-width: 100%;
                 box-shadow: none;
-                margin: 0;
             }
             
-            /* Headings */
-            h1 {
-                margin-top: 10px;
-                margin-bottom: 15px;
+            .page-header {
+                padding: 20px 15px;
                 font-size: 24px;
             }
             
-            h2 {
-                font-size: 20px;
-                margin-bottom: 12px;
+            .form-section, .share-section {
+                padding: 20px 15px;
             }
             
-            /* Form elements */
-            .form-group {
-                margin-bottom: 10px;
+            .section-title {
+                font-size: 20px;
             }
             
             input, select, textarea {
-                padding: 10px;
-                font-size: 16px;
+                padding: 12px;
             }
             
             button {
+                padding: 15px 20px;
+                font-size: 16px;
+            }
+            
+            .link-container {
+                flex-direction: column;
+            }
+            
+            .copy-btn {
                 width: 100%;
-                padding: 12px 15px;
-                margin-right: 0;
-                margin-bottom: 8px;
-            }
-            
-            /* Share link and game cards */
-            #shareLink {
-                margin-top: 15px;
-            }
-            
-            .link-group {
-                margin-bottom: 15px;
-                padding: 10px;
-            }
-            
-            .game-card {
-                padding: 8px;
+                margin-top: 10px;
             }
         }
     </style>
@@ -218,85 +309,86 @@
 </head>
 <body>
     <div class="container">
-        <h1>Create a Game</h1>
+        <h1 class="page-header">Create a Game</h1>
         
         <div id="status" style="display:none;"></div>
         
-        <form id="gameForm">
-            <div class="form-group">
-                <label for="location">Location:</label>
-                <input type="text" id="location" name="location" required>
-            </div>
-
-            <div class="form-group">
-                <label for="organizerName">Your Name (Organizer):</label>
-                <input type="text" id="organizerName" name="organizerName" required>
-            </div>
-
-            <div class="form-group">
-                <label for="organizerPhone">Your Phone Number:</label>
-                <input type="tel" id="organizerPhone" name="organizerPhone" required>
-                <div class="sms-info">
-                    📱 You'll receive a confirmation text. Reply "1" to get your management link!
+        <div class="form-section">
+            <h2 class="section-title">🏓 New Game Setup</h2>
+            
+            <form id="gameForm">
+                <div class="form-group">
+                    <label for="location">📍 Location:</label>
+                    <input type="text" id="location" name="location" placeholder="e.g., Oak Park Courts" required>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <div class="checkbox-inline">
-                    <input type="checkbox" id="organizerPlaying" name="organizerPlaying" checked>
-                    <label for="organizerPlaying">I will be playing in this game (uncheck if organizing for others)</label>
+                <div class="form-group">
+                    <label for="organizerName">👤 Your Name (Organizer):</label>
+                    <input type="text" id="organizerName" name="organizerName" placeholder="Enter your full name" required>
                 </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="date">Date:</label>
-                <input type="date" id="date" name="date" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="time">Start Time:</label>
-                <input type="time" id="time" name="time" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="duration">Duration (minutes):</label>
-                <input type="number" id="duration" name="duration" value="90" min="30" step="15" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="players">Number of Players:</label>
-                <input type="number" id="players" name="players" value="4" min="1" max="50" required>
-                <small style="color: #666; font-size: 12px;">Enter any number from 1 to 50 players</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="message">Optional Message:</label>
-                <textarea id="message" name="message"></textarea>
-            </div>
-            
-            <button type="submit">Create Game</button>
-        </form>
+
+                <div class="form-group">
+                    <label for="organizerPhone">📱 Your Phone Number:</label>
+                    <input type="tel" id="organizerPhone" name="organizerPhone" placeholder="(555) 123-4567" required>
+                    <div class="sms-info">
+                        📱 You'll receive a confirmation text. Reply "1" to get your management link!
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-inline">
+                        <input type="checkbox" id="organizerPlaying" name="organizerPlaying" checked>
+                        <label for="organizerPlaying">I will be playing in this game (uncheck if organizing for others)</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="date">📅 Date:</label>
+                    <input type="date" id="date" name="date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="time">⏰ Start Time:</label>
+                    <input type="time" id="time" name="time" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="duration">⏱️ Duration (minutes):</label>
+                    <input type="number" id="duration" name="duration" value="90" min="30" step="15" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="players">👥 Number of Players:</label>
+                    <input type="number" id="players" name="players" value="4" min="1" max="50" required>
+                    <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Enter any number from 1 to 50 players</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="message">💬 Optional Message:</label>
+                    <textarea id="message" name="message" placeholder="Any additional info for players (e.g., 'Bring water and sunscreen!')"></textarea>
+                </div>
+                
+                <button type="submit">Create Game</button>
+            </form>
+        </div>
         
-        <div id="shareLink" style="display: none;">
-            <h3>Your Game has been Created!</h3>
+        <div id="shareLink" class="share-section" style="display: none;">
+            <h3 class="share-title">🎉 Your Game has been Created!</h3>
             
             <div class="link-group">
-                <h4>Player Registration Link</h4>
-                <p>Share this link with players to let them sign up:</p>
+                <h4>📤 Share with Players</h4>
+                <p>Copy this complete message and send it to your players (text, email, social media):</p>
                 <div class="link-container">
                     <input type="text" id="gameLink" readonly>
-                    <button id="copyLink" class="copy-btn">Copy</button>
+                    <button id="copyLink" class="copy-btn">Copy Message</button>
                 </div>
+                <p class="save-suggestion">This copies a complete invitation message with all game details and the registration link.</p>
             </div>
             
-            <div class="link-group">
-                <h4>Host Management Link</h4>
-                <p><strong>⚠️ Important:</strong> Save this link to manage your game. Anyone with this link can modify game details.</p>
-                <div class="link-container">
-                    <input type="text" id="hostLink" readonly>
-                    <button id="copyHostLink" class="copy-btn">Copy</button>
-                </div>
-                <p class="save-suggestion">Bookmark this link or save it somewhere safe! You can also text yourself "1" to get this link again.</p>
+            <div class="management-reminder">
+                <h4>📱 To Manage Your Game</h4>
+                <p>Reply <strong>"1"</strong> to the confirmation text you received to get your management link.</p>
+                <p><small>You can edit players, send announcements, and cancel the game with that link.</small></p>
             </div>
         </div>
     </div>
@@ -307,9 +399,8 @@
             const gameForm = document.getElementById('gameForm');
             gameForm.addEventListener('submit', createGame);
             
-            // Set up copy buttons
+            // Set up copy button
             document.getElementById('copyLink').addEventListener('click', () => copyToClipboard('gameLink'));
-            document.getElementById('copyHostLink').addEventListener('click', () => copyToClipboard('hostLink'));
             
             // Set default date to tomorrow
             const tomorrow = new Date();
@@ -369,8 +460,8 @@
                 });
                 localStorage.setItem('myGames', JSON.stringify(myGames));
                 
-                // Show game links
-                showGameLinks(data.gameId, data.hostToken);
+                // Show game links (just the player link now)
+                showGameLinks(data.gameId);
                 
                 // Clear form
                 document.getElementById('gameForm').reset();
@@ -384,7 +475,7 @@
                 if (data.hostSms && data.hostSms.success) {
                     showStatus('Game created successfully! Check your phone for confirmation. Reply "1" to get your management link.', 'success');
                 } else if (data.hostSms && !data.hostSms.success) {
-                    showStatus('Game created successfully! However, we couldn\'t send the confirmation text. Please save your management link below.', 'success');
+                    showStatus('Game created successfully! However, we couldn\'t send the confirmation text.', 'success');
                 } else if (data.hostSms && data.hostSms.dev) {
                     showStatus('Game created successfully! (SMS confirmation disabled in development mode)', 'success');
                 } else {
@@ -397,12 +488,11 @@
             }
         }
 
-        function showGameLinks(gameId, hostToken) {
+        function showGameLinks(gameId) {
             const baseUrl = window.location.origin;
             
-            // Set the links
+            // Set only the player registration link
             document.getElementById('gameLink').value = `${baseUrl}/game.html?id=${gameId}`;
-            document.getElementById('hostLink').value = `${baseUrl}/manage.html?id=${gameId}&token=${hostToken}`;
             
             // Show the share link section
             document.getElementById('shareLink').style.display = 'block';
@@ -412,31 +502,115 @@
         }
 
         function copyToClipboard(elementId) {
-            const element = document.getElementById(elementId);
-            element.select();
-            element.setSelectionRange(0, 99999); // For mobile devices
+            // Get the current game data from the form or stored data
+            const gameData = getCurrentGameData();
+            const gameLink = document.getElementById(elementId).value;
+            
+            // Create a complete message with the link and instructions
+            const message = `🏓 Join our pickleball game!
+
+📍 Location: ${gameData.location}
+📅 Date: ${gameData.formattedDate}
+⏰ Time: ${gameData.formattedTime}
+⏱️ Duration: ${gameData.duration} minutes
+👥 Spots: ${gameData.totalPlayers} spots${gameData.message ? '\n💬 ' + gameData.message : ''}
+
+Click this link to sign up:
+${gameLink}
+
+You'll get text confirmations and can easily cancel by replying "9" to any message. See you on the court! 🏓`;
+            
+            try {
+                // Copy the complete message to clipboard
+                navigator.clipboard.writeText(message).then(() => {
+                    // Show feedback
+                    const button = document.getElementById('copyLink');
+                    const originalText = button.textContent;
+                    button.textContent = 'Message Copied!';
+                    button.style.backgroundColor = '#4CAF50';
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.backgroundColor = '#2196F3';
+                    }, 3000);
+                }).catch(() => {
+                    // Fallback for older browsers
+                    fallbackCopy(message);
+                });
+                
+            } catch (err) {
+                // Fallback for older browsers
+                fallbackCopy(message);
+            }
+        }
+
+        function fallbackCopy(text) {
+            // Create a temporary textarea for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
             
             try {
                 document.execCommand('copy');
                 
-                // Show feedback
-                const button = elementId === 'gameLink' ? 
-                    document.getElementById('copyLink') : 
-                    document.getElementById('copyHostLink');
-                
+                const button = document.getElementById('copyLink');
                 const originalText = button.textContent;
-                button.textContent = 'Copied!';
+                button.textContent = 'Message Copied!';
                 button.style.backgroundColor = '#4CAF50';
                 
                 setTimeout(() => {
                     button.textContent = originalText;
                     button.style.backgroundColor = '#2196F3';
-                }, 2000);
+                }, 3000);
                 
             } catch (err) {
                 console.error('Failed to copy text: ', err);
                 showStatus('Failed to copy to clipboard', 'error');
             }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function getCurrentGameData() {
+            // Get the most recently created game from localStorage
+            const myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+            if (myGames.length === 0) {
+                return {
+                    location: 'Game Location',
+                    formattedDate: 'Game Date',
+                    formattedTime: 'Game Time',
+                    duration: '90',
+                    totalPlayers: '4',
+                    message: ''
+                };
+            }
+            
+            // Get the most recent game
+            const latestGame = myGames[myGames.length - 1];
+            
+            // Format the date and time nicely
+            const gameDate = new Date(latestGame.date);
+            const formattedDate = gameDate.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            const [hours, minutes] = latestGame.time.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const hour12 = hour % 12 || 12;
+            const formattedTime = `${hour12}:${minutes} ${ampm}`;
+            
+            return {
+                location: latestGame.location,
+                formattedDate: formattedDate,
+                formattedTime: formattedTime,
+                duration: latestGame.duration,
+                totalPlayers: latestGame.totalPlayers,
+                message: latestGame.message || ''
+            };
         }
 
         function showStatus(message, type) {

@@ -128,7 +128,7 @@ app.post('/api/games', async (req, res) => {
       };
       
       // Message without URL - they can reply "1" to get the link
-      const hostMessage = `Your pickleball game at ${gameData.location} on ${gameDate} at ${gameTime} has been created! Game ID: ${gameId}. Reply "1" to get your management link.`;
+      const hostMessage = `Your pickleball game at ${gameData.location} on ${gameDate} at ${gameTime} has been created! Reply "1" to get your management link.`;
       
       const formattedPhone = formatPhoneNumber(hostPhone);
       smsResult = await sendSMS(formattedPhone, hostMessage, gameId);

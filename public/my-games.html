@@ -16,131 +16,276 @@
             max-width: 800px;
             margin: 0 auto;
             background: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-        h1 {
+        
+        /* Header styling */
+        .page-header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 25px;
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
             text-align: center;
+        }
+        
+        /* Content section */
+        .content-section {
+            padding: 30px;
+        }
+        
+        .section-title {
             color: #4CAF50;
-            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 0 25px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4CAF50;
+            display: inline-block;
         }
-        .section {
-            margin-bottom: 30px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
+        
+        /* Game cards */
         .game-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .game-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            border-color: #4CAF50;
+        }
+        
+        .game-info {
+            flex: 1;
+        }
+        
+        .game-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: #f9f9f9;
+            align-items: flex-start;
+            margin-bottom: 15px;
         }
-        .game-info {
-            flex-grow: 1;
-        }
-        .game-info h3 {
-            margin: 0 0 5px 0;
-            color: #333;
-        }
-        .game-info p {
+        
+        .game-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
             margin: 0;
-            color: #666;
-            font-size: 14px;
-        }
-        .game-actions {
             display: flex;
+            align-items: center;
             gap: 10px;
         }
-        .game-actions a {
-            padding: 8px 12px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 14px;
-            color: white;
-            cursor: pointer;
-        }
-        .btn-manage {
-            background-color: #4CAF50;
-        }
-        .btn-manage:hover {
-            background-color: #45a049;
-        }
-        .btn-view {
-            background-color: #2196F3;
-        }
-        .btn-view:hover {
-            background-color: #0b7dda;
-        }
-        .btn-delete {
-            background-color: #f44336;
-        }
-        .btn-delete:hover {
-            background-color: #d32f2f;
-        }
-        .no-games {
-            text-align: center;
-            color: #666;
-            font-style: italic;
-            padding: 40px 20px;
-        }
-        .create-game-btn {
-            display: inline-block;
-            background-color: #4CAF50;
-            color: white;
-            padding: 12px 20px;
-            text-decoration: none;
-            border-radius: 4px;
-            margin-top: 15px;
-        }
-        .create-game-btn:hover {
-            background-color: #45a049;
-        }
-        .status {
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-            display: none;
-        }
-        .success {
-            background-color: #dff0d8;
-            border: 1px solid #d6e9c6;
-            color: #3c763d;
-        }
-        .error {
-            background-color: #f2dede;
-            border: 1px solid #ebccd1;
-            color: #a94442;
-        }
-        .info {
-            background-color: #d9edf7;
-            border: 1px solid #bce8f1;
-            color: #31708f;
-        }
+        
         .game-status {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 12px;
+            padding: 6px 12px;
+            border-radius: 20px;
             font-size: 12px;
             font-weight: bold;
-            margin-left: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+        
         .status-active {
-            background-color: #d4edda;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border: 2px solid #28a745;
+        }
+        
+        .status-cancelled {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border: 2px solid #dc3545;
+        }
+        
+        .status-completed {
+            background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
+            color: #383d41;
+            border: 2px solid #6c757d;
+        }
+        
+        .game-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .game-detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 4px 0;
+        }
+        
+        .game-detail-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .game-detail-label {
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .game-detail-value {
+            color: #212529;
+            font-weight: 500;
+        }
+        
+        .game-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .game-actions a,
+        .game-actions button {
+            padding: 10px 16px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .btn-manage {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn-manage:hover {
+            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-view {
+            background: linear-gradient(135deg, #2196F3 0%, #1976d2 100%);
+            color: white;
+            box-shadow: 0 2px 6px rgba(33, 150, 243, 0.3);
+        }
+        
+        .btn-view:hover {
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.4);
+        }
+        
+        .btn-delete {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            color: white;
+            box-shadow: 0 2px 6px rgba(244, 67, 54, 0.3);
+        }
+        
+        .btn-delete:hover {
+            background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(244, 67, 54, 0.4);
+        }
+        
+        /* No games state */
+        .no-games {
+            text-align: center;
+            padding: 60px 40px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .no-games-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        .no-games h3 {
+            color: #6c757d;
+            margin: 0 0 15px 0;
+            font-size: 24px;
+        }
+        
+        .no-games p {
+            color: #868e96;
+            margin: 0 0 25px 0;
+            font-size: 16px;
+        }
+        
+        .create-game-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .create-game-btn:hover {
+            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
+        }
+        
+        /* Status messages */
+        .status {
+            margin: 20px 30px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 2px solid #28a745;
             color: #155724;
         }
-        .status-cancelled {
-            background-color: #f8d7da;
+        
+        .error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border: 2px solid #dc3545;
             color: #721c24;
         }
-        .status-completed {
-            background-color: #e2e3e5;
-            color: #383d41;
+        
+        .info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            border: 2px solid #17a2b8;
+            color: #0c5460;
+        }
+        
+        /* Footer note */
+        .footer-note {
+            text-align: center;
+            padding: 20px 30px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-style: italic;
+            font-size: 14px;
         }
 
         @media (max-width: 768px) {
@@ -150,35 +295,60 @@
             }
             
             .container {
-                padding: 15px;
                 border-radius: 0;
-                max-width: 100%;
                 box-shadow: none;
-                margin: 0;
+            }
+            
+            .page-header {
+                padding: 20px 15px;
+                font-size: 24px;
+            }
+            
+            .content-section {
+                padding: 20px 15px;
+            }
+            
+            .section-title {
+                font-size: 20px;
             }
             
             .game-item {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            
+            .game-header {
                 flex-direction: column;
                 align-items: flex-start;
-                padding: 12px;
+                gap: 10px;
             }
             
             .game-actions {
-                margin-top: 10px;
-                width: 100%;
-                justify-content: space-between;
+                flex-direction: column;
+                gap: 8px;
             }
             
-            .game-actions a {
-                flex: 1;
-                text-align: center;
-                padding: 10px 8px;
-                font-size: 12px;
+            .game-actions a,
+            .game-actions button {
+                padding: 12px 16px;
+                font-size: 14px;
             }
             
-            h1 {
-                font-size: 24px;
-                margin-bottom: 20px;
+            .game-detail-row {
+                flex-direction: column;
+                gap: 4px;
+            }
+            
+            .no-games {
+                padding: 40px 20px;
+            }
+            
+            .no-games-icon {
+                font-size: 48px;
+            }
+            
+            .footer-note {
+                padding: 15px 20px;
             }
         }
     </style>
@@ -187,22 +357,26 @@
 </head>
 <body>
     <div class="container">
-        <h1>My Games</h1>
+        <h1 class="page-header">🏓 My Games</h1>
         
-        <div id="status" class="status"></div>
+        <div id="status" class="status" style="display: none;"></div>
         
-        <div class="section">
+        <div class="content-section">
+            <h2 class="section-title">📋 Your Created Games</h2>
+            
             <div id="gamesList">
                 <div class="no-games">
-                    <p>No games found. Games you create will appear here.</p>
+                    <div class="no-games-icon">🏓</div>
+                    <h3>No Games Yet</h3>
+                    <p>Games you create will appear here for easy management.</p>
                     <a href="/" class="create-game-btn">Create Your First Game</a>
                 </div>
             </div>
         </div>
         
-        <p style="text-align: center; color: #666; font-size: 14px; margin-top: 20px; font-style: italic;">
-            This shows games you've created on this device and browser. Games created on other devices won't appear here.
-        </p>
+        <div class="footer-note">
+            💡 This shows games you've created on this device and browser. Games created on other devices won't appear here.
+        </div>
     </div>
 
     <script>
@@ -219,7 +393,9 @@
             if (games.length === 0) {
                 gamesList.innerHTML = `
                     <div class="no-games">
-                        <p>No games found. Games you create will appear here.</p>
+                        <div class="no-games-icon">🏓</div>
+                        <h3>No Games Yet</h3>
+                        <p>Games you create will appear here for easy management.</p>
                         <a href="/" class="create-game-btn">Create Your First Game</a>
                     </div>
                 `;
@@ -236,13 +412,16 @@
                 const now = new Date();
                 let status = 'active';
                 let statusText = 'Active';
+                let statusIcon = '🟢';
                 
                 if (game.cancelled) {
                     status = 'cancelled';
                     statusText = 'Cancelled';
+                    statusIcon = '🔴';
                 } else if (gameDate < now) {
                     status = 'completed';
                     statusText = 'Completed';
+                    statusIcon = '✅';
                 }
                 
                 const formattedDate = gameDate.toLocaleDateString('en-US', {
@@ -256,22 +435,46 @@
                 
                 gamesHTML += `
                     <div class="game-item">
-                        <div class="game-info">
-                            <h3>
-                                ${game.location}
-                                <span class="game-status status-${status}">${statusText}</span>
+                        <div class="game-header">
+                            <h3 class="game-title">
+                                📍 ${game.location}
                             </h3>
-                            <p>
-                                <strong>Date:</strong> ${formattedDate} at ${formattedTime}<br>
-                                <strong>Players:</strong> ${game.totalPlayers} spots<br>
-                                <strong>Duration:</strong> ${game.duration} minutes
-                                ${game.message ? '<br><strong>Message:</strong> ' + game.message : ''}
-                            </p>
+                            <span class="game-status status-${status}">
+                                ${statusIcon} ${statusText}
+                            </span>
                         </div>
+                        
+                        <div class="game-details">
+                            <div class="game-detail-row">
+                                <span class="game-detail-label">📅 Date & Time:</span>
+                                <span class="game-detail-value">${formattedDate} at ${formattedTime}</span>
+                            </div>
+                            <div class="game-detail-row">
+                                <span class="game-detail-label">👥 Players:</span>
+                                <span class="game-detail-value">${game.totalPlayers} spots</span>
+                            </div>
+                            <div class="game-detail-row">
+                                <span class="game-detail-label">⏱️ Duration:</span>
+                                <span class="game-detail-value">${game.duration} minutes</span>
+                            </div>
+                            ${game.message ? `
+                                <div class="game-detail-row">
+                                    <span class="game-detail-label">💬 Message:</span>
+                                    <span class="game-detail-value">${game.message}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
                         <div class="game-actions">
-                            <a href="/manage.html?id=${game.id}&token=${game.hostToken}" class="btn-manage">Manage</a>
-                            <a href="/game.html?id=${game.id}" class="btn-view">View</a>
-                            <a href="#" onclick="deleteGame('${game.id}')" class="btn-delete">Delete</a>
+                            <a href="/manage.html?id=${game.id}&token=${game.hostToken}" class="btn-manage">
+                                ⚙️ Manage
+                            </a>
+                            <a href="/game.html?id=${game.id}" class="btn-view">
+                                👀 View
+                            </a>
+                            <button onclick="deleteGame('${game.id}')" class="btn-delete">
+                                🗑️ Delete
+                            </button>
                         </div>
                     </div>
                 `;
@@ -296,11 +499,16 @@
             
             // Remove from localStorage
             let games = JSON.parse(localStorage.getItem('myGames') || '[]');
+            const gameToDelete = games.find(game => game.id === gameId);
             games = games.filter(game => game.id !== gameId);
             localStorage.setItem('myGames', JSON.stringify(games));
             
             // Show success message
-            showStatus('Game deleted successfully!', 'success');
+            if (gameToDelete) {
+                showStatus(`Game "${gameToDelete.location}" deleted successfully!`, 'success');
+            } else {
+                showStatus('Game deleted successfully!', 'success');
+            }
             
             // Reload the games list
             setTimeout(() => {

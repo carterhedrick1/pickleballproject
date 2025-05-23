@@ -16,186 +16,395 @@
             max-width: 600px;
             margin: 0 auto;
             background: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-        h1 {
+        
+        /* Section styling */
+        .section {
+            padding: 25px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px 25px;
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
             text-align: center;
-            color: #4CAF50;
         }
-        .form-group {
+        
+        .section-title {
+            color: #4CAF50;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #4CAF50;
+            display: inline-block;
+        }
+        
+        /* Game details styling */
+        .game-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
             margin-bottom: 15px;
         }
+        
+        .game-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .game-detail:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .game-detail-label {
+            font-weight: bold;
+            color: #495057;
+            min-width: 80px;
+        }
+        
+        .game-detail-value {
+            color: #212529;
+            text-align: right;
+            flex: 1;
+        }
+        
+        /* Players section */
+        .players-section {
+            background-color: #e8f5e8;
+        }
+        
+        .player-list {
+            background-color: white;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .player-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .player-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .player-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .spots-available {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 12px 15px;
+            border-radius: 25px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .spots-full {
+            background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%);
+            color: white;
+            padding: 12px 15px;
+            border-radius: 25px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .waitlist-info {
+            background-color: rgba(255,255,255,0.9);
+            border: 2px solid #fd7e14;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .waitlist-info h4 {
+            color: #fd7e14;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        
+        .waitlist-info p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        /* Form styling */
+        .signup-section {
+            background-color: #fff3cd;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
         label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
+            color: #495057;
         }
+        
         input {
             width: 100%;
-            padding: 8px;
+            padding: 12px;
             box-sizing: border-box;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px; /* Add this line */
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+            border: 2px solid #ddd;
+            border-radius: 6px;
             font-size: 16px;
-            margin-right: 10px;
+            transition: border-color 0.3s;
         }
+        
+        input:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
         button:hover {
-            background-color: #45a049;
+            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
         }
-        .player-list {
-            margin: 20px 0;
+        
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
         }
+        
+        /* Status messages */
         .error {
-            background-color: #f2dede;
-            border: 1px solid #ebccd1;
-            color: #a94442;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
             padding: 15px;
             margin-bottom: 20px;
-            border-radius: 4px;
+            border-radius: 6px;
         }
+        
         .success {
-            background-color: #dff0d8;
-            border: 1px solid #d6e9c6;
-            color: #3c763d;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
             padding: 15px;
             margin-bottom: 20px;
-            border-radius: 4px;
+            border-radius: 6px;
         }
+        
         .info {
-            background-color: #d9edf7;
-            border: 1px solid #bce8f1;
-            color: #31708f;
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
             padding: 15px;
             margin-bottom: 20px;
-            border-radius: 4px;
+            border-radius: 6px;
         }
-        .button-group {
+        
+        /* Player actions section */
+        .player-actions-section {
+            background-color: #e3f2fd;
+        }
+        
+        .action-form {
+            background-color: white;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
             margin-top: 15px;
         }
-        .danger {
-            background-color: #d9534f;
+        
+        .action-buttons button {
+            flex: 1;
         }
-        .danger:hover {
-            background-color: #c9302c;
+        
+        .btn-secondary {
+            background-color: #6c757d;
         }
-        .player-actions {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        
+        .btn-secondary:hover {
+            background-color: #5a6268;
         }
-
+        
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        
+        /* Back link */
+        .back-link {
+            text-align: center;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        
+        .back-link a {
+            color: #4CAF50;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Mobile responsiveness */
         @media (max-width: 768px) {
-    /* Body and main container */
-    body {
-        padding: 0;
-        margin: 0;
-    }
-    
-    .container {
-        padding: 10px;
-        border-radius: 0;
-        max-width: 100%;
-        box-shadow: none;
-        margin: 0;
-    }
-    
-    /* Headings */
-    h1 {
-        margin-top: 10px;
-        margin-bottom: 15px;
-        font-size: 24px;
-    }
-    
-    h2, h3 {
-        font-size: 20px;
-        margin-bottom: 12px;
-    }
-    
-    /* Form elements */
-    .form-group {
-        margin-bottom: 10px;
-    }
-    
-    input {
-        padding: 10px;
-        font-size: 16px;
-    }
-    
-    button {
-        width: 100%;
-        padding: 12px 15px;
-        margin-right: 0;
-        margin-bottom: 8px;
-    }
-    
-    /* Player sections */
-    #gameDetails, #playerList, #signupForm, #confirmation, #waitlist {
-        padding: 10px;
-        margin-bottom: 10px;
-    }
-    
-    /* Error messages */
-    .error, .success, .info {
-        padding: 10px;
-        margin-bottom: 10px;
-    }
-    
-    /* Player lists */
-    .player-list {
-        margin: 10px 0;
-    }
-    
-    /* Copy button should not be full width */
-    .link-container {
-        display: flex;
-    }
-    
-    .link-container button {
-        width: auto;
-    }
-}
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            
+            .container {
+                border-radius: 0;
+                box-shadow: none;
+            }
+            
+            .section {
+                padding: 20px 15px;
+            }
+            
+            .section-header {
+                padding: 15px;
+                font-size: 20px;
+            }
+            
+            .game-detail {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .game-detail-value {
+                text-align: left;
+                margin-top: 4px;
+                font-weight: bold;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
     </style>
     <link rel="stylesheet" href="/css/header.css">
     <link rel="stylesheet" href="/css/footer.css">
 </head>
 <body>
     <div class="container">
-        <h1>Pickleball Scheduler</h1>
+        <h1 class="section-header">Pickleball Game</h1>
         
         <div id="status" style="display: none;"></div>
         
-        <div id="gameDetails">
-            <h2>Game Details</h2>
+        <!-- Game Details Section -->
+        <div id="gameDetails" class="section">
+            <h2 class="section-title">📋 Game Details</h2>
             <div id="loading">Loading game details...</div>
             <div id="details" style="display: none;">
-                <p><strong>Location:</strong> <span id="location"></span></p>
-                <p><strong>Date:</strong> <span id="date"></span></p>
-                <p><strong>Time:</strong> <span id="time"></span></p>
-                <p><strong>Duration:</strong> <span id="duration"></span> minutes</p>
-                <p><strong>Message:</strong> <span id="message"></span></p>
+                <div class="game-info">
+                    <div class="game-detail">
+                        <span class="game-detail-label">📍 Location:</span>
+                        <span class="game-detail-value" id="location"></span>
+                    </div>
+                    <div class="game-detail">
+                        <span class="game-detail-label">📅 Date:</span>
+                        <span class="game-detail-value" id="date"></span>
+                    </div>
+                    <div class="game-detail">
+                        <span class="game-detail-label">⏰ Time:</span>
+                        <span class="game-detail-value" id="time"></span>
+                    </div>
+                    <div class="game-detail">
+                        <span class="game-detail-label">⏱️ Duration:</span>
+                        <span class="game-detail-value"><span id="duration"></span> minutes</span>
+                    </div>
+                    <div class="game-detail" id="messageDetail" style="display: none;">
+                        <span class="game-detail-label">💬 Message:</span>
+                        <span class="game-detail-value" id="message"></span>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <div id="playerList" style="display: none;">
-            <h3>Players</h3>
-            <ul id="players"></ul>
-            <p><strong>Spots Available:</strong> <span id="spotsAvailable"></span></p>
+        <!-- Players Section -->
+        <div id="playerList" class="section players-section" style="display: none;">
+            <h2 class="section-title">👥 Players</h2>
+            
+            <div id="spotsAvailableContainer">
+                <div id="spotsAvailableBar" class="spots-available">
+                    <span id="spotsAvailable"></span> spots available
+                </div>
+                
+                <div id="spotsFullContainer" style="display: none;">
+                    <div class="spots-full">
+                        Game is Full
+                    </div>
+                    
+                    <div class="waitlist-info">
+                        <h4>🕐 Join the Waitlist!</h4>
+                        <p>Don't worry - you can still sign up to be on the waitlist.</p>
+                        <p>If someone cancels, you'll automatically get their spot and receive a text message.</p>
+                        <p><strong>Currently <span id="waitlistCount">0</span> people waiting</strong></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="player-list">
+                <ul id="players"></ul>
+            </div>
         </div>
         
-        <div id="signupForm" style="display: none;">
-            <h3>Join This Game</h3>
+        <!-- Sign Up Section -->
+        <div id="signupForm" class="section signup-section" style="display: none;">
+            <h2 class="section-title" id="joinSectionTitle">🏓 Join This Game</h2>
             <form id="joinForm">
                 <div class="form-group">
                     <label for="playerName">Your Name:</label>
@@ -207,42 +416,13 @@
                     <input type="tel" id="phoneNumber" name="phoneNumber" required>
                 </div>
                 
-                <button type="submit" id="joinButton">Count Me In!</button>
+                <button type="submit" id="joinButton">COUNT ME IN!</button>
             </form>
-        </div>
-        
-        <div id="playerActions" class="player-actions" style="display: none;">
-            <h3>Your Options</h3>
-            <p>If you've already signed up for this game and want to manage your registration, enter your phone number below:</p>
             
-            <div class="form-group">
-                <label for="lookupPhone">Phone Number:</label>
-                <input type="tel" id="lookupPhone" name="lookupPhone" required>
-            </div>
-            
-            <button id="lookupRegistration">Find My Registration</button>
-            
-            <div id="registrationDetails" style="display: none; margin-top: 15px;">
-                <div id="confirmedPlayer" style="display: none;">
-                    <p>You are registered as: <strong id="playerNameDisplay"></strong></p>
-                    <div class="button-group">
-                        <button id="addToCalendarBtn">Add to Calendar</button>
-                        <button id="cancelSpotBtn" class="danger">Cancel My Spot</button>
-                    </div>
-                </div>
-                
-                <div id="waitlistedPlayer" style="display: none;">
-                    <p>You are on the waitlist at position: <strong id="waitlistPositionDisplay"></strong></p>
-                    <button id="leaveWaitlistBtn" class="danger">Leave Waitlist</button>
-                </div>
-                
-                <div id="notRegistered" style="display: none;">
-                    <p>You are not currently registered for this game.</p>
-                </div>
+            <div style="margin-top: 20px; padding: 15px; background-color: rgba(255,255,255,0.8); border-radius: 6px; font-size: 14px; color: #666;">
+                💡 <strong>Need to cancel later?</strong> Just reply "9" to any text message you receive about this game.
             </div>
         </div>
-        
-        <p><a href="/">Back to Homepage</a></p>
     </div>
 
     <script>
@@ -281,16 +461,18 @@
                     document.getElementById('date').textContent = formatDate(gameData.date);
                     document.getElementById('time').textContent = formatTime(gameData.time);
                     document.getElementById('duration').textContent = gameData.duration;
-                    document.getElementById('message').textContent = gameData.message || "None";
+                    
+                    // Show message only if it exists
+                    if (gameData.message && gameData.message.trim()) {
+                        document.getElementById('message').textContent = gameData.message;
+                        document.getElementById('messageDetail').style.display = 'flex';
+                    }
                     
                     // Update player list
                     updatePlayerList();
                     
                     // Show signup form for new players
                     document.getElementById('signupForm').style.display = 'block';
-                    
-                    // Show player actions section for returning players
-                    document.getElementById('playerActions').style.display = 'block';
                     
                     // Hide the status message since game loaded successfully
                     statusDiv.style.display = 'none';
@@ -306,6 +488,11 @@
             function updatePlayerList() {
                 const playersList = document.getElementById('players');
                 const spotsAvailable = document.getElementById('spotsAvailable');
+                const spotsAvailableBar = document.getElementById('spotsAvailableBar');
+                const spotsFullContainer = document.getElementById('spotsFullContainer');
+                const waitlistCount = document.getElementById('waitlistCount');
+                const joinSectionTitle = document.getElementById('joinSectionTitle');
+                const joinButton = document.getElementById('joinButton');
                 
                 if (!playersList || !spotsAvailable) {
                     return;
@@ -334,15 +521,28 @@
                 
                 // Update spots available
                 const availableSpots = parseInt(gameData.totalPlayers) - gameData.players.length;
-                spotsAvailable.textContent = availableSpots;
+                const waitlistLength = gameData.waitlist ? gameData.waitlist.length : 0;
                 
-                // If game is full, hide signup form only if user hasn't signed up yet
+                if (availableSpots > 0) {
+                    // Show spots available
+                    spotsAvailable.textContent = availableSpots;
+                    spotsAvailableBar.style.display = 'block';
+                    spotsFullContainer.style.display = 'none';
+                    joinSectionTitle.textContent = '🏓 Join This Game';
+                    joinButton.textContent = 'COUNT ME IN!';
+                } else {
+                    // Show game is full with waitlist info
+                    spotsAvailableBar.style.display = 'none';
+                    spotsFullContainer.style.display = 'block';
+                    waitlistCount.textContent = waitlistLength;
+                    joinSectionTitle.textContent = '🕐 Join the Waitlist';
+                    joinButton.textContent = 'JOIN WAITLIST';
+                }
+                
+                // Always show signup form since they can join waitlist when full
                 const signupForm = document.getElementById('signupForm');
-                const playerId = localStorage.getItem(`player_${gameId}`);
-                
-                // Check if user has already signed up before hiding the form
-                if (signupForm && availableSpots <= 0 && !hasUserSignedUp(playerId)) {
-                    signupForm.style.display = 'none';
+                if (signupForm) {
+                    signupForm.style.display = 'block';
                 }
             }
             
@@ -375,12 +575,12 @@
                     })
                     .then(data => {
                         if (data.status === 'confirmed') {
-                            showStatus(`You're in! You are Player ${data.position} of ${data.totalPlayers}.`, 'success');
+                            showStatus(`You're in! You are Player ${data.position} of ${data.totalPlayers}. Check your phone for confirmation.`, 'success');
                             // Clear the form
                             document.getElementById('playerName').value = '';
                             document.getElementById('phoneNumber').value = '';
                         } else if (data.status === 'waitlist') {
-                            showStatus(`Game is full. You've been added to the waitlist at position #${data.position}.`, 'info');
+                            showStatus(`Game is full. You've been added to the waitlist at position #${data.position}. Check your phone for confirmation.`, 'info');
                             // Clear the form
                             document.getElementById('playerName').value = '';
                             document.getElementById('phoneNumber').value = '';
@@ -401,155 +601,6 @@
                         console.error('Error joining game:', error);
                         showStatus('Failed to join game. Please try again.', 'error');
                     });
-                });
-                
-                // Set up player lookup
-                document.getElementById('lookupRegistration').addEventListener('click', () => {
-                    const phoneNumber = document.getElementById('lookupPhone').value;
-                    if (!phoneNumber) {
-                        showStatus('Please enter your phone number to find your registration.', 'error');
-                        return;
-                    }
-                    
-                    // Look for the player in the game data
-                    let found = false;
-                    
-                    // Check confirmed players
-                    for (let i = 0; i < gameData.players.length; i++) {
-                        if (gameData.players[i].phone === phoneNumber) {
-                            found = true;
-                            document.getElementById('registrationDetails').style.display = 'block';
-                            document.getElementById('confirmedPlayer').style.display = 'block';
-                            document.getElementById('waitlistedPlayer').style.display = 'none';
-                            document.getElementById('notRegistered').style.display = 'none';
-                            document.getElementById('playerNameDisplay').textContent = gameData.players[i].name;
-                            
-                            // Store player ID for cancellation
-                            document.getElementById('addToCalendarBtn').setAttribute('data-player-id', gameData.players[i].id);
-                            document.getElementById('cancelSpotBtn').setAttribute('data-player-id', gameData.players[i].id);
-                            break;
-                        }
-                    }
-                    
-                    // Check waitlist if not found in confirmed players
-                    if (!found) {
-                        for (let i = 0; i < gameData.waitlist.length; i++) {
-                            if (gameData.waitlist[i].phone === phoneNumber) {
-                                found = true;
-                                document.getElementById('registrationDetails').style.display = 'block';
-                                document.getElementById('confirmedPlayer').style.display = 'none';
-                                document.getElementById('waitlistedPlayer').style.display = 'block';
-                                document.getElementById('notRegistered').style.display = 'none';
-                                document.getElementById('waitlistPositionDisplay').textContent = `#${i + 1}`;
-                                
-                                // Store player ID for cancellation
-                                document.getElementById('leaveWaitlistBtn').setAttribute('data-player-id', gameData.waitlist[i].id);
-                                break;
-                            }
-                        }
-                    }
-                    
-                    // If not found in either list
-                    if (!found) {
-                        document.getElementById('registrationDetails').style.display = 'block';
-                        document.getElementById('confirmedPlayer').style.display = 'none';
-                        document.getElementById('waitlistedPlayer').style.display = 'none';
-                        document.getElementById('notRegistered').style.display = 'block';
-                    }
-                });
-                
-                // Handle Add to Calendar button
-                document.getElementById('addToCalendarBtn').addEventListener('click', () => {
-                    // Format the start and end times for calendar
-                    const startTime = new Date(`${gameData.date}T${gameData.time}`);
-                    const endTime = new Date(startTime.getTime() + parseInt(gameData.duration) * 60000);
-                    
-                    const startStr = formatIcsDate(startTime);
-                    const endStr = formatIcsDate(endTime);
-                    
-                    // Create Google Calendar URL
-                    const googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Pickleball at ${gameData.location}`)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(`Come join us for a game of pickleball! ${gameData.message || ''}`)}&location=${encodeURIComponent(gameData.location)}`;
-                    
-                    // Open Google Calendar in a new tab
-                    window.open(googleCalUrl, '_blank');
-                });
-                
-                // Handle cancellation
-                document.getElementById('cancelSpotBtn').addEventListener('click', async () => {
-                    const playerId = document.getElementById('cancelSpotBtn').getAttribute('data-player-id');
-                    if (!playerId) return;
-                    
-                    try {
-                        showStatus('Processing your cancellation...', 'info');
-                        
-                        const response = await fetch(`/api/games/${gameId}/players/${playerId}`, {
-                            method: 'DELETE'
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error('Failed to cancel spot');
-                        }
-                        
-                        showStatus('Your spot has been canceled.', 'success');
-                        
-                        // Reset the form and hide details
-                        document.getElementById('lookupPhone').value = '';
-                        document.getElementById('registrationDetails').style.display = 'none';
-                        
-                        // Refresh the game data
-                        fetch(`/api/games/${gameId}`)
-                            .then(response => response.json())
-                            .then(updatedData => {
-                                gameData = updatedData;
-                                updatePlayerList();
-                            })
-                            .catch(error => {
-                                console.error('Error refreshing game data:', error);
-                            });
-                        
-                    } catch (error) {
-                        console.error('Error canceling spot:', error);
-                        showStatus('Failed to cancel your spot. Please try again.', 'error');
-                    }
-                });
-                
-                // Handle leaving waitlist
-                document.getElementById('leaveWaitlistBtn').addEventListener('click', async () => {
-                    const playerId = document.getElementById('leaveWaitlistBtn').getAttribute('data-player-id');
-                    if (!playerId) return;
-                    
-                    try {
-                        showStatus('Processing your request...', 'info');
-                        
-                        const response = await fetch(`/api/games/${gameId}/players/${playerId}`, {
-                            method: 'DELETE'
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error('Failed to leave waitlist');
-                        }
-                        
-                        showStatus('You have been removed from the waitlist.', 'success');
-                        
-                        // Reset the form and hide details
-                        document.getElementById('lookupPhone').value = '';
-                        document.getElementById('registrationDetails').style.display = 'none';
-                        
-                        // Refresh the game data
-                        fetch(`/api/games/${gameId}`)
-                            .then(response => response.json())
-                            .then(updatedData => {
-                                gameData = updatedData;
-                                updatePlayerList();
-                            })
-                            .catch(error => {
-                                console.error('Error refreshing game data:', error);
-                            });
-                        
-                    } catch (error) {
-                        console.error('Error leaving waitlist:', error);
-                        showStatus('Failed to leave the waitlist. Please try again.', 'error');
-                    }
                 });
             }
             
@@ -585,6 +636,17 @@
                         statusDiv.style.display = 'none';
                     }, 5000);
                 }
+            }
+
+            function hasUserSignedUp(playerId) {
+                if (!playerId || !gameData) return false;
+                
+                // Check players list
+                const inPlayers = gameData.players.some(p => p.id === playerId);
+                // Check waitlist
+                const inWaitlist = gameData.waitlist.some(p => p.id === playerId);
+                
+                return inPlayers || inWaitlist;
             }
         });
     </script>
