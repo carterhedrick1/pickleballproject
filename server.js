@@ -1,42 +1,51 @@
 const express = require('express');
 const path = require('path');
 require('dotenv').config(); // Load environment variables
-const twilio = require('twilio');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize Twilio client (if credentials are available)
-let twilioClient = null;
-let twilioPhoneNumber = null;
-
-if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-  twilioClient = twilio(
-    process.env.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_AUTH_TOKEN
-  );
-  twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
-}
-
-// Function to send SMS
-async function sendSMS(to, message) {
+// TextBelt SMS function with webhook support
+async function sendSMS(to, message, gameId = null) {
   try {
-    // Check if Twilio is configured
-    if (!twilioClient) {
+    // Check if TextBelt is configured
+    if (!process.env.TEXTBELT_API_KEY) {
       console.log(`[DEV MODE] SMS would be sent to ${to}: ${message}`);
       return { success: true, dev: true };
     }
     
-    // Send actual SMS
-    const result = await twilioClient.messages.create({
-      body: message,
-      from: twilioPhoneNumber,
-      to: to
-    });
+    // Build the request parameters
+    const params = {
+      phone: to,
+      message: message,
+      key: process.env.TEXTBELT_API_KEY
+    };
     
-    console.log(`SMS sent to ${to}, SID: ${result.sid}`);
-    return { success: true, sid: result.sid };
+    // Add webhook URL if we have a game ID (for replies)
+    if (gameId) {
+      params.replyWebhookUrl = `${process.env.BASE_URL || 'https://your-domain.com'}/api/sms/webhook`;
+      params.webhookData = gameId; // Pass game ID to identify which game the reply is for
+    }
+    
+    // Send SMS via TextBelt
+    const response = await fetch('https://textbelt.com/text', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams(params)
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log(`SMS sent to ${to}. TextID: ${result.textId}, Quota remaining: ${result.quotaRemaining}`);
+      return { success: true, textId: result.textId, quotaRemaining: result.quotaRemaining };
+    } else {
+      console.error('TextBelt error:', result.error);
+      return { success: false, error: result.error };
+    }
   } catch (error) {
-    console.error('Error sending SMS:', error);
+    console.error('SMS sending failed:', error);
     return { success: false, error: error.message };
   }
 }
@@ -61,7 +70,6 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
-// Create a new game
 // Create a new game
 app.post('/api/games', (req, res) => {
   try {
@@ -155,10 +163,9 @@ app.post('/api/games/:id/players', async (req, res) => {
       // Send confirmation SMS
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      // In the player signup route, update the confirmation message
-        const message = `You're confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply with '9' to cancel.`;
+      const message = `You're confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 9 to cancel.`;
       
-      smsResult = await sendSMS(formattedPhone, message);
+      smsResult = await sendSMS(formattedPhone, message, gameId);
       
       console.log(`Player ${name} added to game ${gameId} as player ${game.players.length}`);
       res.status(201).json({ 
@@ -173,8 +180,7 @@ app.post('/api/games/:id/players', async (req, res) => {
       game.waitlist.push(playerData);
       
       // Send waitlist SMS
-      // In the player signup route, update the waitlist message
-        const message = `You've been added to the waitlist for Pickleball at ${game.location}. You are #${game.waitlist.length} on the waitlist. We'll notify you if a spot opens up! Reply with '9' to cancel your spot on the waitlist.`;
+      const message = `You've been added to the waitlist for Pickleball at ${game.location}. You are #${game.waitlist.length} on the waitlist. We'll notify you if a spot opens up!`;
       
       smsResult = await sendSMS(formattedPhone, message);
       
@@ -225,9 +231,9 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
         // Send promotion SMS
         const gameDate = formatDateForSMS(game.date);
         const gameTime = formatTimeForSMS(game.time);
-        const message = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}.`;
+        const message = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 9 to cancel.`;
         
-        smsResult = await sendSMS(promotedPlayer.phone, message);
+        smsResult = await sendSMS(promotedPlayer.phone, message, gameId);
       }
       
       res.json({ 
@@ -312,17 +318,15 @@ function formatPhoneNumber(phoneNumber) {
   // Remove any non-numeric characters
   const cleaned = ('' + phoneNumber).replace(/\D/g, '');
   
-  // Ensure it has country code (US)
+  // TextBelt expects 10-digit US numbers without country code
   if (cleaned.length === 10) {
-    return '+1' + cleaned;
-  } else if (cleaned.length > 10 && cleaned.startsWith('1')) {
-    return '+' + cleaned;
-  } else if (cleaned.length > 10) {
-    return '+' + cleaned;
+    return cleaned; // Return as-is for TextBelt
+  } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
+    return cleaned.substring(1); // Remove leading 1
   }
   
-  // Return as is if we can't determine format
-  return phoneNumber;
+  // Return cleaned version for other cases
+  return cleaned;
 }
 
 // Format date for SMS
@@ -340,62 +344,57 @@ function formatTimeForSMS(timeStr) {
   return `${hour12}:${minutes} ${ampm}`;
 }
 
-// Add this route to your server.js file, before the "Start the server" line
-// Handle incoming SMS from Twilio
-app.post('/api/sms/webhook', express.urlencoded({ extended: false }), async (req, res) => {
+// Handle incoming SMS from TextBelt webhook  
+app.post('/api/sms/webhook', express.json(), async (req, res) => {
   try {
-    // Get the incoming message details
-    const from = req.body.From; // Phone number that sent the message
-    const body = req.body.Body.trim(); // Message content
+    // Get the incoming message details from TextBelt
+    const { fromNumber, text, data: gameId } = req.body;
     
-    console.log(`Received SMS from ${from}: "${body}"`);
+    console.log(`Received SMS from ${fromNumber}: "${text}" for game ${gameId}`);
     
     // Check if the message is "9" (cancel code)
-    if (body === '9') {
-      // Find the player in all games
+    if (text.trim() === '9') {
+      // Find the player in the specific game
+      const game = games[gameId];
+      if (!game) {
+        console.log(`Game ${gameId} not found for SMS reply`);
+        return res.json({ success: true }); // Still return success to TextBelt
+      }
+      
       let playerFound = false;
       
-      // Search through all games
-      for (const gameId in games) {
-        const game = games[gameId];
+      // Check confirmed players
+      const playerIndex = game.players.findIndex(p => p.phone === formatPhoneNumber(fromNumber));
+      if (playerIndex > 0 && !game.players[playerIndex].isOrganizer) { // Skip organizer
+        playerFound = true;
+        const player = game.players[playerIndex];
         
-        // Check confirmed players
-        const playerIndex = game.players.findIndex(p => p.phone === from);
-        if (playerIndex > 0) { // Skip organizer (index 0)
-          playerFound = true;
-          const player = game.players[playerIndex];
+        // Remove the player
+        game.players.splice(playerIndex, 1);
+        console.log(`Player ${player.name} cancelled via SMS from game ${gameId}`);
+        
+        // Promote from waitlist if available
+        if (game.waitlist.length > 0) {
+          const promotedPlayer = game.waitlist.shift();
+          game.players.push(promotedPlayer);
           
-          // Remove the player
-          game.players.splice(playerIndex, 1);
-          console.log(`Player ${player.name} cancelled via SMS from game ${gameId}`);
+          // Send promotion notification to promoted player
+          const gameDate = formatDateForSMS(game.date);
+          const gameTime = formatTimeForSMS(game.time);
+          const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! Reply 9 to cancel.`;
           
-          // Promote from waitlist if available
-          let promotedPlayer = null;
-          if (game.waitlist.length > 0) {
-            promotedPlayer = game.waitlist.shift();
-            game.players.push(promotedPlayer);
-            
-            // Send promotion notification to promoted player
-            const gameDate = formatDateForSMS(game.date);
-            const gameTime = formatTimeForSMS(game.time);
-            const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}!`;
-            
-            await sendSMS(promotedPlayer.phone, promotionMessage);
-            console.log(`Player ${promotedPlayer.name} promoted from waitlist for game ${gameId}`);
-          }
-          
-          // Confirm cancellation to the user
-          const responseMessage = `Your pickleball reservation at ${game.location} has been cancelled. Thanks for letting us know!`;
-          
-          // Send SMS response using TwiML
-          const twiml = new twilio.twiml.MessagingResponse();
-          twiml.message(responseMessage);
-          res.type('text/xml').send(twiml.toString());
-          return;
+          await sendSMS(promotedPlayer.phone, promotionMessage, gameId);
+          console.log(`Player ${promotedPlayer.name} promoted from waitlist for game ${gameId}`);
         }
         
-        // Check waitlist
-        const waitlistIndex = game.waitlist.findIndex(p => p.phone === from);
+        // Send confirmation back to the cancelling user
+        const responseMessage = `Your pickleball reservation at ${game.location} has been cancelled. Thanks for letting us know!`;
+        await sendSMS(fromNumber, responseMessage);
+      }
+      
+      // Check waitlist if not found in confirmed players
+      if (!playerFound) {
+        const waitlistIndex = game.waitlist.findIndex(p => p.phone === formatPhoneNumber(fromNumber));
         if (waitlistIndex >= 0) {
           playerFound = true;
           const player = game.waitlist[waitlistIndex];
@@ -404,35 +403,30 @@ app.post('/api/sms/webhook', express.urlencoded({ extended: false }), async (req
           game.waitlist.splice(waitlistIndex, 1);
           console.log(`Player ${player.name} cancelled from waitlist via SMS for game ${gameId}`);
           
-          // Confirm cancellation
+          // Send confirmation back
           const responseMessage = `You've been removed from the waitlist for pickleball at ${game.location}. Thanks for letting us know!`;
-          
-          // Send SMS response using TwiML
-          const twiml = new twilio.twiml.MessagingResponse();
-          twiml.message(responseMessage);
-          res.type('text/xml').send(twiml.toString());
-          return;
+          await sendSMS(fromNumber, responseMessage);
         }
       }
       
       if (!playerFound) {
-        // If player not found in any game
-        const twiml = new twilio.twiml.MessagingResponse();
-        twiml.message("We couldn't find your registration for any upcoming pickleball games. Please contact the organizer if you need assistance.");
-        res.type('text/xml').send(twiml.toString());
+        // Player not found in this game
+        const responseMessage = `We couldn't find your registration for this pickleball game. Please contact the organizer if you need assistance.`;
+        await sendSMS(fromNumber, responseMessage);
       }
     } else {
       // If message is not "9"
-      const twiml = new twilio.twiml.MessagingResponse();
-      twiml.message("To cancel your pickleball reservation, please reply with just the number 9. For all other inquiries, please contact the organizer.");
-      res.type('text/xml').send(twiml.toString());
+      const responseMessage = `To cancel your pickleball reservation, please reply with just the number 9. For all other inquiries, please contact the organizer.`;
+      await sendSMS(fromNumber, responseMessage);
     }
+    
+    // Always return success to TextBelt
+    res.json({ success: true });
+    
   } catch (error) {
     console.error('Error handling incoming SMS:', error);
-    // Respond with a generic message to avoid errors back to Twilio
-    const twiml = new twilio.twiml.MessagingResponse();
-    twiml.message("Sorry, we encountered an error processing your request. Please try again later or contact the organizer.");
-    res.type('text/xml').send(twiml.toString());
+    // Still return success to avoid TextBelt retries
+    res.json({ success: true });
   }
 });
 
@@ -442,8 +436,6 @@ function verifyHostToken(gameId, token) {
   if (!game) return false;
   return game.hostToken === token;
 }
-
-
 
 // Start the server
 app.listen(PORT, () => {
