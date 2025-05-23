@@ -32,46 +32,46 @@
             border-bottom: none;
         }
         
-.section-header {
-    background: linear-gradient(135deg, #429046dd 0%, #429046dd 100%);
-    color: white;
-    padding: 20px 25px;
-    margin: 0;
-    font-size: 24px;
-    font-weight: bold;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
+        .section-header {
+            background: linear-gradient(135deg, #429046dd 0%, #429046dd 100%);
+            color: white;
+            padding: 20px 25px;
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
 
-.section-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-        radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
-        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
-        radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.4), transparent),
-        radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.2), transparent),
-        radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.3), transparent);
-    background-repeat: repeat;
-    background-size: 200px 100px;
-    animation: sparkle 8s linear infinite;
-}
+        .section-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
+                radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.4), transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.2), transparent),
+                radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.3), transparent);
+            background-repeat: repeat;
+            background-size: 200px 100px;
+            animation: sparkle 8s linear infinite;
+        }
 
-@keyframes sparkle {
-    0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.5;
-        transform: scale(1.1);
-    }
-}
+        @keyframes sparkle {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.1);
+            }
+        }
         
         .section-title {
             color: #4CAF50;
@@ -273,60 +273,130 @@
             margin-bottom: 20px;
             border-radius: 6px;
         }
-        
-        /* Player actions section */
-        .player-actions-section {
-            background-color: #e3f2fd;
-        }
-        
-        .action-form {
-            background-color: white;
-            padding: 20px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        .action-buttons button {
-            flex: 1;
-        }
-        
-        .btn-secondary {
-            background-color: #6c757d;
-        }
-        
-        .btn-secondary:hover {
-            background-color: #5a6268;
-        }
-        
-        .btn-danger {
-            background-color: #dc3545;
-        }
-        
-        .btn-danger:hover {
-            background-color: #c82333;
-        }
-        
-        /* Back link */
-        .back-link {
+
+        /* Confirmation Page Styling */
+        .confirmation-section {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             text-align: center;
-            padding: 20px;
-            background-color: #f8f9fa;
+            padding: 40px 25px;
         }
-        
-        .back-link a {
-            color: #4CAF50;
-            text-decoration: none;
+
+        .confirmation-section.waitlist {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        }
+
+        .confirmation-section h2 {
+            color: #155724;
+            font-size: 32px;
+            margin: 0 0 20px 0;
             font-weight: bold;
         }
-        
-        .back-link a:hover {
-            text-decoration: underline;
+
+        .confirmation-section.waitlist h2 {
+            color: #856404;
+        }
+
+        .confirmation-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .confirmation-message {
+            font-size: 18px;
+            color: #155724;
+            margin-bottom: 30px;
+        }
+
+        .confirmation-section.waitlist .confirmation-message {
+            color: #856404;
+        }
+
+        .confirmation-details {
+            background: rgba(255,255,255,0.8);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid #28a745;
+        }
+
+        .confirmation-section.waitlist .confirmation-details {
+            border: 2px solid #ffc107;
+        }
+
+        .confirmation-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px 0;
+            font-size: 16px;
+        }
+
+        .confirmation-detail:last-child {
+            margin-bottom: 0;
+        }
+
+        .confirmation-detail-label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .confirmation-detail-value {
+            color: #155724;
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .next-steps {
+            background: rgba(255,255,255,0.9);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .next-steps h4 {
+            color: #2c3e50;
+            margin: 0 0 15px 0;
+            text-align: center;
+        }
+
+        .next-steps ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .next-steps li {
+            padding: 8px 0;
+            color: #495057;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .next-steps li:last-child {
+            border-bottom: none;
+        }
+
+        .back-to-game-btn {
+            background: linear-gradient(135deg, #2196F3 0%, #1976d2 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: none;
+            letter-spacing: normal;
+            width: auto;
+            margin-top: 20px;
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+        }
+
+        .back-to-game-btn:hover {
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            box-shadow: 0 6px 12px rgba(33, 150, 243, 0.4);
         }
         
         /* Mobile responsiveness */
@@ -345,12 +415,12 @@
                 padding: 20px 15px;
             }
             
-.section-header {
-    padding: 15px;
-    font-size: 20px;
-    position: relative;
-    overflow: hidden;
-}
+            .section-header {
+                padding: 15px;
+                font-size: 20px;
+                position: relative;
+                overflow: hidden;
+            }
             
             .game-detail {
                 flex-direction: column;
@@ -362,9 +432,27 @@
                 margin-top: 4px;
                 font-weight: bold;
             }
-            
-            .action-buttons {
+
+            .confirmation-section {
+                padding: 30px 15px;
+            }
+
+            .confirmation-section h2 {
+                font-size: 28px;
+            }
+
+            .confirmation-icon {
+                font-size: 50px;
+            }
+
+            .confirmation-detail {
                 flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .confirmation-detail-value {
+                text-align: left;
+                margin-top: 5px;
             }
         }
     </style>
@@ -455,6 +543,44 @@
             <div style="margin-top: 20px; padding: 15px; background-color: rgba(255,255,255,0.8); border-radius: 6px; font-size: 14px; color: #666;">
                 💡 <strong>Need to cancel later?</strong> Just reply "9" to any text message you receive about this game.
             </div>
+        </div>
+
+        <!-- Confirmation Section (Initially Hidden) -->
+        <div id="confirmationSection" class="confirmation-section" style="display: none;">
+            <div class="confirmation-icon">🎉</div>
+            <h2 id="confirmationTitle">You're In!</h2>
+            <div class="confirmation-message" id="confirmationMessage">
+                Great! You've successfully joined the game.
+            </div>
+            
+            <div class="confirmation-details">
+                <div class="confirmation-detail">
+                    <span class="confirmation-detail-label">📍 Location:</span>
+                    <span class="confirmation-detail-value" id="confirmLocation"></span>
+                </div>
+                <div class="confirmation-detail">
+                    <span class="confirmation-detail-label">📅 Date & Time:</span>
+                    <span class="confirmation-detail-value" id="confirmDateTime"></span>
+                </div>
+                <div class="confirmation-detail">
+                    <span class="confirmation-detail-label">👤 Your Status:</span>
+                    <span class="confirmation-detail-value" id="confirmStatus"></span>
+                </div>
+            </div>
+
+            <div class="next-steps">
+                <h4>What's Next?</h4>
+                <ul>
+                    <li>📲 You'll receive a confirmation text message shortly</li>
+                    <li>⏰ We'll send you a reminder before the game</li>
+                    <li>❌ Need to cancel? Just reply "9" to any text message</li>
+                    <li>📧 Game updates will be sent via text</li>
+                </ul>
+            </div>
+
+            <button class="back-to-game-btn" onclick="showGameDetails()">
+                ← Back to Game Details
+            </button>
         </div>
     </div>
 
@@ -578,6 +704,63 @@
                     signupForm.style.display = 'block';
                 }
             }
+
+            function showConfirmation(data) {
+                // Hide other sections
+                document.getElementById('gameDetails').style.display = 'none';
+                document.getElementById('playerList').style.display = 'none';
+                document.getElementById('signupForm').style.display = 'none';
+                
+                // Show confirmation section
+                const confirmationSection = document.getElementById('confirmationSection');
+                confirmationSection.style.display = 'block';
+                
+                // Update confirmation content
+                const confirmTitle = document.getElementById('confirmationTitle');
+                const confirmMessage = document.getElementById('confirmationMessage');
+                const confirmLocation = document.getElementById('confirmLocation');
+                const confirmDateTime = document.getElementById('confirmDateTime');
+                const confirmStatus = document.getElementById('confirmStatus');
+                
+                if (data.status === 'confirmed') {
+                    confirmationSection.classList.remove('waitlist');
+                    confirmTitle.textContent = "You're In!";
+                    confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
+                    confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
+                } else if (data.status === 'waitlist') {
+                    confirmationSection.classList.add('waitlist');
+                    confirmTitle.textContent = "⏳ You're on the Waitlist!";
+                    confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
+                    confirmStatus.textContent = `Waitlist Position #${data.position}`;
+                }
+                
+                confirmLocation.textContent = gameData.location;
+                confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
+                
+                // Scroll to top to show confirmation
+                window.scrollTo(0, 0);
+            }
+
+            window.showGameDetails = function() {
+                // Show game sections again
+                document.getElementById('gameDetails').style.display = 'block';
+                document.getElementById('playerList').style.display = 'block';
+                document.getElementById('signupForm').style.display = 'block';
+                
+                // Hide confirmation section
+                document.getElementById('confirmationSection').style.display = 'none';
+                
+                // Refresh the game data to show updated player list
+                fetch(`/api/games/${gameId}`)
+                    .then(response => response.json())
+                    .then(updatedData => {
+                        gameData = updatedData;
+                        updatePlayerList();
+                    })
+                    .catch(error => {
+                        console.error('Error refreshing game data:', error);
+                    });
+            }
             
             function setupEventHandlers() {
                 // Set up join form submission
@@ -607,24 +790,21 @@
                         return response.json();
                     })
                     .then(data => {
-                        if (data.status === 'confirmed') {
-                            showStatus(`You're in! You are Player ${data.position} of ${data.totalPlayers}. Check your phone for confirmation.`, 'success');
-                            // Clear the form
-                            document.getElementById('playerName').value = '';
-                            document.getElementById('phoneNumber').value = '';
-                        } else if (data.status === 'waitlist') {
-                            showStatus(`Game is full. You've been added to the waitlist at position #${data.position}. Check your phone for confirmation.`, 'info');
-                            // Clear the form
-                            document.getElementById('playerName').value = '';
-                            document.getElementById('phoneNumber').value = '';
-                        }
+                        // Hide status message
+                        statusDiv.style.display = 'none';
                         
-                        // Refresh the game data to update player list
+                        // Show confirmation page
+                        showConfirmation(data);
+                        
+                        // Clear the form
+                        document.getElementById('playerName').value = '';
+                        document.getElementById('phoneNumber').value = '';
+                        
+                        // Update game data in background
                         fetch(`/api/games/${gameId}`)
                             .then(response => response.json())
                             .then(updatedData => {
                                 gameData = updatedData;
-                                updatePlayerList();
                             })
                             .catch(error => {
                                 console.error('Error refreshing game data:', error);
@@ -650,10 +830,6 @@
                 return `${hour12}:${minutes} ${ampm}`;
             }
             
-            function formatIcsDate(date) {
-                return date.toISOString().replace(/-|:|\.\d+/g, '');
-            }
-            
             function showStatus(message, type) {
                 statusDiv.textContent = message;
                 statusDiv.className = type;
@@ -669,17 +845,6 @@
                         statusDiv.style.display = 'none';
                     }, 5000);
                 }
-            }
-
-            function hasUserSignedUp(playerId) {
-                if (!playerId || !gameData) return false;
-                
-                // Check players list
-                const inPlayers = gameData.players.some(p => p.id === playerId);
-                // Check waitlist
-                const inWaitlist = gameData.waitlist.some(p => p.id === playerId);
-                
-                return inPlayers || inWaitlist;
             }
         });
     </script>
