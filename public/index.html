@@ -22,15 +22,68 @@
             overflow: hidden;
         }
         
-        /* Header styling */
+        /* Enhanced Header with Dynamic Sparkle */
         .page-header {
-            background-color: #4CAF50;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa726 100%);
             color: white;
-            padding: 25px;
+            padding: 0;
             margin: 0;
-            font-size: 28px;
-            font-weight: bold;
+            position: relative;
+            overflow: hidden;
+            min-height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
+                radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.4), transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.2), transparent),
+                radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.3), transparent);
+            background-repeat: repeat;
+            background-size: 200px 100px;
+            animation: sparkle 8s linear infinite;
+        }
+        
+        .page-header .header-content {
             text-align: center;
+            z-index: 2;
+            position: relative;
+        }
+        
+        .page-header h1 {
+            font-size: 36px;
+            font-weight: 800;
+            margin: 0 0 8px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: -0.5px;
+        }
+        
+        .page-header .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            font-weight: 400;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        @keyframes sparkle {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.1);
+            }
         }
         
         /* Form section */
@@ -273,8 +326,15 @@
             }
             
             .page-header {
-                padding: 20px 15px;
-                font-size: 24px;
+                min-height: 120px;
+            }
+            
+            .page-header h1 {
+                font-size: 28px;
+            }
+            
+            .page-header .subtitle {
+                font-size: 14px;
             }
             
             .form-section, .share-section {
@@ -309,7 +369,12 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="page-header">Create a Game</h1>
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Create a Game</h1>
+                <div class="subtitle">Set up your pickleball match in seconds</div>
+            </div>
+        </div>
         
         <div id="status" style="display:none;"></div>
         
