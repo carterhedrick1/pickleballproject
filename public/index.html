@@ -220,6 +220,12 @@
             </div>
 
             <div class="form-group">
+                <label for="organizerPhone">Your Phone Number (for confirmations):</label>
+                <input type="tel" id="organizerPhone" name="organizerPhone" required>
+                <small style="color: #666; font-size: 12px;">You'll receive a text with your management link</small>
+            </div>
+
+            <div class="form-group">
                 <div class="checkbox-inline">
                     <input type="checkbox" id="organizerPlaying" name="organizerPlaying" checked>
                     <label for="organizerPlaying">I will be playing in this game (uncheck if organizing for others)</label>
@@ -302,12 +308,14 @@
             const gameData = {
                 location: formData.get('location'),
                 organizerName: formData.get('organizerName'),
+                organizerPhone: formData.get('organizerPhone'),
                 organizerPlaying: formData.get('organizerPlaying') === 'on',
                 date: formData.get('date'),
                 time: formData.get('time'),
                 duration: parseInt(formData.get('duration')),
                 totalPlayers: parseInt(formData.get('players')),
-                message: formData.get('message')
+                message: formData.get('message'),
+                hostPhone: formData.get('organizerPhone') // Include host phone for SMS confirmation
             };
             
             try {
@@ -356,7 +364,16 @@
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 document.getElementById('date').value = tomorrow.toISOString().split('T')[0];
                 
-                showStatus('Game created successfully!', 'success');
+                // Check SMS status and show appropriate message
+                if (data.hostSms && data.hostSms.success) {
+                    showStatus('Game created successfully! Confirmation text sent to your phone.', 'success');
+                } else if (data.hostSms && !data.hostSms.success) {
+                    showStatus('Game created successfully! However, we couldn\'t send the confirmation text. Please save your management link.', 'success');
+                } else if (data.hostSms && data.hostSms.dev) {
+                    showStatus('Game created successfully! (SMS confirmation disabled in development mode)', 'success');
+                } else {
+                    showStatus('Game created successfully!', 'success');
+                }
                 
             } catch (error) {
                 console.error('Error creating game:', error);

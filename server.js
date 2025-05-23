@@ -85,7 +85,7 @@ app.post('/api/games', async (req, res) => {
     // Initialize players array - only add organizer if they're playing
     if (gameData.organizerPlaying) {
       gameData.players = [
-        { id: 'organizer', name: gameData.organizer || 'Organizer', isOrganizer: true }
+        { id: 'organizer', name: gameData.organizerName || 'Organizer', isOrganizer: true }
       ];
     } else {
       gameData.players = [];
@@ -111,19 +111,26 @@ app.post('/api/games', async (req, res) => {
       hostLink: `/manage.html?id=${gameId}&token=${hostToken}`
     };
     
-    // Send SMS confirmation to the host if phone is provided
+    // Send SMS confirmation to the host
     let smsResult = null;
-    if (gameData.hostPhone) {
+    if (gameData.hostPhone || gameData.organizerPhone) {
+      const hostPhone = gameData.hostPhone || gameData.organizerPhone;
       const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
       const gameDate = formatDateForSMS(gameData.date);
       const gameTime = formatTimeForSMS(gameData.time);
       
       const hostMessage = `Your pickleball game at ${gameData.location} on ${gameDate} at ${gameTime} has been created! Manage your game: ${baseUrl}${response.hostLink}`;
       
-      const formattedPhone = formatPhoneNumber(gameData.hostPhone);
+      const formattedPhone = formatPhoneNumber(hostPhone);
       smsResult = await sendSMS(formattedPhone, hostMessage);
       
-      console.log(`Host SMS sent to ${formattedPhone} for game ${gameId}`);
+      console.log(`Host SMS ${smsResult.success ? 'sent' : 'failed'} to ${formattedPhone} for game ${gameId}`);
+      
+      if (smsResult.dev) {
+        console.log(`[DEV MODE] Host SMS message: ${hostMessage}`);
+      }
+    } else {
+      console.log('No host phone number provided - skipping SMS confirmation');
     }
     
     // Add SMS result to response
