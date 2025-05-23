@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PicklePlay Scheduler</title>
+    <title>Create a Game</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -117,28 +117,28 @@
             background-color: #45a049;
         }
 
-.checkbox-inline {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+        .checkbox-inline {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-.checkbox-inline input[type="checkbox"] {
-    width: auto;
-    margin: 0;
-    padding: 0;
-    flex-shrink: 0;
-}
+        .checkbox-inline input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+            padding: 0;
+            flex-shrink: 0;
+        }
 
-.checkbox-inline label {
-    margin: 0;
-    font-weight: normal;
-    cursor: pointer;
-    flex: 1;
-    font-style: italic;
-    font-size: 14px;
-    color: #555;
-}
+        .checkbox-inline label {
+            margin: 0;
+            font-weight: normal;
+            cursor: pointer;
+            flex: 1;
+            font-style: italic;
+            font-size: 14px;
+            color: #555;
+        }
 
         @media (max-width: 768px) {
             /* Body and main container */
@@ -197,21 +197,18 @@
             .game-card {
                 padding: 8px;
             }
-
-
         }
     </style>
     <link rel="stylesheet" href="/css/footer.css">
+    <link rel="stylesheet" href="/css/header.css">
 </head>
 <body>
     <div class="container">
-        <h1>PicklePlay Scheduler</h1>
+        <h1>Create a Game</h1>
         
         <div id="status" style="display:none;"></div>
         
         <form id="gameForm">
-            <h2>Create a Game</h2>
-            
             <div class="form-group">
                 <label for="location">Location:</label>
                 <input type="text" id="location" name="location" required>
@@ -280,15 +277,149 @@
                 <p class="save-suggestion">Bookmark this link or save it somewhere safe!</p>
             </div>
         </div>
-
-        <div id="hostedGames" style="display: none;">
-            <h3>Games You've Created</h3>
-            <div id="gamesList"></div>
-        </div>
     </div>
 
-    <script src="/js/index.js"></script>
-    <script src="/js/footer.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up form submission
+            const gameForm = document.getElementById('gameForm');
+            gameForm.addEventListener('submit', createGame);
+            
+            // Set up copy buttons
+            document.getElementById('copyLink').addEventListener('click', () => copyToClipboard('gameLink'));
+            document.getElementById('copyHostLink').addEventListener('click', () => copyToClipboard('hostLink'));
+            
+            // Set default date to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('date').value = tomorrow.toISOString().split('T')[0];
+        });
 
+        async function createGame(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const gameData = {
+                location: formData.get('location'),
+                organizerName: formData.get('organizerName'),
+                organizerPlaying: formData.get('organizerPlaying') === 'on',
+                date: formData.get('date'),
+                time: formData.get('time'),
+                duration: parseInt(formData.get('duration')),
+                totalPlayers: parseInt(formData.get('players')),
+                message: formData.get('message')
+            };
+            
+            try {
+                showStatus('Creating game...', 'info');
+                
+                const response = await fetch('/api/games', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(gameData)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to create game');
+                }
+                
+                const data = await response.json();
+                console.log('Game created:', data);
+                
+                // Save game to localStorage for My Games page
+                let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+                myGames.push({
+                    id: data.gameId,
+                    hostToken: data.hostToken,
+                    location: gameData.location,
+                    date: gameData.date,
+                    time: gameData.time,
+                    duration: gameData.duration,
+                    totalPlayers: gameData.totalPlayers,
+                    message: gameData.message,
+                    created: new Date().toISOString(),
+                    cancelled: false
+                });
+                localStorage.setItem('myGames', JSON.stringify(myGames));
+                
+                // Show game links
+                showGameLinks(data.gameId, data.hostToken);
+                
+                // Clear form
+                document.getElementById('gameForm').reset();
+                
+                // Set tomorrow's date again
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                document.getElementById('date').value = tomorrow.toISOString().split('T')[0];
+                
+                showStatus('Game created successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error creating game:', error);
+                showStatus('Error creating game: ' + error.message, 'error');
+            }
+        }
+
+        function showGameLinks(gameId, hostToken) {
+            const baseUrl = window.location.origin;
+            
+            // Set the links
+            document.getElementById('gameLink').value = `${baseUrl}/game.html?id=${gameId}`;
+            document.getElementById('hostLink').value = `${baseUrl}/manage.html?id=${gameId}&token=${hostToken}`;
+            
+            // Show the share link section
+            document.getElementById('shareLink').style.display = 'block';
+            
+            // Scroll to the links
+            document.getElementById('shareLink').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            element.select();
+            element.setSelectionRange(0, 99999); // For mobile devices
+            
+            try {
+                document.execCommand('copy');
+                
+                // Show feedback
+                const button = elementId === 'gameLink' ? 
+                    document.getElementById('copyLink') : 
+                    document.getElementById('copyHostLink');
+                
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.style.backgroundColor = '#4CAF50';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.backgroundColor = '#2196F3';
+                }, 2000);
+                
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                showStatus('Failed to copy to clipboard', 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = type;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+    </script>
+    <script src="/js/footer.js"></script>
+    <script src="/js/header.js"></script>
 </body>
 </html>

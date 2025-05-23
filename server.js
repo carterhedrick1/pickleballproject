@@ -70,8 +70,8 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
-// Create a new game
-app.post('/api/games', (req, res) => {
+// Create a new game - WITH HOST SMS CONFIRMATION
+app.post('/api/games', async (req, res) => {
   try {
     console.log('Received game creation request:', req.body);
     
@@ -103,12 +103,33 @@ app.post('/api/games', (req, res) => {
     console.log(`Game created with ID: ${gameId}`);
     console.log('Current games:', Object.keys(games));
     
-    res.status(201).json({ 
+    // Build response data
+    const response = { 
       gameId,
       hostToken,
       playerLink: `/game.html?id=${gameId}`,
       hostLink: `/manage.html?id=${gameId}&token=${hostToken}`
-    });
+    };
+    
+    // Send SMS confirmation to the host if phone is provided
+    let smsResult = null;
+    if (gameData.hostPhone) {
+      const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
+      const gameDate = formatDateForSMS(gameData.date);
+      const gameTime = formatTimeForSMS(gameData.time);
+      
+      const hostMessage = `Your pickleball game at ${gameData.location} on ${gameDate} at ${gameTime} has been created! Manage your game: ${baseUrl}${response.hostLink}`;
+      
+      const formattedPhone = formatPhoneNumber(gameData.hostPhone);
+      smsResult = await sendSMS(formattedPhone, hostMessage);
+      
+      console.log(`Host SMS sent to ${formattedPhone} for game ${gameId}`);
+    }
+    
+    // Add SMS result to response
+    response.hostSms = smsResult;
+    
+    res.status(201).json(response);
   } catch (error) {
     console.error('Error creating game:', error);
     res.status(500).json({ error: 'Failed to create game' });

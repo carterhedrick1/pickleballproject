@@ -167,6 +167,7 @@
     }
 }
     </style>
+    <link rel="stylesheet" href="/css/header.css">
     <link rel="stylesheet" href="/css/footer.css">
 </head>
 <body>
@@ -291,7 +292,8 @@
                     // Show player actions section for returning players
                     document.getElementById('playerActions').style.display = 'block';
                     
-                    showStatus("Game loaded successfully!", 'success');
+                    // Hide the status message since game loaded successfully
+                    statusDiv.style.display = 'none';
                     
                     // Set up event handlers
                     setupEventHandlers();
@@ -587,5 +589,6 @@
         });
     </script>
     <script src="/js/footer.js"></script>
+    <script src="/js/header.js"></script>
 </body>
 </html>
