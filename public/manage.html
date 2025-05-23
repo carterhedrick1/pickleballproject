@@ -174,6 +174,62 @@
             align-items: center;
             gap: 10px;
         }
+
+        /* Collapsible section styling */
+        .collapsible-section {
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .collapsible-header {
+            background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+            padding: 20px 25px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, #dee2e6 0%, #e9ecef 100%);
+        }
+
+        .collapsible-header h3 {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #495057;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .collapse-icon {
+            font-size: 20px;
+            transition: transform 0.3s ease;
+            color: #6c757d;
+        }
+
+        .collapsible-header.expanded .collapse-icon {
+            transform: rotate(180deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .collapsible-content.expanded {
+            max-height: 500px; /* Adjust as needed */
+        }
+
+        .collapsible-inner {
+            padding: 25px;
+        }
         
         /* Form styling */
         .form-section {
@@ -606,6 +662,14 @@
             .form-section {
                 padding: 20px;
             }
+
+            .collapsible-header {
+                padding: 15px 20px;
+            }
+
+            .collapsible-inner {
+                padding: 20px;
+            }
             
             .players-container {
                 grid-template-columns: 1fr;
@@ -728,20 +792,22 @@
                 
                 <div class="share-section">
                     <h3 class="subsection-title">🔗 Share Game Links</h3>
-                    <div class="link-group">
-                        <h4>👥 Player Registration Link:</h4>
-                        <div class="link-container">
-                            <input type="text" id="playerLink" readonly>
-                            <button id="copyPlayerLink" class="copy-btn">📋 Copy</button>
-                        </div>
-                    </div>
-                    <div class="link-group">
-                        <h4>⚙️ Host Management Link (Keep private):</h4>
-                        <div class="link-container">
-                            <input type="text" id="hostLink" readonly>
-                            <button id="copyHostLink" class="copy-btn">📋 Copy</button>
-                        </div>
-                    </div>
+<div class="link-group">
+    <h4>📤 Share with Players</h4>
+    <p style="font-size: 12px; color: #888; font-style: italic; margin: 5px 0 15px 0;">Copy this complete message and send it to your players (text, email, social media) - this copies a complete invitation message with all game details and the registration link.</p>
+    <div class="link-container">
+        <input type="text" id="playerLink" readonly>
+        <button id="copyPlayerLink" class="copy-btn">Copy Message</button>
+    </div>
+</div>
+<div class="link-group">
+    <h4>⚙️ Host Management Link (Keep private):</h4>
+    <p style="font-size: 12px; color: #888; font-style: italic; margin: 5px 0 15px 0;">Use this link to manage your game from any device - edit details, manage players, send announcements, or cancel the game.</p>
+    <div class="link-container">
+        <input type="text" id="hostLink" readonly>
+        <button id="copyHostLink" class="copy-btn">📋 Copy</button>
+    </div>
+</div>
                 </div>
             </div>
             
@@ -771,36 +837,46 @@
                     </div>
                 </div>
                 
-                <div class="form-section">
-                    <h3 class="subsection-title">➕ Add Player Manually</h3>
-                    <form id="addPlayerForm">
-                        <div class="form-group">
-                            <label for="playerName">👤 Player Name:</label>
-                            <input type="text" id="playerName" name="playerName" placeholder="Enter player's full name" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="playerPhone">📱 Phone Number (optional):</label>
-                            <input type="tel" id="playerPhone" name="playerPhone" placeholder="(555) 123-4567">
-                            <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">If provided, player will receive SMS notifications</small>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Add to:</label>
-                            <div class="radio-group">
-                                <div class="radio-option">
-                                    <input type="radio" id="addToConfirmed" name="addTo" value="add" checked>
-                                    <label for="addToConfirmed">✅ Confirmed Players</label>
+                <!-- Collapsible Add Player Section -->
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible('addPlayerSection')">
+                        <h3>
+                            ➕ Add Player Manually
+                            <span class="collapse-icon">▼</span>
+                        </h3>
+                    </div>
+                    <div id="addPlayerSection" class="collapsible-content">
+                        <div class="collapsible-inner">
+                            <form id="addPlayerForm">
+                                <div class="form-group">
+                                    <label for="playerName">👤 Player Name:</label>
+                                    <input type="text" id="playerName" name="playerName" placeholder="Enter player's full name" required>
                                 </div>
-                                <div class="radio-option">
-                                    <input type="radio" id="addToWaitlist" name="addTo" value="waitlist">
-                                    <label for="addToWaitlist">⏳ Waitlist</label>
+                                
+                                <div class="form-group">
+                                    <label for="playerPhone">📱 Phone Number (optional):</label>
+                                    <input type="tel" id="playerPhone" name="playerPhone" placeholder="(555) 123-4567">
+                                    <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">If provided, player will receive SMS notifications</small>
                                 </div>
-                            </div>
+                                
+<div class="form-group">
+    <label>Add to:</label>
+    <div class="radio-group">
+        <div class="radio-option">
+            <input type="radio" id="addToConfirmed" name="addTo" value="add" checked>
+            <label for="addToConfirmed">✅ Confirmed Players</label>
+        </div>
+        <div class="radio-option">
+            <input type="radio" id="addToWaitlist" name="addTo" value="waitlist">
+            <label for="addToWaitlist">⏳ Waitlist</label>
+        </div>
+    </div>
+</div>
+                                
+                                <button type="submit">➕ Add Player</button>
+                            </form>
                         </div>
-                        
-                        <button type="submit">➕ Add Player</button>
-                    </form>
+                    </div>
                 </div>
             </div>
             
@@ -887,6 +963,20 @@
         let gameData = null;
         let gameId = '';
         let hostToken = '';
+        
+        // Function to toggle collapsible sections
+        function toggleCollapsible(sectionId) {
+            const content = document.getElementById(sectionId);
+            const header = content.previousElementSibling;
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                header.classList.remove('expanded');
+            } else {
+                content.classList.add('expanded');
+                header.classList.add('expanded');
+            }
+        }
         
 document.addEventListener('DOMContentLoaded', () => {
     // Get game ID and host token from URL
@@ -1084,16 +1174,91 @@ function restoreActiveTab() {
             const copyPlayerLinkBtn = document.getElementById('copyPlayerLink');
             if (copyPlayerLinkBtn) {
                 copyPlayerLinkBtn.addEventListener('click', () => {
-                    copyToClipboard('playerLink');
+                    copyPlayerInvitation();
                 });
             }
-            
+
             const copyHostLinkBtn = document.getElementById('copyHostLink');
             if (copyHostLinkBtn) {
                 copyHostLinkBtn.addEventListener('click', () => {
                     copyToClipboard('hostLink');
                 });
             }
+
+            function copyPlayerInvitation() {
+    const gameLink = document.getElementById('playerLink').value;
+    
+    // Format the date and time nicely
+    const gameDate = new Date(gameData.date);
+    const formattedDate = gameDate.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    
+    const formattedTime = formatTime(gameData.time);
+    
+    // Create a complete message with the link and instructions
+    const message = `🏓 Join our pickleball game!
+
+📍 Location: ${gameData.location}
+📅 Date: ${formattedDate}
+⏰ Time: ${formattedTime}
+⏱️ Duration: ${gameData.duration} minutes
+👥 Spots: ${gameData.totalPlayers} spots${gameData.message ? '\n💬 ' + gameData.message : ''}
+
+Click this link to sign up:
+${gameLink}
+
+You'll get text confirmations and can easily cancel by replying "9" to any message. See you on the court! 🏓`;
+    
+    try {
+        // Copy the complete message to clipboard
+        navigator.clipboard.writeText(message).then(() => {
+            // Show feedback
+            const button = document.getElementById('copyPlayerLink');
+            const originalText = button.textContent;
+            button.textContent = '✅ Copied!';
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        }).catch(() => {
+            // Fallback for older browsers
+            fallbackCopyMessage(message);
+        });
+        
+    } catch (err) {
+        // Fallback for older browsers
+        fallbackCopyMessage(message);
+    }
+}
+
+function fallbackCopyMessage(text) {
+    // Create a temporary textarea for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        
+        const button = document.getElementById('copyPlayerLink');
+        const originalText = button.textContent;
+        button.textContent = '✅ Copied!';
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 2000);
+        
+    } catch (err) {
+        console.error('Failed to copy text: ', err);
+        showStatus('Failed to copy to clipboard', 'error');
+    }
+    
+    document.body.removeChild(textArea);
+}
             
             // Modal close button
             const closeModalBtn = document.getElementsByClassName('close')[0];
