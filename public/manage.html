@@ -23,15 +23,46 @@
         }
         
         /* Header styling */
-        .page-header {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            padding: 25px;
-            margin: 0;
-            font-size: 28px;
-            font-weight: bold;
-            text-align: center;
-        }
+.page-header {
+    background: linear-gradient(135deg, #429046dd 0%, #429046dd 100%);
+    color: white;
+    padding: 25px;
+    margin: 0;
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
+        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.4), transparent),
+        radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.2), transparent),
+        radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.3), transparent);
+    background-repeat: repeat;
+    background-size: 200px 100px;
+    animation: sparkle 8s linear infinite;
+}
+
+@keyframes sparkle {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.1);
+    }
+}
         
         /* Tab system - COMPLETELY FIXED */
         .tabs-container {
@@ -41,16 +72,16 @@
             margin: 0 !important;
         }
         
-        .tabs {
-            display: flex !important;
-            justify-content: center !important;
-            gap: 4px !important;
-            max-width: 900px !important;
-            margin: 0 auto !important;
-            background-color: #f8f9fa !important;
-            padding: 15px 30px 0 30px !important;
-            flex-wrap: wrap !important;
-        }
+.tabs {
+    display: flex;
+    justify-content: center !important;
+    gap: 4px !important;
+    max-width: 900px !important;
+    margin: 0 auto !important;
+    background-color: #f8f9fa !important;
+    padding: 15px 30px 0 30px !important;
+    flex-wrap: wrap !important;
+}
         
         .tab {
             background-color: #ffffff !important;
@@ -544,18 +575,21 @@
                 box-shadow: none;
             }
             
-            .page-header {
-                padding: 20px 15px;
-                font-size: 24px;
-            }
+.page-header {
+    padding: 20px 15px;
+    font-size: 24px;
+    position: relative;
+    overflow: hidden;
+}
             
             .tabcontent {
                 padding: 20px 15px;
             }
             
-            .tabs {
-                display: none;
-            }
+
+    .tabs {
+        display: none !important;
+    }
             
             .mobile-tab-container {
                 display: block;
@@ -634,7 +668,7 @@
             <!-- Mobile Tab Selection -->
             <div class="mobile-tab-container">
                 <select id="tabSelector" class="mobile-tab-selector" onchange="openTabFromSelect(this.value)">
-                    <option value="Details" selected>📋 Game Details</option>
+                    <option value="Details">📋 Game Details</option>
                     <option value="Players">👥 Players</option>
                     <option value="Communication">📢 Communication</option>
                     <option value="Actions">⚠️ Game Actions</option>
@@ -644,7 +678,7 @@
             <!-- Desktop Tab Navigation -->
             <div class="tabs-container">
                 <div class="tabs">
-                    <button class="tab active" onclick="openTab(event, 'Details')">📋 Game Details</button>
+                    <button class="tab" onclick="openTab(event, 'Details')">📋 Game Details</button>
                     <button class="tab" onclick="openTab(event, 'Players')">👥 Players</button>
                     <button class="tab" onclick="openTab(event, 'Communication')">📢 Communication</button>
                     <button class="tab" onclick="openTab(event, 'Actions')">⚠️ Game Actions</button>
@@ -652,7 +686,7 @@
             </div>
             
             <!-- Game Details Tab -->
-            <div id="Details" class="tabcontent active">
+            <div id="Details" class="tabcontent">
                 <h2 class="section-title">📋 Edit Game Details</h2>
                 
                 <div class="form-section">
@@ -854,23 +888,62 @@
         let gameId = '';
         let hostToken = '';
         
-        document.addEventListener('DOMContentLoaded', () => {
-            // Get game ID and host token from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            gameId = urlParams.get('id');
-            hostToken = urlParams.get('token');
-            
-            if (!gameId || !hostToken) {
-                showUnauthorized();
-                return;
+document.addEventListener('DOMContentLoaded', () => {
+    // Get game ID and host token from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    gameId = urlParams.get('id');
+    hostToken = urlParams.get('token');
+    
+    if (!gameId || !hostToken) {
+        showUnauthorized();
+        return;
+    }
+    
+    // Fetch game data
+    fetchGameData();
+    
+    // Set up event listeners
+    setupEventListeners();
+    
+    // Restore the active tab after everything is loaded
+    setTimeout(restoreActiveTab, 100);
+});
+
+// Add this new function right after the existing openTab function
+function restoreActiveTab() {
+    const activeTab = localStorage.getItem('managePageActiveTab') || 'Details';
+    
+    // Hide all tabs first
+    const tabcontent = document.getElementsByClassName("tabcontent");
+    for (let i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].classList.remove("active");
+    }
+    
+    const tablinks = document.getElementsByClassName("tab");
+    for (let i = 0; i < tablinks.length; i++) {
+        tablinks[i].classList.remove("active");
+    }
+    
+    // Show the active tab
+    const activeTabElement = document.getElementById(activeTab);
+    if (activeTabElement) {
+        activeTabElement.classList.add("active");
+        
+        // Find and activate the corresponding tab button
+        for (let i = 0; i < tablinks.length; i++) {
+            if (tablinks[i].getAttribute("onclick") && tablinks[i].getAttribute("onclick").includes(activeTab)) {
+                tablinks[i].classList.add("active");
+                break;
             }
-            
-            // Fetch game data
-            fetchGameData();
-            
-            // Set up event listeners
-            setupEventListeners();
-        });
+        }
+        
+        // Update mobile selector
+        const tabSelector = document.getElementById('tabSelector');
+        if (tabSelector) {
+            tabSelector.value = activeTab;
+        }
+    }
+}
         
         // Function to open tabs
         function openTab(evt, tabName) {
@@ -889,6 +962,9 @@
             // Show the current tab and add "active" class to the button
             document.getElementById(tabName).classList.add("active");
             evt.currentTarget.classList.add("active");
+
+                localStorage.setItem('managePageActiveTab', tabName);
+
         }
 
         function openTabFromSelect(tabName) {
@@ -910,6 +986,8 @@
                     tablinks[i].classList.add("active");
                 }
             }
+                localStorage.setItem('managePageActiveTab', tabName);
+
         }
         
         async function fetchGameData() {

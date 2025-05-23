@@ -32,15 +32,46 @@
             border-bottom: none;
         }
         
-        .section-header {
-            background-color: #4CAF50;
-            color: white;
-            padding: 20px 25px;
-            margin: 0;
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-        }
+.section-header {
+    background: linear-gradient(135deg, #429046dd 0%, #429046dd 100%);
+    color: white;
+    padding: 20px 25px;
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.section-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
+        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.4), transparent),
+        radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.2), transparent),
+        radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.3), transparent);
+    background-repeat: repeat;
+    background-size: 200px 100px;
+    animation: sparkle 8s linear infinite;
+}
+
+@keyframes sparkle {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.1);
+    }
+}
         
         .section-title {
             color: #4CAF50;
@@ -314,10 +345,12 @@
                 padding: 20px 15px;
             }
             
-            .section-header {
-                padding: 15px;
-                font-size: 20px;
-            }
+.section-header {
+    padding: 15px;
+    font-size: 20px;
+    position: relative;
+    overflow: hidden;
+}
             
             .game-detail {
                 flex-direction: column;
