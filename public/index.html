@@ -126,10 +126,24 @@
         }
 
         input[type="date"], input[type="time"] {
-    width: 100% !important;
-    -webkit-appearance: none;
-    -moz-appearance: textfield;
-}
+            width: 100% !important;
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
+
+        input[type="time"] {
+            min-height: 44px;
+            line-height: 1.5;
+            text-align: center;
+            font-family: inherit;
+        }
+
+        input[type="time"]::-webkit-datetime-edit {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         
         input:focus, select:focus, textarea:focus {
             border-color: #4CAF50;
