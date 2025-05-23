@@ -53,6 +53,9 @@ async function sendSMS(to, message, gameId = null) {
 // In-memory database for storing games
 const games = {};
 
+// Store host phone numbers for each game (for the reply feature)
+const gameHosts = {};
+
 // Middleware for parsing JSON and serving static files
 app.use(express.json());
 app.use(express.static('public'));
@@ -70,7 +73,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
-// Create a new game - WITH HOST SMS CONFIRMATION
+// Create a new game - WITH HOST SMS CONFIRMATION AND REPLY FEATURE
 app.post('/api/games', async (req, res) => {
   try {
     console.log('Received game creation request:', req.body);
@@ -111,18 +114,24 @@ app.post('/api/games', async (req, res) => {
       hostLink: `/manage.html?id=${gameId}&token=${hostToken}`
     };
     
-    // Send SMS confirmation to the host
+    // Send SMS confirmation to the host (without URL, but with reply option)
     let smsResult = null;
     if (gameData.hostPhone || gameData.organizerPhone) {
       const hostPhone = gameData.hostPhone || gameData.organizerPhone;
-      const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
       const gameDate = formatDateForSMS(gameData.date);
       const gameTime = formatTimeForSMS(gameData.time);
       
-      const hostMessage = `Your pickleball game at ${gameData.location} on ${gameDate} at ${gameTime} has been created! Manage your game: ${baseUrl}${response.hostLink}`;
+      // Store host phone for this game so we can respond to their replies
+      gameHosts[gameId] = {
+        phone: formatPhoneNumber(hostPhone),
+        hostToken: hostToken
+      };
+      
+      // Message without URL - they can reply "1" to get the link
+      const hostMessage = `Your pickleball game at ${gameData.location} on ${gameDate} at ${gameTime} has been created! Game ID: ${gameId}. Reply "1" to get your management link.`;
       
       const formattedPhone = formatPhoneNumber(hostPhone);
-      smsResult = await sendSMS(formattedPhone, hostMessage);
+      smsResult = await sendSMS(formattedPhone, hostMessage, gameId);
       
       console.log(`Host SMS ${smsResult.success ? 'sent' : 'failed'} to ${formattedPhone} for game ${gameId}`);
       
@@ -380,8 +389,33 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
     
     console.log(`Received SMS from ${fromNumber}: "${text}" for game ${gameId}`);
     
-    // Check if the message is "9" (cancel code)
-    if (text.trim() === '9') {
+    const cleanedFromNumber = formatPhoneNumber(fromNumber);
+    const messageText = text.trim();
+    
+    // Check if the message is "1" (request management link)
+    if (messageText === '1') {
+      // Check if this is the host for this game
+      const hostInfo = gameHosts[gameId];
+      
+      if (hostInfo && hostInfo.phone === cleanedFromNumber) {
+        // This is the host requesting their management link
+        const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
+        const managementLink = `${baseUrl}/manage.html?id=${gameId}&token=${hostInfo.hostToken}`;
+        
+        const game = games[gameId];
+        if (game) {
+          const responseMessage = `Here's your management link for ${game.location}: ${managementLink}`;
+          await sendSMS(fromNumber, responseMessage);
+          console.log(`Management link sent to host ${cleanedFromNumber} for game ${gameId}`);
+        }
+      } else {
+        // Not the host or game not found
+        const responseMessage = `Sorry, we couldn't find your game. Only the game organizer can request the management link.`;
+        await sendSMS(fromNumber, responseMessage);
+      }
+    }
+    // Check if the message is "9" (cancel registration)
+    else if (messageText === '9') {
       // Find the player in the specific game
       const game = games[gameId];
       if (!game) {
@@ -392,7 +426,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
       let playerFound = false;
       
       // Check confirmed players
-      const playerIndex = game.players.findIndex(p => p.phone === formatPhoneNumber(fromNumber));
+      const playerIndex = game.players.findIndex(p => p.phone === cleanedFromNumber);
       if (playerIndex > 0 && !game.players[playerIndex].isOrganizer) { // Skip organizer
         playerFound = true;
         const player = game.players[playerIndex];
@@ -422,7 +456,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
       
       // Check waitlist if not found in confirmed players
       if (!playerFound) {
-        const waitlistIndex = game.waitlist.findIndex(p => p.phone === formatPhoneNumber(fromNumber));
+        const waitlistIndex = game.waitlist.findIndex(p => p.phone === cleanedFromNumber);
         if (waitlistIndex >= 0) {
           playerFound = true;
           const player = game.waitlist[waitlistIndex];
@@ -443,8 +477,8 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         await sendSMS(fromNumber, responseMessage);
       }
     } else {
-      // If message is not "9"
-      const responseMessage = `To cancel your pickleball reservation, please reply with just the number 9. For all other inquiries, please contact the organizer.`;
+      // If message is not "1" or "9"
+      const responseMessage = `Reply "1" for management link or "9" to cancel your reservation. For other inquiries, contact the organizer.`;
       await sendSMS(fromNumber, responseMessage);
     }
     

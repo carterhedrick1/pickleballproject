@@ -78,6 +78,11 @@
             border: 1px solid #ebccd1;
             color: #a94442;
         }
+        .info {
+            background-color: #d9edf7;
+            border: 1px solid #bce8f1;
+            color: #31708f;
+        }
 
         .link-group {
             margin-bottom: 20px;
@@ -138,6 +143,15 @@
             font-style: italic;
             font-size: 14px;
             color: #555;
+        }
+
+        .sms-info {
+            background-color: #e7f3ff;
+            border: 1px solid #b8daff;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-size: 14px;
         }
 
         @media (max-width: 768px) {
@@ -220,9 +234,11 @@
             </div>
 
             <div class="form-group">
-                <label for="organizerPhone">Your Phone Number (for confirmations):</label>
+                <label for="organizerPhone">Your Phone Number:</label>
                 <input type="tel" id="organizerPhone" name="organizerPhone" required>
-                <small style="color: #666; font-size: 12px;">You'll receive a text with your management link</small>
+                <div class="sms-info">
+                    📱 You'll receive a confirmation text. Reply "1" to get your management link!
+                </div>
             </div>
 
             <div class="form-group">
@@ -280,7 +296,7 @@
                     <input type="text" id="hostLink" readonly>
                     <button id="copyHostLink" class="copy-btn">Copy</button>
                 </div>
-                <p class="save-suggestion">Bookmark this link or save it somewhere safe!</p>
+                <p class="save-suggestion">Bookmark this link or save it somewhere safe! You can also text yourself "1" to get this link again.</p>
             </div>
         </div>
     </div>
@@ -366,9 +382,9 @@
                 
                 // Check SMS status and show appropriate message
                 if (data.hostSms && data.hostSms.success) {
-                    showStatus('Game created successfully! Confirmation text sent to your phone.', 'success');
+                    showStatus('Game created successfully! Check your phone for confirmation. Reply "1" to get your management link.', 'success');
                 } else if (data.hostSms && !data.hostSms.success) {
-                    showStatus('Game created successfully! However, we couldn\'t send the confirmation text. Please save your management link.', 'success');
+                    showStatus('Game created successfully! However, we couldn\'t send the confirmation text. Please save your management link below.', 'success');
                 } else if (data.hostSms && data.hostSms.dev) {
                     showStatus('Game created successfully! (SMS confirmation disabled in development mode)', 'success');
                 } else {
