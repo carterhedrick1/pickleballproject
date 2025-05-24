@@ -152,9 +152,11 @@ app.post('/api/games', async (req, res) => {
   }
 });
 
-// Get game details
+// Get game details - WITH HOST AUTHENTICATION
 app.get('/api/games/:id', (req, res) => {
   const gameId = req.params.id;
+  const token = req.query.token;
+  
   console.log(`Fetching game with ID: ${gameId}`);
   console.log('Available games:', Object.keys(games));
   
@@ -165,8 +167,236 @@ app.get('/api/games/:id', (req, res) => {
     return res.status(404).json({ error: 'Game not found' });
   }
   
+  // If token is provided, verify it's correct for management access
+  if (token && !verifyHostToken(gameId, token)) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+  
   console.log(`Found game: ${gameId}`);
   res.json(game);
+});
+
+// Update game details - NEW ENDPOINT
+app.put('/api/games/:id', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const { token, ...updateData } = req.body;
+    
+    if (!verifyHostToken(gameId, token)) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    const game = games[gameId];
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    // Update game data
+    Object.assign(game, updateData);
+    
+    console.log(`Game ${gameId} updated`);
+    
+    // Send update notification to all players
+    const gameDate = formatDateForSMS(game.date);
+    const gameTime = formatTimeForSMS(game.time);
+    const updateMessage = `UPDATE: Your pickleball game has been updated. New details: ${game.location} on ${gameDate} at ${gameTime}. Duration: ${game.duration} minutes.`;
+    
+    // Send to confirmed players
+    for (const player of game.players) {
+      if (player.phone && !player.isOrganizer) {
+        await sendSMS(player.phone, updateMessage, gameId);
+      }
+    }
+    
+    // Send to waitlist
+    for (const player of game.waitlist) {
+      if (player.phone) {
+        await sendSMS(player.phone, updateMessage);
+      }
+    }
+    
+    res.json({ success: true, message: 'Game updated and players notified' });
+  } catch (error) {
+    console.error('Error updating game:', error);
+    res.status(500).json({ error: 'Failed to update game' });
+  }
+});
+
+// Cancel game - NEW ENDPOINT
+app.delete('/api/games/:id', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const { token, reason } = req.body;
+    
+    if (!verifyHostToken(gameId, token)) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    const game = games[gameId];
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    console.log(`Cancelling game ${gameId} with reason: ${reason}`);
+    
+    // Mark game as cancelled
+    game.cancelled = true;
+    game.cancellationReason = reason;
+    
+    const gameDate = formatDateForSMS(game.date);
+    const gameTime = formatTimeForSMS(game.time);
+    const cancellationMessage = `CANCELLED: Your pickleball game at ${game.location} on ${gameDate} at ${gameTime} has been cancelled. Reason: ${reason || 'No reason provided'}.`;
+    
+    let notificationCount = 0;
+    const results = [];
+    
+    // Notify confirmed players
+    for (const player of game.players) {
+      if (player.phone && !player.isOrganizer) {
+        const result = await sendSMS(player.phone, cancellationMessage);
+        results.push({ player: player.name, type: 'confirmed', result });
+        if (result.success) notificationCount++;
+      }
+    }
+    
+    // Notify waitlisted players
+    for (const player of game.waitlist) {
+      if (player.phone) {
+        const result = await sendSMS(player.phone, cancellationMessage);
+        results.push({ player: player.name, type: 'waitlist', result });
+        if (result.success) notificationCount++;
+      }
+    }
+    
+    console.log(`Game ${gameId} cancelled, ${notificationCount} players notified`);
+    
+    res.json({ 
+      success: true, 
+      notificationCount,
+      results 
+    });
+  } catch (error) {
+    console.error('Error cancelling game:', error);
+    res.status(500).json({ error: 'Failed to cancel game' });
+  }
+});
+
+// Send announcement - NEW ENDPOINT
+app.post('/api/games/:id/announcement', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const { token, message, includeConfirmed, includeWaitlist } = req.body;
+    
+    if (!verifyHostToken(gameId, token)) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    const game = games[gameId];
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    
+    console.log(`Sending announcement for game ${gameId}: ${message}`);
+    
+    let recipientCount = 0;
+    const results = [];
+    
+    // Send to confirmed players
+    if (includeConfirmed) {
+      for (const player of game.players) {
+        if (player.phone && !player.isOrganizer) {
+          const result = await sendSMS(player.phone, message, gameId);
+          results.push({ player: player.name, type: 'confirmed', result });
+          if (result.success) recipientCount++;
+        }
+      }
+    }
+    
+    // Send to waitlist
+    if (includeWaitlist) {
+      for (const player of game.waitlist) {
+        if (player.phone) {
+          const result = await sendSMS(player.phone, message);
+          results.push({ player: player.name, type: 'waitlist', result });
+          if (result.success) recipientCount++;
+        }
+      }
+    }
+    
+    console.log(`Announcement sent to ${recipientCount} players`);
+    
+    res.json({ 
+      success: true, 
+      recipientCount,
+      results 
+    });
+  } catch (error) {
+    console.error('Error sending announcement:', error);
+    res.status(500).json({ error: 'Failed to send announcement' });
+  }
+});
+
+// Add player manually - NEW ENDPOINT
+app.post('/api/games/:id/manual-player', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const { token, name, phone, action } = req.body;
+    
+    if (!verifyHostToken(gameId, token)) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    const game = games[gameId];
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    // Generate a unique player ID
+    const playerId = Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+    const playerData = { 
+      id: playerId, 
+      name, 
+      phone: phone ? formatPhoneNumber(phone) : null 
+    };
+    
+    console.log(`Manually adding player ${name} to game ${gameId} (action: ${action})`);
+    
+    let smsResult = null;
+    
+    if (action === 'add') {
+      // Add to confirmed players
+      game.players.push(playerData);
+      
+      if (phone) {
+        const gameDate = formatDateForSMS(game.date);
+        const gameTime = formatTimeForSMS(game.time);
+        const message = `You've been added to the pickleball game at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 9 to cancel.`;
+        smsResult = await sendSMS(playerData.phone, message, gameId);
+      }
+    } else if (action === 'waitlist') {
+      // Add to waitlist
+      game.waitlist.push(playerData);
+      
+      if (phone) {
+        const message = `You've been added to the waitlist for pickleball at ${game.location}. You are #${game.waitlist.length} on the waitlist. We'll notify you if a spot opens up!`;
+        smsResult = await sendSMS(playerData.phone, message);
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      playerId,
+      action,
+      sms: smsResult 
+    });
+  } catch (error) {
+    console.error('Error adding player manually:', error);
+    res.status(500).json({ error: 'Failed to add player' });
+  }
 });
 
 // Add player to game - WITH SMS NOTIFICATION
@@ -235,15 +465,21 @@ app.post('/api/games/:id/players', async (req, res) => {
   }
 });
 
-// Cancel player spot - WITH SMS NOTIFICATION FOR PROMOTED PLAYERS
+// Cancel player spot - WITH SMS NOTIFICATION FOR PROMOTED PLAYERS - ENHANCED WITH HOST TOKEN SUPPORT
 app.delete('/api/games/:id/players/:playerId', async (req, res) => {
   try {
     const gameId = req.params.id;
     const playerId = req.params.playerId;
+    const token = req.query.token;
     const game = games[gameId];
     
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    // If token is provided, verify it (for host management)
+    if (token && !verifyHostToken(gameId, token)) {
+      return res.status(403).json({ error: 'Unauthorized' });
     }
     
     console.log(`Attempting to remove player ${playerId} from game ${gameId}`);
@@ -348,38 +584,6 @@ app.get('/api/debug/games', (req, res) => {
     games: gamesList 
   });
 });
-
-// Helper Functions
-// Format phone number
-function formatPhoneNumber(phoneNumber) {
-  // Remove any non-numeric characters
-  const cleaned = ('' + phoneNumber).replace(/\D/g, '');
-  
-  // TextBelt expects 10-digit US numbers without country code
-  if (cleaned.length === 10) {
-    return cleaned; // Return as-is for TextBelt
-  } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
-    return cleaned.substring(1); // Remove leading 1
-  }
-  
-  // Return cleaned version for other cases
-  return cleaned;
-}
-
-// Format date for SMS
-function formatDateForSMS(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-}
-
-// Format time for SMS
-function formatTimeForSMS(timeStr) {
-  const [hours, minutes] = timeStr.split(':');
-  const hour = parseInt(hours);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour % 12 || 12;
-  return `${hour12}:${minutes} ${ampm}`;
-}
 
 // Handle incoming SMS from TextBelt webhook  
 app.post('/api/sms/webhook', express.json(), async (req, res) => {
@@ -491,6 +695,38 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
     res.json({ success: true });
   }
 });
+
+// Helper Functions
+// Format phone number
+function formatPhoneNumber(phoneNumber) {
+  // Remove any non-numeric characters
+  const cleaned = ('' + phoneNumber).replace(/\D/g, '');
+  
+  // TextBelt expects 10-digit US numbers without country code
+  if (cleaned.length === 10) {
+    return cleaned; // Return as-is for TextBelt
+  } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
+    return cleaned.substring(1); // Remove leading 1
+  }
+  
+  // Return cleaned version for other cases
+  return cleaned;
+}
+
+// Format date for SMS
+function formatDateForSMS(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+// Format time for SMS
+function formatTimeForSMS(timeStr) {
+  const [hours, minutes] = timeStr.split(':');
+  const hour = parseInt(hours);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
+}
 
 // Verify host token
 function verifyHostToken(gameId, token) {
