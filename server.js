@@ -1107,7 +1107,8 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         });
         
         await sendSMS(fromNumber, responseMessage);
-        // Context is already set via saveLastCommand('details_selection')
+        // FIX APPLIED HERE: Clear context after sending the list for selection
+        await clearLastCommand(cleanedFromNumber); 
       }
       
     } else if (messageText === '9') {
