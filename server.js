@@ -1,36 +1,76 @@
 const express = require('express');
 const path = require('path');
-const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize PostgreSQL connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+// Database setup - SQLite for local, PostgreSQL for production
+let db, pool;
+let isProduction = process.env.DATABASE_URL ? true : false;
 
-// Test database connection and initialize tables
+console.log(`Environment: ${isProduction ? 'Production (PostgreSQL)' : 'Local (SQLite)'}`);
+
+if (isProduction) {
+  // Production: Use PostgreSQL
+  const { Pool } = require('pg');
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
+  console.log('Using PostgreSQL for production');
+} else {
+  // Local development: Use SQLite
+  const sqlite3 = require('sqlite3').verbose();
+  db = new sqlite3.Database('pickleball.db', (err) => {
+    if (err) {
+      console.error('Error opening SQLite database:', err);
+    } else {
+      console.log('Connected to SQLite database');
+    }
+  });
+}
+
+// Initialize database
 async function initializeDatabase() {
   try {
-    const client = await pool.connect();
-    console.log('Connected to PostgreSQL database');
-    
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS games (
-        id TEXT PRIMARY KEY,
-        data JSONB NOT NULL,
-        host_token TEXT NOT NULL,
-        host_phone TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    console.log('Database tables initialized');
-    client.release();
+    if (isProduction) {
+      // PostgreSQL setup
+      const client = await pool.connect();
+      console.log('Connected to PostgreSQL database');
+      
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS games (
+          id TEXT PRIMARY KEY,
+          data JSONB NOT NULL,
+          host_token TEXT NOT NULL,
+          host_phone TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      console.log('PostgreSQL tables initialized');
+      client.release();
+    } else {
+      // SQLite setup
+      db.serialize(() => {
+        db.run(`CREATE TABLE IF NOT EXISTS games (
+          id TEXT PRIMARY KEY,
+          data TEXT NOT NULL,
+          host_token TEXT NOT NULL,
+          host_phone TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`, (err) => {
+          if (err) {
+            console.error('Error creating SQLite table:', err);
+          } else {
+            console.log('SQLite tables initialized');
+          }
+        });
+      });
+    }
   } catch (err) {
     console.error('Database initialization error:', err);
   }
@@ -41,17 +81,36 @@ initializeDatabase();
 // Database helper functions
 async function saveGame(gameId, gameData, hostToken, hostPhone = null) {
   try {
-    const client = await pool.connect();
-    const query = `
-      INSERT INTO games (id, data, host_token, host_phone, updated_at) 
-      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-      ON CONFLICT (id) 
-      DO UPDATE SET data = $2, host_token = $3, host_phone = $4, updated_at = CURRENT_TIMESTAMP
-    `;
+    if (isProduction) {
+      // PostgreSQL
+      const client = await pool.connect();
+      const query = `
+        INSERT INTO games (id, data, host_token, host_phone, updated_at) 
+        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+        ON CONFLICT (id) 
+        DO UPDATE SET data = $2, host_token = $3, host_phone = $4, updated_at = CURRENT_TIMESTAMP
+      `;
+      
+      await client.query(query, [gameId, JSON.stringify(gameData), hostToken, hostPhone]);
+      client.release();
+    } else {
+      // SQLite
+      return new Promise((resolve, reject) => {
+        const stmt = db.prepare(`
+          INSERT OR REPLACE INTO games (id, data, host_token, host_phone, updated_at) 
+          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `);
+        
+        stmt.run([gameId, JSON.stringify(gameData), hostToken, hostPhone], function(err) {
+          if (err) reject(err);
+          else resolve(this);
+        });
+        
+        stmt.finalize();
+      });
+    }
     
-    await client.query(query, [gameId, JSON.stringify(gameData), hostToken, hostPhone]);
     console.log(`Game ${gameId} saved to database`);
-    client.release();
   } catch (err) {
     console.error('Error saving game:', err);
     throw err;
@@ -60,19 +119,39 @@ async function saveGame(gameId, gameData, hostToken, hostPhone = null) {
 
 async function getGame(gameId) {
   try {
-    const client = await pool.connect();
-    const result = await client.query('SELECT * FROM games WHERE id = $1', [gameId]);
-    client.release();
-    
-    if (result.rows.length > 0) {
-      const row = result.rows[0];
-      return {
-        ...row.data,
-        hostToken: row.host_token,
-        hostPhone: row.host_phone
-      };
+    if (isProduction) {
+      // PostgreSQL
+      const client = await pool.connect();
+      const result = await client.query('SELECT * FROM games WHERE id = $1', [gameId]);
+      client.release();
+      
+      if (result.rows.length > 0) {
+        const row = result.rows[0];
+        return {
+          ...row.data,
+          hostToken: row.host_token,
+          hostPhone: row.host_phone
+        };
+      }
+      return null;
+    } else {
+      // SQLite
+      return new Promise((resolve, reject) => {
+        db.get('SELECT * FROM games WHERE id = ?', [gameId], (err, row) => {
+          if (err) {
+            reject(err);
+          } else if (row) {
+            resolve({
+              ...JSON.parse(row.data),
+              hostToken: row.host_token,
+              hostPhone: row.host_phone
+            });
+          } else {
+            resolve(null);
+          }
+        });
+      });
     }
-    return null;
   } catch (err) {
     console.error('Error getting game:', err);
     throw err;
@@ -81,15 +160,29 @@ async function getGame(gameId) {
 
 async function getGameHostInfo(gameId) {
   try {
-    const client = await pool.connect();
-    const result = await client.query('SELECT host_phone, host_token FROM games WHERE id = $1', [gameId]);
-    client.release();
-    
-    if (result.rows.length > 0) {
-      const row = result.rows[0];
-      return { phone: row.host_phone, hostToken: row.host_token };
+    if (isProduction) {
+      // PostgreSQL
+      const client = await pool.connect();
+      const result = await client.query('SELECT host_phone, host_token FROM games WHERE id = $1', [gameId]);
+      client.release();
+      
+      if (result.rows.length > 0) {
+        const row = result.rows[0];
+        return { phone: row.host_phone, hostToken: row.host_token };
+      }
+      return null;
+    } else {
+      // SQLite
+      return new Promise((resolve, reject) => {
+        db.get('SELECT host_phone, host_token FROM games WHERE id = ?', [gameId], (err, row) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(row ? { phone: row.host_phone, hostToken: row.host_token } : null);
+          }
+        });
+      });
     }
-    return null;
   } catch (err) {
     console.error('Error getting host info:', err);
     throw err;
@@ -98,15 +191,33 @@ async function getGameHostInfo(gameId) {
 
 async function getAllGames() {
   try {
-    const client = await pool.connect();
-    const result = await client.query('SELECT id, data FROM games');
-    client.release();
-    
-    const games = {};
-    result.rows.forEach(row => {
-      games[row.id] = row.data;
-    });
-    return games;
+    if (isProduction) {
+      // PostgreSQL
+      const client = await pool.connect();
+      const result = await client.query('SELECT id, data FROM games');
+      client.release();
+      
+      const games = {};
+      result.rows.forEach(row => {
+        games[row.id] = row.data;
+      });
+      return games;
+    } else {
+      // SQLite
+      return new Promise((resolve, reject) => {
+        db.all('SELECT id, data FROM games', [], (err, rows) => {
+          if (err) {
+            reject(err);
+          } else {
+            const games = {};
+            rows.forEach(row => {
+              games[row.id] = JSON.parse(row.data);
+            });
+            resolve(games);
+          }
+        });
+      });
+    }
   } catch (err) {
     console.error('Error getting all games:', err);
     throw err;
@@ -190,7 +301,7 @@ app.use((req, res, next) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running' });
+  res.json({ status: 'OK', message: 'Server is running', database: isProduction ? 'PostgreSQL' : 'SQLite' });
 });
 
 // Create game
@@ -683,7 +794,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
       }
       
       if (hostGames.length === 0) {
-        const responseMessage = `Sorry, we couldn't find any upcoming games for your number. Make sure you're texting from the phone number you used when creating the game.`;
+        const responseMessage = `Sorry, we couldn't find any upcoming games for your number.`;
         await sendSMS(fromNumber, responseMessage);
       } else if (hostGames.length === 1) {
         // Single game - send the link
@@ -695,10 +806,9 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         
         const responseMessage = `Here's your management link for ${game.location} on ${gameDate} at ${gameTime}: ${managementLink}`;
         await sendSMS(fromNumber, responseMessage);
-        console.log(`Management link sent to host ${cleanedFromNumber} for single game ${id}`);
       } else {
         // Multiple games - send a list
-        let responseMessage = `You have ${hostGames.length} upcoming games. Here are your management links:\n\n`;
+        let responseMessage = `You have ${hostGames.length} upcoming games:\n\n`;
         
         hostGames.forEach(({ id, game, hostInfo }, index) => {
           const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
@@ -711,16 +821,15 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         
         // Trim the message if it's too long (SMS has character limits)
         if (responseMessage.length > 1500) {
-          responseMessage = `You have ${hostGames.length} upcoming games. Please visit the website to manage them, or reply with a specific game location for the link.`;
+          responseMessage = `You have ${hostGames.length} upcoming games. Please visit the website to manage them.`;
         }
         
         await sendSMS(fromNumber, responseMessage);
-        console.log(`Management links sent to host ${cleanedFromNumber} for ${hostGames.length} games`);
       }
     } else if (messageText === '9') {
       const game = await getGame(gameId);
       if (!game) {
-        const responseMessage = `To cancel, please reply "9" to a specific game confirmation message, or use your management link to cancel.`;
+        const responseMessage = `To cancel, please reply "9" to a specific game confirmation message.`;
         await sendSMS(fromNumber, responseMessage);
         return res.json({ success: true });
       }
@@ -785,18 +894,40 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('Closing database connection...');
-  pool.end(() => {
-    console.log('Database connection pool closed.');
-    process.exit(0);
-  });
+  if (isProduction) {
+    pool.end(() => {
+      console.log('PostgreSQL connection pool closed.');
+      process.exit(0);
+    });
+  } else {
+    db.close((err) => {
+      if (err) {
+        console.error('Error closing SQLite database:', err);
+      } else {
+        console.log('SQLite database connection closed.');
+      }
+      process.exit(0);
+    });
+  }
 });
 
 process.on('SIGTERM', () => {
   console.log('Closing database connection...');
-  pool.end(() => {
-    console.log('Database connection pool closed.');
-    process.exit(0);
-  });
+  if (isProduction) {
+    pool.end(() => {
+      console.log('PostgreSQL connection pool closed.');
+      process.exit(0);
+    });
+  } else {
+    db.close((err) => {
+      if (err) {
+        console.error('Error closing SQLite database:', err);
+      } else {
+        console.log('SQLite database connection closed.');
+      }
+      process.exit(0);
+    });
+  }
 });
 
 // Start the server

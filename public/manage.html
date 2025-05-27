@@ -464,40 +464,41 @@
         
         /* Status messages */
         .status {
-            margin: 0 30px 20px 30px; /* Keep existing margin */
-            padding: 20px 25px; /* Increased padding to match sections */
-            border-radius: 12px; /* Rounded corners like other sections */
+            margin: 20px 30px; /* Consistent with other sections */
+            padding: 20px 25px; /* Match section padding */
+            border-radius: 12px; /* Match other rounded sections */
             font-weight: bold;
-            font-size: 16px; /* Slightly larger text */
+            font-size: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* Add depth like other sections */
         }
 
         .success {
             background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             border: 2px solid #28a745;
             color: #155724;
-            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15); /* Add subtle shadow */
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15);
         }
 
         .error {
             background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
             border: 2px solid #dc3545;
             color: #721c24;
-            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15); /* Add subtle shadow */
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
         }
 
         .info {
             background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
             border: 2px solid #17a2b8;
             color: #0c5460;
-            box-shadow: 0 2px 8px rgba(23, 162, 184, 0.15); /* Add subtle shadow */
+            box-shadow: 0 2px 8px rgba(23, 162, 184, 0.15);
         }
 
-        /* Mobile adjustments for status messages */
+        /* Mobile responsive adjustments */
         @media (max-width: 768px) {
             .status {
-                margin: 0 15px 15px 15px; /* Adjust margins for mobile */
+                margin: 15px 15px; /* Adjust for mobile margins */
                 padding: 15px 20px; /* Slightly less padding on mobile */
-                font-size: 14px; /* Smaller text on mobile */
+                font-size: 14px;
             }
         }
         
