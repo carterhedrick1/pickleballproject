@@ -843,67 +843,6 @@ app.post('/api/games/:id/send-reminders', async (req, res) => {
   }
 });
 
-// SMS webhook - WITH MULTIPLE GAMES SUPPORT AND "8" COMMAND
-app.post('/api/sms/webhook', express.json(), async (req, res) => {
-  try {
-    const { fromNumber, text, data: gameId } = req.body;
-    
-    console.log(`Received SMS from ${fromNumber}: "${text}" for game ${gameId}`);
-    
-    const cleanedFromNumber = formatPhoneNumber(fromNumber);
-    const messageText = text.trim();
-    
-    if (messageText === '1') {
-      // Handle host requesting management links
-      const allGames = await getAllGames();
-      const hostGames = [];
-      
-      for (const [id, game] of Object.entries(allGames)) {
-        const hostInfo = await getGameHostInfo(id);
-        if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-          // Only include future games (not past games)
-          const gameDate = new Date(game.date);
-          const now = new Date();
-          // Include games that are today or in the future
-          if (gameDate >= now || (gameDate.toDateString() === now.toDateString())) {
-            hostGames.push({ id, game, hostInfo });
-          }
-        }
-      }
-      
-      if (hostGames.length === 0) {
-        const responseMessage = `Sorry, we couldn't find any upcoming games for your number.`;
-        await sendSMS(fromNumber, responseMessage);
-      } else if (hostGames.length === 1) {
-        // Single game - send the link
-        const { id, game, hostInfo } = hostGames[0];
-        const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
-        const managementLink = `${baseUrl}/manage.html?id=${id}&token=${hostInfo.hostToken}`;
-        const gameDate = formatDateForSMS(game.date);
-        const gameTime = formatTimeForSMS(game.time);
-        
-        const responseMessage = `Here's your management link for ${game.location} on ${gameDate} at ${gameTime}: ${managementLink}`;
-        await sendSMS(fromNumber, responseMessage);
-      } else {
-        // Multiple games - send a consolidated list
-        let responseMessage = `You have ${hostGames.length} upcoming games:\n\n`;
-        
-        hostGames.forEach(({ id, game, hostInfo }, index) => {
-          const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
-          const managementLink = `${baseUrl}/manage.html?id=${id}&token=${hostInfo.hostToken}`;
-          const gameDate = formatDateForSMS(game.date);
-          const gameTime = formatTimeForSMS(game.time);
-          
-          responseMessage += `${index + 1}. ${game.location}\n${gameDate} at ${gameTime}\n${managementLink}\n\n`;
-        });
-        
-        // Trim the message if it's too long (SMS has character limits)
-        if (responseMessage.length > 1500) {
-          responseMessage = `You have ${hostGames.length} upcoming games. Please visit the website to manage them.`;
-        }
-        
-        await sendSMS(fromNumber, responseMessage);
-      }
       
 // SMS webhook - FIXED VERSION
 app.post('/api/sms/webhook', express.json(), async (req, res) => {
