@@ -706,10 +706,11 @@
             }
 
             function showConfirmation(data) {
-                // Hide other sections
+                // Hide other sections AND the header
                 document.getElementById('gameDetails').style.display = 'none';
                 document.getElementById('playerList').style.display = 'none';
                 document.getElementById('signupForm').style.display = 'none';
+                document.querySelector('.section-header').style.display = 'none'; // Hide the header
                 
                 // Show confirmation section
                 const confirmationSection = document.getElementById('confirmationSection');
@@ -742,10 +743,11 @@
             }
 
             window.showGameDetails = function() {
-                // Show game sections again
+                // Show game sections again AND the header
                 document.getElementById('gameDetails').style.display = 'block';
                 document.getElementById('playerList').style.display = 'block';
                 document.getElementById('signupForm').style.display = 'block';
+                document.querySelector('.section-header').style.display = 'block'; // Show the header again
                 
                 // Hide confirmation section
                 document.getElementById('confirmationSection').style.display = 'none';
@@ -760,7 +762,7 @@
                     .catch(error => {
                         console.error('Error refreshing game data:', error);
                     });
-            }
+            }       
             
             function setupEventHandlers() {
                 // Set up join form submission
