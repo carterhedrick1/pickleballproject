@@ -500,6 +500,8 @@
                 padding: 15px 20px; /* Slightly less padding on mobile */
                 font-size: 14px;
             }
+
+            
         }
         
         /* Quick actions */
@@ -644,6 +646,27 @@
                 border-radius: 0;
                 box-shadow: none;
             }
+
+                /* Add the iOS input fixes here */
+    input[type="date"], input[type="time"] {
+        width: 100% !important;
+        -webkit-appearance: none;
+        -moz-appearance: textfield;
+    }
+
+    input[type="time"] {
+        min-height: 44px;
+        line-height: 1.5;
+        text-align: left;
+        font-family: inherit;
+    }
+
+    input[type="time"]::-webkit-datetime-edit {
+        width: 100%;
+        display: flex;
+        justify-content: left;
+        align-items: left;
+    }
             
 .page-header {
     padding: 20px 15px;
@@ -1326,17 +1349,15 @@ function fallbackCopyMessage(text) {
                     const playerItem = document.createElement('div');
                     playerItem.className = 'player-item';
                     
-                    let playerActions = '';
-                    
-                    // Don't allow removing the organizer
-                    if (!player.isOrganizer) {
-                        playerActions = `
-                            <div class="player-actions">
-                                <button class="btn-secondary" onclick="moveToWaitlist('${player.id}')">⏳ To Waitlist</button>
-                                <button class="btn-danger" onclick="removePlayer('${player.id}')">❌ Remove</button>
-                            </div>
-                        `;
-                    }
+            let playerActions = '';
+
+            // Show actions for all players, including organizer
+            playerActions = `
+                <div class="player-actions">
+                    <button class="btn-secondary" onclick="moveToWaitlist('${player.id}')">⏳ To Waitlist</button>
+                    <button class="btn-danger" onclick="removePlayer('${player.id}')">❌ Remove</button>
+                </div>
+            `;
                     
                     playerItem.innerHTML = `
                         <div class="player-info">
@@ -1521,27 +1542,51 @@ function fallbackCopyMessage(text) {
         }
         
         async function promoteToGame(playerId) {
+    try {
+        // Check if game is full before promoting
+        if (gameData.players.length >= parseInt(gameData.totalPlayers)) {
+            showStatus('Cannot promote: Game is already full', 'error');
+            return;
+        }
+        
+        showStatus('Promoting player to game...', 'info');
+        
+        // First find the player in the waitlist
+        const player = gameData.waitlist.find(p => p.id === playerId);
+        if (!player) {
+            throw new Error('Player not found');
+        }
+        
+        // Remove from waitlist first
+        const removeResponse = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
+            method: 'DELETE'
+        });
+        
+        if (!removeResponse.ok) {
+            const errorData = await removeResponse.json();
+            throw new Error(errorData.error || 'Failed to remove from waitlist');
+        }
+        
+        // Add to confirmed players
+        const addResponse = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: player.name,
+                phone: player.phone,
+                addTo: 'confirmed', // Make sure we're adding to confirmed, not waitlist
+                token: hostToken
+            })
+        });
+        
+        if (!addResponse.ok) {
+            const errorData = await addResponse.json();
+            
+            // If adding to game failed, try to add back to waitlist
             try {
-                showStatus('Promoting player to game...', 'info');
-                
-                // First find the player in the waitlist
-                const player = gameData.waitlist.find(p => p.id === playerId);
-                if (!player) {
-                    throw new Error('Player not found');
-                }
-                
-                // Remove from waitlist
-                const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
-                    method: 'DELETE'
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to remove from waitlist');
-                }
-                
-                // Add to confirmed
-                const addResponse = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
+                await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1549,26 +1594,37 @@ function fallbackCopyMessage(text) {
                     body: JSON.stringify({
                         name: player.name,
                         phone: player.phone,
-                        action: 'add',
+                        addTo: 'waitlist',
                         token: hostToken
                     })
                 });
-                
-                if (!addResponse.ok) {
-                    const errorData = await addResponse.json();
-                    throw new Error(errorData.error || 'Failed to add to game');
-                }
-                
-                // Refresh game data
-                await fetchGameData();
-                
-                showStatus(`Player ${player.name} promoted to game`, 'success');
-                
-            } catch (error) {
-                console.error('Error promoting player:', error);
-                showStatus('Error promoting player: ' + error.message, 'error');
+            } catch (restoreError) {
+                console.error('Failed to restore player to waitlist:', restoreError);
             }
+            
+            throw new Error(errorData.error || 'Failed to add to game');
         }
+        
+        const addData = await addResponse.json();
+        
+        // Check if they were actually added to confirmed players (not back to waitlist)
+        if (addData.status === 'waitlist') {
+            throw new Error('Game is full - player was moved back to waitlist');
+        }
+        
+        // Refresh game data
+        await fetchGameData();
+        
+        showStatus(`Player ${player.name} promoted to game`, 'success');
+        
+    } catch (error) {
+        console.error('Error promoting player:', error);
+        showStatus('Error promoting player: ' + error.message, 'error');
+        
+        // Refresh to ensure UI is consistent
+        await fetchGameData();
+    }
+}
         
         async function removePlayer(playerId) {
             try {
@@ -1819,18 +1875,24 @@ function fallbackCopyMessage(text) {
             }, 2000);
         }
         
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
-            statusDiv.style.display = 'block';
-            
-            if (type === 'success' || type === 'info') {
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 5000);
-            }
-        }
+function showStatus(message, type) {
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = message;
+    statusDiv.className = `status ${type}`;
+    statusDiv.style.display = 'block';
+    
+    // Auto-scroll to show the status message
+    statusDiv.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+    });
+    
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+}
         
         function showUnauthorized() {
             document.getElementById('loading').style.display = 'none';

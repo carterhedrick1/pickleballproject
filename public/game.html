@@ -248,12 +248,16 @@
         
         /* Status messages */
         .error {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border: 2px solid #dc3545;
             color: #721c24;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 6px;
+            padding: 20px 25px;
+            margin: 20px 25px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
+            text-align: left;
         }
         
         .success {
@@ -785,9 +789,10 @@
                             phone: phoneNumber
                         })
                     })
-                    .then(response => {
+                    .then(async response => {
                         if (!response.ok) {
-                            throw new Error('Failed to join game');
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.error || 'Failed to join game');
                         }
                         return response.json();
                     })
@@ -814,7 +819,7 @@
                     })
                     .catch(error => {
                         console.error('Error joining game:', error);
-                        showStatus('Failed to join game. Please try again.', 'error');
+                        showStatus(error.message, 'error');
                     });
                 });
             }
@@ -836,6 +841,12 @@
                 statusDiv.textContent = message;
                 statusDiv.className = type;
                 statusDiv.style.display = 'block';
+                
+                // Auto-scroll to show the status message  
+                statusDiv.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
                 
                 if (type === 'error') {
                     document.getElementById('loading').style.display = 'none';

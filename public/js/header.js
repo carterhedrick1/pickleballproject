@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <header class="site-header">
             <div class="header-container">
                 <div class="header-brand">
-                    <h1>PicklePlay</h1>
+                    <h1><a href="/" style="color: #4CAF50; text-decoration: none;">PicklePlay</a></h1>
                     <span class="tagline">Organize your pickleball games with ease</span>
                 </div>
                 
