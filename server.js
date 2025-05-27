@@ -52,6 +52,14 @@ async function initializeDatabase() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
+      // New table for SMS context
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS sms_contexts (
+          phone_number TEXT PRIMARY KEY,
+          last_command TEXT NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
       
       console.log('PostgreSQL tables initialized');
       client.release();
@@ -67,9 +75,21 @@ async function initializeDatabase() {
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`, (err) => {
           if (err) {
-            console.error('Error creating SQLite table:', err);
+            console.error('Error creating SQLite games table:', err);
           } else {
-            console.log('SQLite tables initialized');
+            console.log('SQLite games table initialized');
+          }
+        });
+        // New table for SMS context
+        db.run(`CREATE TABLE IF NOT EXISTS sms_contexts (
+          phone_number TEXT PRIMARY KEY,
+          last_command TEXT NOT NULL,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`, (err) => {
+          if (err) {
+            console.error('Error creating SQLite sms_contexts table:', err);
+          } else {
+            console.log('SQLite sms_contexts table initialized');
           }
         });
       });
@@ -94,7 +114,7 @@ async function saveGame(gameId, gameData, hostToken, hostPhone = null) {
         DO UPDATE SET data = $2, host_token = $3, host_phone = $4, updated_at = CURRENT_TIMESTAMP
       `;
       
-      await client.query(query, [gameId, JSON.stringify(gameData), hostToken, hostPhone]);
+      await client.query(query, [JSON.stringify(gameData), gameId, hostToken, hostPhone]); // Corrected order of parameters
       client.release();
     } else {
       // SQLite
@@ -227,6 +247,87 @@ async function getAllGames() {
   }
 }
 
+// SMS Context Management (New functions for stateful SMS conversations)
+async function saveLastCommand(phoneNumber, context) {
+  try {
+    if (isProduction) {
+      const client = await pool.connect();
+      const query = `
+        INSERT INTO sms_contexts (phone_number, last_command, updated_at)
+        VALUES ($1, $2, CURRENT_TIMESTAMP)
+        ON CONFLICT (phone_number)
+        DO UPDATE SET last_command = $2, updated_at = CURRENT_TIMESTAMP
+      `;
+      await client.query(query, [phoneNumber, context]);
+      client.release();
+    } else {
+      return new Promise((resolve, reject) => {
+        const stmt = db.prepare(`
+          INSERT OR REPLACE INTO sms_contexts (phone_number, last_command, updated_at)
+          VALUES (?, ?, CURRENT_TIMESTAMP)
+        `);
+        stmt.run([phoneNumber, context], function(err) {
+          if (err) reject(err);
+          else resolve(this);
+        });
+        stmt.finalize();
+      });
+    }
+    console.log(`[SMS Context] Saved context for ${phoneNumber}: ${context}`);
+  } catch (err) {
+    console.error('Error saving SMS context:', err);
+  }
+}
+
+async function getLastCommand(phoneNumber) {
+  try {
+    if (isProduction) {
+      const client = await pool.connect();
+      const result = await client.query('SELECT last_command FROM sms_contexts WHERE phone_number = $1', [phoneNumber]);
+      client.release();
+      const context = result.rows.length > 0 ? result.rows[0].last_command : null;
+      console.log(`[SMS Context] Retrieved context for ${phoneNumber}: ${context}`);
+      return context;
+    } else {
+      return new Promise((resolve, reject) => {
+        db.get('SELECT last_command FROM sms_contexts WHERE phone_number = ?', [phoneNumber], (err, row) => {
+          if (err) {
+            reject(err);
+          } else {
+            const context = row ? row.last_command : null;
+            console.log(`[SMS Context] Retrieved context for ${phoneNumber}: ${context}`);
+            resolve(context);
+          }
+        });
+      });
+    }
+  } catch (err) {
+    console.error('Error getting SMS context:', err);
+    return null;
+  }
+}
+
+async function clearLastCommand(phoneNumber) {
+  try {
+    if (isProduction) {
+      const client = await pool.connect();
+      await client.query('DELETE FROM sms_contexts WHERE phone_number = $1', [phoneNumber]);
+      client.release();
+    } else {
+      return new Promise((resolve, reject) => {
+        db.run('DELETE FROM sms_contexts WHERE phone_number = ?', [phoneNumber], function(err) {
+          if (err) reject(err);
+          else resolve(this);
+        });
+      });
+    }
+    console.log(`[SMS Context] Cleared context for ${phoneNumber}`);
+  } catch (err) {
+    console.error('Error clearing SMS context:', err);
+  }
+}
+
+
 // SMS function
 async function sendSMS(to, message, gameId = null) {
   try {
@@ -243,7 +344,7 @@ async function sendSMS(to, message, gameId = null) {
     
     if (gameId) {
       params.replyWebhookUrl = `${process.env.BASE_URL || 'https://your-domain.com'}/api/sms/webhook`;
-      params.webhookData = gameId;
+      params.webhookData = gameId; // This is the 'data' field in the webhook
     }
     
     const response = await fetch('https://textbelt.com/text', {
@@ -389,7 +490,8 @@ app.post('/api/games', async (req, res) => {
     if (hostPhone) {
       const gameDate = formatDateForSMS(gameData.date);
       const gameTime = formatTimeForSMS(gameData.time);
-      const hostMessage = `Your pickleball game at ${gameData.location} on ${gameDate} at ${gameTime} has been created! Reply "1" for management link or "8" for game details.`;      
+      // Changed '8' to '2' here
+      const hostMessage = `Your pickleball game at ${gameData.location} on ${gameDate} at ${gameTime} has been created! Reply "1" for management link or "2" for game details.`;      
       const formattedPhone = formatPhoneNumber(hostPhone);
       smsResult = await sendSMS(formattedPhone, hostMessage, gameId);
     }
@@ -715,7 +817,8 @@ app.post('/api/games/:id/players', async (req, res) => {
       
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      const message = `You're confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 8 for game details or 9 to cancel.`;      
+      // Changed '8' to '2' here
+      const message = `You're confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for game details or 9 to cancel.`;      
       smsResult = await sendSMS(formattedPhone, message, gameId);
       
       res.status(201).json({ 
@@ -730,7 +833,7 @@ app.post('/api/games/:id/players', async (req, res) => {
       game.waitlist.push(playerData);
       await saveGame(gameId, game, game.hostToken, game.hostPhone);
       
-      const message = `You've been added to the waitlist for Pickleball at ${game.location}. You are #${game.waitlist.length} on the waitlist. We'll notify you if a spot opens up! Reply 8 for game details or 9 to cancel.`;      
+      const message = `You've been added to the waitlist for Pickleball at ${game.location}. You are #${game.waitlist.length} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.`;      
       smsResult = await sendSMS(formattedPhone, message);
       
       res.status(201).json({ 
@@ -782,6 +885,7 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
         
         const gameDate = formatDateForSMS(game.date);
         const gameTime = formatTimeForSMS(game.time);
+        // Changed '8' to '2' here
         const message = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 9 to cancel.`;
         
         if (promotedPlayer.phone) {
@@ -856,6 +960,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
     
     if (messageText === '1') {
       // Handle host requesting management links
+      await clearLastCommand(cleanedFromNumber); // Clear context immediately for new command
       const allGames = await getAllGames();
       const hostGames = [];
       
@@ -900,8 +1005,9 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         await sendSMS(fromNumber, responseMessage);
       }
       
-    } else if (messageText === '8') {
+    } else if (messageText === '2') { // Changed from '8' to '2'
       // Handle requesting game details - for both players and hosts
+      await saveLastCommand(cleanedFromNumber, 'details_selection'); // Store context
       const allGames = await getAllGames();
       const userGames = [];
       
@@ -938,6 +1044,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
       
       if (userGames.length === 0) {
         await sendSMS(fromNumber, `You don't have any upcoming games.`);
+        await clearLastCommand(cleanedFromNumber); // Clear context if no games
       } else if (userGames.length === 1) {
         // Single game - show full details
         const { game, role } = userGames[0];
@@ -975,9 +1082,10 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         }
         
         await sendSMS(fromNumber, responseMessage);
+        await clearLastCommand(cleanedFromNumber); // Clear context after providing details
       } else {
         // Multiple games - show list
-        let responseMessage = `You have ${userGames.length} upcoming games:\n\n`;
+        let responseMessage = `You have ${userGames.length} upcoming games. Reply with just the number (1, 2, 3, etc.) to see details:\n\n`;
         
         userGames.forEach(({ game, role }, index) => {
           const gameDate = formatDateForSMS(game.date);
@@ -998,83 +1106,13 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
           responseMessage += `${index + 1}. ${statusIcon} ${game.location}${roleText}\n${gameDate} at ${gameTime}\n\n`;
         });
         
-        responseMessage += `Reply "8" with a number (like "8 1") for details, or "9" to cancel a game.`;
         await sendSMS(fromNumber, responseMessage);
-      }
-      
-    } else if (/^8\s+\d+$/.test(messageText)) {
-      // Handle "8 1", "8 2" etc. - show specific game details
-      const gameNumber = parseInt(messageText.split(' ')[1]) - 1;
-      const allGames = await getAllGames();
-      const userGames = [];
-      
-      // Build same list as above
-      for (const [id, game] of Object.entries(allGames)) {
-        const gameDate = new Date(game.date);
-        const now = new Date();
-        
-        if (gameDate >= now || (gameDate.toDateString() === now.toDateString())) {
-          let userRole = null;
-          
-          const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber);
-          const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
-          
-          if (playerInConfirmed) {
-            userRole = playerInConfirmed.isOrganizer ? 'host' : 'confirmed';
-          } else if (playerInWaitlist) {
-            userRole = 'waitlist';
-          } else {
-            const hostInfo = await getGameHostInfo(id);
-            if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-              userRole = 'host';
-            }
-          }
-          
-          if (userRole) {
-            userGames.push({ id, game, role: userRole });
-          }
-        }
-      }
-      
-      if (gameNumber >= 0 && gameNumber < userGames.length) {
-        const { game, role } = userGames[gameNumber];
-        const gameDate = formatDateForSMS(game.date);
-        const gameTime = formatTimeForSMS(game.time);
-        
-        let responseMessage = `🏓 ${game.location}\n📅 ${gameDate} at ${gameTime}\n⏱️ Duration: ${game.duration} minutes\n\n`;
-        
-        responseMessage += `👥 Confirmed Players (${game.players.length}/${game.totalPlayers}):\n`;
-        if (game.players.length === 0) {
-          responseMessage += `• None yet\n`;
-        } else {
-          game.players.forEach(player => {
-            responseMessage += `• ${player.name}${player.isOrganizer ? ' (Organizer)' : ''}\n`;
-          });
-        }
-        
-        if (game.waitlist && game.waitlist.length > 0) {
-          responseMessage += `\n⏳ Waitlist (${game.waitlist.length}):\n`;
-          game.waitlist.forEach((player, index) => {
-            responseMessage += `• ${player.name} (#${index + 1})\n`;
-          });
-        }
-        
-        if (role === 'host') {
-          responseMessage += `\nYou are: 🎯 Host/Organizer\nReply "1" for management link`;
-        } else if (role === 'confirmed') {
-          responseMessage += `\nYou are: ✅ Confirmed Player\nReply "9" to cancel`;
-        } else if (role === 'waitlist') {
-          const waitlistPosition = game.waitlist.findIndex(p => p.phone === cleanedFromNumber) + 1;
-          responseMessage += `\nYou are: ⏳ Waitlist #${waitlistPosition}\nReply "9" to cancel`;
-        }
-        
-        await sendSMS(fromNumber, responseMessage);
-      } else {
-        await sendSMS(fromNumber, `Invalid game number. Reply "8" to see your games.`);
+        // Context is already set via saveLastCommand('details_selection')
       }
       
     } else if (messageText === '9') {
       // Handle cancellation
+      await saveLastCommand(cleanedFromNumber, 'cancellation_selection'); // Store context
       const allGames = await getAllGames();
       const playerGames = [];
       
@@ -1100,6 +1138,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
       
       if (playerGames.length === 0) {
         await sendSMS(fromNumber, `We couldn't find any upcoming game registrations for your number.`);
+        await clearLastCommand(cleanedFromNumber); // Clear context if no games
       } else if (playerGames.length === 1) {
         // Single game - cancel immediately
         const { id, game, player, status } = playerGames[0];
@@ -1115,7 +1154,8 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
             
             const gameDate = formatDateForSMS(game.date);
             const gameTime = formatTimeForSMS(game.time);
-            const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! Reply 8 for game details or 9 to cancel.`;
+            // Changed '8' to '2' here
+            const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! Reply 2 for game details or 9 to cancel.`;
             
             await sendSMS(promotedPlayer.phone, promotionMessage, id);
           }
@@ -1129,6 +1169,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         
         const statusText = status === 'confirmed' ? 'reservation' : 'waitlist spot';
         await sendSMS(fromNumber, `Your pickleball ${statusText} at ${game.location} has been cancelled. Thanks for letting us know!`);
+        await clearLastCommand(cleanedFromNumber); // Clear context after cancellation
         
       } else {
         // Multiple games - let player choose
@@ -1142,79 +1183,164 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
           responseMessage += `${index + 1}. ${game.location}\n${gameDate} at ${gameTime} (${statusText})\n\n`;
         });
         
-        responseMessage += `Reply with just the number (1, 2, 3, etc.) to cancel that game.`;
         await sendSMS(fromNumber, responseMessage);
+        // Context is already set via saveLastCommand('cancellation_selection')
       }
       
-    } else if (/^\d+$/.test(messageText)) {
-      // Handle numbered selection for cancellation
+    } else if (/^\d+$/.test(messageText)) { // This handles single-digit replies
       const selection = parseInt(messageText) - 1;
-      const allGames = await getAllGames();
-      const playerGames = [];
-      
-      // Same logic as "9" command
-      for (const [id, game] of Object.entries(allGames)) {
-        const gameDate = new Date(game.date);
-        const now = new Date();
+      const lastCommand = await getLastCommand(cleanedFromNumber); // Get context
+
+      if (lastCommand === 'details_selection') {
+        const allGames = await getAllGames();
+        const userGames = [];
         
-        if (gameDate >= now || (gameDate.toDateString() === now.toDateString())) {
-          const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber && !p.isOrganizer);
-          const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
+        // Re-generate userGames list (same logic as '2' command)
+        for (const [id, game] of Object.entries(allGames)) {
+          const gameDate = new Date(game.date);
+          const now = new Date();
           
-          if (playerInConfirmed || playerInWaitlist) {
-            playerGames.push({
-              id,
-              game,
-              player: playerInConfirmed || playerInWaitlist,
-              status: playerInConfirmed ? 'confirmed' : 'waitlist'
+          if (gameDate >= now || (gameDate.toDateString() === now.toDateString())) {
+            let userRole = null;
+            const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber);
+            const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
+            
+            if (playerInConfirmed) {
+              userRole = playerInConfirmed.isOrganizer ? 'host' : 'confirmed';
+            } else if (playerInWaitlist) {
+              userRole = 'waitlist';
+            } else {
+              const hostInfo = await getGameHostInfo(id);
+              if (hostInfo && hostInfo.phone === cleanedFromNumber) {
+                userRole = 'host';
+              }
+            }
+            
+            if (userRole) {
+              userGames.push({ id, game, role: userRole });
+            }
+          }
+        }
+        
+        if (selection >= 0 && selection < userGames.length) {
+          const { game, role } = userGames[selection];
+          const gameDate = formatDateForSMS(game.date);
+          const gameTime = formatTimeForSMS(game.time);
+          
+          let responseMessage = `🏓 ${game.location}\n📅 ${gameDate} at ${gameTime}\n⏱️ Duration: ${game.duration} minutes\n\n`;
+          
+          responseMessage += `👥 Confirmed Players (${game.players.length}/${game.totalPlayers}):\n`;
+          if (game.players.length === 0) {
+            responseMessage += `• None yet\n`;
+          } else {
+            game.players.forEach(player => {
+              responseMessage += `• ${player.name}${player.isOrganizer ? ' (Organizer)' : ''}\n`;
             });
           }
-        }
-      }
-      
-      if (selection >= 0 && selection < playerGames.length) {
-        const { id, game, player, status } = playerGames[selection];
-        
-        if (status === 'confirmed') {
-          const playerIndex = game.players.findIndex(p => p.id === player.id);
-          game.players.splice(playerIndex, 1);
           
           if (game.waitlist && game.waitlist.length > 0) {
-            const promotedPlayer = game.waitlist.shift();
-            game.players.push(promotedPlayer);
-            
-            const gameDate = formatDateForSMS(game.date);
-            const gameTime = formatTimeForSMS(game.time);
-            const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! Reply 8 for game details or 9 to cancel.`;
-            
-            await sendSMS(promotedPlayer.phone, promotionMessage, id);
+            responseMessage += `\n⏳ Waitlist (${game.waitlist.length}):\n`;
+            game.waitlist.forEach((player, index) => {
+              responseMessage += `• ${player.name} (#${index + 1})\n`;
+            });
           }
+          
+          if (role === 'host') {
+            responseMessage += `\nYou are: 🎯 Host/Organizer\nReply "1" for management link`;
+          } else if (role === 'confirmed') {
+            responseMessage += `\nYou are: ✅ Confirmed Player\nReply "9" to cancel`;
+          } else if (role === 'waitlist') {
+            const waitlistPosition = game.waitlist.findIndex(p => p.phone === cleanedFromNumber) + 1;
+            responseMessage += `\nYou are: ⏳ Waitlist #${waitlistPosition}\nReply "9" to cancel`;
+          }
+          
+          await sendSMS(fromNumber, responseMessage);
+          await clearLastCommand(cleanedFromNumber); // Clear context after providing details
         } else {
-          const waitlistIndex = game.waitlist.findIndex(p => p.id === player.id);
-          game.waitlist.splice(waitlistIndex, 1);
+          await sendSMS(fromNumber, `Invalid game number. Please reply "2" to see your games.`); // Changed '8' to '2'
+          await clearLastCommand(cleanedFromNumber); // Clear context on invalid input
+        }
+
+      } else if (lastCommand === 'cancellation_selection') {
+        // This is your existing cancellation logic for a single number selection
+        const allGames = await getAllGames();
+        const playerGames = [];
+        
+        // Same logic as "9" command
+        for (const [id, game] of Object.entries(allGames)) {
+          const gameDate = new Date(game.date);
+          const now = new Date();
+          
+          if (gameDate >= now || (gameDate.toDateString() === now.toDateString())) {
+            const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber && !p.isOrganizer);
+            const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
+            
+            if (playerInConfirmed || playerInWaitlist) {
+              playerGames.push({
+                id,
+                game,
+                player: playerInConfirmed || playerInWaitlist,
+                status: playerInConfirmed ? 'confirmed' : 'waitlist'
+              });
+            }
+          }
         }
         
-        await saveGame(id, game, game.hostToken, game.hostPhone);
-        
-        const gameDate = formatDateForSMS(game.date);
-        const gameTime = formatTimeForSMS(game.time);
-        const statusText = status === 'confirmed' ? 'reservation' : 'waitlist spot';
-        await sendSMS(fromNumber, `Your pickleball ${statusText} at ${game.location} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`);
-        
+        if (selection >= 0 && selection < playerGames.length) {
+          const { id, game, player, status } = playerGames[selection];
+          
+          if (status === 'confirmed') {
+            const playerIndex = game.players.findIndex(p => p.id === player.id);
+            game.players.splice(playerIndex, 1);
+            
+            if (game.waitlist && game.waitlist.length > 0) {
+              const promotedPlayer = game.waitlist.shift();
+              game.players.push(promotedPlayer);
+              
+              const gameDate = formatDateForSMS(game.date);
+              const gameTime = formatTimeForSMS(game.time);
+              // Changed '8' to '2' here
+              const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! Reply 2 for game details or 9 to cancel.`;
+              
+              await sendSMS(promotedPlayer.phone, promotionMessage, id);
+            }
+          } else {
+            const waitlistIndex = game.waitlist.findIndex(p => p.id === player.id);
+            game.waitlist.splice(waitlistIndex, 1);
+          }
+          
+          await saveGame(id, game, game.hostToken, game.hostPhone);
+          
+          const gameDate = formatDateForSMS(game.date);
+          const gameTime = formatTimeForSMS(game.time);
+          const statusText = status === 'confirmed' ? 'reservation' : 'waitlist spot';
+          await sendSMS(fromNumber, `Your pickleball ${statusText} at ${game.location} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`);
+          await clearLastCommand(cleanedFromNumber); // Clear context after cancellation
+          
+        } else {
+          await sendSMS(fromNumber, `Invalid selection. Please reply "2" to see your games or "9" to try cancelling again.`); // Changed '8' to '2'
+          await clearLastCommand(cleanedFromNumber); // Clear context on invalid input
+        }
       } else {
-        await sendSMS(fromNumber, `Invalid selection. Please reply "8" to see your games or "9" to try cancelling again.`);
+        // Fallback if no specific context is set (e.g., user just sent a number without prior command)
+        // Changed '8' to '2' here
+        await sendSMS(fromNumber, `Reply "1" for management link, "2" for game details, or "9" to cancel your reservation. For other inquiries, contact the organizer.`);
+        await clearLastCommand(cleanedFromNumber); // Clear context on unrecognized command
       }
       
     } else {
       // Default response for unrecognized commands
-      await sendSMS(fromNumber, `Reply "1" for management link, "8" for game details, or "9" to cancel your reservation. For other inquiries, contact the organizer.`);
+      // Changed '8' to '2' here
+      await sendSMS(fromNumber, `Reply "1" for management link, "2" for game details, or "9" to cancel your reservation. For other inquiries, contact the organizer.`);
+      await clearLastCommand(cleanedFromNumber); // Clear context if the command is unrecognized
     }
     
     res.json({ success: true });
     
   } catch (error) {
     console.error('Error handling incoming SMS:', error);
-    res.json({ success: true });
+    // Even on error, send a success to the webhook provider to prevent retries
+    res.json({ success: true, message: "Error processing webhook, please try again or contact support." });
   }
 });
 
