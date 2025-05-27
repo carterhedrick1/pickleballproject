@@ -757,27 +757,9 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
     const messageText = text.trim();
     
     if (messageText === '1') {
-      // If we have a specific game ID from webhook data, use it
-      if (gameId) {
-        const hostInfo = await getGameHostInfo(gameId);
-        
-        if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-          const game = await getGame(gameId);
-          if (game) {
-            const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
-            const managementLink = `${baseUrl}/manage.html?id=${gameId}&token=${hostInfo.hostToken}`;
-            const gameDate = formatDateForSMS(game.date);
-            const gameTime = formatTimeForSMS(game.time);
-            
-            const responseMessage = `Here's your management link for ${game.location} on ${gameDate} at ${gameTime}: ${managementLink}`;
-            await sendSMS(fromNumber, responseMessage);
-            console.log(`Management link sent to host ${cleanedFromNumber} for game ${gameId}`);
-            return res.json({ success: true });
-          }
-        }
-      }
+      // Handle host requesting management links
       
-      // If no specific game ID or not found, find all games for this host
+      // Find all games for this host (regardless of the specific gameId from webhook)
       const allGames = await getAllGames();
       const hostGames = [];
       
@@ -787,6 +769,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
           // Only include future games (not past games)
           const gameDate = new Date(game.date);
           const now = new Date();
+          // Include games that are today or in the future
           if (gameDate >= now || (gameDate.toDateString() === now.toDateString())) {
             hostGames.push({ id, game, hostInfo });
           }
@@ -807,7 +790,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         const responseMessage = `Here's your management link for ${game.location} on ${gameDate} at ${gameTime}: ${managementLink}`;
         await sendSMS(fromNumber, responseMessage);
       } else {
-        // Multiple games - send a list
+        // Multiple games - send a consolidated list
         let responseMessage = `You have ${hostGames.length} upcoming games:\n\n`;
         
         hostGames.forEach(({ id, game, hostInfo }, index) => {
@@ -826,59 +809,150 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         
         await sendSMS(fromNumber, responseMessage);
       }
+      
     } else if (messageText === '9') {
-      const game = await getGame(gameId);
-      if (!game) {
-        const responseMessage = `To cancel, please reply "9" to a specific game confirmation message.`;
-        await sendSMS(fromNumber, responseMessage);
-        return res.json({ success: true });
+      // Handle player cancellation
+      
+      // Find all games where this player is registered
+      const allGames = await getAllGames();
+      const playerGames = [];
+      
+      for (const [id, game] of Object.entries(allGames)) {
+        // Check if player is in confirmed players or waitlist
+        const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber && !p.isOrganizer);
+        const playerInWaitlist = game.waitlist.find(p => p.phone === cleanedFromNumber);
+        
+        if (playerInConfirmed || playerInWaitlist) {
+          // Only include future games
+          const gameDate = new Date(game.date);
+          const now = new Date();
+          if (gameDate >= now || (gameDate.toDateString() === now.toDateString())) {
+            playerGames.push({
+              id,
+              game,
+              player: playerInConfirmed || playerInWaitlist,
+              status: playerInConfirmed ? 'confirmed' : 'waitlist'
+            });
+          }
+        }
       }
       
-      let playerFound = false;
-      
-      const playerIndex = game.players.findIndex(p => p.phone === cleanedFromNumber);
-      if (playerIndex > 0 && !game.players[playerIndex].isOrganizer) {
-        playerFound = true;
-        const player = game.players[playerIndex];
+      if (playerGames.length === 0) {
+        const responseMessage = `We couldn't find any upcoming game registrations for your number.`;
+        await sendSMS(fromNumber, responseMessage);
+      } else if (playerGames.length === 1) {
+        // Single game - cancel immediately
+        const { id, game, player, status } = playerGames[0];
         
-        game.players.splice(playerIndex, 1);
-        
-        if (game.waitlist.length > 0) {
-          const promotedPlayer = game.waitlist.shift();
-          game.players.push(promotedPlayer);
+        if (status === 'confirmed') {
+          const playerIndex = game.players.findIndex(p => p.id === player.id);
+          game.players.splice(playerIndex, 1);
           
+          // Promote from waitlist if available
+          if (game.waitlist.length > 0) {
+            const promotedPlayer = game.waitlist.shift();
+            game.players.push(promotedPlayer);
+            
+            const gameDate = formatDateForSMS(game.date);
+            const gameTime = formatTimeForSMS(game.time);
+            const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! Reply 9 to cancel.`;
+            
+            await sendSMS(promotedPlayer.phone, promotionMessage, id);
+          }
+        } else {
+          // Remove from waitlist
+          const waitlistIndex = game.waitlist.findIndex(p => p.id === player.id);
+          game.waitlist.splice(waitlistIndex, 1);
+        }
+        
+        await saveGame(id, game, game.hostToken, game.hostPhone);
+        
+        const statusText = status === 'confirmed' ? 'reservation' : 'waitlist spot';
+        const responseMessage = `Your pickleball ${statusText} at ${game.location} has been cancelled. Thanks for letting us know!`;
+        await sendSMS(fromNumber, responseMessage);
+        
+      } else {
+        // Multiple games - let player choose
+        let responseMessage = `You're registered for ${playerGames.length} upcoming games. Reply with the number of the game you want to cancel:\n\n`;
+        
+        playerGames.forEach(({ id, game, status }, index) => {
           const gameDate = formatDateForSMS(game.date);
           const gameTime = formatTimeForSMS(game.time);
-          const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! Reply 9 to cancel.`;
+          const statusText = status === 'confirmed' ? 'Confirmed' : 'Waitlist';
           
-          await sendSMS(promotedPlayer.phone, promotionMessage, gameId);
-        }
+          responseMessage += `${index + 1}. ${game.location}\n${gameDate} at ${gameTime} (${statusText})\n\n`;
+        });
         
-        await saveGame(gameId, game, game.hostToken, game.hostPhone);
+        responseMessage += `Reply with just the number (1, 2, 3, etc.) to cancel that game.`;
         
-        const responseMessage = `Your pickleball reservation at ${game.location} has been cancelled. Thanks for letting us know!`;
         await sendSMS(fromNumber, responseMessage);
       }
       
-      if (!playerFound) {
-        const waitlistIndex = game.waitlist.findIndex(p => p.phone === cleanedFromNumber);
-        if (waitlistIndex >= 0) {
-          playerFound = true;
-          const player = game.waitlist[waitlistIndex];
+    } else if (/^\d+$/.test(messageText)) {
+      // Handle numbered selection for cancellation
+      const selection = parseInt(messageText) - 1;
+      
+      // Find all games where this player is registered
+      const allGames = await getAllGames();
+      const playerGames = [];
+      
+      for (const [id, game] of Object.entries(allGames)) {
+        const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber && !p.isOrganizer);
+        const playerInWaitlist = game.waitlist.find(p => p.phone === cleanedFromNumber);
+        
+        if (playerInConfirmed || playerInWaitlist) {
+          const gameDate = new Date(game.date);
+          const now = new Date();
+          if (gameDate >= now || (gameDate.toDateString() === now.toDateString())) {
+            playerGames.push({
+              id,
+              game,
+              player: playerInConfirmed || playerInWaitlist,
+              status: playerInConfirmed ? 'confirmed' : 'waitlist'
+            });
+          }
+        }
+      }
+      
+      if (selection >= 0 && selection < playerGames.length) {
+        const { id, game, player, status } = playerGames[selection];
+        
+        if (status === 'confirmed') {
+          const playerIndex = game.players.findIndex(p => p.id === player.id);
+          game.players.splice(playerIndex, 1);
           
+          // Promote from waitlist if available
+          if (game.waitlist.length > 0) {
+            const promotedPlayer = game.waitlist.shift();
+            game.players.push(promotedPlayer);
+            
+            const gameDate = formatDateForSMS(game.date);
+            const gameTime = formatTimeForSMS(game.time);
+            const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! Reply 9 to cancel.`;
+            
+            await sendSMS(promotedPlayer.phone, promotionMessage, id);
+          }
+        } else {
+          // Remove from waitlist
+          const waitlistIndex = game.waitlist.findIndex(p => p.id === player.id);
           game.waitlist.splice(waitlistIndex, 1);
-          await saveGame(gameId, game, game.hostToken, game.hostPhone);
-          
-          const responseMessage = `You've been removed from the waitlist for pickleball at ${game.location}. Thanks for letting us know!`;
-          await sendSMS(fromNumber, responseMessage);
         }
-      }
-      
-      if (!playerFound) {
-        const responseMessage = `We couldn't find your registration for this pickleball game. Please contact the organizer if you need assistance.`;
+        
+        await saveGame(id, game, game.hostToken, game.hostPhone);
+        
+        const gameDate = formatDateForSMS(game.date);
+        const gameTime = formatTimeForSMS(game.time);
+        const statusText = status === 'confirmed' ? 'reservation' : 'waitlist spot';
+        const responseMessage = `Your pickleball ${statusText} at ${game.location} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`;
+        await sendSMS(fromNumber, responseMessage);
+        
+      } else {
+        const responseMessage = `Invalid selection. Please reply "9" to see your games again.`;
         await sendSMS(fromNumber, responseMessage);
       }
+      
     } else {
+      // Default response for unrecognized commands
       const responseMessage = `Reply "1" for management link or "9" to cancel your reservation. For other inquiries, contact the organizer.`;
       await sendSMS(fromNumber, responseMessage);
     }
