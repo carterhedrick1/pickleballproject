@@ -1,8 +1,105 @@
 const express = require('express');
 const path = require('path');
-require('dotenv').config(); // Load environment variables
+const sqlite3 = require('sqlite3').verbose();
+require('dotenv').config();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize SQLite database
+const db = new sqlite3.Database('pickleball.db', (err) => {
+  if (err) {
+    console.error('Error opening database:', err);
+  } else {
+    console.log('Connected to SQLite database');
+    initializeDatabase();
+  }
+});
+
+// Create tables if they don't exist
+function initializeDatabase() {
+  db.serialize(() => {
+    // Games table
+    db.run(`CREATE TABLE IF NOT EXISTS games (
+      id TEXT PRIMARY KEY,
+      data TEXT NOT NULL,
+      host_token TEXT NOT NULL,
+      host_phone TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    
+    console.log('Database tables initialized');
+  });
+}
+
+// Database helper functions
+function saveGame(gameId, gameData, hostToken, hostPhone = null) {
+  return new Promise((resolve, reject) => {
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO games (id, data, host_token, host_phone, updated_at) 
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `);
+    
+    stmt.run([gameId, JSON.stringify(gameData), hostToken, hostPhone], function(err) {
+      if (err) {
+        console.error('Error saving game:', err);
+        reject(err);
+      } else {
+        console.log(`Game ${gameId} saved to database`);
+        resolve(this);
+      }
+    });
+    
+    stmt.finalize();
+  });
+}
+
+function getGame(gameId) {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT * FROM games WHERE id = ?', [gameId], (err, row) => {
+      if (err) {
+        reject(err);
+      } else if (row) {
+        resolve({
+          ...JSON.parse(row.data),
+          hostToken: row.host_token,
+          hostPhone: row.host_phone
+        });
+      } else {
+        resolve(null);
+      }
+    });
+  });
+}
+
+function getGameHostInfo(gameId) {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT host_phone, host_token FROM games WHERE id = ?', [gameId], (err, row) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(row ? { phone: row.host_phone, hostToken: row.host_token } : null);
+      }
+    });
+  });
+}
+
+function getAllGames() {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT id, data FROM games', [], (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        const games = {};
+        rows.forEach(row => {
+          games[row.id] = JSON.parse(row.data);
+        });
+        resolve(games);
+      }
+    });
+  });
+}
 
 // TextBelt SMS function with webhook support
 async function sendSMS(to, message, gameId = null) {
@@ -23,7 +120,7 @@ async function sendSMS(to, message, gameId = null) {
     // Add webhook URL if we have a game ID (for replies)
     if (gameId) {
       params.replyWebhookUrl = `${process.env.BASE_URL || 'https://your-domain.com'}/api/sms/webhook`;
-      params.webhookData = gameId; // Pass game ID to identify which game the reply is for
+      params.webhookData = gameId;
     }
     
     // Send SMS via TextBelt
@@ -50,13 +147,7 @@ async function sendSMS(to, message, gameId = null) {
   }
 }
 
-// In-memory database for storing games
-const games = {};
-
-// Store host phone numbers for each game (for the reply feature)
-const gameHosts = {};
-
-// Middleware for parsing JSON and serving static files
+// Middleware
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -72,20 +163,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
-// API Routes
-// Create a new game - WITH HOST SMS CONFIRMATION AND REPLY FEATURE
+// Create a new game
 app.post('/api/games', async (req, res) => {
   try {
     console.log('Received game creation request:', req.body);
     
     const gameData = req.body;
     const gameId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
-    
-    // Generate a host management token
     const hostToken = Math.random().toString(36).substring(2, 15) + 
                       Math.random().toString(36).substring(2, 15);
     
-    // Initialize players array - only add organizer if they're playing
+    // Initialize players array
     if (gameData.organizerPlaying) {
       gameData.players = [
         { id: 'organizer', name: gameData.organizerName || 'Organizer', isOrganizer: true }
@@ -94,19 +182,16 @@ app.post('/api/games', async (req, res) => {
       gameData.players = [];
     }
     
-    // Initialize waitlist
     gameData.waitlist = [];
-    
-    // Add host token to the game data
     gameData.hostToken = hostToken;
     
-    // Store game in our "database"
-    games[gameId] = gameData;
+    const hostPhone = gameData.hostPhone || gameData.organizerPhone;
+    
+    // Save to database
+    await saveGame(gameId, gameData, hostToken, hostPhone ? formatPhoneNumber(hostPhone) : null);
     
     console.log(`Game created with ID: ${gameId}`);
-    console.log('Current games:', Object.keys(games));
     
-    // Build response data
     const response = { 
       gameId,
       hostToken,
@@ -114,20 +199,11 @@ app.post('/api/games', async (req, res) => {
       hostLink: `/manage.html?id=${gameId}&token=${hostToken}`
     };
     
-    // Send SMS confirmation to the host (without URL, but with reply option)
+    // Send SMS confirmation to host
     let smsResult = null;
-    if (gameData.hostPhone || gameData.organizerPhone) {
-      const hostPhone = gameData.hostPhone || gameData.organizerPhone;
+    if (hostPhone) {
       const gameDate = formatDateForSMS(gameData.date);
       const gameTime = formatTimeForSMS(gameData.time);
-      
-      // Store host phone for this game so we can respond to their replies
-      gameHosts[gameId] = {
-        phone: formatPhoneNumber(hostPhone),
-        hostToken: hostToken
-      };
-      
-      // Message without URL - they can reply "1" to get the link
       const hostMessage = `Your pickleball game at ${gameData.location} on ${gameDate} at ${gameTime} has been created! Reply "1" to get your management link.`;
       
       const formattedPhone = formatPhoneNumber(hostPhone);
@@ -142,9 +218,7 @@ app.post('/api/games', async (req, res) => {
       console.log('No host phone number provided - skipping SMS confirmation');
     }
     
-    // Add SMS result to response
     response.hostSms = smsResult;
-    
     res.status(201).json(response);
   } catch (error) {
     console.error('Error creating game:', error);
@@ -152,63 +226,64 @@ app.post('/api/games', async (req, res) => {
   }
 });
 
-// Get game details - WITH HOST AUTHENTICATION
-app.get('/api/games/:id', (req, res) => {
-  const gameId = req.params.id;
-  const token = req.query.token;
-  
-  console.log(`Fetching game with ID: ${gameId}`);
-  console.log('Available games:', Object.keys(games));
-  
-  const game = games[gameId];
-  
-  if (!game) {
-    console.log(`Game not found: ${gameId}`);
-    return res.status(404).json({ error: 'Game not found' });
+// Get game details
+app.get('/api/games/:id', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const token = req.query.token;
+    
+    console.log(`Fetching game with ID: ${gameId}`);
+    
+    const game = await getGame(gameId);
+    
+    if (!game) {
+      console.log(`Game not found: ${gameId}`);
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    if (token && game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    console.log(`Found game: ${gameId}`);
+    res.json(game);
+  } catch (error) {
+    console.error('Error fetching game:', error);
+    res.status(500).json({ error: 'Failed to fetch game' });
   }
-  
-  // If token is provided, verify it's correct for management access
-  if (token && !verifyHostToken(gameId, token)) {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
-  
-  console.log(`Found game: ${gameId}`);
-  res.json(game);
 });
 
-// Update game details - NEW ENDPOINT
+// Update game details
 app.put('/api/games/:id', async (req, res) => {
   try {
     const gameId = req.params.id;
     const { token, ...updateData } = req.body;
     
-    if (!verifyHostToken(gameId, token)) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-    
-    const game = games[gameId];
+    const game = await getGame(gameId);
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    // Update game data
+    if (game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
     Object.assign(game, updateData);
+    await saveGame(gameId, game, game.hostToken, game.hostPhone);
     
     console.log(`Game ${gameId} updated`);
     
-    // Send update notification to all players
+    // Send update notification
     const gameDate = formatDateForSMS(game.date);
     const gameTime = formatTimeForSMS(game.time);
     const updateMessage = `UPDATE: Your pickleball game has been updated. New details: ${game.location} on ${gameDate} at ${gameTime}. Duration: ${game.duration} minutes.`;
     
-    // Send to confirmed players
     for (const player of game.players) {
       if (player.phone && !player.isOrganizer) {
         await sendSMS(player.phone, updateMessage, gameId);
       }
     }
     
-    // Send to waitlist
     for (const player of game.waitlist) {
       if (player.phone) {
         await sendSMS(player.phone, updateMessage);
@@ -222,26 +297,26 @@ app.put('/api/games/:id', async (req, res) => {
   }
 });
 
-// Cancel game - NEW ENDPOINT
+// Cancel game
 app.delete('/api/games/:id', async (req, res) => {
   try {
     const gameId = req.params.id;
     const { token, reason } = req.body;
     
-    if (!verifyHostToken(gameId, token)) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-    
-    const game = games[gameId];
+    const game = await getGame(gameId);
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
     
+    if (game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
     console.log(`Cancelling game ${gameId} with reason: ${reason}`);
     
-    // Mark game as cancelled
     game.cancelled = true;
     game.cancellationReason = reason;
+    await saveGame(gameId, game, game.hostToken, game.hostPhone);
     
     const gameDate = formatDateForSMS(game.date);
     const gameTime = formatTimeForSMS(game.time);
@@ -250,7 +325,6 @@ app.delete('/api/games/:id', async (req, res) => {
     let notificationCount = 0;
     const results = [];
     
-    // Notify confirmed players
     for (const player of game.players) {
       if (player.phone && !player.isOrganizer) {
         const result = await sendSMS(player.phone, cancellationMessage);
@@ -259,7 +333,6 @@ app.delete('/api/games/:id', async (req, res) => {
       }
     }
     
-    // Notify waitlisted players
     for (const player of game.waitlist) {
       if (player.phone) {
         const result = await sendSMS(player.phone, cancellationMessage);
@@ -281,19 +354,19 @@ app.delete('/api/games/:id', async (req, res) => {
   }
 });
 
-// Send announcement - NEW ENDPOINT
+// Send announcement
 app.post('/api/games/:id/announcement', async (req, res) => {
   try {
     const gameId = req.params.id;
     const { token, message, includeConfirmed, includeWaitlist } = req.body;
     
-    if (!verifyHostToken(gameId, token)) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-    
-    const game = games[gameId];
+    const game = await getGame(gameId);
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    if (game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
     }
     
     if (!message || !message.trim()) {
@@ -305,7 +378,6 @@ app.post('/api/games/:id/announcement', async (req, res) => {
     let recipientCount = 0;
     const results = [];
     
-    // Send to confirmed players
     if (includeConfirmed) {
       for (const player of game.players) {
         if (player.phone && !player.isOrganizer) {
@@ -316,7 +388,6 @@ app.post('/api/games/:id/announcement', async (req, res) => {
       }
     }
     
-    // Send to waitlist
     if (includeWaitlist) {
       for (const player of game.waitlist) {
         if (player.phone) {
@@ -340,22 +411,21 @@ app.post('/api/games/:id/announcement', async (req, res) => {
   }
 });
 
-// Add player manually - NEW ENDPOINT
+// Add player manually
 app.post('/api/games/:id/manual-player', async (req, res) => {
   try {
     const gameId = req.params.id;
     const { token, name, phone, action } = req.body;
     
-    if (!verifyHostToken(gameId, token)) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-    
-    const game = games[gameId];
+    const game = await getGame(gameId);
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    // Generate a unique player ID
+    if (game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
     const playerId = Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
     const playerData = { 
       id: playerId, 
@@ -368,7 +438,6 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
     let smsResult = null;
     
     if (action === 'add') {
-      // Add to confirmed players
       game.players.push(playerData);
       
       if (phone) {
@@ -378,7 +447,6 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
         smsResult = await sendSMS(playerData.phone, message, gameId);
       }
     } else if (action === 'waitlist') {
-      // Add to waitlist
       game.waitlist.push(playerData);
       
       if (phone) {
@@ -386,6 +454,8 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
         smsResult = await sendSMS(playerData.phone, message);
       }
     }
+    
+    await saveGame(gameId, game, game.hostToken, game.hostPhone);
     
     res.json({ 
       success: true, 
@@ -399,35 +469,29 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
   }
 });
 
-// Add player to game - WITH SMS NOTIFICATION
+// Add player to game
 app.post('/api/games/:id/players', async (req, res) => {
   try {
     const gameId = req.params.id;
-    const game = games[gameId];
+    const game = await getGame(gameId);
     
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
     
     const { name, phone } = req.body;
-    
-    // Format phone number
     const formattedPhone = formatPhoneNumber(phone);
-    
-    // Generate a unique player ID
     const playerId = Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
     const playerData = { id: playerId, name, phone: formattedPhone };
     
     console.log(`Attempting to add player ${name} to game ${gameId}`);
     
-    // Check if spots are available
     let smsResult;
     
     if (game.players.length < parseInt(game.totalPlayers)) {
-      // Add to players
       game.players.push(playerData);
+      await saveGame(gameId, game, game.hostToken, game.hostPhone);
       
-      // Send confirmation SMS
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
       const message = `You're confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 9 to cancel.`;
@@ -443,10 +507,9 @@ app.post('/api/games/:id/players', async (req, res) => {
         sms: smsResult
       });
     } else {
-      // Add to waitlist
       game.waitlist.push(playerData);
+      await saveGame(gameId, game, game.hostToken, game.hostPhone);
       
-      // Send waitlist SMS
       const message = `You've been added to the waitlist for Pickleball at ${game.location}. You are #${game.waitlist.length} on the waitlist. We'll notify you if a spot opens up!`;
       
       smsResult = await sendSMS(formattedPhone, message);
@@ -465,33 +528,30 @@ app.post('/api/games/:id/players', async (req, res) => {
   }
 });
 
-// Cancel player spot - WITH SMS NOTIFICATION FOR PROMOTED PLAYERS - ENHANCED WITH HOST TOKEN SUPPORT
+// Cancel player spot
 app.delete('/api/games/:id/players/:playerId', async (req, res) => {
   try {
     const gameId = req.params.id;
     const playerId = req.params.playerId;
     const token = req.query.token;
-    const game = games[gameId];
     
+    const game = await getGame(gameId);
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    // If token is provided, verify it (for host management)
-    if (token && !verifyHostToken(gameId, token)) {
+    if (token && game.hostToken !== token) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
     console.log(`Attempting to remove player ${playerId} from game ${gameId}`);
     
-    // Find player in the list
     const playerIndex = game.players.findIndex(p => p.id === playerId);
     
-    if (playerIndex > 0) { // Don't allow removing the organizer
+    if (playerIndex > 0) {
       const removedPlayer = game.players.splice(playerIndex, 1)[0];
       console.log(`Player ${removedPlayer.name} removed from game ${gameId}`);
       
-      // Promote first person from waitlist if available
       let promotedPlayer = null;
       let smsResult = null;
       
@@ -501,7 +561,6 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
         
         console.log(`Player ${promotedPlayer.name} promoted from waitlist for game ${gameId}`);
         
-        // Send promotion SMS
         const gameDate = formatDateForSMS(game.date);
         const gameTime = formatTimeForSMS(game.time);
         const message = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 9 to cancel.`;
@@ -509,22 +568,25 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
         smsResult = await sendSMS(promotedPlayer.phone, message, gameId);
       }
       
+      await saveGame(gameId, game, game.hostToken, game.hostPhone);
+      
       res.json({ 
         status: 'removed',
         promotedPlayer,
         sms: smsResult 
       });
     } else if (playerIndex === 0) {
-      // Trying to remove organizer
       console.log(`Cannot remove organizer from game ${gameId}`);
       res.status(403).json({ error: 'Cannot remove the organizer' });
     } else {
-      // Check waitlist
       const waitlistIndex = game.waitlist.findIndex(p => p.id === playerId);
       
       if (waitlistIndex >= 0) {
         const removedPlayer = game.waitlist.splice(waitlistIndex, 1)[0];
         console.log(`Player ${removedPlayer.name} removed from waitlist for game ${gameId}`);
+        
+        await saveGame(gameId, game, game.hostToken, game.hostPhone);
+        
         res.json({ status: 'removed from waitlist' });
       } else {
         console.log(`Player ${playerId} not found in game ${gameId}`);
@@ -537,11 +599,11 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
   }
 });
 
-// Send reminders to all confirmed players
+// Send reminders
 app.post('/api/games/:id/send-reminders', async (req, res) => {
   try {
     const gameId = req.params.id;
-    const game = games[gameId];
+    const game = await getGame(gameId);
     
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
@@ -550,7 +612,6 @@ app.post('/api/games/:id/send-reminders', async (req, res) => {
     const gameDate = formatDateForSMS(game.date);
     const gameTime = formatTimeForSMS(game.time);
     
-    // Send reminder to all confirmed players
     const results = [];
     for (const player of game.players) {
       if (player.phone && !player.isOrganizer) {
@@ -567,28 +628,33 @@ app.post('/api/games/:id/send-reminders', async (req, res) => {
   }
 });
 
-// Debug route to list all games
-app.get('/api/debug/games', (req, res) => {
-  const gamesList = Object.keys(games).map(gameId => {
-    return {
-      id: gameId,
-      location: games[gameId].location,
-      date: games[gameId].date,
-      players: games[gameId].players.length,
-      waitlist: games[gameId].waitlist.length
-    };
-  });
-  
-  res.json({ 
-    gamesCount: Object.keys(games).length,
-    games: gamesList 
-  });
+// Debug route
+app.get('/api/debug/games', async (req, res) => {
+  try {
+    const games = await getAllGames();
+    const gamesList = Object.keys(games).map(gameId => {
+      return {
+        id: gameId,
+        location: games[gameId].location,
+        date: games[gameId].date,
+        players: games[gameId].players.length,
+        waitlist: games[gameId].waitlist.length
+      };
+    });
+    
+    res.json({ 
+      gamesCount: Object.keys(games).length,
+      games: gamesList 
+    });
+  } catch (error) {
+    console.error('Error fetching games for debug:', error);
+    res.status(500).json({ error: 'Failed to fetch games' });
+  }
 });
 
-// Handle incoming SMS from TextBelt webhook  
+// SMS webhook handler
 app.post('/api/sms/webhook', express.json(), async (req, res) => {
   try {
-    // Get the incoming message details from TextBelt
     const { fromNumber, text, data: gameId } = req.body;
     
     console.log(`Received SMS from ${fromNumber}: "${text}" for game ${gameId}`);
@@ -596,55 +662,43 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
     const cleanedFromNumber = formatPhoneNumber(fromNumber);
     const messageText = text.trim();
     
-    // Check if the message is "1" (request management link)
     if (messageText === '1') {
-      // Check if this is the host for this game
-      const hostInfo = gameHosts[gameId];
+      const hostInfo = await getGameHostInfo(gameId);
       
       if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-        // This is the host requesting their management link
-        const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
-        const managementLink = `${baseUrl}/manage.html?id=${gameId}&token=${hostInfo.hostToken}`;
-        
-        const game = games[gameId];
+        const game = await getGame(gameId);
         if (game) {
+          const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
+          const managementLink = `${baseUrl}/manage.html?id=${gameId}&token=${hostInfo.hostToken}`;
           const responseMessage = `Here's your management link for ${game.location}: ${managementLink}`;
           await sendSMS(fromNumber, responseMessage);
           console.log(`Management link sent to host ${cleanedFromNumber} for game ${gameId}`);
         }
       } else {
-        // Not the host or game not found
         const responseMessage = `Sorry, we couldn't find your game. Only the game organizer can request the management link.`;
         await sendSMS(fromNumber, responseMessage);
       }
-    }
-    // Check if the message is "9" (cancel registration)
-    else if (messageText === '9') {
-      // Find the player in the specific game
-      const game = games[gameId];
+    } else if (messageText === '9') {
+      const game = await getGame(gameId);
       if (!game) {
         console.log(`Game ${gameId} not found for SMS reply`);
-        return res.json({ success: true }); // Still return success to TextBelt
+        return res.json({ success: true });
       }
       
       let playerFound = false;
       
-      // Check confirmed players
       const playerIndex = game.players.findIndex(p => p.phone === cleanedFromNumber);
-      if (playerIndex > 0 && !game.players[playerIndex].isOrganizer) { // Skip organizer
+      if (playerIndex > 0 && !game.players[playerIndex].isOrganizer) {
         playerFound = true;
         const player = game.players[playerIndex];
         
-        // Remove the player
         game.players.splice(playerIndex, 1);
         console.log(`Player ${player.name} cancelled via SMS from game ${gameId}`);
         
-        // Promote from waitlist if available
         if (game.waitlist.length > 0) {
           const promotedPlayer = game.waitlist.shift();
           game.players.push(promotedPlayer);
           
-          // Send promotion notification to promoted player
           const gameDate = formatDateForSMS(game.date);
           const gameTime = formatTimeForSMS(game.time);
           const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! Reply 9 to cancel.`;
@@ -653,73 +707,63 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
           console.log(`Player ${promotedPlayer.name} promoted from waitlist for game ${gameId}`);
         }
         
-        // Send confirmation back to the cancelling user
+        await saveGame(gameId, game, game.hostToken, game.hostPhone);
+        
         const responseMessage = `Your pickleball reservation at ${game.location} has been cancelled. Thanks for letting us know!`;
         await sendSMS(fromNumber, responseMessage);
       }
       
-      // Check waitlist if not found in confirmed players
       if (!playerFound) {
         const waitlistIndex = game.waitlist.findIndex(p => p.phone === cleanedFromNumber);
         if (waitlistIndex >= 0) {
           playerFound = true;
           const player = game.waitlist[waitlistIndex];
           
-          // Remove from waitlist
           game.waitlist.splice(waitlistIndex, 1);
           console.log(`Player ${player.name} cancelled from waitlist via SMS for game ${gameId}`);
           
-          // Send confirmation back
+          await saveGame(gameId, game, game.hostToken, game.hostPhone);
+          
           const responseMessage = `You've been removed from the waitlist for pickleball at ${game.location}. Thanks for letting us know!`;
           await sendSMS(fromNumber, responseMessage);
         }
       }
       
       if (!playerFound) {
-        // Player not found in this game
         const responseMessage = `We couldn't find your registration for this pickleball game. Please contact the organizer if you need assistance.`;
         await sendSMS(fromNumber, responseMessage);
       }
     } else {
-      // If message is not "1" or "9"
       const responseMessage = `Reply "1" for management link or "9" to cancel your reservation. For other inquiries, contact the organizer.`;
       await sendSMS(fromNumber, responseMessage);
     }
     
-    // Always return success to TextBelt
     res.json({ success: true });
     
   } catch (error) {
     console.error('Error handling incoming SMS:', error);
-    // Still return success to avoid TextBelt retries
     res.json({ success: true });
   }
 });
 
 // Helper Functions
-// Format phone number
 function formatPhoneNumber(phoneNumber) {
-  // Remove any non-numeric characters
   const cleaned = ('' + phoneNumber).replace(/\D/g, '');
   
-  // TextBelt expects 10-digit US numbers without country code
   if (cleaned.length === 10) {
-    return cleaned; // Return as-is for TextBelt
+    return cleaned;
   } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
-    return cleaned.substring(1); // Remove leading 1
+    return cleaned.substring(1);
   }
   
-  // Return cleaned version for other cases
   return cleaned;
 }
 
-// Format date for SMS
 function formatDateForSMS(dateStr) {
   const date = new Date(dateStr);
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-// Format time for SMS
 function formatTimeForSMS(timeStr) {
   const [hours, minutes] = timeStr.split(':');
   const hour = parseInt(hours);
@@ -728,12 +772,30 @@ function formatTimeForSMS(timeStr) {
   return `${hour12}:${minutes} ${ampm}`;
 }
 
-// Verify host token
-function verifyHostToken(gameId, token) {
-  const game = games[gameId];
-  if (!game) return false;
-  return game.hostToken === token;
-}
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Closing database connection...');
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err);
+    } else {
+      console.log('Database connection closed.');
+    }
+    process.exit(0);
+  });
+});
+
+process.on('SIGTERM', () => {
+  console.log('Closing database connection...');
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err);
+    } else {
+      console.log('Database connection closed.');
+    }
+    process.exit(0);
+  });
+});
 
 // Start the server
 app.listen(PORT, () => {
