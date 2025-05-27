@@ -8,6 +8,12 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// FIX 1: Tell Express to trust proxy headers (for rate limiting on platforms like Render)
+// If running behind a proxy like Render.com, the client IP is in X-Forwarded-For
+// '1' means trust the first hop, which is typically your load balancer/proxy.
+// Adjust to 'true' or a specific number/IP range if your setup is more complex.
+app.set('trust proxy', 1);
+
 // Database setup - SQLite for local, PostgreSQL for production
 let db, pool;
 let isProduction = process.env.DATABASE_URL ? true : false;
@@ -114,7 +120,9 @@ async function saveGame(gameId, gameData, hostToken, hostPhone = null) {
         DO UPDATE SET data = $2, host_token = $3, host_phone = $4, updated_at = CURRENT_TIMESTAMP
       `;
       
-      await client.query(query, [JSON.stringify(gameData), gameId, hostToken, hostPhone]); // Corrected order of parameters
+      // FIX 2: Corrected order of parameters for PostgreSQL INSERT/UPDATE
+      // $1 -> id, $2 -> data, $3 -> host_token, $4 -> host_phone
+      await client.query(query, [gameId, JSON.stringify(gameData), hostToken, hostPhone]); 
       client.release();
     } else {
       // SQLite
@@ -123,7 +131,7 @@ async function saveGame(gameId, gameData, hostToken, hostPhone = null) {
           INSERT OR REPLACE INTO games (id, data, host_token, host_phone, updated_at) 
           VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
         `);
-        
+        // SQLite expects the parameters in the same order as the VALUES clause
         stmt.run([gameId, JSON.stringify(gameData), hostToken, hostPhone], function(err) {
           if (err) reject(err);
           else resolve(this);
@@ -151,7 +159,7 @@ async function getGame(gameId) {
       if (result.rows.length > 0) {
         const row = result.rows[0];
         return {
-          ...row.data,
+          ...row.data, // row.data is already JSONB, so no need to parse
           hostToken: row.host_token,
           hostPhone: row.host_phone
         };
@@ -165,7 +173,7 @@ async function getGame(gameId) {
             reject(err);
           } else if (row) {
             resolve({
-              ...JSON.parse(row.data),
+              ...JSON.parse(row.data), // SQLite stores as TEXT, so parse
               hostToken: row.host_token,
               hostPhone: row.host_phone
             });
@@ -222,7 +230,7 @@ async function getAllGames() {
       
       const games = {};
       result.rows.forEach(row => {
-        games[row.id] = row.data;
+        games[row.id] = row.data; // row.data is already JSONB, no need to parse
       });
       return games;
     } else {
@@ -234,7 +242,7 @@ async function getAllGames() {
           } else {
             const games = {};
             rows.forEach(row => {
-              games[row.id] = JSON.parse(row.data);
+              games[row.id] = JSON.parse(row.data); // SQLite stores as TEXT, so parse
             });
             resolve(games);
           }
@@ -945,7 +953,7 @@ app.post('/api/games/:id/send-reminders', async (req, res) => {
 });
 
       
-// SMS webhook - CORRECTED VERSION
+// SMS webhook - CORRECTED AND IMPROVED VERSION
 app.post('/api/sms/webhook', express.json(), async (req, res) => {
   try {
     const { fromNumber, text, data: gameId } = req.body;
@@ -1094,11 +1102,13 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
       } 
       // If a number is sent but no relevant context (e.g., just sent "5" out of the blue)
       else {
+        // This case indicates a numerical input without a preceding command that set context.
+        // It's a "mistake" by the user, so clear any context and provide main menu.
         await sendSMS(fromNumber, `Reply "1" for management link, "2" for game details, or "9" to cancel your reservation. For other inquiries, contact the organizer.`);
         await clearLastCommand(cleanedFromNumber); 
       }
     } 
-    // --- Priority 2: Handle specific text commands (1, 2, 9) if no numerical selection or no context ---
+    // --- Priority 2: Handle specific text commands (1, 2, 9, etc.) if no numerical selection or no context ---
     // This block runs if the message is NOT a number, OR if it's a number but there was no active context.
     else if (messageText === '1') {
       await clearLastCommand(cleanedFromNumber); // Clear any old context before starting new command
@@ -1316,6 +1326,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
     
   } catch (error) {
     console.error('Error handling incoming SMS:', error);
+    // Even on error, send a success to the webhook provider to prevent retries
     res.json({ success: true, message: "Error processing webhook, please try again or contact support." });
   }
 });
