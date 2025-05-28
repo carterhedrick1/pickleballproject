@@ -443,7 +443,6 @@ async function sendSMS(to, message, gameId = null) {
 }
 
 // NEW: Game reminder system
-// NEW: Game reminder system
 async function checkAndSendReminders() {
   try {
     console.log('[REMINDER] Checking for games that need reminders...');
@@ -504,11 +503,6 @@ async function checkAndSendReminders() {
         let remindersSent = 0;
         
         for (const player of confirmedPlayers) {
-          // Skip organizer
-          if (player.isOrganizer) {
-            continue;
-          }
-          
           // Skip players without phone numbers
           if (!player.phone) {
             continue;
