@@ -9,9 +9,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // FIX 1: Tell Express to trust proxy headers (for rate limiting on platforms like Render)
-// If running behind a proxy like Render.com, the client IP is in X-Forwarded-For
-// '1' means trust the first hop, which is typically your load balancer/proxy.
-// Adjust to 'true' or a specific number/IP range if your setup is more complex.
 app.set('trust proxy', 1);
 
 // Database setup - SQLite for local, PostgreSQL for production
@@ -58,12 +55,22 @@ async function initializeDatabase() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      // New table for SMS context
+      // SMS context table
       await client.query(`
         CREATE TABLE IF NOT EXISTS sms_contexts (
           phone_number TEXT PRIMARY KEY,
           last_command TEXT NOT NULL,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      // NEW: Reminder tracking table
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS reminder_log (
+          game_id TEXT NOT NULL,
+          player_phone TEXT NOT NULL,
+          reminder_type TEXT NOT NULL,
+          sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (game_id, player_phone, reminder_type)
         )
       `);
       
@@ -86,7 +93,7 @@ async function initializeDatabase() {
             console.log('SQLite games table initialized');
           }
         });
-        // New table for SMS context
+        
         db.run(`CREATE TABLE IF NOT EXISTS sms_contexts (
           phone_number TEXT PRIMARY KEY,
           last_command TEXT NOT NULL,
@@ -96,6 +103,21 @@ async function initializeDatabase() {
             console.error('Error creating SQLite sms_contexts table:', err);
           } else {
             console.log('SQLite sms_contexts table initialized');
+          }
+        });
+        
+        // NEW: Reminder tracking table
+        db.run(`CREATE TABLE IF NOT EXISTS reminder_log (
+          game_id TEXT NOT NULL,
+          player_phone TEXT NOT NULL,
+          reminder_type TEXT NOT NULL,
+          sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (game_id, player_phone, reminder_type)
+        )`, (err) => {
+          if (err) {
+            console.error('Error creating SQLite reminder_log table:', err);
+          } else {
+            console.log('SQLite reminder_log table initialized');
           }
         });
       });
@@ -111,7 +133,6 @@ initializeDatabase();
 async function saveGame(gameId, gameData, hostToken, hostPhone = null) {
   try {
     if (isProduction) {
-      // PostgreSQL
       const client = await pool.connect();
       const query = `
         INSERT INTO games (id, data, host_token, host_phone, updated_at) 
@@ -119,28 +140,21 @@ async function saveGame(gameId, gameData, hostToken, hostPhone = null) {
         ON CONFLICT (id) 
         DO UPDATE SET data = $2, host_token = $3, host_phone = $4, updated_at = CURRENT_TIMESTAMP
       `;
-      
-      // FIX 2: Corrected order of parameters for PostgreSQL INSERT/UPDATE
-      // $1 -> id, $2 -> data, $3 -> host_token, $4 -> host_phone
       await client.query(query, [gameId, JSON.stringify(gameData), hostToken, hostPhone]); 
       client.release();
     } else {
-      // SQLite
       return new Promise((resolve, reject) => {
         const stmt = db.prepare(`
           INSERT OR REPLACE INTO games (id, data, host_token, host_phone, updated_at) 
           VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
         `);
-        // SQLite expects the parameters in the same order as the VALUES clause
         stmt.run([gameId, JSON.stringify(gameData), hostToken, hostPhone], function(err) {
           if (err) reject(err);
           else resolve(this);
         });
-        
         stmt.finalize();
       });
     }
-    
     console.log(`Game ${gameId} saved to database`);
   } catch (err) {
     console.error('Error saving game:', err);
@@ -151,7 +165,6 @@ async function saveGame(gameId, gameData, hostToken, hostPhone = null) {
 async function getGame(gameId) {
   try {
     if (isProduction) {
-      // PostgreSQL
       const client = await pool.connect();
       const result = await client.query('SELECT * FROM games WHERE id = $1', [gameId]);
       client.release();
@@ -159,21 +172,20 @@ async function getGame(gameId) {
       if (result.rows.length > 0) {
         const row = result.rows[0];
         return {
-          ...row.data, // row.data is already JSONB, so no need to parse
+          ...row.data,
           hostToken: row.host_token,
           hostPhone: row.host_phone
         };
       }
       return null;
     } else {
-      // SQLite
       return new Promise((resolve, reject) => {
         db.get('SELECT * FROM games WHERE id = ?', [gameId], (err, row) => {
           if (err) {
             reject(err);
           } else if (row) {
             resolve({
-              ...JSON.parse(row.data), // SQLite stores as TEXT, so parse
+              ...JSON.parse(row.data),
               hostToken: row.host_token,
               hostPhone: row.host_phone
             });
@@ -192,7 +204,6 @@ async function getGame(gameId) {
 async function getGameHostInfo(gameId) {
   try {
     if (isProduction) {
-      // PostgreSQL
       const client = await pool.connect();
       const result = await client.query('SELECT host_phone, host_token FROM games WHERE id = $1', [gameId]);
       client.release();
@@ -203,7 +214,6 @@ async function getGameHostInfo(gameId) {
       }
       return null;
     } else {
-      // SQLite
       return new Promise((resolve, reject) => {
         db.get('SELECT host_phone, host_token FROM games WHERE id = ?', [gameId], (err, row) => {
           if (err) {
@@ -223,18 +233,16 @@ async function getGameHostInfo(gameId) {
 async function getAllGames() {
   try {
     if (isProduction) {
-      // PostgreSQL
       const client = await pool.connect();
       const result = await client.query('SELECT id, data FROM games');
       client.release();
       
       const games = {};
       result.rows.forEach(row => {
-        games[row.id] = row.data; // row.data is already JSONB, no need to parse
+        games[row.id] = row.data;
       });
       return games;
     } else {
-      // SQLite
       return new Promise((resolve, reject) => {
         db.all('SELECT id, data FROM games', [], (err, rows) => {
           if (err) {
@@ -242,7 +250,7 @@ async function getAllGames() {
           } else {
             const games = {};
             rows.forEach(row => {
-              games[row.id] = JSON.parse(row.data); // SQLite stores as TEXT, so parse
+              games[row.id] = JSON.parse(row.data);
             });
             resolve(games);
           }
@@ -255,7 +263,64 @@ async function getAllGames() {
   }
 }
 
-// SMS Context Management (New functions for stateful SMS conversations)
+// NEW: Reminder tracking functions
+async function hasReminderBeenSent(gameId, playerPhone, reminderType) {
+  try {
+    if (isProduction) {
+      const client = await pool.connect();
+      const result = await client.query(
+        'SELECT 1 FROM reminder_log WHERE game_id = $1 AND player_phone = $2 AND reminder_type = $3',
+        [gameId, playerPhone, reminderType]
+      );
+      client.release();
+      return result.rows.length > 0;
+    } else {
+      return new Promise((resolve, reject) => {
+        db.get(
+          'SELECT 1 FROM reminder_log WHERE game_id = ? AND player_phone = ? AND reminder_type = ?',
+          [gameId, playerPhone, reminderType],
+          (err, row) => {
+            if (err) reject(err);
+            else resolve(!!row);
+          }
+        );
+      });
+    }
+  } catch (err) {
+    console.error('Error checking reminder status:', err);
+    return false;
+  }
+}
+
+async function markReminderSent(gameId, playerPhone, reminderType) {
+  try {
+    if (isProduction) {
+      const client = await pool.connect();
+      await client.query(
+        'INSERT INTO reminder_log (game_id, player_phone, reminder_type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+        [gameId, playerPhone, reminderType]
+      );
+      client.release();
+    } else {
+      return new Promise((resolve, reject) => {
+        const stmt = db.prepare(`
+          INSERT OR IGNORE INTO reminder_log (game_id, player_phone, reminder_type) 
+          VALUES (?, ?, ?)
+        `);
+        stmt.run([gameId, playerPhone, reminderType], function(err) {
+          if (err) reject(err);
+          else resolve(this);
+        });
+        stmt.finalize();
+      });
+    }
+    console.log(`[REMINDER] Marked ${reminderType} reminder sent for game ${gameId}, player ${playerPhone}`);
+  } catch (err) {
+    console.error('Error marking reminder sent:', err);
+  }
+}
+
+// SMS Context Management
 async function saveLastCommand(phoneNumber, context) {
   try {
     if (isProduction) {
@@ -335,7 +400,6 @@ async function clearLastCommand(phoneNumber) {
   }
 }
 
-
 // SMS function
 async function sendSMS(to, message, gameId = null) {
   try {
@@ -352,7 +416,7 @@ async function sendSMS(to, message, gameId = null) {
     
     if (gameId) {
       params.replyWebhookUrl = `${process.env.BASE_URL || 'https://your-domain.com'}/api/sms/webhook`;
-      params.webhookData = gameId; // This is the 'data' field in the webhook
+      params.webhookData = gameId;
     }
     
     const response = await fetch('https://textbelt.com/text', {
@@ -378,6 +442,121 @@ async function sendSMS(to, message, gameId = null) {
   }
 }
 
+// NEW: Game reminder system
+// NEW: Game reminder system
+async function checkAndSendReminders() {
+  try {
+    console.log('[REMINDER] Checking for games that need reminders...');
+    
+    const allGames = await getAllGames();
+    
+    // Get current time in Central Time (accounts for DST automatically)
+    const now = new Date();
+    const cstNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}));
+    
+    console.log(`[REMINDER] Current CST time: ${cstNow.toLocaleString('en-US', { timeZone: 'America/Chicago' })}`);
+    
+    for (const [gameId, game] of Object.entries(allGames)) {
+      // Skip cancelled games
+      if (game.cancelled) {
+        continue;
+      }
+      
+      // Create game datetime in Central Time
+      const gameDateTime = `${game.date}T${game.time}:00`;
+      const gameDate = new Date(gameDateTime);
+      
+      // Convert game time to Central Time (in case it was stored in a different timezone)
+      const gameTimeCentral = new Date(gameDate.toLocaleString("en-US", {timeZone: "America/Chicago"}));
+      
+      // Calculate 2 hours before game time
+      const twoHoursBefore = new Date(gameTimeCentral.getTime() - (2 * 60 * 60 * 1000));
+      
+      // Check if game is before 9am CST
+      const gameHour = gameTimeCentral.getHours();
+      const isEarlyMorningGame = gameHour < 9;
+      
+      // For early morning games, set reminder time to 8pm the night before
+      let reminderTime;
+      if (isEarlyMorningGame) {
+        const nightBefore = new Date(gameTimeCentral);
+        nightBefore.setDate(nightBefore.getDate() - 1);
+        nightBefore.setHours(20, 0, 0, 0); // 8:00 PM
+        reminderTime = nightBefore;
+      } else {
+        reminderTime = twoHoursBefore;
+      }
+      
+      console.log(`[REMINDER] Game ${gameId} at ${game.location}:`);
+      console.log(`  Game time: ${gameTimeCentral.toLocaleString('en-US', { timeZone: 'America/Chicago' })}`);
+      console.log(`  Reminder time: ${reminderTime.toLocaleString('en-US', { timeZone: 'America/Chicago' })}`);
+      console.log(`  Current time: ${cstNow.toLocaleString('en-US', { timeZone: 'America/Chicago' })}`);
+      
+      // Check if it's time to send reminders (within 5 minutes of reminder time)
+      const timeDiff = Math.abs(cstNow.getTime() - reminderTime.getTime());
+      const fiveMinutes = 5 * 60 * 1000;
+      
+      if (timeDiff <= fiveMinutes && cstNow >= reminderTime) {
+        console.log(`[REMINDER] Time to send reminders for game ${gameId}`);
+        
+        // Send reminders to all confirmed players (excluding organizer)
+        const confirmedPlayers = game.players || [];
+        let remindersSent = 0;
+        
+        for (const player of confirmedPlayers) {
+          // Skip organizer
+          if (player.isOrganizer) {
+            continue;
+          }
+          
+          // Skip players without phone numbers
+          if (!player.phone) {
+            continue;
+          }
+          
+          // Check if reminder already sent
+          const reminderType = isEarlyMorningGame ? 'evening_before' : 'two_hours';
+          const alreadySent = await hasReminderBeenSent(gameId, player.phone, reminderType);
+          
+          if (alreadySent) {
+            console.log(`[REMINDER] Already sent ${reminderType} reminder to ${player.phone} for game ${gameId}`);
+            continue;
+          }
+          
+          // Format reminder message
+          const gameTime = formatTimeForSMS(game.time);
+          const gameDate = formatDateForSMS(game.date);
+          
+          let reminderMessage;
+          if (isEarlyMorningGame) {
+            reminderMessage = `🏓 Reminder: Your pickleball game is tomorrow morning at ${gameTime} at ${game.location}. Get a good night's sleep! Reply 2 for details or 9 to cancel.`;
+          } else {
+            reminderMessage = `🏓 Reminder: Your pickleball game starts in 2 hours at ${gameTime} at ${game.location}. See you on the court! Reply 2 for details or 9 to cancel.`;
+          }
+          
+          // Send SMS
+          const smsResult = await sendSMS(player.phone, reminderMessage, gameId);
+          
+          if (smsResult.success) {
+            await markReminderSent(gameId, player.phone, reminderType);
+            remindersSent++;
+            console.log(`[REMINDER] Sent ${reminderType} reminder to ${player.name} (${player.phone}) for game ${gameId}`);
+          } else {
+            console.error(`[REMINDER] Failed to send reminder to ${player.phone}:`, smsResult.error);
+          }
+        }
+        
+        if (remindersSent > 0) {
+          console.log(`[REMINDER] Sent ${remindersSent} reminders for game ${gameId} at ${game.location}`);
+        }
+      }
+    }
+    
+  } catch (error) {
+    console.error('[REMINDER] Error in reminder system:', error);
+  }
+}
+
 // Helper Functions
 function formatPhoneNumber(phoneNumber) {
   const cleaned = ('' + phoneNumber).replace(/\D/g, '');
@@ -392,12 +571,9 @@ function formatPhoneNumber(phoneNumber) {
 function isValidPhoneNumber(phoneNumber) {
   if (!phoneNumber) return false;
   
-  // Clean the number first
   const cleaned = ('' + phoneNumber).replace(/\D/g, '');
   
-  // Check if it's a valid US phone number length
   if (cleaned.length === 10 || (cleaned.length === 11 && cleaned.startsWith('1'))) {
-    // Use validator to double-check
     return validator.isMobilePhone(phoneNumber, 'en-US');
   }
   
@@ -417,6 +593,13 @@ function formatTimeForSMS(timeStr) {
   return `${hour12}:${minutes} ${ampm}`;
 }
 
+// Start the reminder system - check every 2 minutes
+setInterval(checkAndSendReminders, 2 * 60 * 1000);
+console.log('[REMINDER] Reminder system started - checking every 2 minutes');
+
+// Also run once on startup after a delay
+setTimeout(checkAndSendReminders, 10000); // Wait 10 seconds after startup
+
 // Middleware
 app.use(express.json());
 app.use(express.static('public'));
@@ -426,20 +609,19 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate limiting - prevents spam
+// Rate limiting
 const createGameLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 15, // Allow 15 game creations per 15 minutes per IP
+  windowMs: 15 * 60 * 1000,
+  max: 15,
   message: { error: 'Too many games created. Please wait 15 minutes.' }
 });
 
 const generalLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // Allow 30 requests per minute per IP
+  windowMs: 1 * 60 * 1000,
+  max: 30,
   message: { error: 'Too many requests. Please slow down.' }
 });
 
-// Apply rate limiting only in production
 if (isProduction) {
   app.use('/api/games', generalLimiter);
   app.post('/api/games', createGameLimiter);
@@ -451,6 +633,17 @@ if (isProduction) {
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running', database: isProduction ? 'PostgreSQL' : 'SQLite' });
+});
+
+// NEW: Manual reminder test endpoint
+app.post('/api/test-reminders', async (req, res) => {
+  try {    
+    await checkAndSendReminders();
+    res.json({ success: true, message: 'Reminder check completed' });
+  } catch (error) {
+    console.error('Manual reminder test failed:', error);
+    res.status(500).json({ error: 'Failed to run reminder check' });
+  }
 });
 
 // Create game
@@ -478,7 +671,6 @@ app.post('/api/games', async (req, res) => {
     
     const hostPhone = gameData.hostPhone || gameData.organizerPhone;
 
-    // Validate organizer phone number
     if (hostPhone && !isValidPhoneNumber(hostPhone)) {
       return res.status(400).json({ 
         error: 'Please enter a valid US phone number for the organizer' 
@@ -687,16 +879,13 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
     const gameId = req.params.id;
     const { name, phone, addTo, token } = req.body;
     
-    // Basic input cleaning
     const cleanName = name ? name.trim() : '';
     const cleanPhone = phone ? phone.trim() : '';
     
-    // Validate required fields
     if (!cleanName) {
       return res.status(400).json({ error: 'Player name is required' });
     }
     
-    // Validate phone number if provided
     if (cleanPhone && !isValidPhoneNumber(cleanPhone)) {
       return res.status(400).json({ error: 'Please enter a valid phone number' });
     }
@@ -706,12 +895,10 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    // Verify host token
     if (game.hostToken !== token) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
-    // Check for duplicate phone numbers ONLY (if phone provided)
     if (cleanPhone) {
       const formattedPhone = formatPhoneNumber(cleanPhone);
       
@@ -736,48 +923,45 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
       isOrganizer: false
     };
     
-    // Determine where to add based on capacity and user choice
     const totalPlayers = parseInt(game.totalPlayers) || 4;
     const currentPlayerCount = game.players.length;
     const spotsAvailable = totalPlayers - currentPlayerCount;
     
-if (addTo === 'waitlist' || spotsAvailable <= 0) {
-  // Add to waitlist
-  if (!game.waitlist) {
-    game.waitlist = [];
-  }
-  game.waitlist.push(newPlayer);
-  
-  await saveGame(gameId, game, game.hostToken, game.hostPhone);
-  
-  const position = game.waitlist.length;
-  return res.json({
-    success: true,
-    message: spotsAvailable <= 0 ? 
-      `Game is full - ${cleanName} added to waitlist` : 
-      `${cleanName} added to waitlist`,
-    status: 'waitlist',
-    position: position,
-    reason: spotsAvailable <= 0 ? 'game_full' : 'requested'
-  });
-} else {
-  // Add to confirmed players
-  game.players.push(newPlayer);
-  
-  await saveGame(gameId, game, game.hostToken, game.hostPhone);
-  
-  const position = game.players.length;
-  return res.json({
-    success: true,
-    message: `${cleanName} added to game`,
-    status: 'confirmed',
-    position: position,
-    totalPlayers: totalPlayers
-  });
-}
-} catch (error) {
-  console.error('Error manually adding player:', error);
-  res.status(500).json({ error: 'Failed to add player' });
+    if (addTo === 'waitlist' || spotsAvailable <= 0) {
+      if (!game.waitlist) {
+        game.waitlist = [];
+      }
+      game.waitlist.push(newPlayer);
+      
+      await saveGame(gameId, game, game.hostToken, game.hostPhone);
+      
+      const position = game.waitlist.length;
+      return res.json({
+        success: true,
+        message: spotsAvailable <= 0 ? 
+          `Game is full - ${cleanName} added to waitlist` : 
+          `${cleanName} added to waitlist`,
+        status: 'waitlist',
+        position: position,
+        reason: spotsAvailable <= 0 ? 'game_full' : 'requested'
+      });
+    } else {
+      game.players.push(newPlayer);
+      
+      await saveGame(gameId, game, game.hostToken, game.hostPhone);
+      
+      const position = game.players.length;
+      return res.json({
+        success: true,
+        message: `${cleanName} added to game`,
+        status: 'confirmed',
+        position: position,
+        totalPlayers: totalPlayers
+      });
+    }
+  } catch (error) {
+    console.error('Error manually adding player:', error);
+    res.status(500).json({ error: 'Failed to add player' });
   }
 });
 
@@ -793,7 +977,6 @@ app.post('/api/games/:id/players', async (req, res) => {
     
     const { name, phone } = req.body;
 
-    // Validate phone number before doing anything
     if (!isValidPhoneNumber(phone)) {
       return res.status(400).json({ 
         error: 'Please enter a valid US phone number (e.g., (555) 123-4567)' 
@@ -802,7 +985,6 @@ app.post('/api/games/:id/players', async (req, res) => {
 
     const formattedPhone = formatPhoneNumber(phone);
     
-    // Check for duplicate phone numbers ONLY
     const existingPlayer = game.players.find(p => p.phone === formattedPhone);
     if (existingPlayer) {
       return res.status(400).json({ error: 'This phone number is already registered for this game' });
@@ -876,7 +1058,6 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
     if (playerIndex >= 0) {
       const removedPlayer = game.players.splice(playerIndex, 1)[0];
       
-      // If organizer removes themselves, keep their organizer status but remove from player list
       if (removedPlayer.isOrganizer) {
         console.log('Organizer removed themselves from player list but retains management access');
       }
@@ -884,7 +1065,6 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
       let promotedPlayer = null;
       let smsResult = null;
       
-      // Promote from waitlist if available
       if (game.waitlist && game.waitlist.length > 0) {
         promotedPlayer = game.waitlist.shift();
         game.players.push(promotedPlayer);
@@ -907,7 +1087,6 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
         sms: smsResult 
       });
     } else {
-      // Check waitlist
       const waitlistIndex = (game.waitlist || []).findIndex(p => p.id === playerId);
       
       if (waitlistIndex >= 0) {
@@ -924,7 +1103,7 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
   }
 });
 
-// Send reminders
+// Send reminders (ENHANCED with automatic tracking)
 app.post('/api/games/:id/send-reminders', async (req, res) => {
   try {
     const gameId = req.params.id;
@@ -939,9 +1118,15 @@ app.post('/api/games/:id/send-reminders', async (req, res) => {
     const results = [];
     for (const player of game.players) {
       if (player.phone && !player.isOrganizer) {
+        const alreadySent = await hasReminderBeenSent(gameId, player.phone, 'manual');
+        
         const message = `Reminder: Your pickleball game at ${game.location} is today at ${gameTime}. See you there!`;
         const result = await sendSMS(player.phone, message);
-        results.push({ player: player.name, result });
+        results.push({ player: player.name, result, alreadySent });
+        
+        if (result.success) {
+          await markReminderSent(gameId, player.phone, 'manual');
+        }
       }
     }
     
@@ -952,8 +1137,7 @@ app.post('/api/games/:id/send-reminders', async (req, res) => {
   }
 });
 
-      
-// SMS webhook - CORRECTED AND IMPROVED VERSION
+// SMS webhook
 app.post('/api/sms/webhook', express.json(), async (req, res) => {
   try {
     const { fromNumber, text, data: gameId } = req.body;
@@ -962,18 +1146,15 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
     
     const cleanedFromNumber = formatPhoneNumber(fromNumber);
     const messageText = text.trim();
-    const lastCommand = await getLastCommand(cleanedFromNumber); // Get context early
+    const lastCommand = await getLastCommand(cleanedFromNumber);
 
-    // --- Priority 1: Handle numerical selections if a context exists ---
-    // This block runs if the message is a number AND we expect a numerical selection
     if (/^\d+$/.test(messageText) && lastCommand) {
-      const selection = parseInt(messageText) - 1; // Convert to 0-indexed
+      const selection = parseInt(messageText) - 1;
       
       if (lastCommand === 'details_selection') {
         const allGames = await getAllGames();
         const userGames = [];
         
-        // Re-generate userGames list (same logic as '2' command)
         for (const [id, game] of Object.entries(allGames)) {
           const gameDate = new Date(game.date);
           const now = new Date();
@@ -1033,18 +1214,16 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
           }
           
           await sendSMS(fromNumber, responseMessage);
-          await clearLastCommand(cleanedFromNumber); // Clear context after providing details
+          await clearLastCommand(cleanedFromNumber);
         } else {
-          // Invalid selection within context
           await sendSMS(fromNumber, `Invalid game number. Please reply with a valid number from the list or text "2" for game details.`);
-          await clearLastCommand(cleanedFromNumber); // Clear context on invalid input
+          await clearLastCommand(cleanedFromNumber);
         }
 
       } else if (lastCommand === 'cancellation_selection') {
         const allGames = await getAllGames();
         const playerGames = [];
         
-        // Same logic as "9" command
         for (const [id, game] of Object.entries(allGames)) {
           const gameDate = new Date(game.date);
           const now = new Date();
@@ -1092,26 +1271,18 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
           const gameTime = formatTimeForSMS(game.time);
           const statusText = status === 'confirmed' ? 'reservation' : 'waitlist spot';
           await sendSMS(fromNumber, `Your pickleball ${statusText} at ${game.location} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`);
-          await clearLastCommand(cleanedFromNumber); // Clear context after cancellation
+          await clearLastCommand(cleanedFromNumber);
           
         } else {
-          // Invalid selection within context
           await sendSMS(fromNumber, `Invalid selection. Please reply with a valid number from the list or text "9" to try cancelling again.`);
-          await clearLastCommand(cleanedFromNumber); // Clear context on invalid input
+          await clearLastCommand(cleanedFromNumber);
         }
-      } 
-      // If a number is sent but no relevant context (e.g., just sent "5" out of the blue)
-      else {
-        // This case indicates a numerical input without a preceding command that set context.
-        // It's a "mistake" by the user, so clear any context and provide main menu.
+      } else {
         await sendSMS(fromNumber, `Reply "1" for management link, "2" for game details, or "9" to cancel your reservation. For other inquiries, contact the organizer.`);
         await clearLastCommand(cleanedFromNumber); 
       }
-    } 
-    // --- Priority 2: Handle specific text commands (1, 2, 9, etc.) if no numerical selection or no context ---
-    // This block runs if the message is NOT a number, OR if it's a number but there was no active context.
-    else if (messageText === '1') {
-      await clearLastCommand(cleanedFromNumber); // Clear any old context before starting new command
+    } else if (messageText === '1') {
+      await clearLastCommand(cleanedFromNumber);
       const allGames = await getAllGames();
       const hostGames = [];
       
@@ -1153,11 +1324,10 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         }
         
         await sendSMS(fromNumber, responseMessage);
-        // No context needed here, '1' always lists games
       }
       
     } else if (messageText === '2') { 
-      await clearLastCommand(cleanedFromNumber); // Clear any old context before starting new command
+      await clearLastCommand(cleanedFromNumber);
       const allGames = await getAllGames();
       const userGames = [];
       
@@ -1222,7 +1392,6 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         }
         
         await sendSMS(fromNumber, responseMessage);
-        // No context needed here if only one game
       } else {
         let responseMessage = `You have ${userGames.length} upcoming games. Reply with just the number (1, 2, 3, etc.) to see details:\n\n`;
         
@@ -1246,11 +1415,11 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         });
         
         await sendSMS(fromNumber, responseMessage);
-        await saveLastCommand(cleanedFromNumber, 'details_selection'); // Set context for numerical follow-up
+        await saveLastCommand(cleanedFromNumber, 'details_selection');
       }
       
     } else if (messageText === '9') {
-      await clearLastCommand(cleanedFromNumber); // Clear any old context before starting new command
+      await clearLastCommand(cleanedFromNumber);
       const allGames = await getAllGames();
       const playerGames = [];
       
@@ -1313,11 +1482,10 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
         });
         
         await sendSMS(fromNumber, responseMessage);
-        await saveLastCommand(cleanedFromNumber, 'cancellation_selection'); // Set context for numerical follow-up
+        await saveLastCommand(cleanedFromNumber, 'cancellation_selection');
       }
       
     } else {
-      // Default response for unrecognized commands or clear context
       await sendSMS(fromNumber, `Reply 1 for host management, 2 for your game details, or 9 to cancel a spot. If you need anything else, reach out to the organizer.`);
       await clearLastCommand(cleanedFromNumber); 
     }
@@ -1326,12 +1494,28 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
     
   } catch (error) {
     console.error('Error handling incoming SMS:', error);
-    // Even on error, send a success to the webhook provider to prevent retries
     res.json({ success: true, message: "Error processing webhook, please try again or contact support." });
   }
 });
 
 // Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Closing database connection...');
+  if (isProduction) {
+    pool.end(() => {
+      console.log('PostgreSQL connection pool closed.');
+      process.exit(0);
+    });
+  }
+});
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Visit http://localhost:${PORT} to view your app`);
+});
+
+// Graceful shutdown handlers
 process.on('SIGINT', () => {
   console.log('Closing database connection...');
   if (isProduction) {
@@ -1368,10 +1552,4 @@ process.on('SIGTERM', () => {
       process.exit(0);
     });
   }
-});
-
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Visit http://localhost:${PORT} to view your app`);
 });
