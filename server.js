@@ -1348,23 +1348,40 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
       const allGames = await getAllGames();
       const userGames = [];
       
-      for (const [id, game] of Object.entries(allGames)) {
+      // Get all game IDs first, then process them with proper async handling
+      const gameEntries = Object.entries(allGames);
+      
+      for (const [id, game] of gameEntries) {
         const gameDate = new Date(game.date);
         const now = new Date();
         
+        // Only check upcoming games
         if (gameDate >= now || (gameDate.toDateString() === now.toDateString())) {
           let userRole = null;
-          const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber);
-          const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
           
+          // Check if user is in confirmed players
+          const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber);
           if (playerInConfirmed) {
             userRole = playerInConfirmed.isOrganizer ? 'host' : 'confirmed';
-          } else if (playerInWaitlist) {
-            userRole = 'waitlist';
-          } else {
-            const hostInfo = await getGameHostInfo(id);
-            if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-              userRole = 'host';
+          }
+          
+          // Check if user is in waitlist
+          if (!userRole) {
+            const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
+            if (playerInWaitlist) {
+              userRole = 'waitlist';
+            }
+          }
+          
+          // Check if user is host (only if not already found as player)
+          if (!userRole) {
+            try {
+              const hostInfo = await getGameHostInfo(id);
+              if (hostInfo && hostInfo.phone === cleanedFromNumber) {
+                userRole = 'host';
+              }
+            } catch (error) {
+              console.error(`Error getting host info for game ${id}:`, error);
             }
           }
           
@@ -1373,6 +1390,8 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
           }
         }
       }
+      
+      console.log(`[SMS] User ${cleanedFromNumber} has ${userGames.length} upcoming games`);
       
       if (userGames.length === 0) {
         await sendSMS(fromNumber, `You don't have any upcoming games registered to this phone number.`);
