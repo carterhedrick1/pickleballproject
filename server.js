@@ -1127,7 +1127,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
       }
       
       if (hostGames.length === 0) {
-        await sendSMS(fromNumber, `Sorry, we couldn't find any upcoming games for your number.`);
+        await sendSMS(fromNumber, `Sorry, we couldn't find any upcoming games that you're hosting.`);
       } else if (hostGames.length === 1) {
         const { id, game, hostInfo } = hostGames[0];
         const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
@@ -1318,7 +1318,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
       
     } else {
       // Default response for unrecognized commands or clear context
-      await sendSMS(fromNumber, `Reply "1" for management link, "2" for game details, or "9" to cancel your reservation. For other inquiries, contact the organizer.`);
+      await sendSMS(fromNumber, `Reply 1 for host management, 2 for your game details, or 9 to cancel a spot. If you need anything else, reach out to the organizer.`);
       await clearLastCommand(cleanedFromNumber); 
     }
     
