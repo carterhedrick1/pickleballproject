@@ -1188,7 +1188,7 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
       }
       
       if (userGames.length === 0) {
-        await sendSMS(fromNumber, `You don't have any upcoming games.`);
+        await sendSMS(fromNumber, `You don't have any upcoming games registered to this phone number.`);
       } else if (userGames.length === 1) {
         const { game, role } = userGames[0];
         const gameDate = formatDateForSMS(game.date);
