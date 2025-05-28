@@ -443,17 +443,22 @@ async function sendSMS(to, message, gameId = null) {
 }
 
 // NEW: Game reminder system
+// NEW: Game reminder system
 async function checkAndSendReminders() {
   try {
     console.log('[REMINDER] Checking for games that need reminders...');
     
     const allGames = await getAllGames();
     
-    // Get current time in Central Time (accounts for DST automatically)
+    // Get current time in Central Time (best practice for timezone handling)
     const now = new Date();
-    const cstNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}));
     
-    console.log(`[REMINDER] Current CST time: ${cstNow.toLocaleString('en-US', { timeZone: 'America/Chicago' })}`);
+    // Use toLocaleString with timezone to get Central time as a string, then parse it back
+    const centralTimeString = now.toLocaleString('en-CA', { timeZone: 'America/Chicago' }); // en-CA gives YYYY-MM-DD HH:mm:ss format
+    const centralNow = new Date(centralTimeString);
+    
+    console.log(`[REMINDER] Server time: ${now.toLocaleString()}`);
+    console.log(`[REMINDER] Central time: ${centralNow.toLocaleString()}`);
     
     for (const [gameId, game] of Object.entries(allGames)) {
       // Skip cancelled games
@@ -461,24 +466,21 @@ async function checkAndSendReminders() {
         continue;
       }
       
-      // Create game datetime in Central Time
+      // Create game datetime (assuming game times are stored in Central Time)
       const gameDateTime = `${game.date}T${game.time}:00`;
-      const gameDate = new Date(gameDateTime);
-      
-      // Convert game time to Central Time (in case it was stored in a different timezone)
-      const gameTimeCentral = new Date(gameDate.toLocaleString("en-US", {timeZone: "America/Chicago"}));
+      const gameTime = new Date(gameDateTime);
       
       // Calculate 2 hours before game time
-      const twoHoursBefore = new Date(gameTimeCentral.getTime() - (2 * 60 * 60 * 1000));
+      const twoHoursBefore = new Date(gameTime.getTime() - (2 * 60 * 60 * 1000));
       
-      // Check if game is before 9am CST
-      const gameHour = gameTimeCentral.getHours();
+      // Check if game is before 9am Central
+      const gameHour = gameTime.getHours();
       const isEarlyMorningGame = gameHour < 9;
       
       // For early morning games, set reminder time to 8pm the night before
       let reminderTime;
       if (isEarlyMorningGame) {
-        const nightBefore = new Date(gameTimeCentral);
+        const nightBefore = new Date(gameTime);
         nightBefore.setDate(nightBefore.getDate() - 1);
         nightBefore.setHours(20, 0, 0, 0); // 8:00 PM
         reminderTime = nightBefore;
@@ -487,18 +489,18 @@ async function checkAndSendReminders() {
       }
       
       console.log(`[REMINDER] Game ${gameId} at ${game.location}:`);
-      console.log(`  Game time: ${gameTimeCentral.toLocaleString('en-US', { timeZone: 'America/Chicago' })}`);
-      console.log(`  Reminder time: ${reminderTime.toLocaleString('en-US', { timeZone: 'America/Chicago' })}`);
-      console.log(`  Current time: ${cstNow.toLocaleString('en-US', { timeZone: 'America/Chicago' })}`);
+      console.log(`  Game time: ${gameTime.toLocaleString()}`);
+      console.log(`  Reminder time: ${reminderTime.toLocaleString()}`);
+      console.log(`  Current Central time: ${centralNow.toLocaleString()}`);
       
       // Check if it's time to send reminders (within 5 minutes of reminder time)
-      const timeDiff = Math.abs(cstNow.getTime() - reminderTime.getTime());
+      const timeDiff = Math.abs(centralNow.getTime() - reminderTime.getTime());
       const fiveMinutes = 5 * 60 * 1000;
       
-      if (timeDiff <= fiveMinutes && cstNow >= reminderTime) {
+      if (timeDiff <= fiveMinutes && centralNow >= reminderTime) {
         console.log(`[REMINDER] Time to send reminders for game ${gameId}`);
         
-        // Send reminders to all confirmed players (excluding organizer)
+        // Send reminders to all confirmed players
         const confirmedPlayers = game.players || [];
         let remindersSent = 0;
         
