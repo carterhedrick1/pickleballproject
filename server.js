@@ -444,21 +444,33 @@ async function sendSMS(to, message, gameId = null) {
 
 // NEW: Game reminder system
 // NEW: Game reminder system
+// NEW: Game reminder system
 async function checkAndSendReminders() {
   try {
     console.log('[REMINDER] Checking for games that need reminders...');
     
     const allGames = await getAllGames();
     
-    // Get current time in Central Time (best practice for timezone handling)
+    // Get current time in Central Time using UTC offset calculation
     const now = new Date();
     
-    // Use toLocaleString with timezone to get Central time as a string, then parse it back
-    const centralTimeString = now.toLocaleString('en-CA', { timeZone: 'America/Chicago' }); // en-CA gives YYYY-MM-DD HH:mm:ss format
-    const centralNow = new Date(centralTimeString);
+    // Get current UTC time
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    
+    // Central Time is UTC-5 (CDT) or UTC-6 (CST)
+    // Check if we're in Daylight Saving Time (March 2nd Sunday to November 1st Sunday)
+    const year = now.getFullYear();
+    const marchSecondSunday = new Date(year, 2, 14 - new Date(year, 2, 1).getDay());
+    const novemberFirstSunday = new Date(year, 10, 7 - new Date(year, 10, 1).getDay());
+    
+    const isDST = now >= marchSecondSunday && now < novemberFirstSunday;
+    const centralOffset = isDST ? -5 : -6; // Hours from UTC
+    
+    const centralNow = new Date(utcTime + (centralOffset * 3600000));
     
     console.log(`[REMINDER] Server time: ${now.toLocaleString()}`);
     console.log(`[REMINDER] Central time: ${centralNow.toLocaleString()}`);
+    console.log(`[REMINDER] Using ${isDST ? 'CDT (UTC-5)' : 'CST (UTC-6)'}`);
     
     for (const [gameId, game] of Object.entries(allGames)) {
       // Skip cancelled games
