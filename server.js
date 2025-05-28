@@ -1346,14 +1346,30 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
     } else if (messageText === '2') { 
       await clearLastCommand(cleanedFromNumber);
       const allGames = await getAllGames();
-      const userGames = [];
       
-      // Get all game IDs first, then process them with proper async handling
+      // Pre-fetch ALL host info to avoid race conditions
       const gameEntries = Object.entries(allGames);
+      const hostInfoPromises = gameEntries.map(async ([id, game]) => {
+        try {
+          const hostInfo = await getGameHostInfo(id);
+          return { id, hostInfo };
+        } catch (error) {
+          console.error(`Error getting host info for game ${id}:`, error);
+          return { id, hostInfo: null };
+        }
+      });
+      
+      // Wait for ALL host info to be fetched
+      const allHostInfo = await Promise.all(hostInfoPromises);
+      const hostInfoMap = new Map(allHostInfo.map(({ id, hostInfo }) => [id, hostInfo]));
+      
+      console.log(`[SMS] Fetched host info for ${allHostInfo.length} games`);
+      
+      const userGames = [];
+      const now = new Date();
       
       for (const [id, game] of gameEntries) {
         const gameDate = new Date(game.date);
-        const now = new Date();
         
         // Only check upcoming games
         if (gameDate >= now || (gameDate.toDateString() === now.toDateString())) {
@@ -1373,20 +1389,17 @@ app.post('/api/sms/webhook', express.json(), async (req, res) => {
             }
           }
           
-          // Check if user is host (only if not already found as player)
+          // Check if user is host using pre-fetched data
           if (!userRole) {
-            try {
-              const hostInfo = await getGameHostInfo(id);
-              if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-                userRole = 'host';
-              }
-            } catch (error) {
-              console.error(`Error getting host info for game ${id}:`, error);
+            const hostInfo = hostInfoMap.get(id);
+            if (hostInfo && hostInfo.phone === cleanedFromNumber) {
+              userRole = 'host';
             }
           }
           
           if (userRole) {
             userGames.push({ id, game, role: userRole });
+            console.log(`[SMS] Added game ${id} for user ${cleanedFromNumber} as ${userRole}`);
           }
         }
       }
