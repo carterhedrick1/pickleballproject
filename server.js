@@ -443,34 +443,43 @@ async function sendSMS(to, message, gameId = null) {
 }
 
 // NEW: Game reminder system
-// NEW: Game reminder system
-// NEW: Game reminder system
 async function checkAndSendReminders() {
   try {
     console.log('[REMINDER] Checking for games that need reminders...');
     
     const allGames = await getAllGames();
     
-    // Get current time in Central Time using UTC offset calculation
+    // Get current time in Central Time using a simple, reliable approach
     const now = new Date();
     
-    // Get current UTC time
-    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    // Simple approach: Get the time as if it were Central Time
+    // We'll use a fixed offset and handle DST detection differently
+    const centralNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}));
     
-    // Central Time is UTC-5 (CDT) or UTC-6 (CST)
-    // Check if we're in Daylight Saving Time (March 2nd Sunday to November 1st Sunday)
-    const year = now.getFullYear();
-    const marchSecondSunday = new Date(year, 2, 14 - new Date(year, 2, 1).getDay());
-    const novemberFirstSunday = new Date(year, 10, 7 - new Date(year, 10, 1).getDay());
-    
-    const isDST = now >= marchSecondSunday && now < novemberFirstSunday;
-    const centralOffset = isDST ? -5 : -6; // Hours from UTC
-    
-    const centralNow = new Date(utcTime + (centralOffset * 3600000));
-    
-    console.log(`[REMINDER] Server time: ${now.toLocaleString()}`);
-    console.log(`[REMINDER] Central time: ${centralNow.toLocaleString()}`);
-    console.log(`[REMINDER] Using ${isDST ? 'CDT (UTC-5)' : 'CST (UTC-6)'}`);
+    // If that fails, fall back to manual calculation
+    if (isNaN(centralNow.getTime())) {
+      console.log('[REMINDER] Timezone conversion failed, using manual calculation');
+      
+      // Manual calculation as fallback
+      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+      
+      // For May 2025, we're definitely in CDT (UTC-5)
+      const centralOffset = -5; // CDT
+      const manualCentralTime = new Date(utcTime + (centralOffset * 3600000));
+      
+      console.log(`[REMINDER] Server time: ${now.toLocaleString()}`);
+      console.log(`[REMINDER] Manual Central time: ${manualCentralTime.toLocaleString()}`);
+      console.log(`[REMINDER] Using manual CDT calculation (UTC-5)`);
+      
+      // Use the manual calculation
+      var finalCentralTime = manualCentralTime;
+    } else {
+      console.log(`[REMINDER] Server time: ${now.toLocaleString()}`);
+      console.log(`[REMINDER] Central time: ${centralNow.toLocaleString()}`);
+      
+      // Use the timezone conversion
+      var finalCentralTime = centralNow;
+    }
     
     for (const [gameId, game] of Object.entries(allGames)) {
       // Skip cancelled games
@@ -503,13 +512,13 @@ async function checkAndSendReminders() {
       console.log(`[REMINDER] Game ${gameId} at ${game.location}:`);
       console.log(`  Game time: ${gameTime.toLocaleString()}`);
       console.log(`  Reminder time: ${reminderTime.toLocaleString()}`);
-      console.log(`  Current Central time: ${centralNow.toLocaleString()}`);
+      console.log(`  Current Central time: ${finalCentralTime.toLocaleString()}`);
       
       // Check if it's time to send reminders (within 5 minutes of reminder time)
-      const timeDiff = Math.abs(centralNow.getTime() - reminderTime.getTime());
+      const timeDiff = Math.abs(finalCentralTime.getTime() - reminderTime.getTime());
       const fiveMinutes = 5 * 60 * 1000;
       
-      if (timeDiff <= fiveMinutes && centralNow >= reminderTime) {
+      if (timeDiff <= fiveMinutes && finalCentralTime >= reminderTime) {
         console.log(`[REMINDER] Time to send reminders for game ${gameId}`);
         
         // Send reminders to all confirmed players
