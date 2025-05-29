@@ -478,120 +478,152 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Set up form submission
-            const gameForm = document.getElementById('gameForm');
-            gameForm.addEventListener('submit', createGame);
-            
-            // Set up copy button
-            document.getElementById('copyLink').addEventListener('click', () => copyToClipboard('gameLink'));
-            
-            // Set default date to tomorrow
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            document.getElementById('date').value = tomorrow.toISOString().split('T')[0];
+        // TIMEZONE-FIXED JavaScript for create game form
+// Replace the entire <script> section in your create game HTML with this:
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Set up form submission
+    const gameForm = document.getElementById('gameForm');
+    gameForm.addEventListener('submit', createGame);
+    
+    // Set up copy button
+    document.getElementById('copyLink').addEventListener('click', () => copyToClipboard('gameLink'));
+    
+    // TIMEZONE FIX: Set default date to tomorrow using local date
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Format date as YYYY-MM-DD for HTML date input (local timezone)
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+    const tomorrowStr = `${year}-${month}-${day}`;
+    
+    document.getElementById('date').value = tomorrowStr;
+    console.log('Default date set to:', tomorrowStr); // Debug log
+});
+
+// TIMEZONE FIX FUNCTION - formats dates safely
+function formatDateForDisplay(dateStr) {
+    if (!dateStr) return '';
+    
+    // Parse as local date to avoid timezone shift
+    const [year, month, day] = dateStr.split('-');
+    const date = new Date(year, month - 1, day); // Local date constructor
+    
+    return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric'
+    });
+}
+
+async function createGame(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const gameData = {
+        location: formData.get('location'),
+        organizerName: formData.get('organizerName'),
+        organizerPhone: formData.get('organizerPhone'),
+        organizerPlaying: formData.get('organizerPlaying') === 'on',
+        date: formData.get('date'), // This is already in YYYY-MM-DD format
+        time: formData.get('time'),
+        duration: parseInt(formData.get('duration')),
+        totalPlayers: parseInt(formData.get('players')),
+        message: formData.get('message'),
+        hostPhone: formData.get('organizerPhone') // Include host phone for SMS confirmation
+    };
+    
+    console.log('Creating game with data:', gameData); // Debug log
+    
+    try {
+        showStatus('Creating game...', 'info');
+        
+        const response = await fetch('/api/games', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gameData)
         });
-
-        async function createGame(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(e.target);
-            const gameData = {
-                location: formData.get('location'),
-                organizerName: formData.get('organizerName'),
-                organizerPhone: formData.get('organizerPhone'),
-                organizerPlaying: formData.get('organizerPlaying') === 'on',
-                date: formData.get('date'),
-                time: formData.get('time'),
-                duration: parseInt(formData.get('duration')),
-                totalPlayers: parseInt(formData.get('players')),
-                message: formData.get('message'),
-                hostPhone: formData.get('organizerPhone') // Include host phone for SMS confirmation
-            };
-            
-            try {
-                showStatus('Creating game...', 'info');
-                
-                const response = await fetch('/api/games', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(gameData)
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to create game');
-                }
-                
-                const data = await response.json();
-                console.log('Game created:', data);
-                
-                // Save game to localStorage for My Games page
-                let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
-                myGames.push({
-                    id: data.gameId,
-                    hostToken: data.hostToken,
-                    location: gameData.location,
-                    date: gameData.date,
-                    time: gameData.time,
-                    duration: gameData.duration,
-                    totalPlayers: gameData.totalPlayers,
-                    message: gameData.message,
-                    created: new Date().toISOString(),
-                    cancelled: false
-                });
-                localStorage.setItem('myGames', JSON.stringify(myGames));
-                
-                // Show game links (just the player link now)
-                showGameLinks(data.gameId);
-                
-                // Clear form
-                document.getElementById('gameForm').reset();
-                
-                // Set tomorrow's date again
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                document.getElementById('date').value = tomorrow.toISOString().split('T')[0];
-                
-                // Check SMS status and show appropriate message
-                if (data.hostSms && data.hostSms.success) {
-                    showStatus('Game created successfully! Check your phone for confirmation. Reply "1" to get your management link.', 'success');
-                } else if (data.hostSms && !data.hostSms.success) {
-                    showStatus('Game created successfully! However, we couldn\'t send the confirmation text.', 'success');
-                } else if (data.hostSms && data.hostSms.dev) {
-                    showStatus('Game created successfully! (SMS confirmation disabled in development mode)', 'success');
-                } else {
-                    showStatus('Game created successfully!', 'success');
-                }
-                
-            } catch (error) {
-                console.error('Error creating game:', error);
-                showStatus('Error creating game: ' + error.message, 'error');
-            }
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create game');
         }
-
-        function showGameLinks(gameId) {
-            const baseUrl = window.location.origin;
-            
-            // Set only the player registration link
-            document.getElementById('gameLink').value = `${baseUrl}/game.html?id=${gameId}`;
-            
-            // Show the share link section
-            document.getElementById('shareLink').style.display = 'block';
-            
-            // Scroll to the links
-            document.getElementById('shareLink').scrollIntoView({ behavior: 'smooth' });
+        
+        const data = await response.json();
+        console.log('Game created:', data);
+        
+        // Save game to localStorage for My Games page
+        let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+        myGames.push({
+            id: data.gameId,
+            hostToken: data.hostToken,
+            location: gameData.location,
+            date: gameData.date,
+            time: gameData.time,
+            duration: gameData.duration,
+            totalPlayers: gameData.totalPlayers,
+            message: gameData.message,
+            created: new Date().toISOString(),
+            cancelled: false
+        });
+        localStorage.setItem('myGames', JSON.stringify(myGames));
+        
+        // Show game links (just the player link now)
+        showGameLinks(data.gameId);
+        
+        // Clear form
+        document.getElementById('gameForm').reset();
+        
+        // TIMEZONE FIX: Set tomorrow's date again using safe method
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const year = tomorrow.getFullYear();
+        const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const day = String(tomorrow.getDate()).padStart(2, '0');
+        const tomorrowStr = `${year}-${month}-${day}`;
+        document.getElementById('date').value = tomorrowStr;
+        
+        // Check SMS status and show appropriate message
+        if (data.hostSms && data.hostSms.success) {
+            showStatus('Game created successfully! Check your phone for confirmation. Reply "1" to get your management link.', 'success');
+        } else if (data.hostSms && !data.hostSms.success) {
+            showStatus('Game created successfully! However, we couldn\'t send the confirmation text.', 'success');
+        } else if (data.hostSms && data.hostSms.dev) {
+            showStatus('Game created successfully! (SMS confirmation disabled in development mode)', 'success');
+        } else {
+            showStatus('Game created successfully!', 'success');
         }
+        
+    } catch (error) {
+        console.error('Error creating game:', error);
+        showStatus('Error creating game: ' + error.message, 'error');
+    }
+}
 
-        function copyToClipboard(elementId) {
-            // Get the current game data from the form or stored data
-            const gameData = getCurrentGameData();
-            const gameLink = document.getElementById(elementId).value;
-            
-            // Create a complete message with the link and instructions
-            const message = `🏓 Join our pickleball game!
+function showGameLinks(gameId) {
+    const baseUrl = window.location.origin;
+    
+    // Set only the player registration link
+    document.getElementById('gameLink').value = `${baseUrl}/game.html?id=${gameId}`;
+    
+    // Show the share link section
+    document.getElementById('shareLink').style.display = 'block';
+    
+    // Scroll to the links
+    document.getElementById('shareLink').scrollIntoView({ behavior: 'smooth' });
+}
+
+function copyToClipboard(elementId) {
+    // Get the current game data from the form or stored data
+    const gameData = getCurrentGameData();
+    const gameLink = document.getElementById(elementId).value;
+    
+    // Create a complete message with the link and instructions
+    const message = `🏓 Join our pickleball game!
 
 📍 Location: ${gameData.location}
 📅 Date: ${gameData.formattedDate}
@@ -603,112 +635,111 @@ Click this link to sign up:
 ${gameLink}
 
 You'll get text confirmations and can easily cancel by replying "9" to any message. See you on the court! 🏓`;
+    
+    try {
+        // Copy the complete message to clipboard
+        navigator.clipboard.writeText(message).then(() => {
+            // Show feedback
+            const button = document.getElementById('copyLink');
+            const originalText = button.textContent;
+            button.textContent = 'Message Copied!';
+            button.style.backgroundColor = '#4CAF50';
             
-            try {
-                // Copy the complete message to clipboard
-                navigator.clipboard.writeText(message).then(() => {
-                    // Show feedback
-                    const button = document.getElementById('copyLink');
-                    const originalText = button.textContent;
-                    button.textContent = 'Message Copied!';
-                    button.style.backgroundColor = '#4CAF50';
-                    
-                    setTimeout(() => {
-                        button.textContent = originalText;
-                        button.style.backgroundColor = '#2196F3';
-                    }, 3000);
-                }).catch(() => {
-                    // Fallback for older browsers
-                    fallbackCopy(message);
-                });
-                
-            } catch (err) {
-                // Fallback for older browsers
-                fallbackCopy(message);
-            }
-        }
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.backgroundColor = '#2196F3';
+            }, 3000);
+        }).catch(() => {
+            // Fallback for older browsers
+            fallbackCopy(message);
+        });
+        
+    } catch (err) {
+        // Fallback for older browsers
+        fallbackCopy(message);
+    }
+}
 
-        function fallbackCopy(text) {
-            // Create a temporary textarea for older browsers
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.select();
-            
-            try {
-                document.execCommand('copy');
-                
-                const button = document.getElementById('copyLink');
-                const originalText = button.textContent;
-                button.textContent = 'Message Copied!';
-                button.style.backgroundColor = '#4CAF50';
-                
-                setTimeout(() => {
-                    button.textContent = originalText;
-                    button.style.backgroundColor = '#2196F3';
-                }, 3000);
-                
-            } catch (err) {
-                console.error('Failed to copy text: ', err);
-                showStatus('Failed to copy to clipboard', 'error');
-            }
-            
-            document.body.removeChild(textArea);
-        }
+function fallbackCopy(text) {
+    // Create a temporary textarea for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        
+        const button = document.getElementById('copyLink');
+        const originalText = button.textContent;
+        button.textContent = 'Message Copied!';
+        button.style.backgroundColor = '#4CAF50';
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.style.backgroundColor = '#2196F3';
+        }, 3000);
+        
+    } catch (err) {
+        console.error('Failed to copy text: ', err);
+        showStatus('Failed to copy to clipboard', 'error');
+    }
+    
+    document.body.removeChild(textArea);
+}
 
-        function getCurrentGameData() {
-            // Get the most recently created game from localStorage
-            const myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
-            if (myGames.length === 0) {
-                return {
-                    location: 'Game Location',
-                    formattedDate: 'Game Date',
-                    formattedTime: 'Game Time',
-                    duration: '90',
-                    totalPlayers: '4',
-                    message: ''
-                };
-            }
-            
-            // Get the most recent game
-            const latestGame = myGames[myGames.length - 1];
-            
-            // Format the date and time nicely
-            const gameDate = new Date(latestGame.date);
-            const formattedDate = gameDate.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                month: 'long', 
-                day: 'numeric' 
-            });
-            
-            const [hours, minutes] = latestGame.time.split(':');
-            const hour = parseInt(hours);
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            const hour12 = hour % 12 || 12;
-            const formattedTime = `${hour12}:${minutes} ${ampm}`;
-            
-            return {
-                location: latestGame.location,
-                formattedDate: formattedDate,
-                formattedTime: formattedTime,
-                duration: latestGame.duration,
-                totalPlayers: latestGame.totalPlayers,
-                message: latestGame.message || ''
-            };
-        }
+function getCurrentGameData() {
+    // Get the most recently created game from localStorage
+    const myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+    
+    if (myGames.length === 0) {
+        return {
+            location: 'Game Location',
+            formattedDate: 'Game Date',
+            formattedTime: 'Game Time',
+            duration: '90',
+            totalPlayers: '4',
+            message: ''
+        };
+    }
+    
+    // Get the most recent game
+    const latestGame = myGames[myGames.length - 1];
+    console.log('Getting current game data for:', latestGame.date); // Debug log
+    
+    // TIMEZONE FIX: Format the date and time safely
+    const formattedDate = formatDateForDisplay(latestGame.date);
+    
+    const [hours, minutes] = latestGame.time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    const formattedTime = `${hour12}:${minutes} ${ampm}`;
+    
+    console.log('Date formatted as:', formattedDate); // Debug log
+    
+    return {
+        location: latestGame.location,
+        formattedDate: formattedDate,
+        formattedTime: formattedTime,
+        duration: latestGame.duration,
+        totalPlayers: latestGame.totalPlayers,
+        message: latestGame.message || ''
+    };
+}
 
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.textContent = message;
-            statusDiv.className = type;
-            statusDiv.style.display = 'block';
-            
-            if (type === 'success' || type === 'info') {
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 5000);
-            }
-        }
+function showStatus(message, type) {
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = message;
+    statusDiv.className = type;
+    statusDiv.style.display = 'block';
+    
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+}
     </script>
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>
