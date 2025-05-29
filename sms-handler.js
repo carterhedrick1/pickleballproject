@@ -262,8 +262,11 @@ async function handleCancellationRequest(fromNumber, cleanedFromNumber) {
   }
 }
 
-// Helper function to get user's games
+// Helper function to get user's games - FIXED VERSION
 async function getUserGames(cleanedFromNumber, allGames) {
+  console.log(`[SMS] Looking for games for phone: ${cleanedFromNumber}`);
+  console.log(`[SMS] Total games to check: ${Object.keys(allGames).length}`);
+  
   const gameEntries = Object.entries(allGames);
   const hostInfoPromises = gameEntries.map(async ([id, game]) => {
     try {
@@ -284,34 +287,60 @@ async function getUserGames(cleanedFromNumber, allGames) {
   for (const [id, game] of gameEntries) {
     const gameDate = new Date(game.date);
     
+    console.log(`[SMS] Checking game ${id}: ${game.location} on ${game.date}`);
+    console.log(`[SMS] Game date: ${gameDate}, Now: ${now}, Future: ${gameDate >= now}`);
+    
+    // Check if game is today or in the future
     if (gameDate >= now || (gameDate.toDateString() === now.toDateString())) {
       let userRole = null;
       
-      const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber);
+      // Check confirmed players
+      const playerInConfirmed = game.players.find(p => {
+        console.log(`[SMS] Checking confirmed player: ${p.name}, phone: ${p.phone} vs ${cleanedFromNumber}`);
+        return p.phone === cleanedFromNumber;
+      });
+      
       if (playerInConfirmed) {
         userRole = playerInConfirmed.isOrganizer ? 'host' : 'confirmed';
+        console.log(`[SMS] Found in confirmed players as: ${userRole}`);
       }
       
+      // Check waitlist
       if (!userRole) {
-        const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
+        const playerInWaitlist = (game.waitlist || []).find(p => {
+          console.log(`[SMS] Checking waitlist player: ${p.name}, phone: ${p.phone} vs ${cleanedFromNumber}`);
+          return p.phone === cleanedFromNumber;
+        });
         if (playerInWaitlist) {
           userRole = 'waitlist';
+          console.log(`[SMS] Found in waitlist`);
         }
       }
       
+      // Check if they're the host
       if (!userRole) {
         const hostInfo = hostInfoMap.get(id);
-        if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-          userRole = 'host';
+        if (hostInfo) {
+          console.log(`[SMS] Checking host info: ${hostInfo.phone} vs ${cleanedFromNumber}`);
+          if (hostInfo.phone === cleanedFromNumber) {
+            userRole = 'host';
+            console.log(`[SMS] Found as host`);
+          }
         }
       }
       
       if (userRole) {
+        console.log(`[SMS] Adding game ${id} with role: ${userRole}`);
         userGames.push({ id, game, role: userRole });
+      } else {
+        console.log(`[SMS] No role found for game ${id}`);
       }
+    } else {
+      console.log(`[SMS] Game ${id} is in the past, skipping`);
     }
   }
   
+  console.log(`[SMS] Found ${userGames.length} games for user ${cleanedFromNumber}`);
   return userGames;
 }
 
