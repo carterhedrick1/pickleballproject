@@ -589,372 +589,389 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const statusDiv = document.getElementById('status');
-            let gameData;
+        // TIMEZONE-FIXED JavaScript for game.html
+// Replace the entire <script> section in your game.html with this:
+
+document.addEventListener('DOMContentLoaded', () => {
+    const statusDiv = document.getElementById('status');
+    let gameData;
+    
+    // TIMEZONE FIX FUNCTION - prevents date shifting
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        
+        // Parse as local date to avoid timezone shift
+        const [year, month, day] = dateStr.split('-');
+        const date = new Date(year, month - 1, day); // Local date constructor
+        
+        return date.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            month: 'long', 
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+    
+    // Get game ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameId = urlParams.get('id');
+    
+    if (!gameId) {
+        showStatus("Game not found. Please check your link. The URL should include an 'id' parameter.", 'error');
+        return;
+    }
+    
+    // Fetch game data
+    showStatus("Fetching game data...", 'info');
+    
+    fetch(`/api/games/${gameId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            gameData = data;
+            console.log('Game data received:', gameData); // Debug log
             
-            // Get game ID from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const gameId = urlParams.get('id');
+            // Display game details
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('details').style.display = 'block';
+            document.getElementById('playerList').style.display = 'block';
             
-            if (!gameId) {
-                showStatus("Game not found. Please check your link. The URL should include an 'id' parameter.", 'error');
-                return;
+            document.getElementById('location').textContent = gameData.location;
+            document.getElementById('date').textContent = formatDate(gameData.date);
+            document.getElementById('time').textContent = formatTime(gameData.time);
+            document.getElementById('duration').textContent = gameData.duration;
+            
+            console.log('Date formatted as:', formatDate(gameData.date)); // Debug log
+            
+            // Show message only if it exists
+            if (gameData.message && gameData.message.trim()) {
+                document.getElementById('message').textContent = gameData.message;
+                document.getElementById('messageDetail').style.display = 'flex';
             }
             
-            // Fetch game data
-            showStatus("Fetching game data...", 'info');
+            // Update player list
+            updatePlayerList();
             
-            fetch(`/api/games/${gameId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Server responded with status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
+            // Show signup form for new players
+            document.getElementById('signupForm').style.display = 'block';
+            
+            // Hide the status message since game loaded successfully
+            statusDiv.style.display = 'none';
+            
+            // Set up event handlers
+            setupEventHandlers();
+        })
+        .catch(error => {
+            console.error("Error fetching game:", error);
+            showStatus(`Game not found. Please check your link.`, 'error');
+        });
+
+    // AUTO-REFRESH: Add periodic refresh every 30 seconds
+    setInterval(() => {
+        if (!document.hidden && gameData) { // Only refresh if tab is visible and game loaded
+            fetchGameDataSilently();
+        }
+    }, 30000); // 30 seconds
+    
+    // AUTO-REFRESH: Refresh when tab becomes visible again
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && gameData) {
+            fetchGameDataSilently();
+        }
+    });
+    
+    // Silent refresh function (no loading messages)
+    function fetchGameDataSilently() {
+        fetch(`/api/games/${gameId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const oldData = JSON.stringify(gameData);
+                const newData = JSON.stringify(data);
+                
+                // Only update if data actually changed
+                if (oldData !== newData) {
                     gameData = data;
                     
-                    // Display game details
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('details').style.display = 'block';
-                    document.getElementById('playerList').style.display = 'block';
-                    
+                    // Update all the game details - TIMEZONE FIXED
                     document.getElementById('location').textContent = gameData.location;
                     document.getElementById('date').textContent = formatDate(gameData.date);
                     document.getElementById('time').textContent = formatTime(gameData.time);
                     document.getElementById('duration').textContent = gameData.duration;
                     
-                    // Show message only if it exists
+                    // Update message
                     if (gameData.message && gameData.message.trim()) {
                         document.getElementById('message').textContent = gameData.message;
                         document.getElementById('messageDetail').style.display = 'flex';
+                    } else {
+                        document.getElementById('messageDetail').style.display = 'none';
                     }
                     
-                    // Update player list
                     updatePlayerList();
                     
-                    // Show signup form for new players
-                    document.getElementById('signupForm').style.display = 'block';
-                    
-                    // Hide the status message since game loaded successfully
-                    statusDiv.style.display = 'none';
-                    
-                    // Set up event handlers
-                    setupEventHandlers();
-                })
-                .catch(error => {
-                    console.error("Error fetching game:", error);
-                    showStatus(`Game not found. Please check your link.`, 'error');
-                });
-
-            // AUTO-REFRESH: Add periodic refresh every 30 seconds
-            setInterval(() => {
-                if (!document.hidden && gameData) { // Only refresh if tab is visible and game loaded
-                    fetchGameDataSilently();
+                    // Show subtle update notification
+                    showUpdateNotification();
                 }
-            }, 30000); // 30 seconds
-            
-            // AUTO-REFRESH: Refresh when tab becomes visible again
-            document.addEventListener('visibilitychange', () => {
-                if (!document.hidden && gameData) {
-                    fetchGameDataSilently();
-                }
+            })
+            .catch(error => {
+                console.error("Silent refresh failed:", error);
+                // Fail silently - don't show error to user
             });
-            
-            // Silent refresh function (no loading messages)
-            function fetchGameDataSilently() {
-                fetch(`/api/games/${gameId}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`Server responded with status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        const oldData = JSON.stringify(gameData);
-                        const newData = JSON.stringify(data);
-                        
-                        // Only update if data actually changed
-                        if (oldData !== newData) {
-                            gameData = data;
-                            
-                            // Update all the game details
-                            document.getElementById('location').textContent = gameData.location;
-                            document.getElementById('date').textContent = formatDate(gameData.date);
-                            document.getElementById('time').textContent = formatTime(gameData.time);
-                            document.getElementById('duration').textContent = gameData.duration;
-                            
-                            // Update message
-                            if (gameData.message && gameData.message.trim()) {
-                                document.getElementById('message').textContent = gameData.message;
-                                document.getElementById('messageDetail').style.display = 'flex';
-                            } else {
-                                document.getElementById('messageDetail').style.display = 'none';
-                            }
-                            
-                            updatePlayerList();
-                            
-                            // Show subtle update notification
-                            showUpdateNotification();
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Silent refresh failed:", error);
-                        // Fail silently - don't show error to user
-                    });
-            }
-            
-            // Show subtle update notification
-            function showUpdateNotification() {
-                const notification = document.createElement('div');
-                notification.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-                    color: white;
-                    padding: 12px 20px;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-                    z-index: 1000;
-                    font-size: 14px;
-                    font-weight: bold;
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                `;
-                notification.textContent = '✨ Game details updated!';
-                
-                document.body.appendChild(notification);
-                
-                // Fade in
-                setTimeout(() => {
-                    notification.style.opacity = '1';
-                }, 100);
-                
-                // Fade out and remove
-                setTimeout(() => {
-                    notification.style.opacity = '0';
-                    setTimeout(() => {
-                        if (notification.parentNode) {
-                            notification.parentNode.removeChild(notification);
-                        }
-                    }, 300);
-                }, 3000);
-            }
-                
-            function updatePlayerList() {
-                const playersList = document.getElementById('players');
-                const spotsAvailable = document.getElementById('spotsAvailable');
-                const spotsAvailableBar = document.getElementById('spotsAvailableBar');
-                const spotsFullContainer = document.getElementById('spotsFullContainer');
-                const waitlistCount = document.getElementById('waitlistCount');
-                const joinSectionTitle = document.getElementById('joinSectionTitle');
-                const joinButton = document.getElementById('joinButton');
-                
-                if (!playersList || !spotsAvailable) {
-                    return;
+    }
+    
+    // Show subtle update notification
+    function showUpdateNotification() {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+            z-index: 1000;
+            font-size: 14px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        notification.textContent = '✨ Game details updated!';
+        
+        document.body.appendChild(notification);
+        
+        // Fade in
+        setTimeout(() => {
+            notification.style.opacity = '1';
+        }, 100);
+        
+        // Fade out and remove
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
                 }
-                
-                // Clear existing list
-                playersList.innerHTML = '';
-                
-                // Check if there are any players
-                if (gameData.players.length === 0) {
-                    // No players yet - show helpful hint
-                    const li = document.createElement('li');
-                    li.style.fontStyle = 'italic';
-                    li.style.color = '#999';
-                    li.style.fontSize = '14px';
-                    li.textContent = 'None yet - be the first to join!';
-                    playersList.appendChild(li);
-                } else {
-                    // Add players to list
-                    gameData.players.forEach(player => {
-                        const li = document.createElement('li');
-                        li.textContent = player.name + (player.isOrganizer ? ' (Organizer)' : '');
-                        playersList.appendChild(li);
-                    });
-                }
-                
-                // Update spots available
-                const availableSpots = parseInt(gameData.totalPlayers) - gameData.players.length;
-                const waitlistLength = gameData.waitlist ? gameData.waitlist.length : 0;
-                
-                if (availableSpots > 0) {
-                    // Show spots available
-                    spotsAvailable.textContent = availableSpots;
-                    spotsAvailableBar.style.display = 'block';
-                    spotsFullContainer.style.display = 'none';
-                    joinSectionTitle.textContent = '🏓 Join This Game';
-                    joinButton.textContent = 'COUNT ME IN!';
-                } else {
-                    // Show game is full with waitlist info
-                    spotsAvailableBar.style.display = 'none';
-                    spotsFullContainer.style.display = 'block';
-                    waitlistCount.textContent = waitlistLength;
-                    joinSectionTitle.textContent = '🕐 Join the Waitlist';
-                    joinButton.textContent = 'JOIN WAITLIST';
-                }
-                
-                // Always show signup form since they can join waitlist when full
-                const signupForm = document.getElementById('signupForm');
-                if (signupForm) {
-                    signupForm.style.display = 'block';
-                }
-            }
+            }, 300);
+        }, 3000);
+    }
+        
+    function updatePlayerList() {
+        const playersList = document.getElementById('players');
+        const spotsAvailable = document.getElementById('spotsAvailable');
+        const spotsAvailableBar = document.getElementById('spotsAvailableBar');
+        const spotsFullContainer = document.getElementById('spotsFullContainer');
+        const waitlistCount = document.getElementById('waitlistCount');
+        const joinSectionTitle = document.getElementById('joinSectionTitle');
+        const joinButton = document.getElementById('joinButton');
+        
+        if (!playersList || !spotsAvailable) {
+            return;
+        }
+        
+        // Clear existing list
+        playersList.innerHTML = '';
+        
+        // Check if there are any players
+        if (gameData.players.length === 0) {
+            // No players yet - show helpful hint
+            const li = document.createElement('li');
+            li.style.fontStyle = 'italic';
+            li.style.color = '#999';
+            li.style.fontSize = '14px';
+            li.textContent = 'None yet - be the first to join!';
+            playersList.appendChild(li);
+        } else {
+            // Add players to list
+            gameData.players.forEach(player => {
+                const li = document.createElement('li');
+                li.textContent = player.name + (player.isOrganizer ? ' (Organizer)' : '');
+                playersList.appendChild(li);
+            });
+        }
+        
+        // Update spots available
+        const availableSpots = parseInt(gameData.totalPlayers) - gameData.players.length;
+        const waitlistLength = gameData.waitlist ? gameData.waitlist.length : 0;
+        
+        if (availableSpots > 0) {
+            // Show spots available
+            spotsAvailable.textContent = availableSpots;
+            spotsAvailableBar.style.display = 'block';
+            spotsFullContainer.style.display = 'none';
+            joinSectionTitle.textContent = '🏓 Join This Game';
+            joinButton.textContent = 'COUNT ME IN!';
+        } else {
+            // Show game is full with waitlist info
+            spotsAvailableBar.style.display = 'none';
+            spotsFullContainer.style.display = 'block';
+            waitlistCount.textContent = waitlistLength;
+            joinSectionTitle.textContent = '🕐 Join the Waitlist';
+            joinButton.textContent = 'JOIN WAITLIST';
+        }
+        
+        // Always show signup form since they can join waitlist when full
+        const signupForm = document.getElementById('signupForm');
+        if (signupForm) {
+            signupForm.style.display = 'block';
+        }
+    }
 
-            function showConfirmation(data) {
-                // Hide other sections AND the header
-                document.getElementById('gameDetails').style.display = 'none';
-                document.getElementById('playerList').style.display = 'none';
-                document.getElementById('signupForm').style.display = 'none';
-                document.querySelector('.section-header').style.display = 'none'; // Hide the header
-                
-                // Show confirmation section
-                const confirmationSection = document.getElementById('confirmationSection');
-                confirmationSection.style.display = 'block';
-                
-                // Update confirmation content
-                const confirmTitle = document.getElementById('confirmationTitle');
-                const confirmMessage = document.getElementById('confirmationMessage');
-                const confirmLocation = document.getElementById('confirmLocation');
-                const confirmDateTime = document.getElementById('confirmDateTime');
-                const confirmStatus = document.getElementById('confirmStatus');
-                
-                if (data.status === 'confirmed') {
-                    confirmationSection.classList.remove('waitlist');
-                    confirmTitle.textContent = "You're In!";
-                    confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
-                    confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
-                } else if (data.status === 'waitlist') {
-                    confirmationSection.classList.add('waitlist');
-                    confirmTitle.textContent = "⏳ You're on the Waitlist!";
-                    confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
-                    confirmStatus.textContent = `Waitlist Position #${data.position}`;
-                }
-                
-                confirmLocation.textContent = gameData.location;
-                confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
-                
-                // Scroll to top to show confirmation
-                window.scrollTo(0, 0);
-            }
+    function showConfirmation(data) {
+        // Hide other sections AND the header
+        document.getElementById('gameDetails').style.display = 'none';
+        document.getElementById('playerList').style.display = 'none';
+        document.getElementById('signupForm').style.display = 'none';
+        document.querySelector('.section-header').style.display = 'none'; // Hide the header
+        
+        // Show confirmation section
+        const confirmationSection = document.getElementById('confirmationSection');
+        confirmationSection.style.display = 'block';
+        
+        // Update confirmation content - TIMEZONE FIXED
+        const confirmTitle = document.getElementById('confirmationTitle');
+        const confirmMessage = document.getElementById('confirmationMessage');
+        const confirmLocation = document.getElementById('confirmLocation');
+        const confirmDateTime = document.getElementById('confirmDateTime');
+        const confirmStatus = document.getElementById('confirmStatus');
+        
+        if (data.status === 'confirmed') {
+            confirmationSection.classList.remove('waitlist');
+            confirmTitle.textContent = "You're In!";
+            confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
+            confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
+        } else if (data.status === 'waitlist') {
+            confirmationSection.classList.add('waitlist');
+            confirmTitle.textContent = "⏳ You're on the Waitlist!";
+            confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
+            confirmStatus.textContent = `Waitlist Position #${data.position}`;
+        }
+        
+        confirmLocation.textContent = gameData.location;
+        confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
+        
+        // Scroll to top to show confirmation
+        window.scrollTo(0, 0);
+    }
 
-            window.showGameDetails = function() {
-                // Show game sections again AND the header
-                document.getElementById('gameDetails').style.display = 'block';
-                document.getElementById('playerList').style.display = 'block';
-                document.getElementById('signupForm').style.display = 'block';
-                document.querySelector('.section-header').style.display = 'block'; // Show the header again
+    window.showGameDetails = function() {
+        // Show game sections again AND the header
+        document.getElementById('gameDetails').style.display = 'block';
+        document.getElementById('playerList').style.display = 'block';
+        document.getElementById('signupForm').style.display = 'block';
+        document.querySelector('.section-header').style.display = 'block'; // Show the header again
+        
+        // Hide confirmation section
+        document.getElementById('confirmationSection').style.display = 'none';
+        
+        // Refresh the game data to show updated player list
+        fetch(`/api/games/${gameId}`)
+            .then(response => response.json())
+            .then(updatedData => {
+                gameData = updatedData;
+                updatePlayerList();
+            })
+            .catch(error => {
+                console.error('Error refreshing game data:', error);
+            });
+    }       
+    
+    function setupEventHandlers() {
+        // Set up join form submission
+        const joinForm = document.getElementById('joinForm');
+        joinForm.addEventListener('submit', event => {
+            event.preventDefault();
+            const playerName = document.getElementById('playerName').value;
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            
+            showStatus('Processing your request...', 'info');
+            
+            // Send the player data to the server
+            fetch(`/api/games/${gameId}/players`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: playerName,
+                    phone: phoneNumber
+                })
+            })
+            .then(async response => {
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Failed to join game');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Hide status message
+                statusDiv.style.display = 'none';
                 
-                // Hide confirmation section
-                document.getElementById('confirmationSection').style.display = 'none';
+                // Show confirmation page
+                showConfirmation(data);
                 
-                // Refresh the game data to show updated player list
+                // Clear the form
+                document.getElementById('playerName').value = '';
+                document.getElementById('phoneNumber').value = '';
+                
+                // Update game data in background
                 fetch(`/api/games/${gameId}`)
                     .then(response => response.json())
                     .then(updatedData => {
                         gameData = updatedData;
-                        updatePlayerList();
                     })
                     .catch(error => {
                         console.error('Error refreshing game data:', error);
                     });
-            }       
-            
-            function setupEventHandlers() {
-                // Set up join form submission
-                const joinForm = document.getElementById('joinForm');
-                joinForm.addEventListener('submit', event => {
-                    event.preventDefault();
-                    const playerName = document.getElementById('playerName').value;
-                    const phoneNumber = document.getElementById('phoneNumber').value;
-                    
-                    showStatus('Processing your request...', 'info');
-                    
-                    // Send the player data to the server
-                    fetch(`/api/games/${gameId}/players`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            name: playerName,
-                            phone: phoneNumber
-                        })
-                    })
-                    .then(async response => {
-                        if (!response.ok) {
-                            const errorData = await response.json().catch(() => ({}));
-                            throw new Error(errorData.error || 'Failed to join game');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        // Hide status message
-                        statusDiv.style.display = 'none';
-                        
-                        // Show confirmation page
-                        showConfirmation(data);
-                        
-                        // Clear the form
-                        document.getElementById('playerName').value = '';
-                        document.getElementById('phoneNumber').value = '';
-                        
-                        // Update game data in background
-                        fetch(`/api/games/${gameId}`)
-                            .then(response => response.json())
-                            .then(updatedData => {
-                                gameData = updatedData;
-                            })
-                            .catch(error => {
-                                console.error('Error refreshing game data:', error);
-                            });
-                    })
-                    .catch(error => {
-                        console.error('Error joining game:', error);
-                        showStatus(error.message, 'error');
-                    });
-                });
-            }
-            
-            function formatDate(dateStr) {
-                const date = new Date(dateStr);
-                return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-            }
-            
-            function formatTime(timeStr) {
-                const [hours, minutes] = timeStr.split(':');
-                const hour = parseInt(hours);
-                const ampm = hour >= 12 ? 'PM' : 'AM';
-                const hour12 = hour % 12 || 12;
-                return `${hour12}:${minutes} ${ampm}`;
-            }
-            
-            function showStatus(message, type) {
-                statusDiv.textContent = message;
-                statusDiv.className = type;
-                statusDiv.style.display = 'block';
-                
-                // Auto-scroll to show the status message  
-                statusDiv.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center' 
-                });
-                
-                if (type === 'error') {
-                    document.getElementById('loading').style.display = 'none';
-                }
-                
-                // Auto-hide success messages after 5 seconds
-                if (type === 'success' || type === 'info') {
-                    setTimeout(() => {
-                        statusDiv.style.display = 'none';
-                    }, 5000);
-                }
-            }
+            })
+            .catch(error => {
+                console.error('Error joining game:', error);
+                showStatus(error.message, 'error');
+            });
         });
+    }
+    
+    function formatTime(timeStr) {
+        const [hours, minutes] = timeStr.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        return `${hour12}:${minutes} ${ampm}`;
+    }
+    
+    function showStatus(message, type) {
+        statusDiv.textContent = message;
+        statusDiv.className = type;
+        statusDiv.style.display = 'block';
+        
+        // Auto-scroll to show the status message  
+        statusDiv.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+        });
+        
+        if (type === 'error') {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        // Auto-hide success messages after 5 seconds
+        if (type === 'success' || type === 'info') {
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+    }
+});
     </script>
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>

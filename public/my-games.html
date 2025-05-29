@@ -413,154 +413,175 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            loadMyGames();
-        });
+        // TIMEZONE-FIXED JavaScript for home/my-games page
+// Replace the entire <script> section in your home page with this:
 
-        function loadMyGames() {
-            // Get games from localStorage
-            const games = JSON.parse(localStorage.getItem('myGames') || '[]');
-            
-            const gamesList = document.getElementById('gamesList');
-            
-            if (games.length === 0) {
-                gamesList.innerHTML = `
-                    <div class="no-games">
-                        <div class="no-games-icon">🏓</div>
-                        <h3>No Games Yet</h3>
-                        <p>Games you create will appear here for easy management.</p>
-                        <a href="/" class="create-game-btn">Create Your First Game</a>
+document.addEventListener('DOMContentLoaded', () => {
+    loadMyGames();
+});
+
+// TIMEZONE FIX FUNCTION - prevents date shifting
+function formatDateForDisplay(dateStr) {
+    if (!dateStr) return '';
+    
+    // Parse as local date to avoid timezone shift
+    const [year, month, day] = dateStr.split('-');
+    const date = new Date(year, month - 1, day); // Local date constructor
+    
+    return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+    });
+}
+
+function loadMyGames() {
+    // Get games from localStorage
+    const games = JSON.parse(localStorage.getItem('myGames') || '[]');
+    
+    const gamesList = document.getElementById('gamesList');
+    
+    if (games.length === 0) {
+        gamesList.innerHTML = `
+            <div class="no-games">
+                <div class="no-games-icon">🏓</div>
+                <h3>No Games Yet</h3>
+                <p>Games you create will appear here for easy management.</p>
+                <a href="/" class="create-game-btn">Create Your First Game</a>
+            </div>
+        `;
+        return;
+    }
+    
+    // Sort games by date (newest first)
+    games.sort((a, b) => new Date(b.created) - new Date(a.created));
+    
+    let gamesHTML = '';
+    
+    games.forEach(game => {
+        console.log('Processing game with date:', game.date); // Debug log
+        
+        // TIMEZONE FIX: Use proper date parsing
+        const [year, month, day] = game.date.split('-');
+        const gameDate = new Date(year, month - 1, day); // Local date constructor
+        const now = new Date();
+        
+        let status = 'active';
+        let statusText = 'Active';
+        let statusIcon = '🟢';
+        
+        if (game.cancelled) {
+            status = 'cancelled';
+            statusText = 'Cancelled';
+            statusIcon = '🔴';
+        } else if (gameDate < now) {
+            status = 'completed';
+            statusText = 'Completed';
+            statusIcon = '✅';
+        }
+        
+        // TIMEZONE FIX: Use the fixed date formatting function
+        const formattedDate = formatDateForDisplay(game.date);
+        console.log('Date formatted as:', formattedDate); // Debug log
+        
+        const formattedTime = formatTime(game.time);
+        
+        gamesHTML += `
+            <div class="game-item">
+                <div class="game-header">
+                    <h3 class="game-title">
+                        📍 ${game.location}
+                    </h3>
+                    <span class="game-status status-${status}">
+                        ${statusIcon} ${statusText}
+                    </span>
+                </div>
+                
+                <div class="game-details">
+                    <div class="game-detail-row">
+                        <span class="game-detail-label">📅 Date & Time:</span>
+                        <span class="game-detail-value">${formattedDate} at ${formattedTime}</span>
                     </div>
-                `;
-                return;
-            }
-            
-            // Sort games by date (newest first)
-            games.sort((a, b) => new Date(b.created) - new Date(a.created));
-            
-            let gamesHTML = '';
-            
-            games.forEach(game => {
-                const gameDate = new Date(game.date);
-                const now = new Date();
-                let status = 'active';
-                let statusText = 'Active';
-                let statusIcon = '🟢';
-                
-                if (game.cancelled) {
-                    status = 'cancelled';
-                    statusText = 'Cancelled';
-                    statusIcon = '🔴';
-                } else if (gameDate < now) {
-                    status = 'completed';
-                    statusText = 'Completed';
-                    statusIcon = '✅';
-                }
-                
-                const formattedDate = gameDate.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short', 
-                    day: 'numeric',
-                    year: 'numeric'
-                });
-                
-                const formattedTime = formatTime(game.time);
-                
-                gamesHTML += `
-                    <div class="game-item">
-                        <div class="game-header">
-                            <h3 class="game-title">
-                                📍 ${game.location}
-                            </h3>
-                            <span class="game-status status-${status}">
-                                ${statusIcon} ${statusText}
-                            </span>
-                        </div>
-                        
-                        <div class="game-details">
-                            <div class="game-detail-row">
-                                <span class="game-detail-label">📅 Date & Time:</span>
-                                <span class="game-detail-value">${formattedDate} at ${formattedTime}</span>
-                            </div>
-                            <div class="game-detail-row">
-                                <span class="game-detail-label">👥 Players:</span>
-                                <span class="game-detail-value">${game.totalPlayers} spots</span>
-                            </div>
-                            <div class="game-detail-row">
-                                <span class="game-detail-label">⏱️ Duration:</span>
-                                <span class="game-detail-value">${game.duration} minutes</span>
-                            </div>
-                            ${game.message ? `
-                                <div class="game-detail-row">
-                                    <span class="game-detail-label">💬 Message:</span>
-                                    <span class="game-detail-value">${game.message}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        <div class="game-actions">
-                            <a href="/manage.html?id=${game.id}&token=${game.hostToken}" class="btn-manage">
-                                ⚙️ Manage
-                            </a>
-                            <a href="/game.html?id=${game.id}" class="btn-view">
-                                👀 View
-                            </a>
-                            <button onclick="deleteGame('${game.id}')" class="btn-delete">
-                                🗑️ Delete
-                            </button>
-                        </div>
+                    <div class="game-detail-row">
+                        <span class="game-detail-label">👥 Players:</span>
+                        <span class="game-detail-value">${game.totalPlayers} spots</span>
                     </div>
-                `;
-            });
-            
-            gamesList.innerHTML = gamesHTML;
-        }
-        
-        function formatTime(timeStr) {
-            if (!timeStr) return '';
-            const [hours, minutes] = timeStr.split(':');
-            const hour = parseInt(hours);
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            const hour12 = hour % 12 || 12;
-            return `${hour12}:${minutes} ${ampm}`;
-        }
-        
-        function deleteGame(gameId) {
-            if (!confirm('Are you sure you want to delete this game? This action cannot be undone.')) {
-                return;
-            }
-            
-            // Remove from localStorage
-            let games = JSON.parse(localStorage.getItem('myGames') || '[]');
-            const gameToDelete = games.find(game => game.id === gameId);
-            games = games.filter(game => game.id !== gameId);
-            localStorage.setItem('myGames', JSON.stringify(games));
-            
-            // Show success message
-            if (gameToDelete) {
-                showStatus(`Game "${gameToDelete.location}" deleted successfully!`, 'success');
-            } else {
-                showStatus('Game deleted successfully!', 'success');
-            }
-            
-            // Reload the games list
-            setTimeout(() => {
-                loadMyGames();
-            }, 1000);
-        }
-        
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
-            statusDiv.style.display = 'block';
-            
-            if (type === 'success' || type === 'info') {
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 3000);
-            }
-        }
+                    <div class="game-detail-row">
+                        <span class="game-detail-label">⏱️ Duration:</span>
+                        <span class="game-detail-value">${game.duration} minutes</span>
+                    </div>
+                    ${game.message ? `
+                        <div class="game-detail-row">
+                            <span class="game-detail-label">💬 Message:</span>
+                            <span class="game-detail-value">${game.message}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="game-actions">
+                    <a href="/manage.html?id=${game.id}&token=${game.hostToken}" class="btn-manage">
+                        ⚙️ Manage
+                    </a>
+                    <a href="/game.html?id=${game.id}" class="btn-view">
+                        👀 View
+                    </a>
+                    <button onclick="deleteGame('${game.id}')" class="btn-delete">
+                        🗑️ Delete
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    gamesList.innerHTML = gamesHTML;
+}
+
+function formatTime(timeStr) {
+    if (!timeStr) return '';
+    const [hours, minutes] = timeStr.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+}
+
+function deleteGame(gameId) {
+    if (!confirm('Are you sure you want to delete this game? This action cannot be undone.')) {
+        return;
+    }
+    
+    // Remove from localStorage
+    let games = JSON.parse(localStorage.getItem('myGames') || '[]');
+    const gameToDelete = games.find(game => game.id === gameId);
+    games = games.filter(game => game.id !== gameId);
+    localStorage.setItem('myGames', JSON.stringify(games));
+    
+    // Show success message
+    if (gameToDelete) {
+        showStatus(`Game "${gameToDelete.location}" deleted successfully!`, 'success');
+    } else {
+        showStatus('Game deleted successfully!', 'success');
+    }
+    
+    // Reload the games list
+    setTimeout(() => {
+        loadMyGames();
+    }, 1000);
+}
+
+function showStatus(message, type) {
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = message;
+    statusDiv.className = `status ${type}`;
+    statusDiv.style.display = 'block';
+    
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 3000);
+    }
+}
     </script>
     <script src="/js/header.js"></script>
     <script src="/js/footer.js"></script>

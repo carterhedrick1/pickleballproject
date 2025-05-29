@@ -1,8 +1,61 @@
-// manage-scripts.js - All JavaScript for manage.html
+// manage-scripts.js - All JavaScript for manage.html (TIMEZONE FIXED)
 
 let gameData = null;
 let gameId = '';
 let hostToken = '';
+
+// TIMEZONE FIX FUNCTIONS
+function formatDateForInput(dateStr) {
+    // Convert date string to proper format for HTML date input without timezone shift
+    if (!dateStr) return '';
+    
+    // If it's already in YYYY-MM-DD format, return as-is
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return dateStr;
+    }
+    
+    // Handle other date formats by creating date in local timezone
+    const date = new Date(dateStr + 'T00:00:00'); // Force local midnight
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+}
+
+function formatDateForDisplay(dateStr) {
+    // Format date for display without timezone conversion
+    if (!dateStr) return '';
+    
+    // Parse as local date to avoid timezone shift
+    const [year, month, day] = dateStr.split('-');
+    const date = new Date(year, month - 1, day); // Local date constructor
+    
+    return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'long', 
+        day: 'numeric',
+        year: 'numeric'
+    });
+}
+
+function formatDateForServer(dateStr) {
+    // Ensure date is sent to server in YYYY-MM-DD format without timezone
+    if (!dateStr) return '';
+    
+    // If input is from HTML date input, it's already in correct format
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return dateStr;
+    }
+    
+    // Handle other formats
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+}
 
 // Function to toggle collapsible sections
 function toggleCollapsible(sectionId) {
@@ -39,7 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(restoreActiveTab, 100);
 });
 
-// Add this new function right after the existing openTab function
 function restoreActiveTab() {
     const activeTab = localStorage.getItem('managePageActiveTab') || 'Details';
     
@@ -131,13 +183,13 @@ async function fetchGameData() {
         }
         
         gameData = await response.json();
-        console.log('Game data:', gameData);
+        console.log('Game data received:', gameData);
         
         // Show management interface
         document.getElementById('loading').style.display = 'none';
         document.getElementById('gameManagement').style.display = 'block';
         
-        // Populate game details
+        // ALWAYS populate game details (this was the bug!)
         populateGameDetails();
         
         // Populate player lists
@@ -237,13 +289,17 @@ function setupEventListeners() {
 }
 
 function populateGameDetails() {
-    // Fill the edit form with current values
-    document.getElementById('location').value = gameData.location;
-    document.getElementById('date').value = gameData.date;
-    document.getElementById('time').value = gameData.time;
-    document.getElementById('duration').value = gameData.duration;
-    document.getElementById('players').value = gameData.totalPlayers;
+    console.log('Populating game details with:', gameData);
+    
+    // Fill the edit form with current values - TIMEZONE FIXED
+    document.getElementById('location').value = gameData.location || '';
+    document.getElementById('date').value = formatDateForInput(gameData.date);
+    document.getElementById('time').value = gameData.time || '';
+    document.getElementById('duration').value = gameData.duration || '';
+    document.getElementById('players').value = gameData.totalPlayers || '';
     document.getElementById('message').value = gameData.message || '';
+    
+    console.log('Form populated with date:', formatDateForInput(gameData.date));
     
     // If game is cancelled, show a notice
     if (gameData.cancelled) {
@@ -336,15 +392,18 @@ async function updateGameDetails() {
     try {
         showStatus('Updating game details...', 'info');
         
+        // TIMEZONE FIX: Properly format date for server
         const updatedData = {
             location: document.getElementById('location').value,
-            date: document.getElementById('date').value,
+            date: formatDateForServer(document.getElementById('date').value),
             time: document.getElementById('time').value,
             duration: document.getElementById('duration').value,
             totalPlayers: document.getElementById('players').value,
             message: document.getElementById('message').value,
             token: hostToken
         };
+        
+        console.log('Sending updated data:', updatedData); // Debug log
         
         const response = await fetch(`/api/games/${gameId}`, {
             method: 'PUT',
@@ -364,6 +423,9 @@ async function updateGameDetails() {
         
         // Refresh game data
         await fetchGameData();
+        
+        // UPDATE LOCALSTORAGE: Update the localStorage with new game data
+        updateLocalStorage();
         
         showStatus('Game details updated successfully! Players have been notified.', 'success');
         
@@ -389,7 +451,7 @@ async function addPlayerManually() {
             body: JSON.stringify({
                 name,
                 phone,
-                addTo: action,
+                action,
                 token: hostToken
             })
         });
@@ -446,7 +508,7 @@ async function moveToWaitlist(playerId) {
             body: JSON.stringify({
                 name: player.name,
                 phone: player.phone,
-                addTo: 'waitlist',
+                action: 'waitlist',
                 token: hostToken
             })
         });
@@ -502,7 +564,7 @@ async function promoteToGame(playerId) {
             body: JSON.stringify({
                 name: player.name,
                 phone: player.phone,
-                addTo: 'add',
+                action: 'add',
                 token: hostToken
             })
         });
@@ -520,7 +582,7 @@ async function promoteToGame(playerId) {
                     body: JSON.stringify({
                         name: player.name,
                         phone: player.phone,
-                        addTo: 'waitlist',
+                        action: 'waitlist',
                         token: hostToken
                     })
                 });
@@ -688,12 +750,8 @@ function sendQuickMessage(type) {
     let message = '';
     
     if (type === 'reminder') {
-        const date = new Date(gameData.date);
-        const formattedDate = date.toLocaleDateString('en-US', { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric' 
-        });
+        // TIMEZONE FIX: Use proper date formatting
+        const formattedDate = formatDateForDisplay(gameData.date);
         
         message = `Reminder: Your pickleball game is on ${formattedDate} at ${formatTime(gameData.time)} at ${gameData.location}. Looking forward to seeing you there!`;
     } else if (type === 'location') {
@@ -786,14 +844,8 @@ function closeModal() {
 function copyPlayerInvitation() {
     const gameLink = document.getElementById('playerLink').value;
     
-    // Format the date and time nicely
-    const gameDate = new Date(gameData.date);
-    const formattedDate = gameDate.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        month: 'long', 
-        day: 'numeric' 
-    });
-    
+    // TIMEZONE FIX: Use proper date formatting for invitation
+    const formattedDate = formatDateForDisplay(gameData.date);
     const formattedTime = formatTime(gameData.time);
     
     // Create a complete message with the link and instructions
@@ -898,4 +950,38 @@ function showStatus(message, type) {
 function showUnauthorized() {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('unauthorizedMessage').style.display = 'block';
+}
+
+// Function to update localStorage with current game data
+function updateLocalStorage() {
+    try {
+        // Get current games from localStorage
+        let games = JSON.parse(localStorage.getItem('myGames') || '[]');
+        
+        // Find and update the current game
+        const gameIndex = games.findIndex(game => game.id === gameId);
+        
+        if (gameIndex !== -1) {
+            // Update the existing game with current data
+            games[gameIndex] = {
+                ...games[gameIndex], // Keep original created date and hostToken
+                location: gameData.location,
+                date: gameData.date,
+                time: gameData.time,
+                duration: gameData.duration,
+                totalPlayers: gameData.totalPlayers,
+                message: gameData.message,
+                cancelled: gameData.cancelled || false
+            };
+            
+            // Save back to localStorage
+            localStorage.setItem('myGames', JSON.stringify(games));
+            console.log('LocalStorage updated successfully');
+        } else {
+            console.log('Game not found in localStorage - may have been created on different device');
+        }
+    } catch (error) {
+        console.error('Error updating localStorage:', error);
+        // Don't show error to user - this is not critical
+    }
 }
