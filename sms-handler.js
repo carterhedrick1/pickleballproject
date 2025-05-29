@@ -1,4 +1,4 @@
-// sms-handler.js - All SMS-related functions
+// sms-handler.js - All SMS-related functions - FIXED VERSION
 const { 
   getAllGames, 
   getGameHostInfo, 
@@ -74,7 +74,7 @@ async function sendSMS(to, message, gameId = null) {
   }
 }
 
-// Main SMS webhook handler
+// Main SMS webhook handler - FIXED VERSION
 async function handleIncomingSMS(req, res) {
   try {
     const { fromNumber, text, data: gameId } = req.body;
@@ -85,15 +85,27 @@ async function handleIncomingSMS(req, res) {
     const messageText = text.trim();
     const lastCommand = await getLastCommand(cleanedFromNumber);
 
+    console.log(`[SMS] Last command for ${cleanedFromNumber}: ${lastCommand}`);
+
+    // Handle numbered responses first (1, 2, 3, etc.) when we're expecting them
     if (/^\d+$/.test(messageText) && lastCommand) {
       await handleNumberResponse(fromNumber, cleanedFromNumber, messageText, lastCommand);
-    } else if (messageText === '1') {
+    } 
+    // Handle primary commands
+    else if (messageText === '1') {
+      await clearLastCommand(cleanedFromNumber); // Clear any pending state
       await handleManagementLinkRequest(fromNumber, cleanedFromNumber);
-    } else if (messageText === '2') {
+    } 
+    else if (messageText === '2') {
+      await clearLastCommand(cleanedFromNumber); // Clear any pending state first
       await handleGameDetailsRequest(fromNumber, cleanedFromNumber);
-    } else if (messageText === '9') {
+    } 
+    else if (messageText === '9') {
+      await clearLastCommand(cleanedFromNumber); // Clear any pending state
       await handleCancellationRequest(fromNumber, cleanedFromNumber);
-    } else {
+    } 
+    // Default response for unrecognized commands
+    else {
       await sendSMS(fromNumber, `Reply 1 for host management, 2 for your game details, or 9 to cancel a spot. If you need anything else, reach out to the organizer.`);
       await clearLastCommand(cleanedFromNumber);
     }
@@ -106,33 +118,46 @@ async function handleIncomingSMS(req, res) {
   }
 }
 
-// Handle numbered responses (1, 2, 3, etc.)
+// Handle numbered responses (1, 2, 3, etc.) - FIXED VERSION
 async function handleNumberResponse(fromNumber, cleanedFromNumber, messageText, lastCommand) {
   const selection = parseInt(messageText) - 1;
+  
+  console.log(`[SMS] Handling number response: ${messageText} (index: ${selection}) for command: ${lastCommand}`);
   
   if (lastCommand === 'details_selection') {
     await handleGameDetailsSelection(fromNumber, cleanedFromNumber, selection);
   } else if (lastCommand === 'cancellation_selection') {
     await handleCancellationSelection(fromNumber, cleanedFromNumber, selection);
   } else {
-    await sendSMS(fromNumber, `Reply "1" for management link, "2" for game details, or "9" to cancel your reservation.`);
+    // Invalid state - clear and give help
+    console.log(`[SMS] Invalid command state: ${lastCommand}`);
     await clearLastCommand(cleanedFromNumber);
+    await sendSMS(fromNumber, `Reply "1" for management link, "2" for game details, or "9" to cancel your reservation.`);
   }
 }
 
-// Handle game details selection
+// Handle game details selection - ENHANCED VERSION
 async function handleGameDetailsSelection(fromNumber, cleanedFromNumber, selection) {
-  const allGames = await getAllGames();
-  const userGames = await getUserGames(cleanedFromNumber, allGames);
-  
-  if (selection >= 0 && selection < userGames.length) {
-    const { game, role } = userGames[selection];
-    const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
-    await sendSMS(fromNumber, responseMessage);
+  try {
+    const allGames = await getAllGames();
+    const userGames = await getUserGames(cleanedFromNumber, allGames);
+    
+    console.log(`[SMS] Game selection ${selection + 1} of ${userGames.length} games`);
+    
+    if (selection >= 0 && selection < userGames.length) {
+      const { game, role } = userGames[selection];
+      const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
+      await sendSMS(fromNumber, responseMessage);
+      await clearLastCommand(cleanedFromNumber);
+    } else {
+      console.log(`[SMS] Invalid selection: ${selection + 1}, valid range: 1-${userGames.length}`);
+      // Don't clear the command - let them try again
+      await sendSMS(fromNumber, `Invalid game number. Please reply with a number from 1 to ${userGames.length}, or text "2" to see the list again.`);
+    }
+  } catch (error) {
+    console.error('[SMS] Error in handleGameDetailsSelection:', error);
     await clearLastCommand(cleanedFromNumber);
-  } else {
-    await sendSMS(fromNumber, `Invalid game number. Please reply with a valid number from the list or text "2" for game details.`);
-    await clearLastCommand(cleanedFromNumber);
+    await sendSMS(fromNumber, `Sorry, there was an error. Please text "2" to try again.`);
   }
 }
 
@@ -153,7 +178,6 @@ async function handleCancellationSelection(fromNumber, cleanedFromNumber, select
 
 // Handle management link requests (command "1")
 async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
-  await clearLastCommand(cleanedFromNumber);
   const allGames = await getAllGames();
   const hostGames = [];
   
@@ -198,9 +222,9 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
   }
 }
 
-// Handle game details requests (command "2")
+// Handle game details requests (command "2") - FIXED VERSION
 async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
-  await clearLastCommand(cleanedFromNumber);
+  // DON'T clear last command immediately - wait until we know what we're doing
   const allGames = await getAllGames();
   const userGames = await getUserGames(cleanedFromNumber, allGames);
   
@@ -209,19 +233,20 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
   if (userGames.length === 0) {
     await sendSMS(fromNumber, `You don't have any upcoming games registered to this phone number.`);
   } else if (userGames.length === 1) {
+    // Single game - send details immediately and we're done
     const { game, role } = userGames[0];
     const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
     await sendSMS(fromNumber, responseMessage);
   } else {
+    // Multiple games - we need to track state for follow-up
+    await saveLastCommand(cleanedFromNumber, 'details_selection');
     const responseMessage = await buildGameListMessage(userGames);
     await sendSMS(fromNumber, responseMessage);
-    await saveLastCommand(cleanedFromNumber, 'details_selection');
   }
 }
 
 // Handle cancellation requests (command "9")
 async function handleCancellationRequest(fromNumber, cleanedFromNumber) {
-  await clearLastCommand(cleanedFromNumber);
   const allGames = await getAllGames();
   const playerGames = await getPlayerGames(cleanedFromNumber, allGames);
   
@@ -351,7 +376,7 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
   return responseMessage;
 }
 
-// Helper function to build game list message
+// Helper function to build game list message - ENHANCED VERSION
 async function buildGameListMessage(userGames) {
   let responseMessage = `You have ${userGames.length} upcoming games. Reply with just the number (1, 2, 3, etc.) to see details:\n\n`;
   
