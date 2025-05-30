@@ -1161,102 +1161,6 @@ function clearAllRecipientSelections() {
 }
 
 
-function updatePlayerCheckboxes() {
-    const container = document.getElementById('playerCheckboxes');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    // Add confirmed players
-    gameData.players.forEach(player => {
-        if (player.phone && !player.isOrganizer) { // Only players with phones who aren't organizers
-            const checkboxItem = document.createElement('div');
-            checkboxItem.className = 'player-checkbox-item confirmed';
-            
-            // Add inline styles to force proper layout
-            checkboxItem.style.cssText = `
-                display: flex !important;
-                flex-direction: row !important;
-                align-items: center !important;
-                gap: 12px !important;
-                padding: 12px 15px !important;
-                background: white !important;
-                border: 2px solid #dee2e6 !important;
-                border-radius: 8px !important;
-                border-left: 4px solid #28a745 !important;
-                transition: all 0.2s ease !important;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-                margin-bottom: 8px !important;
-            `;
-            
-            checkboxItem.innerHTML = `
-                <input type="checkbox" 
-                       class="player-checkbox" 
-                       value="${player.id}" 
-                       data-phone="${player.phone}" 
-                       data-name="${player.name}" 
-                       data-type="confirmed"
-                       onchange="updateIndividualSelection()"
-                       checked
-                       style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
-                <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name} ✅</label>
-            `;
-            
-            container.appendChild(checkboxItem);
-        }
-    });
-    
-    // Add waitlist players
-    if (gameData.waitlist) {
-        gameData.waitlist.forEach(player => {
-            if (player.phone) {
-                const checkboxItem = document.createElement('div');
-                checkboxItem.className = 'player-checkbox-item waitlist';
-                
-                // Add inline styles to force proper layout
-                checkboxItem.style.cssText = `
-                    display: flex !important;
-                    flex-direction: row !important;
-                    align-items: center !important;
-                    gap: 12px !important;
-                    padding: 12px 15px !important;
-                    background: white !important;
-                    border: 2px solid #dee2e6 !important;
-                    border-radius: 8px !important;
-                    border-left: 4px solid #ffc107 !important;
-                    transition: all 0.2s ease !important;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-                    margin-bottom: 8px !important;
-                `;
-                
-                checkboxItem.innerHTML = `
-                    <input type="checkbox" 
-                           class="player-checkbox" 
-                           value="${player.id}" 
-                           data-phone="${player.phone}" 
-                           data-name="${player.name}" 
-                           data-type="waitlist"
-                           onchange="updateIndividualSelection()"
-                           style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
-                    <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name}</label>
-                `;
-                
-                container.appendChild(checkboxItem);
-            }
-        });
-    }
-    
-    // Show section only if there are players with phones
-    const individualSection = document.getElementById('individualPlayersSection');
-    if (individualSection) {
-        const hasPlayers = container.children.length > 0;
-        individualSection.style.display = hasPlayers ? 'block' : 'none';
-    }
-    
-    // Update group selections
-    updateIndividualSelection();
-}
-
 // Add this function to update the group checkbox styling to match individual players
 function updateGroupCheckboxStyling() {
     // Style the group checkbox containers
@@ -1327,105 +1231,7 @@ function updateGroupCheckboxStyling() {
 // Update the updatePlayerCheckboxes function to match the group styling
 // 1. Update the updatePlayerCheckboxes function to not auto-check individual players:
 
-function updatePlayerCheckboxes() {
-    const container = document.getElementById('playerCheckboxes');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    // Add confirmed players
-    gameData.players.forEach(player => {
-        if (player.phone && !player.isOrganizer) { // Only players with phones who aren't organizers
-            const checkboxItem = document.createElement('div');
-            checkboxItem.className = 'player-checkbox-item confirmed';
-            
-            // Match the group checkbox styling exactly
-            checkboxItem.style.cssText = `
-                display: flex !important;
-                flex-direction: row !important;
-                align-items: center !important;
-                gap: 12px !important;
-                padding: 12px 15px !important;
-                background: white !important;
-                border: 2px solid #dee2e6 !important;
-                border-radius: 8px !important;
-                border-left: 4px solid #28a745 !important;
-                transition: all 0.2s ease !important;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-                margin-bottom: 8px !important;
-            `;
-            
-            checkboxItem.innerHTML = `
-                <input type="checkbox" 
-                       class="player-checkbox" 
-                       value="${player.id}" 
-                       data-phone="${player.phone}" 
-                       data-name="${player.name}" 
-                       data-type="confirmed"
-                       onchange="updateIndividualSelection()"
-                       style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
-                <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name} ✅</label>
-            `;
-            
-            // REMOVED: checked attribute - let them start unchecked
-            
-            container.appendChild(checkboxItem);
-        }
-    });
-    
-    // Add waitlist players
-    if (gameData.waitlist) {
-        gameData.waitlist.forEach(player => {
-            if (player.phone) {
-                const checkboxItem = document.createElement('div');
-                checkboxItem.className = 'player-checkbox-item waitlist';
-                
-                // Match the group checkbox styling exactly
-                checkboxItem.style.cssText = `
-                    display: flex !important;
-                    flex-direction: row !important;
-                    align-items: center !important;
-                    gap: 12px !important;
-                    padding: 12px 15px !important;
-                    background: white !important;
-                    border: 2px solid #dee2e6 !important;
-                    border-radius: 8px !important;
-                    border-left: 4px solid #ffc107 !important;
-                    transition: all 0.2s ease !important;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-                    margin-bottom: 8px !important;
-                `;
-                
-                checkboxItem.innerHTML = `
-                    <input type="checkbox" 
-                           class="player-checkbox" 
-                           value="${player.id}" 
-                           data-phone="${player.phone}" 
-                           data-name="${player.name}" 
-                           data-type="waitlist"
-                           onchange="updateIndividualSelection()"
-                           style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
-                    <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name}</label>
-                `;
-                
-                // REMOVED: Any checked attributes - let them start unchecked
-                
-                container.appendChild(checkboxItem);
-            }
-        });
-    }
-    
-    // Show section only if there are players with phones
-    const individualSection = document.getElementById('individualPlayersSection');
-    if (individualSection) {
-        const hasPlayers = container.children.length > 0;
-        individualSection.style.display = hasPlayers ? 'block' : 'none';
-    }
-    
-    // IMPORTANT: Don't call updateIndividualSelection() here to avoid auto-checking group boxes
-    // Just clear everything to start fresh
-    clearAllRecipientSelections();
-}
+
 
 // 2. Update the DOMContentLoaded event to ensure clean state:
 // Find this section in your code and update it:
@@ -1514,7 +1320,6 @@ function updateGroupCheckboxStyling() {
     }
 }
 
-// Update the updatePlayerCheckboxes function to match the group styling
 function updatePlayerCheckboxes() {
     const container = document.getElementById('playerCheckboxes');
     if (!container) return;
@@ -1527,7 +1332,7 @@ function updatePlayerCheckboxes() {
             const checkboxItem = document.createElement('div');
             checkboxItem.className = 'player-checkbox-item confirmed';
             
-            // Match the group checkbox styling exactly
+            // Styling to match group checkboxes
             checkboxItem.style.cssText = `
                 display: flex !important;
                 flex-direction: row !important;
@@ -1541,6 +1346,8 @@ function updatePlayerCheckboxes() {
                 transition: all 0.2s ease !important;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
                 margin-bottom: 8px !important;
+                font-size: inherit !important;
+                line-height: inherit !important;
             `;
             
             checkboxItem.innerHTML = `
@@ -1551,9 +1358,8 @@ function updatePlayerCheckboxes() {
                        data-name="${player.name}" 
                        data-type="confirmed"
                        onchange="updateIndividualSelection()"
-                       checked
                        style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
-                <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name}</label>
+                <label style="margin: 0 !important; cursor: pointer !important; flex: 1 !important; font-size: inherit !important; line-height: inherit !important;">${player.name}</label>
             `;
             
             container.appendChild(checkboxItem);
@@ -1567,7 +1373,7 @@ function updatePlayerCheckboxes() {
                 const checkboxItem = document.createElement('div');
                 checkboxItem.className = 'player-checkbox-item waitlist';
                 
-                // Match the group checkbox styling exactly
+                // Styling to match group checkboxes
                 checkboxItem.style.cssText = `
                     display: flex !important;
                     flex-direction: row !important;
@@ -1581,6 +1387,8 @@ function updatePlayerCheckboxes() {
                     transition: all 0.2s ease !important;
                     box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
                     margin-bottom: 8px !important;
+                    font-size: inherit !important;
+                    line-height: inherit !important;
                 `;
                 
                 checkboxItem.innerHTML = `
@@ -1592,7 +1400,7 @@ function updatePlayerCheckboxes() {
                            data-type="waitlist"
                            onchange="updateIndividualSelection()"
                            style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
-                    <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name}</label>
+                    <label style="margin: 0 !important; cursor: pointer !important; flex: 1 !important; font-size: inherit !important; line-height: inherit !important;">${player.name}</label>
                 `;
                 
                 container.appendChild(checkboxItem);
@@ -1607,8 +1415,26 @@ function updatePlayerCheckboxes() {
         individualSection.style.display = hasPlayers ? 'block' : 'none';
     }
     
-    // Update group selections
-    updateIndividualSelection();
+    // Explicitly uncheck all checkboxes on initial load
+    const allPlayerCheckboxes = document.querySelectorAll('.player-checkbox');
+    allPlayerCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    // Also uncheck group checkboxes
+    const groupCheckboxes = ['sendToAll', 'sendToPlayers', 'sendToWaitlist'];
+    groupCheckboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.checked = false;
+        }
+    });
+    
+    // Set "Confirmed Players" as default checked
+    const sendToPlayersCheckbox = document.getElementById('sendToPlayers');
+    if (sendToPlayersCheckbox) {
+        sendToPlayersCheckbox.checked = true;
+    }
 }
 
 // Also call the styling function when the page loads
