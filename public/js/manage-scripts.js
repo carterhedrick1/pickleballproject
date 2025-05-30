@@ -1228,16 +1228,8 @@ function updateGroupCheckboxStyling() {
     }
 }
 
-// Update the updatePlayerCheckboxes function to match the group styling
-// 1. Update the updatePlayerCheckboxes function to not auto-check individual players:
-
-
-
-// 2. Update the DOMContentLoaded event to ensure clean state:
-// Find this section in your code and update it:
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ... existing DOMContentLoaded code ...
     
     // Update player checkboxes after everything is loaded
     setTimeout(() => {
