@@ -453,6 +453,58 @@ app.post('/api/games/:id/announcement', async (req, res) => {
   }
 });
 
+// Send announcement to individual players
+app.post('/api/games/:id/announcement-individual', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const { token, message, recipients } = req.body;
+    
+    const game = await getGame(gameId);
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    if (game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    
+    if (!recipients || recipients.length === 0) {
+      return res.status(400).json({ error: 'At least one recipient is required' });
+    }
+    
+    let recipientCount = 0;
+    const results = [];
+    
+    // Send to each selected recipient
+    for (const recipient of recipients) {
+      if (recipient.phone) {
+        const result = await sendSMS(recipient.phone, message, gameId);
+        results.push({ 
+          player: recipient.name, 
+          type: recipient.type, 
+          phone: recipient.phone,
+          result 
+        });
+        if (result.success) recipientCount++;
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      recipientCount,
+      totalRecipients: recipients.length,
+      results 
+    });
+  } catch (error) {
+    console.error('Error sending individual announcement:', error);
+    res.status(500).json({ error: 'Failed to send announcement' });
+  }
+});
+
 // SMS webhook (uses our SMS handler)
 app.post('/api/sms/webhook', express.json(), handleIncomingSMS);
 

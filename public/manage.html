@@ -181,23 +181,37 @@
                     <h3 class="subsection-title">✏️ Send Custom Message</h3>
                     <form id="announcementForm">
                         <div class="form-group">
-                            <label for="announcementText">📝 Message:</label>
+                            <label for="announcementText">Message:</label>
                             <textarea id="announcementText" name="announcementText" rows="4" placeholder="Type your message to players..." required></textarea>
                         </div>
                         
-                        <div class="form-group">
-                            <label>Send to:</label>
-                            <div class="checkbox-group">
-                                <div class="checkbox-option">
-                                    <input type="checkbox" id="sendToPlayers" name="sendToPlayers" checked>
-                                    <label for="sendToPlayers">✅ Confirmed Players</label>
-                                </div>
-                                <div class="checkbox-option">
-                                    <input type="checkbox" id="sendToWaitlist" name="sendToWaitlist">
-                                    <label for="sendToWaitlist">⏳ Waitlisted Players</label>
-                                </div>
-                            </div>
-                        </div>
+<div class="form-group">
+    <label>Send to:</label>
+    
+    <!-- Group Selection Row -->
+    <div class="recipient-groups">
+        <div class="checkbox-option">
+            <input type="checkbox" id="sendToAll" name="sendToAll" onchange="toggleAllPlayers(this.checked)">
+            <label for="sendToAll">👥 All Players</label>
+        </div>
+        <div class="checkbox-option">
+            <input type="checkbox" id="sendToPlayers" name="sendToPlayers" checked onchange="updateGroupSelections()">
+            <label for="sendToPlayers">✅ Confirmed Players</label>
+        </div>
+        <div class="checkbox-option">
+            <input type="checkbox" id="sendToWaitlist" name="sendToWaitlist" onchange="updateGroupSelections()">
+            <label for="sendToWaitlist">⏳ Waitlisted Players</label>
+        </div>
+    </div>
+    
+    <!-- Individual Players Section -->
+    <div id="individualPlayersSection" class="individual-players-section">
+        <label>Or Select Individual Players:</label>
+        <div id="playerCheckboxes" class="player-checkboxes">
+            <!-- Individual player checkboxes will be populated here -->
+        </div>
+    </div>
+</div>
                         
                         <button type="submit">📤 Send Announcement</button>
                     </form>

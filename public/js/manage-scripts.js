@@ -376,6 +376,9 @@ function updatePlayerLists() {
             waitlistPlayers.appendChild(playerItem);
         });
     }
+    
+    // Update player checkboxes for messaging
+    updatePlayerCheckboxes();
 }
 
 function populateShareLinks() {
@@ -423,9 +426,6 @@ async function updateGameDetails() {
         
         // Refresh game data
         await fetchGameData();
-        
-        // UPDATE LOCALSTORAGE: Update the localStorage with new game data
-        updateLocalStorage();
         
         showStatus('Game details updated successfully! Players have been notified.', 'success');
         
@@ -701,28 +701,29 @@ async function removeWaitlisted(playerId) {
 async function sendAnnouncement() {
     try {
         const message = document.getElementById('announcementText').value;
-        const sendToPlayers = document.getElementById('sendToPlayers').checked;
-        const sendToWaitlist = document.getElementById('sendToWaitlist').checked;
         
         if (!message) {
             throw new Error('Please enter a message');
         }
         
-        if (!sendToPlayers && !sendToWaitlist) {
-            throw new Error('Please select at least one recipient group');
+        // Get selected recipients
+        const recipients = getSelectedRecipients();
+        
+        if (recipients.length === 0) {
+            throw new Error('Please select at least one recipient');
         }
         
         showStatus('Sending announcement...', 'info');
         
-        const response = await fetch(`/api/games/${gameId}/announcement?token=${hostToken}`, {
+        // Send to individual players
+        const response = await fetch(`/api/games/${gameId}/announcement-individual?token=${hostToken}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 message,
-                includeConfirmed: sendToPlayers,
-                includeWaitlist: sendToWaitlist,
+                recipients: recipients,
                 token: hostToken
             })
         });
@@ -737,6 +738,7 @@ async function sendAnnouncement() {
         
         // Reset form
         document.getElementById('announcementText').value = '';
+        clearAllRecipientSelections();
         
         showStatus(`Announcement sent to ${data.recipientCount} players`, 'success');
         
@@ -952,36 +954,669 @@ function showUnauthorized() {
     document.getElementById('unauthorizedMessage').style.display = 'block';
 }
 
-// Function to update localStorage with current game data
-function updateLocalStorage() {
-    try {
-        // Get current games from localStorage
-        let games = JSON.parse(localStorage.getItem('myGames') || '[]');
-        
-        // Find and update the current game
-        const gameIndex = games.findIndex(game => game.id === gameId);
-        
-        if (gameIndex !== -1) {
-            // Update the existing game with current data
-            games[gameIndex] = {
-                ...games[gameIndex], // Keep original created date and hostToken
-                location: gameData.location,
-                date: gameData.date,
-                time: gameData.time,
-                duration: gameData.duration,
-                totalPlayers: gameData.totalPlayers,
-                message: gameData.message,
-                cancelled: gameData.cancelled || false
-            };
-            
-            // Save back to localStorage
-            localStorage.setItem('myGames', JSON.stringify(games));
-            console.log('LocalStorage updated successfully');
-        } else {
-            console.log('Game not found in localStorage - may have been created on different device');
+// Get selected recipients from checkboxes
+// Replace your existing getSelectedRecipients function with this more robust version:
+
+function getSelectedRecipients() {
+    const recipients = [];
+    
+    console.log('Checking recipients...'); // Debug log
+    
+    // Check if group checkboxes are selected - try multiple possible IDs
+    const sendToPlayersEl = document.getElementById('sendToPlayers') || 
+                           document.querySelector('input[type="checkbox"][id*="Players"]') ||
+                           document.querySelector('input[type="checkbox"]:checked');
+    
+    const sendToWaitlistEl = document.getElementById('sendToWaitlist') || 
+                            document.querySelector('input[type="checkbox"][id*="Waitlist"]');
+    
+    const sendToPlayers = sendToPlayersEl?.checked || false;
+    const sendToWaitlist = sendToWaitlistEl?.checked || false;
+    
+    console.log('Group selections:', { sendToPlayers, sendToWaitlist }); // Debug log
+    
+    // If group checkboxes are selected, add all players from those groups
+    if (sendToPlayers && gameData?.players) {
+        gameData.players.forEach(player => {
+            if (player.phone && !player.isOrganizer) {
+                recipients.push({
+                    id: player.id,
+                    phone: player.phone,
+                    name: player.name,
+                    type: 'confirmed'
+                });
+            }
+        });
+        console.log('Added confirmed players:', recipients.length); // Debug log
+    }
+    
+    if (sendToWaitlist && gameData?.waitlist) {
+        gameData.waitlist.forEach(player => {
+            if (player.phone) {
+                recipients.push({
+                    id: player.id,
+                    phone: player.phone,
+                    name: player.name,
+                    type: 'waitlist'
+                });
+            }
+        });
+        console.log('Added waitlist players:', recipients.length); // Debug log
+    }
+    
+    // Also check individual player checkboxes (for partial selections)
+    const playerCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+    console.log('Found checked checkboxes:', playerCheckboxes.length); // Debug log
+    
+    playerCheckboxes.forEach(checkbox => {
+        // Skip if it's a group checkbox
+        if (checkbox.id === 'sendToPlayers' || checkbox.id === 'sendToWaitlist' || checkbox.id === 'sendToAll') {
+            return;
         }
-    } catch (error) {
-        console.error('Error updating localStorage:', error);
-        // Don't show error to user - this is not critical
+        
+        // Only add if not already included from group selection and has required data
+        if (checkbox.dataset?.phone && checkbox.dataset?.name) {
+            const existingRecipient = recipients.find(r => r.id === checkbox.value);
+            if (!existingRecipient) {
+                recipients.push({
+                    id: checkbox.value,
+                    phone: checkbox.dataset.phone,
+                    name: checkbox.dataset.name,
+                    type: checkbox.dataset.type || 'individual'
+                });
+            }
+        }
+    });
+    
+    console.log('Final recipients:', recipients); // Debug log
+    return recipients;
+}
+
+// Toggle all players checkbox
+function toggleAllPlayers(checked) {
+    // Update group checkboxes
+    document.getElementById('sendToPlayers').checked = checked;
+    document.getElementById('sendToWaitlist').checked = checked;
+    
+    // Update individual player checkboxes
+    const playerCheckboxes = document.querySelectorAll('.player-checkbox input[type="checkbox"]');
+    playerCheckboxes.forEach(checkbox => {
+        checkbox.checked = checked;
+    });
+}
+
+// Update group selections based on individual checkboxes
+function updateGroupSelections() {
+    const sendToPlayers = document.getElementById('sendToPlayers').checked;
+    const sendToWaitlist = document.getElementById('sendToWaitlist').checked;
+    const sendToAll = document.getElementById('sendToAll');
+    
+    // Update individual checkboxes based on group selections
+    const confirmedCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="confirmed"]');
+    const waitlistCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="waitlist"]');
+    
+    confirmedCheckboxes.forEach(checkbox => {
+        checkbox.checked = sendToPlayers;
+    });
+    
+    waitlistCheckboxes.forEach(checkbox => {
+        checkbox.checked = sendToWaitlist;
+    });
+    
+    // Update "All Players" checkbox
+    const allChecked = sendToPlayers && sendToWaitlist && 
+                      confirmedCheckboxes.length > 0 && waitlistCheckboxes.length > 0;
+    const someChecked = sendToPlayers || sendToWaitlist;
+    
+    if (allChecked) {
+        sendToAll.checked = true;
+        sendToAll.indeterminate = false;
+    } else if (someChecked) {
+        sendToAll.checked = false;
+        sendToAll.indeterminate = true;
+    } else {
+        sendToAll.checked = false;
+        sendToAll.indeterminate = false;
     }
 }
+
+// Update individual player selection
+function updateIndividualSelection() {
+    const confirmedCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="confirmed"]');
+    const waitlistCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="waitlist"]');
+    
+    // Check group checkbox states
+    const allConfirmedChecked = Array.from(confirmedCheckboxes).every(cb => cb.checked);
+    const allWaitlistChecked = Array.from(waitlistCheckboxes).every(cb => cb.checked);
+    const anyConfirmedChecked = Array.from(confirmedCheckboxes).some(cb => cb.checked);
+    const anyWaitlistChecked = Array.from(waitlistCheckboxes).some(cb => cb.checked);
+    
+    // Update group checkboxes
+    const sendToPlayers = document.getElementById('sendToPlayers');
+    const sendToWaitlist = document.getElementById('sendToWaitlist');
+    const sendToAll = document.getElementById('sendToAll');
+    
+    // Update confirmed players checkbox
+    if (confirmedCheckboxes.length > 0) {
+        if (allConfirmedChecked) {
+            sendToPlayers.checked = true;
+            sendToPlayers.indeterminate = false;
+        } else if (anyConfirmedChecked) {
+            sendToPlayers.checked = false;
+            sendToPlayers.indeterminate = true;
+        } else {
+            sendToPlayers.checked = false;
+            sendToPlayers.indeterminate = false;
+        }
+    }
+    
+    // Update waitlist checkbox
+    if (waitlistCheckboxes.length > 0) {
+        if (allWaitlistChecked) {
+            sendToWaitlist.checked = true;
+            sendToWaitlist.indeterminate = false;
+        } else if (anyWaitlistChecked) {
+            sendToWaitlist.checked = false;
+            sendToWaitlist.indeterminate = true;
+        } else {
+            sendToWaitlist.checked = false;
+            sendToWaitlist.indeterminate = false;
+        }
+    }
+    
+    // Update "All Players" checkbox
+    const allPlayersChecked = allConfirmedChecked && allWaitlistChecked && 
+                             confirmedCheckboxes.length > 0 && waitlistCheckboxes.length > 0;
+    const anyPlayersChecked = anyConfirmedChecked || anyWaitlistChecked;
+    
+    if (allPlayersChecked) {
+        sendToAll.checked = true;
+        sendToAll.indeterminate = false;
+    } else if (anyPlayersChecked) {
+        sendToAll.checked = false;
+        sendToAll.indeterminate = true;
+    } else {
+        sendToAll.checked = false;
+        sendToAll.indeterminate = false;
+    }
+}
+
+// Clear all recipient selections
+// Replace your existing clearAllRecipientSelections function with this version:
+
+function clearAllRecipientSelections() {
+    // Clear all group checkboxes - start with nothing selected
+    document.getElementById('sendToAll').checked = false;
+    document.getElementById('sendToAll').indeterminate = false;
+    document.getElementById('sendToPlayers').checked = false;  // Changed from true to false
+    document.getElementById('sendToPlayers').indeterminate = false;
+    document.getElementById('sendToWaitlist').checked = false;
+    document.getElementById('sendToWaitlist').indeterminate = false;
+    
+    // Clear all individual player checkboxes
+    const playerCheckboxes = document.querySelectorAll('.player-checkbox input[type="checkbox"]');
+    playerCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;  // Changed to false for all players
+    });
+}
+
+
+function updatePlayerCheckboxes() {
+    const container = document.getElementById('playerCheckboxes');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Add confirmed players
+    gameData.players.forEach(player => {
+        if (player.phone && !player.isOrganizer) { // Only players with phones who aren't organizers
+            const checkboxItem = document.createElement('div');
+            checkboxItem.className = 'player-checkbox-item confirmed';
+            
+            // Add inline styles to force proper layout
+            checkboxItem.style.cssText = `
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 12px !important;
+                padding: 12px 15px !important;
+                background: white !important;
+                border: 2px solid #dee2e6 !important;
+                border-radius: 8px !important;
+                border-left: 4px solid #28a745 !important;
+                transition: all 0.2s ease !important;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                margin-bottom: 8px !important;
+            `;
+            
+            checkboxItem.innerHTML = `
+                <input type="checkbox" 
+                       class="player-checkbox" 
+                       value="${player.id}" 
+                       data-phone="${player.phone}" 
+                       data-name="${player.name}" 
+                       data-type="confirmed"
+                       onchange="updateIndividualSelection()"
+                       checked
+                       style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
+                <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name} ✅</label>
+            `;
+            
+            container.appendChild(checkboxItem);
+        }
+    });
+    
+    // Add waitlist players
+    if (gameData.waitlist) {
+        gameData.waitlist.forEach(player => {
+            if (player.phone) {
+                const checkboxItem = document.createElement('div');
+                checkboxItem.className = 'player-checkbox-item waitlist';
+                
+                // Add inline styles to force proper layout
+                checkboxItem.style.cssText = `
+                    display: flex !important;
+                    flex-direction: row !important;
+                    align-items: center !important;
+                    gap: 12px !important;
+                    padding: 12px 15px !important;
+                    background: white !important;
+                    border: 2px solid #dee2e6 !important;
+                    border-radius: 8px !important;
+                    border-left: 4px solid #ffc107 !important;
+                    transition: all 0.2s ease !important;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                    margin-bottom: 8px !important;
+                `;
+                
+                checkboxItem.innerHTML = `
+                    <input type="checkbox" 
+                           class="player-checkbox" 
+                           value="${player.id}" 
+                           data-phone="${player.phone}" 
+                           data-name="${player.name}" 
+                           data-type="waitlist"
+                           onchange="updateIndividualSelection()"
+                           style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
+                    <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name}</label>
+                `;
+                
+                container.appendChild(checkboxItem);
+            }
+        });
+    }
+    
+    // Show section only if there are players with phones
+    const individualSection = document.getElementById('individualPlayersSection');
+    if (individualSection) {
+        const hasPlayers = container.children.length > 0;
+        individualSection.style.display = hasPlayers ? 'block' : 'none';
+    }
+    
+    // Update group selections
+    updateIndividualSelection();
+}
+
+// Add this function to update the group checkbox styling to match individual players
+function updateGroupCheckboxStyling() {
+    // Style the group checkbox containers
+    const groupCheckboxes = [
+        document.getElementById('sendToAll')?.parentElement,
+        document.getElementById('sendToPlayers')?.parentElement, 
+        document.getElementById('sendToWaitlist')?.parentElement
+    ];
+    
+    groupCheckboxes.forEach(container => {
+        if (container) {
+            // Apply consistent styling to match individual players
+            container.style.cssText = `
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 12px !important;
+                padding: 12px 15px !important;
+                background: white !important;
+                border: 2px solid #dee2e6 !important;
+                border-radius: 8px !important;
+                transition: all 0.2s ease !important;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                margin-bottom: 8px !important;
+            `;
+            
+            // Style the checkbox input
+            const checkbox = container.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                checkbox.style.cssText = `
+                    width: 18px !important; 
+                    height: 18px !important; 
+                    margin: 0 !important; 
+                    flex-shrink: 0 !important;
+                `;
+            }
+            
+            // Style the label
+            const label = container.querySelector('label');
+            if (label) {
+                label.style.cssText = `
+                    margin: 0 !important; 
+                    font-weight: 500 !important; 
+                    cursor: pointer !important; 
+                    flex: 1 !important;
+                `;
+            }
+        }
+    });
+    
+    // Add specific border colors for different groups
+    const sendToAll = document.getElementById('sendToAll')?.parentElement;
+    if (sendToAll) {
+        sendToAll.style.borderLeft = '4px solid #007bff !important';
+    }
+    
+    const sendToPlayers = document.getElementById('sendToPlayers')?.parentElement;
+    if (sendToPlayers) {
+        sendToPlayers.style.borderLeft = '4px solid #28a745 !important';
+    }
+    
+    const sendToWaitlist = document.getElementById('sendToWaitlist')?.parentElement;
+    if (sendToWaitlist) {
+        sendToWaitlist.style.borderLeft = '4px solid #ffc107 !important';
+    }
+}
+
+// Update the updatePlayerCheckboxes function to match the group styling
+// 1. Update the updatePlayerCheckboxes function to not auto-check individual players:
+
+function updatePlayerCheckboxes() {
+    const container = document.getElementById('playerCheckboxes');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Add confirmed players
+    gameData.players.forEach(player => {
+        if (player.phone && !player.isOrganizer) { // Only players with phones who aren't organizers
+            const checkboxItem = document.createElement('div');
+            checkboxItem.className = 'player-checkbox-item confirmed';
+            
+            // Match the group checkbox styling exactly
+            checkboxItem.style.cssText = `
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 12px !important;
+                padding: 12px 15px !important;
+                background: white !important;
+                border: 2px solid #dee2e6 !important;
+                border-radius: 8px !important;
+                border-left: 4px solid #28a745 !important;
+                transition: all 0.2s ease !important;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                margin-bottom: 8px !important;
+            `;
+            
+            checkboxItem.innerHTML = `
+                <input type="checkbox" 
+                       class="player-checkbox" 
+                       value="${player.id}" 
+                       data-phone="${player.phone}" 
+                       data-name="${player.name}" 
+                       data-type="confirmed"
+                       onchange="updateIndividualSelection()"
+                       style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
+                <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name} ✅</label>
+            `;
+            
+            // REMOVED: checked attribute - let them start unchecked
+            
+            container.appendChild(checkboxItem);
+        }
+    });
+    
+    // Add waitlist players
+    if (gameData.waitlist) {
+        gameData.waitlist.forEach(player => {
+            if (player.phone) {
+                const checkboxItem = document.createElement('div');
+                checkboxItem.className = 'player-checkbox-item waitlist';
+                
+                // Match the group checkbox styling exactly
+                checkboxItem.style.cssText = `
+                    display: flex !important;
+                    flex-direction: row !important;
+                    align-items: center !important;
+                    gap: 12px !important;
+                    padding: 12px 15px !important;
+                    background: white !important;
+                    border: 2px solid #dee2e6 !important;
+                    border-radius: 8px !important;
+                    border-left: 4px solid #ffc107 !important;
+                    transition: all 0.2s ease !important;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                    margin-bottom: 8px !important;
+                `;
+                
+                checkboxItem.innerHTML = `
+                    <input type="checkbox" 
+                           class="player-checkbox" 
+                           value="${player.id}" 
+                           data-phone="${player.phone}" 
+                           data-name="${player.name}" 
+                           data-type="waitlist"
+                           onchange="updateIndividualSelection()"
+                           style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
+                    <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name}</label>
+                `;
+                
+                // REMOVED: Any checked attributes - let them start unchecked
+                
+                container.appendChild(checkboxItem);
+            }
+        });
+    }
+    
+    // Show section only if there are players with phones
+    const individualSection = document.getElementById('individualPlayersSection');
+    if (individualSection) {
+        const hasPlayers = container.children.length > 0;
+        individualSection.style.display = hasPlayers ? 'block' : 'none';
+    }
+    
+    // IMPORTANT: Don't call updateIndividualSelection() here to avoid auto-checking group boxes
+    // Just clear everything to start fresh
+    clearAllRecipientSelections();
+}
+
+// 2. Update the DOMContentLoaded event to ensure clean state:
+// Find this section in your code and update it:
+
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing DOMContentLoaded code ...
+    
+    // Update player checkboxes after everything is loaded
+    setTimeout(() => {
+        if (gameData) {
+            updatePlayerCheckboxes();
+            // Force all checkboxes to be unchecked after creation
+            const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+            allCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                checkbox.indeterminate = false;
+            });
+        }
+    }, 200);
+});
+
+// Add this function to update the group checkbox styling to match individual players
+function updateGroupCheckboxStyling() {
+    // Style the group checkbox containers
+    const groupCheckboxes = [
+        document.getElementById('sendToAll')?.parentElement,
+        document.getElementById('sendToPlayers')?.parentElement, 
+        document.getElementById('sendToWaitlist')?.parentElement
+    ];
+    
+    groupCheckboxes.forEach(container => {
+        if (container) {
+            // Apply consistent styling to match individual players
+            container.style.cssText = `
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 12px !important;
+                padding: 12px 15px !important;
+                background: white !important;
+                border: 2px solid #dee2e6 !important;
+                border-radius: 8px !important;
+                transition: all 0.2s ease !important;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                margin-bottom: 8px !important;
+            `;
+            
+            // Style the checkbox input
+            const checkbox = container.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                checkbox.style.cssText = `
+                    width: 18px !important; 
+                    height: 18px !important; 
+                    margin: 0 !important; 
+                    flex-shrink: 0 !important;
+                `;
+            }
+            
+            // Style the label
+            const label = container.querySelector('label');
+            if (label) {
+                label.style.cssText = `
+                    margin: 0 !important; 
+                    font-weight: 500 !important; 
+                    cursor: pointer !important; 
+                    flex: 1 !important;
+                `;
+            }
+        }
+    });
+    
+    // Add specific border colors for different groups
+    const sendToAll = document.getElementById('sendToAll')?.parentElement;
+    if (sendToAll) {
+        sendToAll.style.borderLeft = '4px solid #007bff !important';
+    }
+    
+    const sendToPlayers = document.getElementById('sendToPlayers')?.parentElement;
+    if (sendToPlayers) {
+        sendToPlayers.style.borderLeft = '4px solid #28a745 !important';
+    }
+    
+    const sendToWaitlist = document.getElementById('sendToWaitlist')?.parentElement;
+    if (sendToWaitlist) {
+        sendToWaitlist.style.borderLeft = '4px solid #ffc107 !important';
+    }
+}
+
+// Update the updatePlayerCheckboxes function to match the group styling
+function updatePlayerCheckboxes() {
+    const container = document.getElementById('playerCheckboxes');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Add confirmed players
+    gameData.players.forEach(player => {
+        if (player.phone && !player.isOrganizer) { // Only players with phones who aren't organizers
+            const checkboxItem = document.createElement('div');
+            checkboxItem.className = 'player-checkbox-item confirmed';
+            
+            // Match the group checkbox styling exactly
+            checkboxItem.style.cssText = `
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 12px !important;
+                padding: 12px 15px !important;
+                background: white !important;
+                border: 2px solid #dee2e6 !important;
+                border-radius: 8px !important;
+                border-left: 4px solid #28a745 !important;
+                transition: all 0.2s ease !important;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                margin-bottom: 8px !important;
+            `;
+            
+            checkboxItem.innerHTML = `
+                <input type="checkbox" 
+                       class="player-checkbox" 
+                       value="${player.id}" 
+                       data-phone="${player.phone}" 
+                       data-name="${player.name}" 
+                       data-type="confirmed"
+                       onchange="updateIndividualSelection()"
+                       checked
+                       style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
+                <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name}</label>
+            `;
+            
+            container.appendChild(checkboxItem);
+        }
+    });
+    
+    // Add waitlist players
+    if (gameData.waitlist) {
+        gameData.waitlist.forEach(player => {
+            if (player.phone) {
+                const checkboxItem = document.createElement('div');
+                checkboxItem.className = 'player-checkbox-item waitlist';
+                
+                // Match the group checkbox styling exactly
+                checkboxItem.style.cssText = `
+                    display: flex !important;
+                    flex-direction: row !important;
+                    align-items: center !important;
+                    gap: 12px !important;
+                    padding: 12px 15px !important;
+                    background: white !important;
+                    border: 2px solid #dee2e6 !important;
+                    border-radius: 8px !important;
+                    border-left: 4px solid #ffc107 !important;
+                    transition: all 0.2s ease !important;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                    margin-bottom: 8px !important;
+                `;
+                
+                checkboxItem.innerHTML = `
+                    <input type="checkbox" 
+                           class="player-checkbox" 
+                           value="${player.id}" 
+                           data-phone="${player.phone}" 
+                           data-name="${player.name}" 
+                           data-type="waitlist"
+                           onchange="updateIndividualSelection()"
+                           style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
+                    <label style="margin: 0 !important; font-weight: 500 !important; cursor: pointer !important; flex: 1 !important;">${player.name}</label>
+                `;
+                
+                container.appendChild(checkboxItem);
+            }
+        });
+    }
+    
+    // Show section only if there are players with phones
+    const individualSection = document.getElementById('individualPlayersSection');
+    if (individualSection) {
+        const hasPlayers = container.children.length > 0;
+        individualSection.style.display = hasPlayers ? 'block' : 'none';
+    }
+    
+    // Update group selections
+    updateIndividualSelection();
+}
+
+// Also call the styling function when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing DOMContentLoaded code ...
+    
+    // Apply consistent styling after everything is loaded
+    setTimeout(() => {
+        updateGroupCheckboxStyling();
+    }, 200);
+});
