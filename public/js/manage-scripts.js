@@ -1042,15 +1042,20 @@ function populateShareLinks() {
 }
 
 function copyPlayerInvitation() {
-const gameLink = `${window.location.origin}/game.html?id=${gameId}`;    
+    const gameLink = `${window.location.origin}/game.html?id=${gameId}`;    
     // TIMEZONE FIX: Use proper date formatting for invitation
     const formattedDate = formatDateForDisplay(gameData.date);
     const formattedTime = formatTime(gameData.time);
 
     let locationText = gameData.location;
-if (gameData.courtNumber && gameData.courtNumber.trim()) {
-    locationText += ` - ${gameData.courtNumber}`;
-}
+    if (gameData.courtNumber && gameData.courtNumber.trim()) {
+        locationText += ` - ${gameData.courtNumber}`;
+    }
+    
+    // FIXED: Handle singular/plural spots
+    const totalPlayers = parseInt(gameData.totalPlayers);
+    const spotsText = totalPlayers === 1 ? 'Spot' : 'Spots';
+    const spotsWord = totalPlayers === 1 ? 'spot' : 'spots';
     
     // Create a complete message with the link and instructions
     const message = `🏓 Join our pickleball game!
@@ -1059,7 +1064,7 @@ if (gameData.courtNumber && gameData.courtNumber.trim()) {
 📅 Date: ${formattedDate}
 ⏰ Time: ${formattedTime}
 ⏱️ Duration: ${gameData.duration} minutes
-👥 ${gameData.totalPlayers === 1 ? 'Spot' : 'Spots'}: ${gameData.totalPlayers} ${gameData.totalPlayers === 1 ? 'spot' : 'spots'}
+👥 ${spotsText}: ${totalPlayers} ${spotsWord}${gameData.message ? '\n💬 ' + gameData.message : ''}
 
 Click this link to sign up:
 ${gameLink}
