@@ -663,20 +663,25 @@ function showGameLinks(gameId) {
 }
 
 function copyToClipboard(elementId) {
+    // Get the game link from the input field
+    const gameLink = document.getElementById('gameLink').value;
+    
     // Get the current game data from the form or stored data
-    let locationText = gameData.location;
-    if (gameData.courtNumber && gameData.courtNumber.trim()) {
-        locationText += ` - ${gameData.courtNumber}`;
+    const currentGameData = getCurrentGameData();
+    
+    let locationText = currentGameData.location;
+    if (currentGameData.courtNumber && currentGameData.courtNumber.trim()) {
+        locationText += ` - ${currentGameData.courtNumber}`;
     }
     
     // Create a complete message with the link and instructions
     const message = `🏓 Join our pickleball game!
 
 📍 Location: ${locationText}
-📅 Date: ${gameData.formattedDate}
-⏰ Time: ${gameData.formattedTime}
-⏱️ Duration: ${gameData.duration} minutes
-👥 Spots: ${gameData.totalPlayers} spots${gameData.message ? '\n💬 ' + gameData.message : ''}
+📅 Date: ${currentGameData.formattedDate}
+⏰ Time: ${currentGameData.formattedTime}
+⏱️ Duration: ${currentGameData.duration} minutes
+👥 Spots: ${currentGameData.totalPlayers} spots${currentGameData.message ? '\n💬 ' + currentGameData.message : ''}
 
 Click this link to sign up:
 ${gameLink}
@@ -694,7 +699,7 @@ You'll get text confirmations and can easily cancel by replying "9" to any messa
             
             setTimeout(() => {
                 button.textContent = originalText;
-                button.style.backgroundColor = '#2196F3';
+                button.style.backgroundColor = '';
             }, 3000);
         }).catch(() => {
             // Fallback for older browsers
@@ -742,6 +747,7 @@ function getCurrentGameData() {
     if (myGames.length === 0) {
         return {
             location: 'Game Location',
+            courtNumber: '',
             formattedDate: 'Game Date',
             formattedTime: 'Game Time',
             duration: '90',
@@ -767,6 +773,7 @@ function getCurrentGameData() {
     
     return {
         location: latestGame.location,
+        courtNumber: latestGame.courtNumber || '', // Include court number
         formattedDate: formattedDate,
         formattedTime: formattedTime,
         duration: latestGame.duration,

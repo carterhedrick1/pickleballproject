@@ -869,42 +869,48 @@ document.getElementById('duration').textContent = gameData.duration;
         }
     }
 
-    function showConfirmation(data) {
-        // Hide other sections AND the header
-        document.getElementById('gameDetails').style.display = 'none';
-        document.getElementById('playerList').style.display = 'none';
-        document.getElementById('signupForm').style.display = 'none';
-        document.querySelector('.section-header').style.display = 'none'; // Hide the header
-        
-        // Show confirmation section
-        const confirmationSection = document.getElementById('confirmationSection');
-        confirmationSection.style.display = 'block';
-        
-        // Update confirmation content - TIMEZONE FIXED
-        const confirmTitle = document.getElementById('confirmationTitle');
-        const confirmMessage = document.getElementById('confirmationMessage');
-        const confirmLocation = document.getElementById('confirmLocation');
-        const confirmDateTime = document.getElementById('confirmDateTime');
-        const confirmStatus = document.getElementById('confirmStatus');
-        
-        if (data.status === 'confirmed') {
-            confirmationSection.classList.remove('waitlist');
-            confirmTitle.textContent = "You're In!";
-            confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
-            confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
-        } else if (data.status === 'waitlist') {
-            confirmationSection.classList.add('waitlist');
-            confirmTitle.textContent = "⏳ You're on the Waitlist!";
-            confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
-            confirmStatus.textContent = `Waitlist Position #${data.position}`;
-        }
-        
-        confirmLocation.textContent = gameData.location;
-        confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
-        
-        // Scroll to top to show confirmation
-        window.scrollTo(0, 0);
+function showConfirmation(data) {
+    // Hide other sections AND the header
+    document.getElementById('gameDetails').style.display = 'none';
+    document.getElementById('playerList').style.display = 'none';
+    document.getElementById('signupForm').style.display = 'none';
+    document.querySelector('.section-header').style.display = 'none'; // Hide the header
+    
+    // Show confirmation section
+    const confirmationSection = document.getElementById('confirmationSection');
+    confirmationSection.style.display = 'block';
+    
+    // Update confirmation content - TIMEZONE FIXED
+    const confirmTitle = document.getElementById('confirmationTitle');
+    const confirmMessage = document.getElementById('confirmationMessage');
+    const confirmLocation = document.getElementById('confirmLocation');
+    const confirmDateTime = document.getElementById('confirmDateTime');
+    const confirmStatus = document.getElementById('confirmStatus');
+    
+    if (data.status === 'confirmed') {
+        confirmationSection.classList.remove('waitlist');
+        confirmTitle.textContent = "You're In!";
+        confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
+        confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
+    } else if (data.status === 'waitlist') {
+        confirmationSection.classList.add('waitlist');
+        confirmTitle.textContent = "⏳ You're on the Waitlist!";
+        confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
+        confirmStatus.textContent = `Waitlist Position #${data.position}`;
     }
+    
+    // Include court number in confirmation location
+    let locationText = gameData.location;
+    if (gameData.courtNumber && gameData.courtNumber.trim()) {
+        locationText += ` - ${gameData.courtNumber}`;
+    }
+    
+    confirmLocation.textContent = locationText;
+    confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
+    
+    // Scroll to top to show confirmation
+    window.scrollTo(0, 0);
+}
 
     window.showGameDetails = function() {
         // Show game sections again AND the header
