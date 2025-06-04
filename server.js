@@ -295,6 +295,9 @@ app.put('/api/games/:id', async (req, res) => {
     const gameId = req.params.id;
     const { token, ...updateData } = req.body;
     
+    console.log('[SERVER] Updating game with data:', updateData);
+    console.log('[SERVER] Received notification preferences:', updateData.notificationPreferences);
+    
     const game = await getGame(gameId);
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
@@ -304,15 +307,32 @@ app.put('/api/games/:id', async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
+    // IMPORTANT: Merge the update data with existing game data
     Object.assign(game, updateData);
+    
+    // Ensure notification preferences are properly saved
+    if (updateData.notificationPreferences) {
+      game.notificationPreferences = {
+        gameFull: updateData.notificationPreferences.gameFull === true,
+        playerJoins: updateData.notificationPreferences.playerJoins === true,
+        playerCancels: updateData.notificationPreferences.playerCancels === true,
+        oneSpotLeft: updateData.notificationPreferences.oneSpotLeft === true,
+        waitlistStarts: updateData.notificationPreferences.waitlistStarts === true
+      };
+    }
+    
+    console.log('[SERVER] Saving game with notification preferences:', game.notificationPreferences);
+    
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
     
-    // REMOVED: Automatic notification sending code
-    // Organizers can now use the Communication tab to send manual updates
+    // Verify the save worked by reading it back
+    const savedGame = await getGame(gameId);
+    console.log('[SERVER] Verified saved notification preferences:', savedGame.notificationPreferences);
     
     res.json({ 
       success: true, 
-      message: 'Game updated successfully. Use the Communication tab to notify players of changes if needed.' 
+      message: 'Game updated successfully. Use the Communication tab to notify players of changes if needed.',
+      notificationPreferences: savedGame.notificationPreferences
     });
   } catch (error) {
     console.error('Error updating game:', error);
