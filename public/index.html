@@ -5,6 +5,88 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Create a Game</title>
     <style>
+        /* Chrome-specific font rendering fixes - targets only Chrome/Chromium browsers */
+@supports (-webkit-mask: none) and (not (-webkit-backdrop-filter: blur(1px))) {
+    /* This targets Chrome specifically, excluding Safari */
+    
+    * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+    }
+    
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-weight: 400;
+        font-synthesis: none;
+    }
+    
+    /* Fix Chrome's tendency to make fonts too bold */
+    label,
+    .section-title,
+    .notification-title,
+    .mode-option .notification-title {
+        font-weight: 500 !important; /* Use 500 instead of bold for better Chrome rendering */
+    }
+    
+    .page-header h1 {
+        font-weight: 700 !important;
+        font-synthesis: none;
+    }
+    
+    .page-header .subtitle {
+        font-weight: 400 !important;
+        font-synthesis: none;
+    }
+    
+    button {
+        font-family: inherit;
+        font-weight: 500 !important;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+    }
+    
+    input, select, textarea {
+        font-family: inherit;
+        font-weight: 400 !important;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+    }
+    
+    .notification-title,
+    .mode-option .notification-title {
+        font-weight: 500 !important;
+        -webkit-font-smoothing: antialiased;
+    }
+    
+    .notification-description,
+    .mode-option .notification-description {
+        font-weight: 400 !important;
+        -webkit-font-smoothing: antialiased;
+    }
+    
+    .share-title,
+    .management-reminder h4 {
+        font-weight: 500 !important;
+    }
+}
+
+/* Additional Chrome-only fix using user agent detection */
+@media screen and (-webkit-min-device-pixel-ratio:0) and (min-resolution:.001dpcm) {
+    /* This is another Chrome-specific selector */
+    
+    body {
+        -webkit-font-smoothing: antialiased;
+    }
+    
+    label {
+        font-weight: 500;
+    }
+    
+    button {
+        font-weight: 500;
+    }
+}
         body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
