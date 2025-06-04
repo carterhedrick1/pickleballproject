@@ -162,9 +162,13 @@ async function checkAndSendReminders() {
 }
 
 // Game creation logic
+// Updated createGameData function in game-logic.js
 function createGameData(formData) {
   const gameData = {
     location: formData.location,
+        courtNumber: formData.courtNumber || '',
+
+    courtNumber: formData.courtNumber || '', // Add court number field
     organizerName: formData.organizerName || 'Organizer',
     organizerPhone: formData.organizerPhone ? formatPhoneNumber(formData.organizerPhone) : '',
     organizerPlaying: formData.organizerPlaying,
@@ -192,7 +196,6 @@ function createGameData(formData) {
 
   return gameData;
 }
-
 // Player validation and processing
 function validatePlayerData(name, phone) {
   const cleanName = name ? name.trim() : '';

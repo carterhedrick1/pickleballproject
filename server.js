@@ -127,14 +127,18 @@ app.post('/api/games', async (req, res) => {
     };
     
     // Send confirmation SMS to host
-    let smsResult = null;
-    if (hostPhone) {
-      const gameDate = formatDateForSMS(gameData.date);
-      const gameTime = formatTimeForSMS(gameData.time);
-      const hostMessage = `Your pickleball game at ${gameData.location} on ${gameDate} at ${gameTime} has been created! Reply "1" for management link or "2" for game details.`;      
-      const formattedPhone = formatPhoneNumber(hostPhone);
-      smsResult = await sendSMS(formattedPhone, hostMessage, gameId);
-    }
+let smsResult = null;
+if (hostPhone) {
+  const gameDate = formatDateForSMS(gameData.date);
+  const gameTime = formatTimeForSMS(gameData.time);
+  let locationText = gameData.location;
+  if (gameData.courtNumber && gameData.courtNumber.trim()) {
+      locationText += ` - ${gameData.courtNumber}`;
+  }
+  const hostMessage = `Your pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been created! Reply "1" for management link or "2" for game details.`;
+  const formattedPhone = formatPhoneNumber(hostPhone);
+  smsResult = await sendSMS(formattedPhone, hostMessage, gameId);
+}
     
     response.hostSms = smsResult;
     res.status(201).json(response);
@@ -296,10 +300,16 @@ app.post('/api/games/:id/players', async (req, res) => {
       
       let message;
       if (result.status === 'confirmed') {
-        message = `You're confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for game details or 9 to cancel.`;
-      } else {
-        message = `You've been added to the waitlist for Pickleball at ${game.location}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.`;
-      }
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+}
+message = `You're confirmed for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for game details or 9 to cancel.`;      } else {
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+}
+message = `You've been added to the waitlist for Pickleball at ${locationText}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.`;      }
       
       smsResult = await sendSMS(playerData.phone, message, gameId);
     }

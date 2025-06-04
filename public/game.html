@@ -475,26 +475,60 @@
             <div id="loading">Loading game details...</div>
             <div id="details" style="display: none;">
                 <div class="game-info">
-                    <div class="game-detail">
-                        <span class="game-detail-label">📍 Location:</span>
-                        <span class="game-detail-value" id="location"></span>
-                    </div>
-                    <div class="game-detail">
-                        <span class="game-detail-label">📅 Date:</span>
-                        <span class="game-detail-value" id="date"></span>
-                    </div>
-                    <div class="game-detail">
-                        <span class="game-detail-label">⏰ Time:</span>
-                        <span class="game-detail-value" id="time"></span>
-                    </div>
-                    <div class="game-detail">
-                        <span class="game-detail-label">⏱️ Duration:</span>
-                        <span class="game-detail-value"><span id="duration"></span> minutes</span>
-                    </div>
-                    <div class="game-detail" id="messageDetail" style="display: none;">
-                        <span class="game-detail-label">💬 Message:</span>
-                        <span class="game-detail-value" id="message"></span>
-                    </div>
+<!-- Updated game details section in public/game.html -->
+<div class="game-info">
+    <div class="game-detail">
+        <span class="game-detail-label">📍 Location:</span>
+        <span class="game-detail-value" id="location"></span>
+    </div>
+    <div class="game-detail" id="courtDetail" style="display: none;">
+        <span class="game-detail-label">🏟️ Court:</span>
+        <span class="game-detail-value" id="courtNumber"></span>
+    </div>
+    <div class="game-detail">
+        <span class="game-detail-label">📅 Date:</span>
+        <span class="game-detail-value" id="date"></span>
+    </div>
+    <div class="game-detail">
+        <span class="game-detail-label">⏰ Time:</span>
+        <span class="game-detail-value" id="time"></span>
+    </div>
+    <div class="game-detail">
+        <span class="game-detail-label">⏱️ Duration:</span>
+        <span class="game-detail-value"><span id="duration"></span> minutes</span>
+    </div>
+    <div class="game-detail" id="messageDetail" style="display: none;">
+        <span class="game-detail-label">💬 Message:</span>
+        <span class="game-detail-value" id="message"></span>
+    </div>
+</div>
+
+<!-- Updated JavaScript for game.html -->
+<script>
+function displayGameData() {
+    document.getElementById('location').textContent = gameData.location;
+    
+    // Show court number if it exists
+    if (gameData.courtNumber && gameData.courtNumber.trim()) {
+        document.getElementById('courtNumber').textContent = gameData.courtNumber;
+        document.getElementById('courtDetail').style.display = 'flex';
+    } else {
+        document.getElementById('courtDetail').style.display = 'none';
+    }
+    
+    document.getElementById('date').textContent = formatDate(gameData.date);
+    document.getElementById('time').textContent = formatTime(gameData.time);
+    document.getElementById('duration').textContent = gameData.duration;
+    
+    // Show message only if it exists
+    if (gameData.message && gameData.message.trim()) {
+        document.getElementById('message').textContent = gameData.message;
+        document.getElementById('messageDetail').style.display = 'flex';
+    }
+    
+    updatePlayerList();
+}
+</script>
                 </div>
             </div>
         </div>
@@ -640,10 +674,19 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('details').style.display = 'block';
             document.getElementById('playerList').style.display = 'block';
             
-            document.getElementById('location').textContent = gameData.location;
-            document.getElementById('date').textContent = formatDate(gameData.date);
-            document.getElementById('time').textContent = formatTime(gameData.time);
-            document.getElementById('duration').textContent = gameData.duration;
+document.getElementById('location').textContent = gameData.location;
+
+// Show court number if it exists
+if (gameData.courtNumber && gameData.courtNumber.trim()) {
+    document.getElementById('courtNumber').textContent = gameData.courtNumber;
+    document.getElementById('courtDetail').style.display = 'flex';
+} else {
+    document.getElementById('courtDetail').style.display = 'none';
+}
+
+document.getElementById('date').textContent = formatDate(gameData.date);
+document.getElementById('time').textContent = formatTime(gameData.time);
+document.getElementById('duration').textContent = gameData.duration;
             
             console.log('Date formatted as:', formatDate(gameData.date)); // Debug log
             

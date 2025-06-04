@@ -407,6 +407,12 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="courtNumber">🏟️ Court Number (optional):</label>
+                    <input type="text" id="courtNumber" name="courtNumber" placeholder="e.g., Court 3, Courts 1-2, Center Court">
+                    <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Specify which court(s) you'll be using at this location</small>
+                </div>
+
+                <div class="form-group">
                     <label for="organizerName">👤 Your Name (Organizer):</label>
                     <input type="text" id="organizerName" name="organizerName" placeholder="Enter your full name" required>
                 </div>
@@ -518,24 +524,26 @@ function formatDateForDisplay(dateStr) {
     });
 }
 
+// Updated createGame function in public/index.html script section
 async function createGame(e) {
     e.preventDefault();
     
     const formData = new FormData(e.target);
     const gameData = {
         location: formData.get('location'),
+        courtNumber: formData.get('courtNumber') || '', // Add court number
         organizerName: formData.get('organizerName'),
         organizerPhone: formData.get('organizerPhone'),
         organizerPlaying: formData.get('organizerPlaying') === 'on',
-        date: formData.get('date'), // This is already in YYYY-MM-DD format
+        date: formData.get('date'),
         time: formData.get('time'),
         duration: parseInt(formData.get('duration')),
         totalPlayers: parseInt(formData.get('players')),
         message: formData.get('message'),
-        hostPhone: formData.get('organizerPhone') // Include host phone for SMS confirmation
+        hostPhone: formData.get('organizerPhone')
     };
     
-    console.log('Creating game with data:', gameData); // Debug log
+    console.log('Creating game with data:', gameData);
     
     try {
         showStatus('Creating game...', 'info');
@@ -556,12 +564,13 @@ async function createGame(e) {
         const data = await response.json();
         console.log('Game created:', data);
         
-        // Save game to localStorage for My Games page
+        // Save game to localStorage for My Games page (include court number)
         let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
         myGames.push({
             id: data.gameId,
             hostToken: data.hostToken,
             location: gameData.location,
+            courtNumber: gameData.courtNumber, // Add court number
             date: gameData.date,
             time: gameData.time,
             duration: gameData.duration,
@@ -572,13 +581,13 @@ async function createGame(e) {
         });
         localStorage.setItem('myGames', JSON.stringify(myGames));
         
-        // Show game links (just the player link now)
+        // Show game links
         showGameLinks(data.gameId);
         
         // Clear form
         document.getElementById('gameForm').reset();
         
-        // TIMEZONE FIX: Set tomorrow's date again using safe method
+        // Set tomorrow's date again
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         const year = tomorrow.getFullYear();
@@ -604,6 +613,42 @@ async function createGame(e) {
     }
 }
 
+// Updated getCurrentGameData function to include court number
+function getCurrentGameData() {
+    const myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+    
+    if (myGames.length === 0) {
+        return {
+            location: 'Game Location',
+            courtNumber: '',
+            formattedDate: 'Game Date',
+            formattedTime: 'Game Time',
+            duration: '90',
+            totalPlayers: '4',
+            message: ''
+        };
+    }
+    
+    const latestGame = myGames[myGames.length - 1];
+    const formattedDate = formatDateForDisplay(latestGame.date);
+    
+    const [hours, minutes] = latestGame.time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    const formattedTime = `${hour12}:${minutes} ${ampm}`;
+    
+    return {
+        location: latestGame.location,
+        courtNumber: latestGame.courtNumber || '',
+        formattedDate: formattedDate,
+        formattedTime: formattedTime,
+        duration: latestGame.duration,
+        totalPlayers: latestGame.totalPlayers,
+        message: latestGame.message || ''
+    };
+}
+
 function showGameLinks(gameId) {
     const baseUrl = window.location.origin;
     
@@ -619,13 +664,15 @@ function showGameLinks(gameId) {
 
 function copyToClipboard(elementId) {
     // Get the current game data from the form or stored data
-    const gameData = getCurrentGameData();
-    const gameLink = document.getElementById(elementId).value;
+    let locationText = gameData.location;
+    if (gameData.courtNumber && gameData.courtNumber.trim()) {
+        locationText += ` - ${gameData.courtNumber}`;
+    }
     
     // Create a complete message with the link and instructions
     const message = `🏓 Join our pickleball game!
 
-📍 Location: ${gameData.location}
+📍 Location: ${locationText}
 📅 Date: ${gameData.formattedDate}
 ⏰ Time: ${gameData.formattedTime}
 ⏱️ Duration: ${gameData.duration} minutes

@@ -208,8 +208,11 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
       
-      await sendSMS(fromNumber, `Here's your management link for ${game.location} on ${gameDate} at ${gameTime}: ${managementLink}`);
-    } else {
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+}
+await sendSMS(fromNumber, `Here's your management link for ${locationText} on ${gameDate} at ${gameTime}: ${managementLink}`);    } else {
       let responseMessage = `You have ${hostGames.length} upcoming games:\n\n`;
       
       hostGames.forEach(({ id, game, hostInfo }, index) => {
@@ -218,8 +221,11 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
         const gameDate = formatDateForSMS(game.date);
         const gameTime = formatTimeForSMS(game.time);
         
-        responseMessage += `${index + 1}. ${game.location}\n${gameDate} at ${gameTime}\n${managementLink}\n\n`;
-      });
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+}
+responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime}\n${managementLink}\n\n`;      });
       
       if (responseMessage.length > 1500) {
         responseMessage = `You have ${hostGames.length} upcoming games. Please visit the website to manage them.`;
@@ -368,8 +374,11 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
   const gameDate = formatDateForSMS(game.date);
   const gameTime = formatTimeForSMS(game.time);
   
-  let responseMessage = `🏓 ${game.location}\n📅 ${gameDate} at ${gameTime}\n⏱️ Duration: ${game.duration} minutes\n\n`;
-  
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+}
+let responseMessage = `🏓 ${locationText}\n📅 ${gameDate} at ${gameTime}\n⏱️ Duration: ${game.duration} minutes\n\n`;  
   responseMessage += `👥 Confirmed Players (${game.players.length}/${game.totalPlayers}):\n`;
   if (game.players.length === 0) {
     responseMessage += `• None yet\n`;
@@ -418,8 +427,11 @@ async function buildGameListMessage(userGames) {
       statusIcon = '⏳';
     }
     
-    responseMessage += `${index + 1}. ${statusIcon} ${game.location}${roleText}\n${gameDate} at ${gameTime}\n\n`;
-  });
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+}
+responseMessage += `${index + 1}. ${statusIcon} ${locationText}${roleText}\n${gameDate} at ${gameTime}\n\n`;  });
   
   return responseMessage;
 }
@@ -433,8 +445,11 @@ async function buildCancellationListMessage(playerGames) {
     const gameTime = formatTimeForSMS(game.time);
     const statusText = status === 'confirmed' ? 'Confirmed' : 'Waitlist';
     
-    responseMessage += `${index + 1}. ${game.location}\n${gameDate} at ${gameTime} (${statusText})\n\n`;
-  });
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+}
+responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime} (${statusText})\n\n`;  });
   
   return responseMessage;
 }
@@ -452,8 +467,11 @@ async function cancelPlayerFromGame(gameId, game, player, status, fromNumber) {
         
         const gameDate = formatDateForSMS(game.date);
         const gameTime = formatTimeForSMS(game.time);
-        const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! Reply 2 for game details or 9 to cancel.`;
-        
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+}
+const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 2 for game details or 9 to cancel.`;        
         await sendSMS(promotedPlayer.phone, promotionMessage, gameId);
       }
     } else {
@@ -466,8 +484,11 @@ async function cancelPlayerFromGame(gameId, game, player, status, fromNumber) {
     const gameDate = formatDateForSMS(game.date);
     const gameTime = formatTimeForSMS(game.time);
     const statusText = status === 'confirmed' ? 'reservation' : 'waitlist spot';
-    await sendSMS(fromNumber, `Your pickleball ${statusText} at ${game.location} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`);
-  } catch (error) {
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+}
+await sendSMS(fromNumber, `Your pickleball ${statusText} at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`);  } catch (error) {
     console.error('Error cancelling player from game:', error);
     await sendSMS(fromNumber, `Sorry, there was an error cancelling your registration. Please try again or contact the organizer.`);
   }

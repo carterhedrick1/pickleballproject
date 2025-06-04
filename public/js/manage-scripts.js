@@ -293,6 +293,7 @@ function populateGameDetails() {
     
     // Fill the edit form with current values - TIMEZONE FIXED
     document.getElementById('location').value = gameData.location || '';
+    document.getElementById('courtNumber').value = gameData.courtNumber || '';
     document.getElementById('date').value = formatDateForInput(gameData.date);
     document.getElementById('time').value = gameData.time || '';
     document.getElementById('duration').value = gameData.duration || '';
@@ -398,6 +399,7 @@ async function updateGameDetails() {
         // TIMEZONE FIX: Properly format date for server
         const updatedData = {
             location: document.getElementById('location').value,
+            courtNumber: document.getElementById('courtNumber').value || '',
             date: formatDateForServer(document.getElementById('date').value),
             time: document.getElementById('time').value,
             duration: document.getElementById('duration').value,
@@ -849,11 +851,16 @@ function copyPlayerInvitation() {
     // TIMEZONE FIX: Use proper date formatting for invitation
     const formattedDate = formatDateForDisplay(gameData.date);
     const formattedTime = formatTime(gameData.time);
+
+    let locationText = gameData.location;
+if (gameData.courtNumber && gameData.courtNumber.trim()) {
+    locationText += ` - ${gameData.courtNumber}`;
+}
     
     // Create a complete message with the link and instructions
     const message = `🏓 Join our pickleball game!
 
-📍 Location: ${gameData.location}
+📍 Location: ${locationText}
 📅 Date: ${formattedDate}
 ⏰ Time: ${formattedTime}
 ⏱️ Duration: ${gameData.duration} minutes
