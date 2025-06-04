@@ -72,8 +72,7 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
         if (prefs.playerJoins === true && playerName) {
           shouldSend = true;
           const spotsLeft = parseInt(game.totalPlayers) - game.players.length;
-          message = `🎯 HOST ALERT: ${playerName} just joined your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} spots remaining.`;
-        }
+message = `🎯 HOST ALERT: ${playerName} just joined your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} remaining.`;        }
         break;
         
       case 'playerCancels':
@@ -81,8 +80,7 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
         if (prefs.playerCancels === true && playerName) {
           shouldSend = true;
           const spotsLeft = parseInt(game.totalPlayers) - game.players.length;
-          message = `🎯 HOST ALERT: ${playerName} cancelled their spot for your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} spots now available.`;
-        }
+message = `🎯 HOST ALERT: ${playerName} cancelled their spot for your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} now available.`;        }
         break;
         
       case 'oneSpotLeft':

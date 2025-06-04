@@ -1059,7 +1059,7 @@ if (gameData.courtNumber && gameData.courtNumber.trim()) {
 📅 Date: ${formattedDate}
 ⏰ Time: ${formattedTime}
 ⏱️ Duration: ${gameData.duration} minutes
-👥 Spots: ${gameData.totalPlayers} spots${gameData.message ? '\n💬 ' + gameData.message : ''}
+👥 ${gameData.totalPlayers === 1 ? 'Spot' : 'Spots'}: ${gameData.totalPlayers} ${gameData.totalPlayers === 1 ? 'spot' : 'spots'}
 
 Click this link to sign up:
 ${gameLink}

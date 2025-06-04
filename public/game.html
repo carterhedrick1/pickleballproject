@@ -539,7 +539,7 @@ function displayGameData() {
             
             <div id="spotsAvailableContainer">
                 <div id="spotsAvailableBar" class="spots-available">
-                    <span id="spotsAvailable"></span> spots available
+                    <span id="spotsAvailable"></span> <span id="spotsText">spots</span> available
                 </div>
                 
                 <div id="spotsFullContainer" style="display: none;">
@@ -823,6 +823,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
     // Update the updatePlayerList function in public/game.html
 // Updated updatePlayerList function in public/game.html
+// REPLACE the entire updatePlayerList function in public/game.html with this:
+
 function updatePlayerList() {
     const playersList = document.getElementById('players');
     const spotsAvailable = document.getElementById('spotsAvailable');
@@ -898,6 +900,13 @@ function updatePlayerList() {
         spotsFullContainer.style.display = 'none';
         joinSectionTitle.textContent = '🏓 Join This Game';
         joinButton.textContent = 'COUNT ME IN!';
+        
+        // FIXED: Update spots text to be singular/plural
+        const spotsText = document.getElementById('spotsText');
+        if (spotsText) {
+            spotsText.textContent = availableSpots === 1 ? 'spot' : 'spots';
+        }
+        
     } else {
         // Show game is full with waitlist info
         spotsAvailableBar.style.display = 'none';
