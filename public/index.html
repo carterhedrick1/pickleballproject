@@ -263,25 +263,7 @@
             text-align: center;
         }
 
-        .link-group {
-            margin-bottom: 25px;
-            padding: 20px;
-            border: 2px solid #4CAF50;
-            border-radius: 12px;
-            background: white;
-            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
-        }
-        
-        .link-group h4 {
-            color: #2e7d32;
-            margin: 0 0 10px 0;
-            font-size: 18px;
-        }
-        
-        .link-group p {
-            margin: 0 0 15px 0;
-            color: #666;
-        }
+
         
         .save-suggestion {
             font-style: italic;
@@ -290,29 +272,54 @@
             font-size: 14px;
         }
         
-        .copy-btn {
-            background: linear-gradient(135deg, #2196F3 0%, #1976d2 100%);
-            padding: 12px 20px;
-            font-size: 14px;
-            width: auto;
-            margin-top: 0;
-            text-transform: none;
-            letter-spacing: normal;
-        }
+        .center-copy-section {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.center-copy-section p {
+    color: #666;
+    margin: 15px 0;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.save-suggestion {
+    font-style: italic;
+    color: #666;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+/* Updated CSS for the copy button */
+.copy-btn {
+    background: linear-gradient(135deg, #2196F3 0%, #1976d2 100%);
+    padding: 15px 25px;
+    font-size: 16px;
+    width: 100%;
+    max-width: 300px;
+    margin: 20px auto;
+    text-transform: none;
+    letter-spacing: normal;
+    border-radius: 8px;
+    font-weight: bold;
+    display: block;
+}
+
+.copy-btn:hover {
+    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(33, 150, 243, 0.4);
+}
+
+.copy-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
         
-        .copy-btn:hover {
-            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
-        }
+
         
-        .link-container {
-            display: flex;
-            gap: 10px;
-        }
-        
-        #gameLink {
-            flex-grow: 1;
-            margin: 0;
-        }
+
         
         .management-reminder {
             background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
@@ -374,9 +381,7 @@
                 font-size: 16px;
             }
             
-            .link-container {
-                flex-direction: column;
-            }
+
             
             .copy-btn {
                 width: 100%;
@@ -601,25 +606,21 @@
             </form>
         </div>
         
-        <div id="shareLink" class="share-section" style="display: none;">
-            <h3 class="share-title">🎉 Your Game has been Created!</h3>
-            
-            <div class="link-group">
-                <h4>📤 Share with Players</h4>
-                <p>Copy this complete message and send it to your players (text, email, social media):</p>
-                <div class="link-container">
-                    <input type="text" id="gameLink" readonly>
-                    <button id="copyLink" class="copy-btn">Copy Message</button>
-                </div>
-                <p class="save-suggestion">This copies a complete invitation message with all game details and the registration link.</p>
-            </div>
-            
-            <div class="management-reminder">
-                <h4>📱 To Manage Your Game</h4>
-                <p>Reply <strong>"1"</strong> to the confirmation text you received to get your management link.</p>
-                <p><small>You can edit players, send announcements, and cancel the game with that link.</small></p>
-            </div>
-        </div>
+<div id="shareLink" class="share-section" style="display: none;">
+    <h3 class="share-title">🎉 Your Game has been Created!</h3>
+    
+    <div class="center-copy-section">
+        <p>Click the button below to copy a complete invitation message with all game details and registration link:</p>
+        <button id="copyLink" class="copy-btn">Copy Invitation Message</button>
+        <p class="save-suggestion">This copies a complete invitation message that you can send via text, email, or social media. It includes all game details and the registration link.</p>
+    </div>
+    
+    <div class="management-reminder">
+        <h4>📱 To Manage Your Game</h4>
+        <p>Reply <strong>"1"</strong> to the confirmation text you received to get your management link.</p>
+        <p><small>You can edit players, send announcements, and cancel the game with that link.</small></p>
+    </div>
+</div>
     </div>
 
     <script>
@@ -631,9 +632,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameForm = document.getElementById('gameForm');
     gameForm.addEventListener('submit', createGame);
     
-    // Set up copy button
-    document.getElementById('copyLink').addEventListener('click', () => copyToClipboard('gameLink'));
-    
+    // Set up copy button - simplified
+    document.getElementById('copyLink').addEventListener('click', copyToClipboard);
     // TIMEZONE FIX: Set default date to tomorrow using local date
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -790,10 +790,8 @@ function getCurrentGameData() {
 }
 
 function showGameLinks(gameId) {
-    const baseUrl = window.location.origin;
-    
-    // Set only the player registration link
-    document.getElementById('gameLink').value = `${baseUrl}/game.html?id=${gameId}`;
+    // Store the game ID for the copy function
+    window.currentGameId = gameId;
     
     // Show the share link section
     document.getElementById('shareLink').style.display = 'block';
@@ -802,9 +800,10 @@ function showGameLinks(gameId) {
     document.getElementById('shareLink').scrollIntoView({ behavior: 'smooth' });
 }
 
-function copyToClipboard(elementId) {
-    // Get the game link from the input field
-    const gameLink = document.getElementById('gameLink').value;
+function copyToClipboard() {
+    // Build the game link using the stored game ID
+    const baseUrl = window.location.origin;
+    const gameLink = `${baseUrl}/game.html?id=${window.currentGameId}`;
     
     // Get the current game data from the form or stored data
     const currentGameData = getCurrentGameData();
@@ -834,12 +833,12 @@ You'll get text confirmations and can easily cancel by replying "9" to any messa
             // Show feedback
             const button = document.getElementById('copyLink');
             const originalText = button.textContent;
-            button.textContent = 'Message Copied!';
-            button.style.backgroundColor = '#4CAF50';
+            button.textContent = '✅ Message Copied!';
+            button.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
             
             setTimeout(() => {
                 button.textContent = originalText;
-                button.style.backgroundColor = '';
+                button.style.background = '';
             }, 3000);
         }).catch(() => {
             // Fallback for older browsers

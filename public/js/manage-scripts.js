@@ -261,19 +261,14 @@ function setupEventListeners() {
     }
     
     // Copy link buttons
-    const copyPlayerLinkBtn = document.getElementById('copyPlayerLink');
-    if (copyPlayerLinkBtn) {
-        copyPlayerLinkBtn.addEventListener('click', () => {
-            copyPlayerInvitation();
-        });
-    }
+const copyPlayerLinkBtn = document.getElementById('copyPlayerLink');
+if (copyPlayerLinkBtn) {
+    copyPlayerLinkBtn.addEventListener('click', () => {
+        copyPlayerInvitation();
+    });
+}
 
-    const copyHostLinkBtn = document.getElementById('copyHostLink');
-    if (copyHostLinkBtn) {
-        copyHostLinkBtn.addEventListener('click', () => {
-            copyToClipboard('hostLink');
-        });
-    }
+
 
     // Modal close button
     const closeModalBtn = document.getElementsByClassName('close')[0];
@@ -382,15 +377,6 @@ function updatePlayerLists() {
     updatePlayerCheckboxes();
 }
 
-function populateShareLinks() {
-    const playerLink = document.getElementById('playerLink');
-    const hostLink = document.getElementById('hostLink');
-    
-    const baseUrl = window.location.origin;
-    
-    playerLink.value = `${baseUrl}/game.html?id=${gameId}`;
-    hostLink.value = `${baseUrl}/manage.html?id=${gameId}&token=${hostToken}`;
-}
 
 async function updateGameDetails() {
     try {
@@ -867,9 +853,13 @@ function closeModal() {
     modal.style.display = 'none';
 }
 
+function populateShareLinks() {
+    // No longer need to populate visible links since we removed them
+    // The copy function will build the links when needed
+}
+
 function copyPlayerInvitation() {
-    const gameLink = document.getElementById('playerLink').value;
-    
+const gameLink = `${window.location.origin}/game.html?id=${gameId}`;    
     // TIMEZONE FIX: Use proper date formatting for invitation
     const formattedDate = formatDateForDisplay(gameData.date);
     const formattedTime = formatTime(gameData.time);
