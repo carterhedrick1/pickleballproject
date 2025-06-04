@@ -822,6 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
         
     // Update the updatePlayerList function in public/game.html
+// Updated updatePlayerList function in public/game.html
 function updatePlayerList() {
     const playersList = document.getElementById('players');
     const spotsAvailable = document.getElementById('spotsAvailable');
@@ -840,7 +841,7 @@ function updatePlayerList() {
     const isWaitlistMode = gameData.registrationMode === 'waitlist';
     
     if (isWaitlistMode) {
-        // Hide the entire players section in waitlist mode
+        // Hide the entire players section in waitlist mode - NO PLAYER INFO VISIBLE
         if (playerListSection) {
             playerListSection.style.display = 'none';
         }
@@ -857,10 +858,10 @@ function updatePlayerList() {
             signupForm.style.display = 'block';
         }
         
-        return; // Exit early for waitlist mode
+        return; // Exit early for waitlist mode - NO PLAYER DATA SHOWN
     }
     
-    // Regular mode - show players section
+    // Regular mode - show players section with full transparency
     if (playerListSection) {
         playerListSection.style.display = 'block';
     }
@@ -914,6 +915,7 @@ function updatePlayerList() {
 }
 
 // Update showConfirmation function in public/game.html
+// FIXED showConfirmation function for public/game.html
 function showConfirmation(data) {
     // Hide other sections
     document.getElementById('gameDetails').style.display = 'none';
@@ -928,17 +930,21 @@ function showConfirmation(data) {
     const confirmTitle = document.getElementById('confirmationTitle');
     const confirmMessage = document.getElementById('confirmationMessage');
     const confirmStatus = document.getElementById('confirmStatus');
+    const confirmLocation = document.getElementById('confirmLocation');
+    const confirmDateTime = document.getElementById('confirmDateTime');
     
     if (data.status === 'confirmed') {
+        // Regular confirmed player
         confirmationSection.classList.remove('waitlist');
         confirmTitle.textContent = "You're In!";
         confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
         confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
     } else if (data.status === 'waitlist') {
+        // Waitlisted player
         confirmationSection.classList.add('waitlist');
         
-        if (data.hidePosition) {
-            // Waitlist mode - hide position
+        if (data.hidePosition || gameData.registrationMode === 'waitlist') {
+            // Waitlist mode - hide position, show application status
             confirmTitle.textContent = "⏳ Application Submitted!";
             confirmMessage.textContent = `Thanks for signing up! The organizer will review all applications and select players. You'll be notified if you're selected.`;
             confirmStatus.textContent = `Application Under Review`;

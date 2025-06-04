@@ -294,32 +294,32 @@ app.post('/api/games/:id/players', async (req, res) => {
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
     
     // Send confirmation SMS
-    let smsResult;
-    if (playerData.phone) {
-      const gameDate = formatDateForSMS(game.date);
-      const gameTime = formatTimeForSMS(game.time);
-      
-      let locationText = game.location;
-      if (game.courtNumber && game.courtNumber.trim()) {
-        locationText += ` - ${game.courtNumber}`;
-      }
-      
-      let message;
-      if (result.status === 'confirmed') {
-        message = `You're confirmed for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for game details or 9 to cancel.`;
-      } else {
-        // Handle waitlist mode vs regular waitlist
-        if (result.hidePosition) {
-          // Waitlist mode - don't show position
-          message = `Thanks for signing up for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! The organizer will review applications and select players. You'll be notified if selected. Reply 2 for details or 9 to cancel.`;
-        } else {
-          // Regular waitlist - show position
-          message = `You've been added to the waitlist for Pickleball at ${locationText}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.`;
-        }
-      }
-      
-      smsResult = await sendSMS(playerData.phone, message, gameId);
+let smsResult;
+if (playerData.phone) {
+  const gameDate = formatDateForSMS(game.date);
+  const gameTime = formatTimeForSMS(game.time);
+  
+  let locationText = game.location;
+  if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+  }
+  
+  let message;
+  if (result.status === 'confirmed') {
+    message = `You're confirmed for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for game details or 9 to cancel.`;
+  } else {
+    // Handle waitlist mode vs regular waitlist
+    if (result.hidePosition || game.registrationMode === 'waitlist') {
+      // Waitlist mode - don't show position, don't mention "2" for details
+      message = `Thanks for signing up for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.`;
+    } else {
+      // Regular waitlist - show position, allow details
+      message = `You've been added to the waitlist for Pickleball at ${locationText}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.`;
     }
+  }
+  
+  smsResult = await sendSMS(playerData.phone, message, gameId);
+}
     
     res.status(201).json({ 
       ...result,

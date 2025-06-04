@@ -251,8 +251,14 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
       await sendSMS(fromNumber, `You don't have any upcoming games registered to this phone number.`);
     } else if (userGames.length === 1) {
       const { game, role } = userGames[0];
-      const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
-      await sendSMS(fromNumber, responseMessage);
+      
+      // Check if this is a waitlist mode game and user is not host
+      if (game.registrationMode === 'waitlist' && role !== 'host' && role === 'waitlist') {
+        await sendSMS(fromNumber, `Your application for the pickleball game is under review. You'll be notified if selected. Reply 9 to cancel your application.`);
+      } else {
+        const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
+        await sendSMS(fromNumber, responseMessage);
+      }
     } else {
       await saveLastCommand(cleanedFromNumber, 'details_selection');
       const responseMessage = await buildGameListMessage(userGames);
@@ -370,6 +376,7 @@ async function getPlayerGames(cleanedFromNumber, allGames) {
 }
 
 // Update buildGameDetailsMessage function in sms-handler.js
+// 1. Fix buildGameDetailsMessage function
 async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
   const gameDate = formatDateForSMS(game.date);
   const gameTime = formatTimeForSMS(game.time);
@@ -381,26 +388,33 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
   
   let responseMessage = `🏓 ${locationText}\n📅 ${gameDate} at ${gameTime}\n⏱️ Duration: ${game.duration} minutes\n\n`;
   
-  responseMessage += `👥 Confirmed Players (${game.players.length}/${game.totalPlayers}):\n`;
-  if (game.players.length === 0) {
-    responseMessage += `• None yet\n`;
-  } else {
-    game.players.forEach(player => {
-      responseMessage += `• ${player.name}${player.isOrganizer ? ' (Organizer)' : ''}\n`;
-    });
-  }
-  
-  if (game.waitlist && game.waitlist.length > 0) {
-    responseMessage += `\n⏳ Waitlist (${game.waitlist.length}):\n`;
-    
-    // Check if game is in waitlist mode
-    if (game.registrationMode === 'waitlist') {
-      responseMessage += `• Applications under review\n`;
+  // Only show player details if NOT in waitlist mode OR if user is the host
+  if (game.registrationMode !== 'waitlist' || role === 'host') {
+    responseMessage += `👥 Confirmed Players (${game.players.length}/${game.totalPlayers}):\n`;
+    if (game.players.length === 0) {
+      responseMessage += `• None yet\n`;
     } else {
-      game.waitlist.forEach((player, index) => {
-        responseMessage += `• ${player.name} (#${index + 1})\n`;
+      game.players.forEach(player => {
+        responseMessage += `• ${player.name}${player.isOrganizer ? ' (Organizer)' : ''}\n`;
       });
     }
+    
+    if (game.waitlist && game.waitlist.length > 0) {
+      responseMessage += `\n⏳ Waitlist (${game.waitlist.length}):\n`;
+      
+      // Check if game is in waitlist mode
+      if (game.registrationMode === 'waitlist') {
+        responseMessage += `• Applications under review\n`;
+      } else {
+        game.waitlist.forEach((player, index) => {
+          responseMessage += `• ${player.name} (#${index + 1})\n`;
+        });
+      }
+    }
+  } else {
+    // Waitlist mode - hide player info from non-hosts
+    responseMessage += `👥 Player selection in progress\n`;
+    responseMessage += `The organizer will review all applications and select players.\n`;
   }
   
   if (role === 'host') {
@@ -409,7 +423,7 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
     responseMessage += `\nYou are: ✅ Confirmed Player\nReply "9" to cancel`;
   } else if (role === 'waitlist') {
     if (game.registrationMode === 'waitlist') {
-      responseMessage += `\nYou are: ⏳ Application Submitted\nReply "9" to cancel`;
+      responseMessage += `\nYou are: ⏳ Application Submitted\nReply "9" to cancel application`;
     } else {
       const waitlistPosition = game.waitlist.findIndex(p => p.phone === cleanedFromNumber) + 1;
       responseMessage += `\nYou are: ⏳ Waitlist #${waitlistPosition}\nReply "9" to cancel`;
@@ -485,7 +499,13 @@ async function cancelPlayerFromGame(gameId, game, player, status, fromNumber) {
           locationText += ` - ${game.courtNumber}`;
         }
         
-        const promotionMessage = `Good news! You've been selected for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 2 for game details or 9 to cancel.`;
+        // Different promotion message based on game mode
+        let promotionMessage;
+        if (game.registrationMode === 'waitlist') {
+          promotionMessage = `Good news! You've been selected for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 9 to cancel if needed.`;
+        } else {
+          promotionMessage = `Good news! You've been selected for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 2 for game details or 9 to cancel.`;
+        }
         await sendSMS(promotedPlayer.phone, promotionMessage, gameId);
       }
     } else {
