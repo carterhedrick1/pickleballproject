@@ -85,6 +85,74 @@
             <label for="message">💬 Optional Message:</label>
             <textarea id="message" name="message" rows="3" placeholder="Any additional info for players..."></textarea>
         </div>
+
+        <div class="form-group">
+    <!-- REPLACE the organizer notifications section in your manage page with this: -->
+
+<div class="form-group notifications-section">
+    <label>📱 Organizer Notifications:</label>
+    <small>Get SMS alerts when these events happen (optional)</small>
+    
+    <div class="notification-option" onclick="toggleManageNotification(this, 'notifyGameFull')">
+        <div class="notification-content">
+            <div class="notification-icon">🎯</div>
+            <div class="notification-text">
+                <div class="notification-title">Game becomes full</div>
+                <div class="notification-description">Get notified when all spots are taken</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyGameFull" name="notifyGameFull">
+    </div>
+    
+    <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerJoins')">
+        <div class="notification-content">
+            <div class="notification-icon">👋</div>
+            <div class="notification-text">
+                <div class="notification-title">Someone joins the game</div>
+                <div class="notification-description">Get notified each time a player signs up</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyPlayerJoins" name="notifyPlayerJoins">
+    </div>
+    
+    <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerCancels')">
+        <div class="notification-content">
+            <div class="notification-icon">❌</div>
+            <div class="notification-text">
+                <div class="notification-title">Someone cancels their spot</div>
+                <div class="notification-description">Get notified when players cancel</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels">
+    </div>
+    
+    <div class="notification-option" onclick="toggleManageNotification(this, 'notifyOneSpotLeft')">
+        <div class="notification-content">
+            <div class="notification-icon">⚠️</div>
+            <div class="notification-text">
+                <div class="notification-title">Only one spot remaining</div>
+                <div class="notification-description">Get notified when almost full</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyOneSpotLeft" name="notifyOneSpotLeft">
+    </div>
+    
+    <div class="notification-option" onclick="toggleManageNotification(this, 'notifyWaitlistStarts')">
+        <div class="notification-content">
+            <div class="notification-icon">⏳</div>
+            <div class="notification-text">
+                <div class="notification-title">Waitlist starts</div>
+                <div class="notification-description">Get notified when first person is waitlisted</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyWaitlistStarts" name="notifyWaitlistStarts">
+    </div>
+</div>
         
         <button type="submit">💾 Update Game Details</button>
     </form>

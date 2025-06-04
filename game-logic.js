@@ -162,7 +162,10 @@ async function checkAndSendReminders() {
 }
 
 // Update the createGameData function in game-logic.js
+// game-logic.js - UPDATED createGameData function
 function createGameData(formData) {
+  console.log('[DEBUG] Creating game data, received:', formData);
+  
   const gameData = {
     location: formData.location,
     courtNumber: formData.courtNumber || '',
@@ -174,9 +177,24 @@ function createGameData(formData) {
     duration: parseInt(formData.duration),
     totalPlayers: parseInt(formData.totalPlayers),
     message: formData.message,
-    registrationMode: formData.registrationMode || 'fcfs', // 'fcfs' or 'waitlist'
-    waitlist: []
+    registrationMode: formData.registrationMode || 'fcfs',
+    waitlist: [],
+    // FIX: Properly handle notification preferences
+    notificationPreferences: {
+      gameFull: formData.notificationPreferences?.gameFull ?? true,
+      playerJoins: formData.notificationPreferences?.playerJoins ?? true,
+      playerCancels: formData.notificationPreferences?.playerCancels ?? true,
+      oneSpotLeft: formData.notificationPreferences?.oneSpotLeft ?? true,
+      waitlistStarts: formData.notificationPreferences?.waitlistStarts ?? true
+    },
+    // Add hostPhone for easier access
+    hostPhone: formData.organizerPhone ? formatPhoneNumber(formData.organizerPhone) : null,
+    cancelled: false,
+    created: new Date().toISOString()
   };
+
+  console.log('[DEBUG] Final notification preferences:', gameData.notificationPreferences);
+  console.log('[DEBUG] Host phone:', gameData.hostPhone);
 
   // Set up initial players list
   if (gameData.organizerPlaying) {
@@ -185,7 +203,8 @@ function createGameData(formData) {
         id: 'organizer', 
         name: gameData.organizerName, 
         phone: gameData.organizerPhone,
-        isOrganizer: true 
+        isOrganizer: true,
+        joinedAt: new Date().toISOString()
       }
     ];
   } else {
@@ -194,6 +213,8 @@ function createGameData(formData) {
 
   return gameData;
 }
+
+
 // Player validation and processing
 function validatePlayerData(name, phone) {
   const cleanName = name ? name.trim() : '';

@@ -39,6 +39,94 @@ function formatDateForDisplay(dateStr) {
     });
 }
 
+// ADD this JavaScript function to your manage-scripts.js file:
+
+function toggleManageNotification(element, checkboxId) {
+    const checkbox = document.getElementById(checkboxId);
+    const isCurrentlyChecked = checkbox.checked;
+    
+    // Toggle the checkbox
+    checkbox.checked = !isCurrentlyChecked;
+    
+    // Toggle the visual state
+    if (checkbox.checked) {
+        element.classList.add('checked');
+    } else {
+        element.classList.remove('checked');
+    }
+    
+    // Prevent the event from bubbling up
+    if (event) {
+        event.stopPropagation();
+    }
+}
+
+// UPDATE your loadGameDetails function to set the toggle states:
+function loadGameDetails(game) {
+    // ... your existing code ...
+    
+    // Set notification preferences and toggle states
+    if (game.notificationPreferences) {
+        const prefs = game.notificationPreferences;
+        
+        // Set checkbox values and toggle visual states
+        setNotificationToggle('notifyGameFull', prefs.gameFull);
+        setNotificationToggle('notifyPlayerJoins', prefs.playerJoins);
+        setNotificationToggle('notifyPlayerCancels', prefs.playerCancels);
+        setNotificationToggle('notifyOneSpotLeft', prefs.oneSpotLeft);
+        setNotificationToggle('notifyWaitlistStarts', prefs.waitlistStarts);
+    }
+}
+
+// Helper function to set both checkbox and visual state
+// REPLACE your setNotificationToggle function with this improved version:
+
+function setNotificationToggle(checkboxId, isChecked) {
+    const checkbox = document.getElementById(checkboxId);
+    
+    if (!checkbox) {
+        console.log(`Checkbox ${checkboxId} not found`);
+        return;
+    }
+    
+    const toggleElement = checkbox.closest('.notification-option');
+    
+    if (!toggleElement) {
+        console.log(`Toggle element for ${checkboxId} not found`);
+        return;
+    }
+    
+    // Set checkbox state
+    checkbox.checked = isChecked;
+    
+    // Set visual state
+    if (isChecked) {
+        toggleElement.classList.add('checked');
+    } else {
+        toggleElement.classList.remove('checked');
+    }
+    
+    console.log(`Set ${checkboxId} to ${isChecked}, visual state updated`);
+}
+
+// UPDATE your updateGame function to include notification preferences:
+async function updateGame() {
+    // ... your existing form data collection ...
+    
+    const updateData = {
+        // ... your existing fields ...
+        notificationPreferences: {
+            gameFull: document.getElementById('notifyGameFull').checked,
+            playerJoins: document.getElementById('notifyPlayerJoins').checked,
+            playerCancels: document.getElementById('notifyPlayerCancels').checked,
+            oneSpotLeft: document.getElementById('notifyOneSpotLeft').checked,
+            waitlistStarts: document.getElementById('notifyWaitlistStarts').checked
+        }
+    };
+    
+    // ... rest of your update logic ...
+}
+
 function formatDateForServer(dateStr) {
     // Ensure date is sent to server in YYYY-MM-DD format without timezone
     if (!dateStr) return '';
@@ -283,6 +371,8 @@ if (copyPlayerLinkBtn) {
     }
 }
 
+// REPLACE your populateGameDetails function with this updated version:
+
 function populateGameDetails() {
     console.log('Populating game details with:', gameData);
     
@@ -294,6 +384,29 @@ function populateGameDetails() {
     document.getElementById('duration').value = gameData.duration || '';
     document.getElementById('players').value = gameData.totalPlayers || '';
     document.getElementById('message').value = gameData.message || '';
+    
+    // Set notification preferences with a small delay to ensure DOM is ready
+    setTimeout(() => {
+        if (gameData.notificationPreferences) {
+            const prefs = gameData.notificationPreferences;
+            console.log('Setting notification preferences:', prefs);
+            
+            // Set checkbox values and toggle visual states
+            setNotificationToggle('notifyGameFull', prefs.gameFull || false);
+            setNotificationToggle('notifyPlayerJoins', prefs.playerJoins || false);
+            setNotificationToggle('notifyPlayerCancels', prefs.playerCancels || false);
+            setNotificationToggle('notifyOneSpotLeft', prefs.oneSpotLeft || false);
+            setNotificationToggle('notifyWaitlistStarts', prefs.waitlistStarts || false);
+        } else {
+            console.log('No notification preferences found in game data');
+            // Set all to false if no preferences exist
+            setNotificationToggle('notifyGameFull', false);
+            setNotificationToggle('notifyPlayerJoins', false);
+            setNotificationToggle('notifyPlayerCancels', false);
+            setNotificationToggle('notifyOneSpotLeft', false);
+            setNotificationToggle('notifyWaitlistStarts', false);
+        }
+    }, 100);
     
     console.log('Form populated with date:', formatDateForInput(gameData.date));
     
@@ -378,6 +491,8 @@ function updatePlayerLists() {
 }
 
 
+// UPDATE your updateGameDetails function in manage-scripts.js:
+
 async function updateGameDetails() {
     try {
         showStatus('Updating game details...', 'info');
@@ -391,6 +506,13 @@ async function updateGameDetails() {
             duration: document.getElementById('duration').value,
             totalPlayers: document.getElementById('players').value,
             message: document.getElementById('message').value,
+            notificationPreferences: {
+                gameFull: document.getElementById('notifyGameFull').checked,
+                playerJoins: document.getElementById('notifyPlayerJoins').checked,
+                playerCancels: document.getElementById('notifyPlayerCancels').checked,
+                oneSpotLeft: document.getElementById('notifyOneSpotLeft').checked,
+                waitlistStarts: document.getElementById('notifyWaitlistStarts').checked
+            },
             token: hostToken
         };
         
@@ -415,7 +537,8 @@ async function updateGameDetails() {
         // Refresh game data
         await fetchGameData();
         
-        showStatus('Game details updated successfully! Players have been notified.', 'success');
+        // UPDATED: New success message without mentioning notifications
+        showStatus('Game details updated successfully! Use the Communication tab to notify players of changes if needed.', 'success');
         
     } catch (error) {
         console.error('Error updating game:', error);

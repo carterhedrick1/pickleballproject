@@ -616,6 +616,126 @@ button:hover {
     margin-bottom: 20px;
 }
 
+/* ADD this CSS to your manage-styles.css file or in a <style> section: */
+
+/* Notifications section styling for manage page */
+.notifications-section {
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
+
+.notifications-section > label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #495057;
+    font-size: 16px;
+}
+
+.notifications-section small {
+    color: #666;
+    font-size: 12px;
+    margin-top: 5px;
+    margin-bottom: 20px;
+    display: block;
+}
+
+/* Modern Toggle-Style Checkboxes for manage page */
+.notification-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    background: white;
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.notification-option:hover {
+    border-color: #4CAF50;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.15);
+}
+
+.notification-option.checked {
+    border-color: #4CAF50;
+    background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
+    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.2);
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.notification-icon {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+}
+
+.notification-text {
+    flex: 1;
+}
+
+.notification-title {
+    font-weight: 600;
+    font-size: 15px;
+    color: #2c3e50;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.notification-description {
+    font-size: 13px;
+    color: #6c757d;
+    margin: 2px 0 0 0;
+    line-height: 1.4;
+}
+
+/* Custom Toggle Switch for manage page */
+.toggle-switch {
+    position: relative;
+    width: 52px;
+    height: 28px;
+    background-color: #ccc;
+    border-radius: 14px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+}
+
+.toggle-switch::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.notification-option.checked .toggle-switch {
+    background-color: #4CAF50;
+}
+
+.notification-option.checked .toggle-switch::before {
+    transform: translateX(24px);
+}
+
+/* Hide the actual checkbox */
+.notification-option input[type="checkbox"] {
+    display: none;
+}
+
 @media (max-width: 768px) {
     .main-content {
         padding: 0; /* Remove padding on mobile for full width */

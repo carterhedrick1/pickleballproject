@@ -23,6 +23,111 @@ const {
   formatTimeForSMS 
 } = require('./sms-handler');
 
+// Function to send organizer notifications
+// server.js - REPLACE your sendOrganizerNotification function with this:
+async function sendOrganizerNotification(gameId, game, eventType, playerName = null) {
+  try {
+    console.log('[DEBUG] ==================== ORGANIZER NOTIFICATION ====================');
+    console.log('[DEBUG] gameId:', gameId);
+    console.log('[DEBUG] eventType:', eventType);
+    console.log('[DEBUG] playerName:', playerName);
+    console.log('[DEBUG] hostPhone:', game.hostPhone);
+    console.log('[DEBUG] notificationPreferences:', JSON.stringify(game.notificationPreferences, null, 2));
+
+    // Check if we have the required data
+    if (!game.hostPhone) {
+      console.log('[DEBUG] ❌ No hostPhone found, skipping notification');
+      return;
+    }
+    
+    if (!game.notificationPreferences) {
+      console.log('[DEBUG] ❌ No notification preferences found, skipping notification');
+      return;
+    }
+    
+    const prefs = game.notificationPreferences;
+    let shouldSend = false;
+    let message = '';
+    
+    const gameDate = formatDateForSMS(game.date);
+    const gameTime = formatTimeForSMS(game.time);
+    let locationText = game.location;
+    if (game.courtNumber && game.courtNumber.trim()) {
+      locationText += ` - ${game.courtNumber}`;
+    }
+    
+    console.log('[DEBUG] Checking preferences for event:', eventType);
+    
+    switch (eventType) {
+      case 'gameFull':
+        console.log('[DEBUG] gameFull preference:', prefs.gameFull);
+        if (prefs.gameFull === true) {
+          shouldSend = true;
+          message = `🎯 HOST ALERT: Your pickleball game at ${locationText} on ${gameDate} is now FULL! All ${game.totalPlayers} spots are taken.`;
+        }
+        break;
+        
+      case 'playerJoins':
+        console.log('[DEBUG] playerJoins preference:', prefs.playerJoins);
+        if (prefs.playerJoins === true && playerName) {
+          shouldSend = true;
+          const spotsLeft = parseInt(game.totalPlayers) - game.players.length;
+          message = `🎯 HOST ALERT: ${playerName} just joined your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} spots remaining.`;
+        }
+        break;
+        
+      case 'playerCancels':
+        console.log('[DEBUG] playerCancels preference:', prefs.playerCancels);
+        if (prefs.playerCancels === true && playerName) {
+          shouldSend = true;
+          const spotsLeft = parseInt(game.totalPlayers) - game.players.length;
+          message = `🎯 HOST ALERT: ${playerName} cancelled their spot for your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} spots now available.`;
+        }
+        break;
+        
+      case 'oneSpotLeft':
+        console.log('[DEBUG] oneSpotLeft preference:', prefs.oneSpotLeft);
+        if (prefs.oneSpotLeft === true) {
+          shouldSend = true;
+          message = `🎯 HOST ALERT: Only 1 spot left for your pickleball game at ${locationText} on ${gameDate}!`;
+        }
+        break;
+        
+      case 'waitlistStarts':
+        console.log('[DEBUG] waitlistStarts preference:', prefs.waitlistStarts);
+        if (prefs.waitlistStarts === true && playerName) {
+          shouldSend = true;
+          message = `🎯 HOST ALERT: ${playerName} is the first person on the waitlist for your pickleball game at ${locationText} on ${gameDate}.`;
+        }
+        break;
+        
+      default:
+        console.log('[DEBUG] ❌ Unknown event type:', eventType);
+    }
+    
+    console.log('[DEBUG] shouldSend:', shouldSend);
+    console.log('[DEBUG] message length:', message ? message.length : 0);
+
+    if (shouldSend && message) {
+      console.log('[DEBUG] ✅ Sending organizer SMS to:', game.hostPhone);
+      const smsResult = await sendSMS(game.hostPhone, message, gameId);
+      console.log('[DEBUG] SMS result:', smsResult);
+      
+      if (smsResult.success) {
+        console.log(`[ORGANIZER NOTIFICATION] ✅ Successfully sent ${eventType} notification to host for game ${gameId}`);
+      } else {
+        console.log(`[ORGANIZER NOTIFICATION] ❌ Failed to send ${eventType} notification:`, smsResult.error);
+      }
+    } else {
+      console.log('[DEBUG] ❌ Not sending notification');
+      console.log('[DEBUG] Reasons - shouldSend:', shouldSend, 'hasMessage:', !!message);
+    }
+    
+    console.log('[DEBUG] ============================================================');
+  } catch (error) {
+    console.error('❌ Error sending organizer notification:', error);
+  }
+}
 const { 
   checkAndSendReminders,
   createGameData,
@@ -100,8 +205,11 @@ app.post('/api/test-reminders', async (req, res) => {
 });
 
 // Create game
+// server.js - REPLACE your create game endpoint with this:
 app.post('/api/games', async (req, res) => {
   try {
+    console.log('[SERVER] Received create game request:', req.body);
+    
     const gameId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
     const hostToken = crypto.randomBytes(32).toString('hex');
 
@@ -117,7 +225,15 @@ app.post('/api/games', async (req, res) => {
       });
     }    
     
-    await saveGame(gameId, gameData, hostToken, hostPhone ? formatPhoneNumber(hostPhone) : null);
+    // Make sure hostPhone is properly formatted and saved
+    const formattedHostPhone = hostPhone ? formatPhoneNumber(hostPhone) : null;
+    gameData.hostPhone = formattedHostPhone;
+    
+    console.log('[SERVER] Final game data before saving:');
+    console.log('  - hostPhone:', gameData.hostPhone);
+    console.log('  - notificationPreferences:', gameData.notificationPreferences);
+    
+    await saveGame(gameId, gameData, hostToken, formattedHostPhone);
     
     const response = { 
       gameId,
@@ -127,23 +243,23 @@ app.post('/api/games', async (req, res) => {
     };
     
     // Send confirmation SMS to host
-let smsResult = null;
-if (hostPhone) {
-  const gameDate = formatDateForSMS(gameData.date);
-  const gameTime = formatTimeForSMS(gameData.time);
-  let locationText = gameData.location;
-  if (gameData.courtNumber && gameData.courtNumber.trim()) {
-      locationText += ` - ${gameData.courtNumber}`;
-  }
-  const hostMessage = `Your pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been created! Reply "1" for management link or "2" for game details.`;
-  const formattedPhone = formatPhoneNumber(hostPhone);
-  smsResult = await sendSMS(formattedPhone, hostMessage, gameId);
-}
+    let smsResult = null;
+    if (hostPhone) {
+      const gameDate = formatDateForSMS(gameData.date);
+      const gameTime = formatTimeForSMS(gameData.time);
+      let locationText = gameData.location;
+      if (gameData.courtNumber && gameData.courtNumber.trim()) {
+          locationText += ` - ${gameData.courtNumber}`;
+      }
+      const hostMessage = `Your pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been created! Reply "1" for management link or "2" for game details.`;
+      smsResult = await sendSMS(formattedHostPhone, hostMessage, gameId);
+    }
     
     response.hostSms = smsResult;
+    console.log('[SERVER] Game created successfully:', gameId);
     res.status(201).json(response);
   } catch (error) {
-    console.error('Error creating game:', error);
+    console.error('[SERVER] Error creating game:', error);
     res.status(500).json({ error: 'Failed to create game' });
   }
 });
@@ -172,6 +288,8 @@ app.get('/api/games/:id', async (req, res) => {
 });
 
 // Update game
+// UPDATE your game update endpoint in server.js - REMOVE the automatic notifications:
+
 app.put('/api/games/:id', async (req, res) => {
   try {
     const gameId = req.params.id;
@@ -189,24 +307,13 @@ app.put('/api/games/:id', async (req, res) => {
     Object.assign(game, updateData);
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
     
-    // Notify players of update
-    const gameDate = formatDateForSMS(game.date);
-    const gameTime = formatTimeForSMS(game.time);
-    const updateMessage = `UPDATE: Your pickleball game has been updated. New details: ${game.location} on ${gameDate} at ${gameTime}. Duration: ${game.duration} minutes.`;
+    // REMOVED: Automatic notification sending code
+    // Organizers can now use the Communication tab to send manual updates
     
-    for (const player of game.players) {
-      if (player.phone && !player.isOrganizer) {
-        await sendSMS(player.phone, updateMessage, gameId);
-      }
-    }
-    
-    for (const player of game.waitlist || []) {
-      if (player.phone) {
-        await sendSMS(player.phone, updateMessage);
-      }
-    }
-    
-    res.json({ success: true, message: 'Game updated and players notified' });
+    res.json({ 
+      success: true, 
+      message: 'Game updated successfully. Use the Communication tab to notify players of changes if needed.' 
+    });
   } catch (error) {
     console.error('Error updating game:', error);
     res.status(500).json({ error: 'Failed to update game' });
@@ -268,7 +375,6 @@ app.delete('/api/games/:id', async (req, res) => {
 });
 
 // Add player to game (regular signup)
-// Update the SMS message logic in server.js - Add player to game route
 app.post('/api/games/:id/players', async (req, res) => {
   try {
     const gameId = req.params.id;
@@ -293,43 +399,66 @@ app.post('/api/games/:id/players', async (req, res) => {
     const result = addPlayerToGame(game, playerData);
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
     
-    // Send confirmation SMS
-let smsResult;
-if (playerData.phone) {
-  const gameDate = formatDateForSMS(game.date);
-  const gameTime = formatTimeForSMS(game.time);
-  
-  let locationText = game.location;
-  if (game.courtNumber && game.courtNumber.trim()) {
-    locationText += ` - ${game.courtNumber}`;
-  }
-  
-  let message;
-  if (result.status === 'confirmed') {
-    message = `You're confirmed for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for game details or 9 to cancel.`;
-  } else {
-    // Handle waitlist mode vs regular waitlist
-    if (result.hidePosition || game.registrationMode === 'waitlist') {
-      // Waitlist mode - don't show position, don't mention "2" for details
-      message = `Thanks for signing up for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.`;
-    } else {
-      // Regular waitlist - show position, allow details
-      message = `You've been added to the waitlist for Pickleball at ${locationText}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.`;
+    // Send confirmation SMS to the player
+    let smsResult = null;
+    if (playerData.phone) {
+      const gameDate = formatDateForSMS(game.date);
+      const gameTime = formatTimeForSMS(game.time);
+      
+      let locationText = game.location;
+      if (game.courtNumber && game.courtNumber.trim()) {
+        locationText += ` - ${game.courtNumber}`;
+      }
+      
+      let message;
+      if (result.status === 'confirmed') {
+        message = `You're confirmed for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for game details or 9 to cancel.`;
+      } else {
+        // Handle waitlist mode vs regular waitlist
+        if (result.hidePosition || game.registrationMode === 'waitlist') {
+          // Waitlist mode - don't show position, don't mention "2" for details
+          message = `Thanks for signing up for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.`;
+        } else {
+          // Regular waitlist - show position, allow details
+          message = `You've been added to the waitlist for Pickleball at ${locationText}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.`;
+        }
+      }
+      
+      smsResult = await sendSMS(playerData.phone, message, gameId);
     }
-  }
-  
-  smsResult = await sendSMS(playerData.phone, message, gameId);
-}
-    
+
+    // Send organizer notifications (if preferences are set)
+    if (result.status === 'confirmed') {
+      // Check if game is now full
+      if (game.players.length === parseInt(game.totalPlayers)) {
+        await sendOrganizerNotification(gameId, game, 'gameFull');
+      }
+      // Check if only one spot left
+      else if (game.players.length === parseInt(game.totalPlayers) - 1) {
+        await sendOrganizerNotification(gameId, game, 'oneSpotLeft');
+      }
+      // Player joined notification
+      await sendOrganizerNotification(gameId, game, 'playerJoins', playerData.name);
+    } else if (result.status === 'waitlist') {
+      // Check if this is the first person on waitlist
+      if ((game.waitlist || []).length === 1) {
+        await sendOrganizerNotification(gameId, game, 'waitlistStarts', playerData.name);
+      }
+    }
+
+    // Send response back to client (ONLY ONE RESPONSE!)
     res.status(201).json({ 
       ...result,
       sms: smsResult
     });
+    
   } catch (error) {
     console.error('Error adding player:', error);
     res.status(500).json({ error: error.message || 'Failed to add player' });
   }
 });
+
+
 
 // Add player manually (host function)
 app.post('/api/games/:id/manual-player', async (req, res) => {
@@ -354,6 +483,8 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
     if (existingCheck.exists) {
       return res.status(400).json({ error: existingCheck.message });
     }
+
+    
     
     // Add player to game (force waitlist if requested)
     const forceWaitlist = addTo === 'waitlist';
@@ -585,11 +716,16 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
       promotionSmsResult = await sendSMS(result.promotedPlayer.phone, message, gameId);
     }
     
-    res.json({ 
-      ...result,
-      removalSms: removalSmsResult,
-      promotionSms: promotionSmsResult
-    });
+// Send organizer notification for cancellation
+if (removedPlayer && !removedPlayer.isOrganizer && token) {
+  await sendOrganizerNotification(gameId, game, 'playerCancels', removedPlayer.name);
+}
+
+res.json({ 
+  ...result,
+  removalSms: removalSmsResult,
+  promotionSms: promotionSmsResult
+});
   } catch (error) {
     console.error('Error removing player:', error);
     res.status(500).json({ error: 'Failed to remove player' });

@@ -341,6 +341,248 @@
             margin: 5px 0;
         }
 
+        /* REPLACE your notifications CSS - MOVE this OUTSIDE the @media query and BEFORE the @media (max-width: 768px) section */
+
+/* UPDATE your notifications section CSS: */
+
+/* REPLACE your notifications section CSS with this: */
+
+.notifications-section {
+    margin-top: 40px;
+    margin-bottom: 30px;
+    /* REMOVED: padding, background, border, box-shadow */
+}
+
+.notifications-section > label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #495057; /* CHANGED: Match other form labels */
+    font-size: 16px; /* CHANGED: Match other form labels */
+}
+
+.notifications-section small {
+    color: #666;
+    font-size: 12px;
+    margin-top: 5px;
+    margin-bottom: 20px;
+    display: block;
+}
+
+/* Modern Toggle-Style Checkboxes */
+.notification-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    background: white;
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.notification-option:hover {
+    border-color: #4CAF50;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.15);
+}
+
+.notification-option.checked {
+    border-color: #4CAF50;
+    background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
+    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.2);
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.notification-icon {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+}
+
+.notification-text {
+    flex: 1;
+}
+
+.notification-title {
+    font-weight: 600;
+    font-size: 15px;
+    color: #2c3e50;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.notification-description {
+    font-size: 13px;
+    color: #6c757d;
+    margin: 2px 0 0 0;
+    line-height: 1.4;
+}
+
+/* Custom Toggle Switch */
+.toggle-switch {
+    position: relative;
+    width: 52px;
+    height: 28px;
+    background-color: #ccc;
+    border-radius: 14px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+}
+
+.toggle-switch::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.notification-option.checked .toggle-switch {
+    background-color: #4CAF50;
+}
+
+.notification-option.checked .toggle-switch::before {
+    transform: translateX(24px);
+}
+
+/* Hide the actual checkbox */
+.notification-option input[type="checkbox"] {
+    display: none;
+}
+
+/* Better button spacing */
+.notifications-section + button {
+    margin-top: 40px;
+}
+
+/* MAKE REGISTRATION MODE LOOK LIKE NOTIFICATION TOGGLES */
+/* REPLACE your .mode-selector CSS with this: */
+
+.mode-selector {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.mode-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    margin-bottom: 0;
+    background: white;
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.mode-option:hover {
+    border-color: #4CAF50;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.15);
+}
+
+.mode-option.checked {
+    border-color: #4CAF50;
+    background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
+    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.2);
+}
+
+/* Hide the radio buttons */
+.mode-option input[type="radio"] {
+    display: none;
+}
+
+/* Mode options use the same structure as notifications */
+.mode-option .notification-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.mode-option .notification-icon {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+}
+
+.mode-option .notification-text {
+    flex: 1;
+}
+
+.mode-option .notification-title {
+    font-weight: 600;
+    font-size: 15px;
+    color: #2c3e50;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.mode-option .notification-description {
+    font-size: 13px;
+    color: #6c757d;
+    margin: 2px 0 0 0;
+    line-height: 1.4;
+}
+
+/* Toggle switch styling for mode options */
+.mode-option .toggle-switch {
+    position: relative;
+    width: 52px;
+    height: 28px;
+    background-color: #ccc;
+    border-radius: 14px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+}
+
+.mode-option .toggle-switch::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.mode-option.checked .toggle-switch {
+    background-color: #4CAF50;
+}
+
+.mode-option.checked .toggle-switch::before {
+    transform: translateX(24px);
+}
+
+.mode-option.checked .notification-title {
+    color: #2e7d32;
+}
+
+.mode-option.checked .notification-description {
+    color: #4a5568;
+}
         @media (max-width: 768px) {
             body {
                 padding: 0;
@@ -387,6 +629,9 @@
                 width: 100%;
                 margin-top: 10px;
             }
+
+            /* ADD this CSS to your existing <style> section for better spacing */
+
         }
     </style>
     <link rel="stylesheet" href="/css/footer.css">
@@ -458,118 +703,45 @@
                     <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Enter any number from 1 to 50 players. Include yourself if you are playing</small>
                 </div>
 
+                                <div class="form-group">
+                    <label for="message">💬 Optional Message:</label>
+                    <textarea id="message" name="message" placeholder="Any additional info for players (e.g., 'Bring water and sunscreen!')"></textarea>
+                </div>
+
                 <!-- Add this after the "Number of Players" field in public/index.html -->
 <!-- Replace the Registration Mode section in public/index.html -->
 <div class="form-group">
     <label>🎯 Registration Mode:</label>
     <div class="mode-selector">
-        <div class="mode-option" data-mode="fcfs">
-            <input type="radio" id="fcfsMode" name="registrationMode" value="fcfs" checked>
-            <label for="fcfsMode">
-                <div class="mode-header">
-                    <span class="mode-icon">⚡</span>
-                    <span class="mode-title">First-Come First-Served</span>
+        <div class="mode-option checked" onclick="toggleRegistrationMode(this, 'fcfsMode')">
+            <div class="notification-content">
+                <div class="notification-icon">⚡</div>
+                <div class="notification-text">
+                    <div class="notification-title">First-Come First-Served</div>
+                    <div class="notification-description">Players are automatically confirmed as they sign up</div>
                 </div>
-                <div class="mode-description">Players are automatically confirmed as they sign up</div>
-            </label>
+            </div>
+            <div class="toggle-switch"></div>
+            <input type="radio" id="fcfsMode" name="registrationMode" value="fcfs" checked>
         </div>
         
-        <div class="mode-option" data-mode="waitlist">
-            <input type="radio" id="waitlistMode" name="registrationMode" value="waitlist">
-            <label for="waitlistMode">
-                <div class="mode-header">
-                    <span class="mode-icon">⏳</span>
-                    <span class="mode-title">Waitlist Mode</span>
+        <div class="mode-option" onclick="toggleRegistrationMode(this, 'waitlistMode')">
+            <div class="notification-content">
+                <div class="notification-icon">⏳</div>
+                <div class="notification-text">
+                    <div class="notification-title">Waitlist Mode</div>
+                    <div class="notification-description">You manually select players from all signups</div>
                 </div>
-                <div class="mode-description">You manually select players from all signups</div>
-            </label>
+            </div>
+            <div class="toggle-switch"></div>
+            <input type="radio" id="waitlistMode" name="registrationMode" value="waitlist">
         </div>
     </div>
 </div>
 
+
 <style>
-.mode-selector {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-top: 10px;
-}
 
-.mode-option {
-    position: relative;
-    border: 2px solid #e9ecef;
-    border-radius: 12px;
-    padding: 0;
-    background: white;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    overflow: hidden;
-}
-
-.mode-option:hover {
-    border-color: #4CAF50;
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
-    transform: translateY(-2px);
-}
-
-.mode-option input[type="radio"] {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    width: 20px;
-    height: 20px;
-    margin: 0;
-    cursor: pointer;
-    z-index: 2;
-}
-
-.mode-option label {
-    display: block;
-    padding: 20px;
-    margin: 0;
-    cursor: pointer;
-    font-weight: normal;
-    padding-right: 50px; /* Make room for radio button */
-}
-
-.mode-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-
-.mode-icon {
-    font-size: 24px;
-    flex-shrink: 0;
-}
-
-.mode-title {
-    font-weight: bold;
-    font-size: 16px;
-    color: #2c3e50;
-}
-
-.mode-description {
-    font-size: 14px;
-    color: #6c757d;
-    line-height: 1.4;
-}
-
-/* Selected state */
-.mode-option:has(input:checked) {
-    border-color: #4CAF50;
-    background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
-}
-
-.mode-option:has(input:checked) .mode-title {
-    color: #2e7d32;
-}
-
-.mode-option:has(input:checked) .mode-description {
-    color: #4a5568;
-}
 
 /* Mobile responsive */
 @media (max-width: 768px) {
@@ -597,15 +769,80 @@
 }
 </style>
                 
-                <div class="form-group">
-                    <label for="message">💬 Optional Message:</label>
-                    <textarea id="message" name="message" placeholder="Any additional info for players (e.g., 'Bring water and sunscreen!')"></textarea>
-                </div>
-                
-                <button type="submit">Create Game</button>
-            </form>
+
+
+                <!-- REPLACE your organizer notifications section with this: -->
+<!-- REPLACE your notifications section HTML with this: -->
+<div class="form-group notifications-section">
+    <label for="notifications">📱 Organizer Notifications:</label>
+    <small>Get SMS alerts when these events happen (optional)</small>
+    
+    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyGameFull')">
+        <div class="notification-content">
+            <div class="notification-icon">🎯</div>
+            <div class="notification-text">
+                <div class="notification-title">Game becomes full</div>
+                <div class="notification-description">Get notified when all spots are taken</div>
+            </div>
         </div>
-        
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyGameFull" name="notifyGameFull" checked>
+    </div>
+    
+    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyPlayerJoins')">
+        <div class="notification-content">
+            <div class="notification-icon">👋</div>
+            <div class="notification-text">
+                <div class="notification-title">Someone joins the game</div>
+                <div class="notification-description">Get notified each time a player signs up</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyPlayerJoins" name="notifyPlayerJoins" checked>
+    </div>
+    
+    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyPlayerCancels')">
+        <div class="notification-content">
+            <div class="notification-icon">❌</div>
+            <div class="notification-text">
+                <div class="notification-title">Someone cancels their spot</div>
+                <div class="notification-description">Get notified when players cancel</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels" checked>
+    </div>
+    
+    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyOneSpotLeft')">
+        <div class="notification-content">
+            <div class="notification-icon">⚠️</div>
+            <div class="notification-text">
+                <div class="notification-title">Only one spot remaining</div>
+                <div class="notification-description">Get notified when almost full</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyOneSpotLeft" name="notifyOneSpotLeft" checked>
+    </div>
+    
+    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyWaitlistStarts')">
+        <div class="notification-content">
+            <div class="notification-icon">⏳</div>
+            <div class="notification-text">
+                <div class="notification-title">Waitlist starts</div>
+                <div class="notification-description">Get notified when first person is waitlisted</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyWaitlistStarts" name="notifyWaitlistStarts" checked>
+    </div>
+</div>
+
+<button type="submit">Create Game</button>
+</form>
+</div>
+
+<!-- MOVE the shareLink section INSIDE the container but OUTSIDE the form-section: -->
 <div id="shareLink" class="share-section" style="display: none;">
     <h3 class="share-title">🎉 Your Game has been Created!</h3>
     
@@ -621,7 +858,7 @@
         <p><small>You can edit players, send announcements, and cancel the game with that link.</small></p>
     </div>
 </div>
-    </div>
+</div> <!-- Close container -->
 
     <script>
         // TIMEZONE-FIXED JavaScript for create game form
@@ -663,11 +900,75 @@ function formatDateForDisplay(dateStr) {
     });
 }
 
+// ADD this JavaScript function to your existing <script> section:
+
+
+
+    function toggleNotification(element, checkboxId) {
+    const checkbox = document.getElementById(checkboxId);
+    const isCurrentlyChecked = checkbox.checked;
+    
+    // Toggle the checkbox
+    checkbox.checked = !isCurrentlyChecked;
+    
+    // Toggle the visual state
+    if (checkbox.checked) {
+        element.classList.add('checked');
+    } else {
+        element.classList.remove('checked');
+    }
+    
+    // Prevent the event from bubbling up
+    event.stopPropagation();
+}
+
+function toggleRegistrationMode(element, radioId) {
+    // Get all mode options
+    const allModeOptions = document.querySelectorAll('.mode-option');
+    const selectedRadio = document.getElementById(radioId);
+    
+    // Remove checked class from all options
+    allModeOptions.forEach(option => {
+        option.classList.remove('checked');
+    });
+    
+    // Add checked class to clicked option
+    element.classList.add('checked');
+    
+    // Check the corresponding radio button
+    selectedRadio.checked = true;
+    
+    // Prevent event bubbling
+    if (event) {
+        event.stopPropagation();
+    }
+}
+
 // Updated createGame function in public/index.html script section
+// Updated createGame function in public/index.html script section
+// REPLACE your createGame function in public/index.html with this:
+
+
+
 async function createGame(e) {
     e.preventDefault();
     
     const formData = new FormData(e.target);
+    
+    // DEBUG: Log form data collection
+    console.log('[CLIENT] Collecting form data...');
+    
+    // Collect notification preferences explicitly
+    const notificationPreferences = {
+        gameFull: formData.get('notifyGameFull') === 'on',
+        playerJoins: formData.get('notifyPlayerJoins') === 'on',
+        playerCancels: formData.get('notifyPlayerCancels') === 'on',
+        oneSpotLeft: formData.get('notifyOneSpotLeft') === 'on',
+        waitlistStarts: formData.get('notifyWaitlistStarts') === 'on'
+    };
+    
+    console.log('[CLIENT] Notification preferences collected:', notificationPreferences);
+    
     const gameData = {
         location: formData.get('location'),
         courtNumber: formData.get('courtNumber') || '',
@@ -679,11 +980,12 @@ async function createGame(e) {
         duration: parseInt(formData.get('duration')),
         totalPlayers: parseInt(formData.get('players')),
         message: formData.get('message'),
-        registrationMode: formData.get('registrationMode'), // Add this line
+        registrationMode: formData.get('registrationMode'),
+        notificationPreferences: notificationPreferences,
         hostPhone: formData.get('organizerPhone')
     };
     
-    console.log('Creating game with data:', gameData);
+    console.log('[CLIENT] Final game data being sent:', gameData);
     
     try {
         showStatus('Creating game...', 'info');
@@ -702,15 +1004,15 @@ async function createGame(e) {
         }
         
         const data = await response.json();
-        console.log('Game created:', data);
+        console.log('[CLIENT] Game created successfully:', data);
         
-        // Save game to localStorage for My Games page (include court number)
+        // Save game to localStorage for My Games page
         let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
         myGames.push({
             id: data.gameId,
             hostToken: data.hostToken,
             location: gameData.location,
-            courtNumber: gameData.courtNumber, // Add court number
+            courtNumber: gameData.courtNumber,
             date: gameData.date,
             time: gameData.time,
             duration: gameData.duration,
@@ -748,7 +1050,7 @@ async function createGame(e) {
         }
         
     } catch (error) {
-        console.error('Error creating game:', error);
+        console.error('[CLIENT] Error creating game:', error);
         showStatus('Error creating game: ' + error.message, 'error');
     }
 }
