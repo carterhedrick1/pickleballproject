@@ -437,267 +437,289 @@ async function updateGameDetails() {
     }
 }
 
+// Updated addPlayerManually function - enhanced to show SMS status  
 async function addPlayerManually() {
-    try {
-        const name = document.getElementById('playerName').value;
-        const phone = document.getElementById('playerPhone').value;
-        const action = document.querySelector('input[name="addTo"]:checked').value;
-        
-        showStatus('Adding player...', 'info');
-        
-        const response = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name,
-                phone,
-                action,
-                token: hostToken
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to add player');
-        }
-        
-        const data = await response.json();
-        console.log('Player added:', data);
-        
-        // Reset form
-        document.getElementById('playerName').value = '';
-        document.getElementById('playerPhone').value = '';
-        
-        // Refresh game data
-        await fetchGameData();
-        
-        showStatus(`Player ${name} added successfully!`, 'success');
-        
-    } catch (error) {
-        console.error('Error adding player:', error);
-        showStatus('Error adding player: ' + error.message, 'error');
+  try {
+    const name = document.getElementById('playerName').value;
+    const phone = document.getElementById('playerPhone').value;
+    const action = document.querySelector('input[name="addTo"]:checked').value;
+    
+    showStatus('Adding player...', 'info');
+    
+    const response = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name,
+        phone,
+        action,
+        token: hostToken
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to add player');
     }
+    
+    const data = await response.json();
+    console.log('Player added manually:', data);
+    
+    // Reset form
+    document.getElementById('playerName').value = '';
+    document.getElementById('playerPhone').value = '';
+    
+    // Refresh game data
+    await fetchGameData();
+    
+    // Build status message
+    let statusMessage = `Player ${name} added successfully`;
+    
+    // Add SMS status info
+    if (phone && data.sms && data.sms.success) {
+      statusMessage += ' and notified via SMS';
+    } else if (phone && data.sms && !data.sms.success) {
+      statusMessage += ' (SMS notification failed)';
+    } else if (!phone) {
+      statusMessage += ' (no phone number provided)';
+    }
+    
+    showStatus(statusMessage, 'success');
+    
+  } catch (error) {
+    console.error('Error adding player:', error);
+    showStatus('Error adding player: ' + error.message, 'error');
+  }
 }
 
+// Updated moveToWaitlist function - now uses dedicated endpoint with SMS
 async function moveToWaitlist(playerId) {
-    try {
-        showStatus('Moving player to waitlist...', 'info');
-        
-        // First find the player in the game data
-        const player = gameData.players.find(p => p.id === playerId);
-        if (!player) {
-            throw new Error('Player not found');
-        }
-        
-        // Remove from confirmed
-        const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
-            method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to remove player');
-        }
-        
-        // Add to waitlist
-        const addResponse = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: player.name,
-                phone: player.phone,
-                action: 'waitlist',
-                token: hostToken
-            })
-        });
-        
-        if (!addResponse.ok) {
-            const errorData = await addResponse.json();
-            throw new Error(errorData.error || 'Failed to add to waitlist');
-        }
-        
-        // Refresh game data
-        await fetchGameData();
-        
-        showStatus(`Player ${player.name} moved to waitlist`, 'success');
-        
-    } catch (error) {
-        console.error('Error moving player:', error);
-        showStatus('Error moving player: ' + error.message, 'error');
+  try {
+    showStatus('Moving player to waitlist...', 'info');
+    
+    // First find the player in the game data
+    const player = gameData.players.find(p => p.id === playerId);
+    if (!player) {
+      throw new Error('Player not found');
     }
+    
+    // Use new dedicated endpoint
+    const response = await fetch(`/api/games/${gameId}/move-to-waitlist/${playerId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: hostToken
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to move player to waitlist');
+    }
+    
+    const data = await response.json();
+    console.log('Player moved to waitlist:', data);
+    
+    // Refresh game data
+    await fetchGameData();
+    
+    // Show status with SMS info
+    let statusMessage = `Player ${player.name} moved to waitlist`;
+    if (data.sms && data.sms.success) {
+      statusMessage += ' and notified via SMS';
+    } else if (data.sms && !data.sms.success) {
+      statusMessage += ' (SMS notification failed)';
+    }
+    
+    showStatus(statusMessage, 'success');
+    
+  } catch (error) {
+    console.error('Error moving player:', error);
+    showStatus('Error moving player: ' + error.message, 'error');
+  }
 }
 
+
+// Updated promoteToGame function - now uses dedicated endpoint with SMS
 async function promoteToGame(playerId) {
-    try {
-        // Check if game is full before promoting
-        if (gameData.players.length >= parseInt(gameData.totalPlayers)) {
-            showStatus('Cannot promote: Game is already full', 'error');
-            return;
-        }
-        
-        showStatus('Promoting player to game...', 'info');
-        
-        // First find the player in the waitlist
-        const player = gameData.waitlist.find(p => p.id === playerId);
-        if (!player) {
-            throw new Error('Player not found');
-        }
-        
-        // Remove from waitlist first
-        const removeResponse = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
-            method: 'DELETE'
-        });
-        
-        if (!removeResponse.ok) {
-            const errorData = await removeResponse.json();
-            throw new Error(errorData.error || 'Failed to remove from waitlist');
-        }
-        
-        // Add to confirmed players
-        const addResponse = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: player.name,
-                phone: player.phone,
-                action: 'add',
-                token: hostToken
-            })
-        });
-        
-        if (!addResponse.ok) {
-            const errorData = await addResponse.json();
-            
-            // If adding to game failed, try to add back to waitlist
-            try {
-                await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name: player.name,
-                        phone: player.phone,
-                        action: 'waitlist',
-                        token: hostToken
-                    })
-                });
-            } catch (restoreError) {
-                console.error('Failed to restore player to waitlist:', restoreError);
-            }
-            
-            throw new Error(errorData.error || 'Failed to add to game');
-        }
-        
-        const addData = await addResponse.json();
-        
-        // Check if they were actually added to confirmed players (not back to waitlist)
-        if (addData.status === 'waitlist') {
-            throw new Error('Game is full - player was moved back to waitlist');
-        }
-        
-        // Refresh game data
-        await fetchGameData();
-        
-        showStatus(`Player ${player.name} promoted to game`, 'success');
-        
-    } catch (error) {
-        console.error('Error promoting player:', error);
-        showStatus('Error promoting player: ' + error.message, 'error');
-        
-        // Refresh to ensure UI is consistent
-        await fetchGameData();
+  try {
+    // Check if game is full before promoting
+    if (gameData.players.length >= parseInt(gameData.totalPlayers)) {
+      showStatus('Cannot promote: Game is already full', 'error');
+      return;
     }
+    
+    showStatus('Promoting player to game...', 'info');
+    
+    // First find the player in the waitlist
+    const player = gameData.waitlist.find(p => p.id === playerId);
+    if (!player) {
+      throw new Error('Player not found in waitlist');
+    }
+    
+    // Use new dedicated endpoint
+    const response = await fetch(`/api/games/${gameId}/promote-from-waitlist/${playerId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: hostToken
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to promote player');
+    }
+    
+    const data = await response.json();
+    console.log('Player promoted:', data);
+    
+    // Refresh game data
+    await fetchGameData();
+    
+    // Show status with SMS info
+    let statusMessage = `Player ${player.name} promoted to confirmed players`;
+    if (data.sms && data.sms.success) {
+      statusMessage += ' and notified via SMS';
+    } else if (data.sms && !data.sms.success) {
+      statusMessage += ' (SMS notification failed)';
+    }
+    
+    showStatus(statusMessage, 'success');
+    
+  } catch (error) {
+    console.error('Error promoting player:', error);
+    showStatus('Error promoting player: ' + error.message, 'error');
+    
+    // Refresh to ensure UI is consistent
+    await fetchGameData();
+  }
 }
 
 async function removePlayer(playerId) {
-    try {
-        // First find the player in the game data
-        const player = gameData.players.find(p => p.id === playerId);
-        if (!player) {
-            throw new Error('Player not found');
-        }
-        
-        showConfirmModal(
-            'Remove Player', 
-            `Are you sure you want to remove ${player.name} from the game?`, 
-            async () => {
-                try {
-                    showStatus('Removing player...', 'info');
-                    
-                    const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'Failed to remove player');
-                    }
-                    
-                    // Refresh game data
-                    await fetchGameData();
-                    
-                    showStatus(`Player ${player.name} removed from game`, 'success');
-                    
-                } catch (error) {
-                    console.error('Error removing player:', error);
-                    showStatus('Error removing player: ' + error.message, 'error');
-                }
-            }
-        );
-        
-    } catch (error) {
-        console.error('Error removing player:', error);
-        showStatus('Error removing player: ' + error.message, 'error');
+  try {
+    // First find the player in the game data
+    const player = gameData.players.find(p => p.id === playerId);
+    if (!player) {
+      throw new Error('Player not found');
     }
+    
+    showConfirmModal(
+      'Remove Player', 
+      `Are you sure you want to remove ${player.name} from the game?`, 
+      async () => {
+        try {
+          showStatus('Removing player...', 'info');
+          
+          const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
+            method: 'DELETE'
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to remove player');
+          }
+          
+          const data = await response.json();
+          console.log('Player removal response:', data);
+          
+          // Refresh game data
+          await fetchGameData();
+          
+          // Build status message
+          let statusMessage = `Player ${player.name} removed from game`;
+          
+          // Add SMS status info
+          if (data.removalSms && data.removalSms.success) {
+            statusMessage += ', player notified via SMS';
+          } else if (data.removalSms && !data.removalSms.success) {
+            statusMessage += ' (SMS notification to removed player failed)';
+          }
+          
+          // Add promotion info if someone was promoted
+          if (data.promotedPlayer) {
+            statusMessage += `. ${data.promotedPlayer.name} promoted from waitlist`;
+            if (data.promotionSms && data.promotionSms.success) {
+              statusMessage += ' and notified via SMS';
+            } else if (data.promotionSms && !data.promotionSms.success) {
+              statusMessage += ' (promotion SMS failed)';
+            }
+          }
+          
+          showStatus(statusMessage, 'success');
+          
+        } catch (error) {
+          console.error('Error removing player:', error);
+          showStatus('Error removing player: ' + error.message, 'error');
+        }
+      }
+    );
+    
+  } catch (error) {
+    console.error('Error removing player:', error);
+    showStatus('Error removing player: ' + error.message, 'error');
+  }
 }
 
 async function removeWaitlisted(playerId) {
-    try {
-        // First find the player in the waitlist
-        const player = gameData.waitlist.find(p => p.id === playerId);
-        if (!player) {
-            throw new Error('Player not found');
-        }
-        
-        showConfirmModal(
-            'Remove from Waitlist', 
-            `Are you sure you want to remove ${player.name} from the waitlist?`, 
-            async () => {
-                try {
-                    showStatus('Removing from waitlist...', 'info');
-                    
-                    const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'Failed to remove from waitlist');
-                    }
-                    
-                    // Refresh game data
-                    await fetchGameData();
-                    
-                    showStatus(`Player ${player.name} removed from waitlist`, 'success');
-                    
-                } catch (error) {
-                    console.error('Error removing from waitlist:', error);
-                    showStatus('Error removing from waitlist: ' + error.message, 'error');
-                }
-            }
-        );
-        
-    } catch (error) {
-        console.error('Error removing from waitlist:', error);
-        showStatus('Error removing from waitlist: ' + error.message, 'error');
+  try {
+    // First find the player in the waitlist
+    const player = gameData.waitlist.find(p => p.id === playerId);
+    if (!player) {
+      throw new Error('Player not found in waitlist');
     }
+    
+    showConfirmModal(
+      'Remove from Waitlist', 
+      `Are you sure you want to remove ${player.name} from the waitlist?`, 
+      async () => {
+        try {
+          showStatus('Removing from waitlist...', 'info');
+          
+          const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
+            method: 'DELETE'
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to remove from waitlist');
+          }
+          
+          const data = await response.json();
+          console.log('Waitlist removal response:', data);
+          
+          // Refresh game data
+          await fetchGameData();
+          
+          // Build status message
+          let statusMessage = `Player ${player.name} removed from waitlist`;
+          
+          // Add SMS status info if applicable
+          if (data.removalSms && data.removalSms.success) {
+            statusMessage += ', player notified via SMS';
+          } else if (data.removalSms && !data.removalSms.success) {
+            statusMessage += ' (SMS notification failed)';
+          }
+          
+          showStatus(statusMessage, 'success');
+          
+        } catch (error) {
+          console.error('Error removing from waitlist:', error);
+          showStatus('Error removing from waitlist: ' + error.message, 'error');
+        }
+      }
+    );
+    
+  } catch (error) {
+    console.error('Error removing from waitlist:', error);
+    showStatus('Error removing from waitlist: ' + error.message, 'error');
+  }
 }
 
 async function sendAnnouncement() {

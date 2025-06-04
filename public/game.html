@@ -672,21 +672,34 @@ document.addEventListener('DOMContentLoaded', () => {
             // Display game details
             document.getElementById('loading').style.display = 'none';
             document.getElementById('details').style.display = 'block';
-            document.getElementById('playerList').style.display = 'block';
             
-document.getElementById('location').textContent = gameData.location;
+            // Check if we should show players section based on registration mode
+            const playerListSection = document.getElementById('playerList');
+            if (gameData.registrationMode === 'waitlist') {
+                // Hide players section for waitlist mode
+                if (playerListSection) {
+                    playerListSection.style.display = 'none';
+                }
+            } else {
+                // Show players section for regular mode
+                if (playerListSection) {
+                    playerListSection.style.display = 'block';
+                }
+            }
+            
+            document.getElementById('location').textContent = gameData.location;
 
-// Show court number if it exists
-if (gameData.courtNumber && gameData.courtNumber.trim()) {
-    document.getElementById('courtNumber').textContent = gameData.courtNumber;
-    document.getElementById('courtDetail').style.display = 'flex';
-} else {
-    document.getElementById('courtDetail').style.display = 'none';
-}
+            // Show court number if it exists
+            if (gameData.courtNumber && gameData.courtNumber.trim()) {
+                document.getElementById('courtNumber').textContent = gameData.courtNumber;
+                document.getElementById('courtDetail').style.display = 'flex';
+            } else {
+                document.getElementById('courtDetail').style.display = 'none';
+            }
 
-document.getElementById('date').textContent = formatDate(gameData.date);
-document.getElementById('time').textContent = formatTime(gameData.time);
-document.getElementById('duration').textContent = gameData.duration;
+            document.getElementById('date').textContent = formatDate(gameData.date);
+            document.getElementById('time').textContent = formatTime(gameData.time);
+            document.getElementById('duration').textContent = gameData.duration;
             
             console.log('Date formatted as:', formatDate(gameData.date)); // Debug log
             
@@ -808,83 +821,112 @@ document.getElementById('duration').textContent = gameData.duration;
         }, 3000);
     }
         
-    function updatePlayerList() {
-        const playersList = document.getElementById('players');
-        const spotsAvailable = document.getElementById('spotsAvailable');
-        const spotsAvailableBar = document.getElementById('spotsAvailableBar');
-        const spotsFullContainer = document.getElementById('spotsFullContainer');
-        const waitlistCount = document.getElementById('waitlistCount');
-        const joinSectionTitle = document.getElementById('joinSectionTitle');
-        const joinButton = document.getElementById('joinButton');
-        
-        if (!playersList || !spotsAvailable) {
-            return;
+    // Update the updatePlayerList function in public/game.html
+function updatePlayerList() {
+    const playersList = document.getElementById('players');
+    const spotsAvailable = document.getElementById('spotsAvailable');
+    const spotsAvailableBar = document.getElementById('spotsAvailableBar');
+    const spotsFullContainer = document.getElementById('spotsFullContainer');
+    const waitlistCount = document.getElementById('waitlistCount');
+    const joinSectionTitle = document.getElementById('joinSectionTitle');
+    const joinButton = document.getElementById('joinButton');
+    const playerListSection = document.getElementById('playerList'); // The entire players section
+    
+    if (!playersList || !spotsAvailable) {
+        return;
+    }
+    
+    // Check if game is in waitlist mode
+    const isWaitlistMode = gameData.registrationMode === 'waitlist';
+    
+    if (isWaitlistMode) {
+        // Hide the entire players section in waitlist mode
+        if (playerListSection) {
+            playerListSection.style.display = 'none';
         }
         
-        // Clear existing list
-        playersList.innerHTML = '';
-        
-        // Check if there are any players
-        if (gameData.players.length === 0) {
-            // No players yet - show helpful hint
-            const li = document.createElement('li');
-            li.style.fontStyle = 'italic';
-            li.style.color = '#999';
-            li.style.fontSize = '14px';
-            li.textContent = 'None yet - be the first to join!';
-            playersList.appendChild(li);
-        } else {
-            // Add players to list
-            gameData.players.forEach(player => {
-                const li = document.createElement('li');
-                li.textContent = player.name + (player.isOrganizer ? ' (Organizer)' : '');
-                playersList.appendChild(li);
-            });
+        // Update join section for waitlist mode
+        if (joinSectionTitle && joinButton) {
+            joinSectionTitle.textContent = '📝 Apply for This Game';
+            joinButton.textContent = 'SUBMIT APPLICATION';
         }
         
-        // Update spots available
-        const availableSpots = parseInt(gameData.totalPlayers) - gameData.players.length;
-        const waitlistLength = gameData.waitlist ? gameData.waitlist.length : 0;
-        
-        if (availableSpots > 0) {
-            // Show spots available
-            spotsAvailable.textContent = availableSpots;
-            spotsAvailableBar.style.display = 'block';
-            spotsFullContainer.style.display = 'none';
-            joinSectionTitle.textContent = '🏓 Join This Game';
-            joinButton.textContent = 'COUNT ME IN!';
-        } else {
-            // Show game is full with waitlist info
-            spotsAvailableBar.style.display = 'none';
-            spotsFullContainer.style.display = 'block';
-            waitlistCount.textContent = waitlistLength;
-            joinSectionTitle.textContent = '🕐 Join the Waitlist';
-            joinButton.textContent = 'JOIN WAITLIST';
-        }
-        
-        // Always show signup form since they can join waitlist when full
+        // Show signup form
         const signupForm = document.getElementById('signupForm');
         if (signupForm) {
             signupForm.style.display = 'block';
         }
+        
+        return; // Exit early for waitlist mode
     }
+    
+    // Regular mode - show players section
+    if (playerListSection) {
+        playerListSection.style.display = 'block';
+    }
+    
+    // Clear existing list
+    playersList.innerHTML = '';
+    
+    // Check if there are any players
+    if (gameData.players.length === 0) {
+        // No players yet - show helpful hint
+        const li = document.createElement('li');
+        li.style.fontStyle = 'italic';
+        li.style.color = '#999';
+        li.style.fontSize = '14px';
+        li.textContent = 'None yet - be the first to join!';
+        playersList.appendChild(li);
+    } else {
+        // Add players to list
+        gameData.players.forEach(player => {
+            const li = document.createElement('li');
+            li.textContent = player.name + (player.isOrganizer ? ' (Organizer)' : '');
+            playersList.appendChild(li);
+        });
+    }
+    
+    // Update spots available
+    const availableSpots = parseInt(gameData.totalPlayers) - gameData.players.length;
+    const waitlistLength = gameData.waitlist ? gameData.waitlist.length : 0;
+    
+    if (availableSpots > 0) {
+        // Show spots available
+        spotsAvailable.textContent = availableSpots;
+        spotsAvailableBar.style.display = 'block';
+        spotsFullContainer.style.display = 'none';
+        joinSectionTitle.textContent = '🏓 Join This Game';
+        joinButton.textContent = 'COUNT ME IN!';
+    } else {
+        // Show game is full with waitlist info
+        spotsAvailableBar.style.display = 'none';
+        spotsFullContainer.style.display = 'block';
+        waitlistCount.textContent = waitlistLength;
+        joinSectionTitle.textContent = '🕐 Join the Waitlist';
+        joinButton.textContent = 'JOIN WAITLIST';
+    }
+    
+    // Always show signup form since they can join waitlist when full
+    const signupForm = document.getElementById('signupForm');
+    if (signupForm) {
+        signupForm.style.display = 'block';
+    }
+}
 
+// Update showConfirmation function in public/game.html
 function showConfirmation(data) {
-    // Hide other sections AND the header
+    // Hide other sections
     document.getElementById('gameDetails').style.display = 'none';
     document.getElementById('playerList').style.display = 'none';
     document.getElementById('signupForm').style.display = 'none';
-    document.querySelector('.section-header').style.display = 'none'; // Hide the header
+    document.querySelector('.section-header').style.display = 'none';
     
     // Show confirmation section
     const confirmationSection = document.getElementById('confirmationSection');
     confirmationSection.style.display = 'block';
     
-    // Update confirmation content - TIMEZONE FIXED
     const confirmTitle = document.getElementById('confirmationTitle');
     const confirmMessage = document.getElementById('confirmationMessage');
-    const confirmLocation = document.getElementById('confirmLocation');
-    const confirmDateTime = document.getElementById('confirmDateTime');
     const confirmStatus = document.getElementById('confirmStatus');
     
     if (data.status === 'confirmed') {
@@ -894,9 +936,18 @@ function showConfirmation(data) {
         confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
     } else if (data.status === 'waitlist') {
         confirmationSection.classList.add('waitlist');
-        confirmTitle.textContent = "⏳ You're on the Waitlist!";
-        confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
-        confirmStatus.textContent = `Waitlist Position #${data.position}`;
+        
+        if (data.hidePosition) {
+            // Waitlist mode - hide position
+            confirmTitle.textContent = "⏳ Application Submitted!";
+            confirmMessage.textContent = `Thanks for signing up! The organizer will review all applications and select players. You'll be notified if you're selected.`;
+            confirmStatus.textContent = `Application Under Review`;
+        } else {
+            // Regular waitlist - show position
+            confirmTitle.textContent = "⏳ You're on the Waitlist!";
+            confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
+            confirmStatus.textContent = `Waitlist Position #${data.position}`;
+        }
     }
     
     // Include court number in confirmation location

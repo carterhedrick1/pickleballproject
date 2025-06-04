@@ -161,14 +161,11 @@ async function checkAndSendReminders() {
   }
 }
 
-// Game creation logic
-// Updated createGameData function in game-logic.js
+// Update the createGameData function in game-logic.js
 function createGameData(formData) {
   const gameData = {
     location: formData.location,
-        courtNumber: formData.courtNumber || '',
-
-    courtNumber: formData.courtNumber || '', // Add court number field
+    courtNumber: formData.courtNumber || '',
     organizerName: formData.organizerName || 'Organizer',
     organizerPhone: formData.organizerPhone ? formatPhoneNumber(formData.organizerPhone) : '',
     organizerPlaying: formData.organizerPlaying,
@@ -177,6 +174,7 @@ function createGameData(formData) {
     duration: parseInt(formData.duration),
     totalPlayers: parseInt(formData.totalPlayers),
     message: formData.message,
+    registrationMode: formData.registrationMode || 'fcfs', // 'fcfs' or 'waitlist'
     waitlist: []
   };
 
@@ -235,6 +233,7 @@ function checkExistingPlayer(game, phone) {
 }
 
 // Add player to game (handles both confirmed and waitlist)
+// Update addPlayerToGame function in game-logic.js
 function addPlayerToGame(game, playerData, forceWaitlist = false) {
   const totalPlayers = parseInt(game.totalPlayers) || 4;
   const currentPlayerCount = game.players.length;
@@ -247,7 +246,10 @@ function addPlayerToGame(game, playerData, forceWaitlist = false) {
     isOrganizer: false
   };
   
-  if (forceWaitlist || spotsAvailable <= 0) {
+  // In waitlist mode, ALL new players go to waitlist (except manual additions)
+  const isWaitlistMode = game.registrationMode === 'waitlist';
+  
+  if (isWaitlistMode || forceWaitlist || spotsAvailable <= 0) {
     if (!game.waitlist) {
       game.waitlist = [];
     }
@@ -255,11 +257,13 @@ function addPlayerToGame(game, playerData, forceWaitlist = false) {
     
     return {
       status: 'waitlist',
-      position: game.waitlist.length,
+      position: isWaitlistMode ? null : game.waitlist.length, // Hide position in waitlist mode
       playerId: newPlayer.id,
-      reason: spotsAvailable <= 0 ? 'game_full' : 'requested'
+      reason: isWaitlistMode ? 'waitlist_mode' : (spotsAvailable <= 0 ? 'game_full' : 'requested'),
+      hidePosition: isWaitlistMode
     };
   } else {
+    // First-come first-served mode
     game.players.push(newPlayer);
     
     return {

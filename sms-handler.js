@@ -369,16 +369,18 @@ async function getPlayerGames(cleanedFromNumber, allGames) {
   return playerGames;
 }
 
-// Helper function to build game details message
+// Update buildGameDetailsMessage function in sms-handler.js
 async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
   const gameDate = formatDateForSMS(game.date);
   const gameTime = formatTimeForSMS(game.time);
   
-let locationText = game.location;
-if (game.courtNumber && game.courtNumber.trim()) {
+  let locationText = game.location;
+  if (game.courtNumber && game.courtNumber.trim()) {
     locationText += ` - ${game.courtNumber}`;
-}
-let responseMessage = `🏓 ${locationText}\n📅 ${gameDate} at ${gameTime}\n⏱️ Duration: ${game.duration} minutes\n\n`;  
+  }
+  
+  let responseMessage = `🏓 ${locationText}\n📅 ${gameDate} at ${gameTime}\n⏱️ Duration: ${game.duration} minutes\n\n`;
+  
   responseMessage += `👥 Confirmed Players (${game.players.length}/${game.totalPlayers}):\n`;
   if (game.players.length === 0) {
     responseMessage += `• None yet\n`;
@@ -390,9 +392,15 @@ let responseMessage = `🏓 ${locationText}\n📅 ${gameDate} at ${gameTime}\n�
   
   if (game.waitlist && game.waitlist.length > 0) {
     responseMessage += `\n⏳ Waitlist (${game.waitlist.length}):\n`;
-    game.waitlist.forEach((player, index) => {
-      responseMessage += `• ${player.name} (#${index + 1})\n`;
-    });
+    
+    // Check if game is in waitlist mode
+    if (game.registrationMode === 'waitlist') {
+      responseMessage += `• Applications under review\n`;
+    } else {
+      game.waitlist.forEach((player, index) => {
+        responseMessage += `• ${player.name} (#${index + 1})\n`;
+      });
+    }
   }
   
   if (role === 'host') {
@@ -400,8 +408,12 @@ let responseMessage = `🏓 ${locationText}\n📅 ${gameDate} at ${gameTime}\n�
   } else if (role === 'confirmed') {
     responseMessage += `\nYou are: ✅ Confirmed Player\nReply "9" to cancel`;
   } else if (role === 'waitlist') {
-    const waitlistPosition = game.waitlist.findIndex(p => p.phone === cleanedFromNumber) + 1;
-    responseMessage += `\nYou are: ⏳ Waitlist #${waitlistPosition}\nReply "9" to cancel`;
+    if (game.registrationMode === 'waitlist') {
+      responseMessage += `\nYou are: ⏳ Application Submitted\nReply "9" to cancel`;
+    } else {
+      const waitlistPosition = game.waitlist.findIndex(p => p.phone === cleanedFromNumber) + 1;
+      responseMessage += `\nYou are: ⏳ Waitlist #${waitlistPosition}\nReply "9" to cancel`;
+    }
   }
   
   return responseMessage;
@@ -455,6 +467,7 @@ responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime} ($
 }
 
 // Helper function to cancel player from game
+// Update cancelPlayerFromGame function in sms-handler.js
 async function cancelPlayerFromGame(gameId, game, player, status, fromNumber) {
   try {
     if (status === 'confirmed') {
@@ -467,11 +480,12 @@ async function cancelPlayerFromGame(gameId, game, player, status, fromNumber) {
         
         const gameDate = formatDateForSMS(game.date);
         const gameTime = formatTimeForSMS(game.time);
-let locationText = game.location;
-if (game.courtNumber && game.courtNumber.trim()) {
-    locationText += ` - ${game.courtNumber}`;
-}
-const promotionMessage = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 2 for game details or 9 to cancel.`;        
+        let locationText = game.location;
+        if (game.courtNumber && game.courtNumber.trim()) {
+          locationText += ` - ${game.courtNumber}`;
+        }
+        
+        const promotionMessage = `Good news! You've been selected for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 2 for game details or 9 to cancel.`;
         await sendSMS(promotedPlayer.phone, promotionMessage, gameId);
       }
     } else {
@@ -483,12 +497,22 @@ const promotionMessage = `Good news! You've been moved from the waitlist to conf
     
     const gameDate = formatDateForSMS(game.date);
     const gameTime = formatTimeForSMS(game.time);
-    const statusText = status === 'confirmed' ? 'reservation' : 'waitlist spot';
-let locationText = game.location;
-if (game.courtNumber && game.courtNumber.trim()) {
-    locationText += ` - ${game.courtNumber}`;
-}
-await sendSMS(fromNumber, `Your pickleball ${statusText} at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`);  } catch (error) {
+    let locationText = game.location;
+    if (game.courtNumber && game.courtNumber.trim()) {
+      locationText += ` - ${game.courtNumber}`;
+    }
+    
+    // Different message based on status and game mode
+    let statusText;
+    if (status === 'confirmed') {
+      statusText = 'reservation';
+    } else {
+      // Check if waitlist mode
+      statusText = (game.registrationMode === 'waitlist') ? 'application' : 'waitlist spot';
+    }
+    
+    await sendSMS(fromNumber, `Your pickleball ${statusText} at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`);
+  } catch (error) {
     console.error('Error cancelling player from game:', error);
     await sendSMS(fromNumber, `Sorry, there was an error cancelling your registration. Please try again or contact the organizer.`);
   }

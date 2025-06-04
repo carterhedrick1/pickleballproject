@@ -452,6 +452,145 @@
                     <input type="number" id="players" name="players" value="4" min="1" max="50" required>
                     <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Enter any number from 1 to 50 players. Include yourself if you are playing</small>
                 </div>
+
+                <!-- Add this after the "Number of Players" field in public/index.html -->
+<!-- Replace the Registration Mode section in public/index.html -->
+<div class="form-group">
+    <label>🎯 Registration Mode:</label>
+    <div class="mode-selector">
+        <div class="mode-option" data-mode="fcfs">
+            <input type="radio" id="fcfsMode" name="registrationMode" value="fcfs" checked>
+            <label for="fcfsMode">
+                <div class="mode-header">
+                    <span class="mode-icon">⚡</span>
+                    <span class="mode-title">First-Come First-Served</span>
+                </div>
+                <div class="mode-description">Players are automatically confirmed as they sign up</div>
+            </label>
+        </div>
+        
+        <div class="mode-option" data-mode="waitlist">
+            <input type="radio" id="waitlistMode" name="registrationMode" value="waitlist">
+            <label for="waitlistMode">
+                <div class="mode-header">
+                    <span class="mode-icon">⏳</span>
+                    <span class="mode-title">Waitlist Mode</span>
+                </div>
+                <div class="mode-description">You manually select players from all signups</div>
+            </label>
+        </div>
+    </div>
+</div>
+
+<style>
+.mode-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.mode-option {
+    position: relative;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 0;
+    background: white;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.mode-option:hover {
+    border-color: #4CAF50;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+    transform: translateY(-2px);
+}
+
+.mode-option input[type="radio"] {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.mode-option label {
+    display: block;
+    padding: 20px;
+    margin: 0;
+    cursor: pointer;
+    font-weight: normal;
+    padding-right: 50px; /* Make room for radio button */
+}
+
+.mode-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.mode-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.mode-title {
+    font-weight: bold;
+    font-size: 16px;
+    color: #2c3e50;
+}
+
+.mode-description {
+    font-size: 14px;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+/* Selected state */
+.mode-option:has(input:checked) {
+    border-color: #4CAF50;
+    background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+}
+
+.mode-option:has(input:checked) .mode-title {
+    color: #2e7d32;
+}
+
+.mode-option:has(input:checked) .mode-description {
+    color: #4a5568;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .mode-selector {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .mode-option label {
+        padding: 15px;
+        padding-right: 45px;
+    }
+    
+    .mode-icon {
+        font-size: 20px;
+    }
+    
+    .mode-title {
+        font-size: 15px;
+    }
+    
+    .mode-description {
+        font-size: 13px;
+    }
+}
+</style>
                 
                 <div class="form-group">
                     <label for="message">💬 Optional Message:</label>
@@ -531,7 +670,7 @@ async function createGame(e) {
     const formData = new FormData(e.target);
     const gameData = {
         location: formData.get('location'),
-        courtNumber: formData.get('courtNumber') || '', // Add court number
+        courtNumber: formData.get('courtNumber') || '',
         organizerName: formData.get('organizerName'),
         organizerPhone: formData.get('organizerPhone'),
         organizerPlaying: formData.get('organizerPlaying') === 'on',
@@ -540,6 +679,7 @@ async function createGame(e) {
         duration: parseInt(formData.get('duration')),
         totalPlayers: parseInt(formData.get('players')),
         message: formData.get('message'),
+        registrationMode: formData.get('registrationMode'), // Add this line
         hostPhone: formData.get('organizerPhone')
     };
     

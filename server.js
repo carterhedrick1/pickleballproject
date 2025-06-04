@@ -268,6 +268,7 @@ app.delete('/api/games/:id', async (req, res) => {
 });
 
 // Add player to game (regular signup)
+// Update the SMS message logic in server.js - Add player to game route
 app.post('/api/games/:id/players', async (req, res) => {
   try {
     const gameId = req.params.id;
@@ -298,18 +299,24 @@ app.post('/api/games/:id/players', async (req, res) => {
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
       
+      let locationText = game.location;
+      if (game.courtNumber && game.courtNumber.trim()) {
+        locationText += ` - ${game.courtNumber}`;
+      }
+      
       let message;
       if (result.status === 'confirmed') {
-let locationText = game.location;
-if (game.courtNumber && game.courtNumber.trim()) {
-    locationText += ` - ${game.courtNumber}`;
-}
-message = `You're confirmed for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for game details or 9 to cancel.`;      } else {
-let locationText = game.location;
-if (game.courtNumber && game.courtNumber.trim()) {
-    locationText += ` - ${game.courtNumber}`;
-}
-message = `You've been added to the waitlist for Pickleball at ${locationText}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.`;      }
+        message = `You're confirmed for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for game details or 9 to cancel.`;
+      } else {
+        // Handle waitlist mode vs regular waitlist
+        if (result.hidePosition) {
+          // Waitlist mode - don't show position
+          message = `Thanks for signing up for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! The organizer will review applications and select players. You'll be notified if selected. Reply 2 for details or 9 to cancel.`;
+        } else {
+          // Regular waitlist - show position
+          message = `You've been added to the waitlist for Pickleball at ${locationText}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.`;
+        }
+      }
       
       smsResult = await sendSMS(playerData.phone, message, gameId);
     }
@@ -353,10 +360,32 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
     const result = addPlayerToGame(game, playerData, forceWaitlist);
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
     
+    // Send SMS confirmation to the added player
+    let smsResult = null;
+    if (playerData.phone) {
+      const gameDate = formatDateForSMS(game.date);
+      const gameTime = formatTimeForSMS(game.time);
+      
+      let locationText = game.location;
+      if (game.courtNumber && game.courtNumber.trim()) {
+        locationText += ` - ${game.courtNumber}`;
+      }
+      
+      let message;
+      if (result.status === 'confirmed') {
+        message = `You've been added to the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
+      } else {
+        message = `You've been added to the waitlist for the pickleball game at ${locationText}. You are #${result.position} on the waitlist. You'll be notified if a spot opens up! Reply 2 for details or 9 to cancel.`;
+      }
+      
+      smsResult = await sendSMS(playerData.phone, message, gameId);
+    }
+    
     const statusText = result.status === 'confirmed' ? 'game' : 'waitlist';
     res.json({
       success: true,
       message: `${playerData.name} added to ${statusText}`,
+      sms: smsResult,
       ...result
     });
   } catch (error) {
@@ -365,7 +394,125 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
   }
 });
 
-// Remove player from game
+// NEW ENDPOINT: Move player to waitlist with SMS notification
+app.post('/api/games/:id/move-to-waitlist/:playerId', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const playerId = req.params.playerId;
+    const { token } = req.body;
+    
+    const game = await getGame(gameId);
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    if (game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    // Find the player in confirmed players
+    const playerIndex = game.players.findIndex(p => p.id === playerId);
+    if (playerIndex === -1) {
+      return res.status(404).json({ error: 'Player not found in confirmed players' });
+    }
+    
+    const player = game.players[playerIndex];
+    
+    // Remove from confirmed players and add to waitlist
+    game.players.splice(playerIndex, 1);
+    if (!game.waitlist) game.waitlist = [];
+    game.waitlist.push(player);
+    
+    await saveGame(gameId, game, game.hostToken, game.hostPhone);
+    
+    // Send SMS notification to the moved player
+    let smsResult = null;
+    if (player.phone) {
+      const gameDate = formatDateForSMS(game.date);
+      const gameTime = formatTimeForSMS(game.time);
+      
+      let locationText = game.location;
+      if (game.courtNumber && game.courtNumber.trim()) {
+        locationText += ` - ${game.courtNumber}`;
+      }
+      
+      const message = `You've been moved to the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. You are #${game.waitlist.length} on the waitlist. Reply 2 for details or 9 to cancel.`;
+      smsResult = await sendSMS(player.phone, message, gameId);
+    }
+    
+    res.json({
+      success: true,
+      message: `${player.name} moved to waitlist`,
+      sms: smsResult
+    });
+  } catch (error) {
+    console.error('Error moving player to waitlist:', error);
+    res.status(500).json({ error: 'Failed to move player to waitlist' });
+  }
+});
+
+// NEW ENDPOINT: Promote player from waitlist with SMS notification
+app.post('/api/games/:id/promote-from-waitlist/:playerId', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const playerId = req.params.playerId;
+    const { token } = req.body;
+    
+    const game = await getGame(gameId);
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    if (game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    // Check if game is full
+    if (game.players.length >= parseInt(game.totalPlayers)) {
+      return res.status(400).json({ error: 'Cannot promote: Game is already full' });
+    }
+    
+    // Find the player in waitlist
+    const waitlistIndex = (game.waitlist || []).findIndex(p => p.id === playerId);
+    if (waitlistIndex === -1) {
+      return res.status(404).json({ error: 'Player not found in waitlist' });
+    }
+    
+    const player = game.waitlist[waitlistIndex];
+    
+    // Remove from waitlist and add to confirmed players
+    game.waitlist.splice(waitlistIndex, 1);
+    game.players.push(player);
+    
+    await saveGame(gameId, game, game.hostToken, game.hostPhone);
+    
+    // Send SMS notification to the promoted player
+    let smsResult = null;
+    if (player.phone) {
+      const gameDate = formatDateForSMS(game.date);
+      const gameTime = formatTimeForSMS(game.time);
+      
+      let locationText = game.location;
+      if (game.courtNumber && game.courtNumber.trim()) {
+        locationText += ` - ${game.courtNumber}`;
+      }
+      
+      const message = `Great news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
+      smsResult = await sendSMS(player.phone, message, gameId);
+    }
+    
+    res.json({
+      success: true,
+      message: `${player.name} promoted to confirmed players`,
+      sms: smsResult
+    });
+  } catch (error) {
+    console.error('Error promoting player from waitlist:', error);
+    res.status(500).json({ error: 'Failed to promote player from waitlist' });
+  }
+});
+
+// ENHANCED: Remove player from game with SMS notification
 app.delete('/api/games/:id/players/:playerId', async (req, res) => {
   try {
     const gameId = req.params.id;
@@ -381,28 +528,67 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
-    // Remove player using our game logic
-    const result = removePlayerFromGame(game, playerId);
+    // Find player to get their info before removal
+    let removedPlayer = null;
+    let removalType = null;
     
-    if (result.status === 'not_found') {
+    // Check confirmed players
+    const confirmedIndex = game.players.findIndex(p => p.id === playerId);
+    if (confirmedIndex >= 0) {
+      removedPlayer = game.players[confirmedIndex];
+      removalType = 'confirmed';
+    } else {
+      // Check waitlist
+      const waitlistIndex = (game.waitlist || []).findIndex(p => p.id === playerId);
+      if (waitlistIndex >= 0) {
+        removedPlayer = game.waitlist[waitlistIndex];
+        removalType = 'waitlist';
+      }
+    }
+    
+    if (!removedPlayer) {
       return res.status(404).json({ error: 'Player not found' });
     }
     
+    // Remove player using existing game logic
+    const result = removePlayerFromGame(game, playerId);
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
     
-    // Send promotion SMS if someone was promoted from waitlist
-    let smsResult = null;
+    // Send removal notification to the removed player (if they have a phone and aren't organizer)
+    let removalSmsResult = null;
+    if (removedPlayer.phone && !removedPlayer.isOrganizer && token) { // Only send if removed by host
+      const gameDate = formatDateForSMS(game.date);
+      const gameTime = formatTimeForSMS(game.time);
+      
+      let locationText = game.location;
+      if (game.courtNumber && game.courtNumber.trim()) {
+        locationText += ` - ${game.courtNumber}`;
+      }
+      
+      const statusText = removalType === 'confirmed' ? 'registration' : 'waitlist spot';
+      const message = `Your ${statusText} for the pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been cancelled by the organizer.`;
+      removalSmsResult = await sendSMS(removedPlayer.phone, message);
+    }
+    
+    // Send promotion SMS if someone was promoted from waitlist (this already exists in the logic)
+    let promotionSmsResult = null;
     if (result.promotedPlayer && result.promotedPlayer.phone) {
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      const message = `Good news! You've been moved from the waitlist to confirmed for Pickleball at ${game.location} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 9 to cancel.`;
       
-      smsResult = await sendSMS(result.promotedPlayer.phone, message, gameId);
+      let locationText = game.location;
+      if (game.courtNumber && game.courtNumber.trim()) {
+        locationText += ` - ${game.courtNumber}`;
+      }
+      
+      const message = `Good news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
+      promotionSmsResult = await sendSMS(result.promotedPlayer.phone, message, gameId);
     }
     
     res.json({ 
       ...result,
-      sms: smsResult 
+      removalSms: removalSmsResult,
+      promotionSms: promotionSmsResult
     });
   } catch (error) {
     console.error('Error removing player:', error);
