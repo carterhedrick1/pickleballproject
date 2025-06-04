@@ -7,6 +7,10 @@ const {
 } = require('./database');
 const { sendSMS, formatDateForSMS, formatTimeForSMS } = require('./sms-handler');
 
+// Test logging variables
+let TEST_GAME_ID = null;
+let hasInitializedTestGame = false;
+
 // Validation functions
 function isValidPhoneNumber(phoneNumber) {
   if (!phoneNumber) return false;
@@ -37,76 +41,74 @@ async function checkAndSendReminders() {
     
     const allGames = await getAllGames();
     
-    // Get current time in Central Time using a simple, reliable approach
+    // Get current time in Central Time
     const now = new Date();
-    
-    // Simple approach: Get the time as if it were Central Time
     const centralNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}));
     
-    // If that fails, fall back to manual calculation
+    // If timezone conversion fails, use manual calculation
     if (isNaN(centralNow.getTime())) {
       console.log('[REMINDER] Timezone conversion failed, using manual calculation');
-      
-      // Manual calculation as fallback
       const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-      
-      // For May 2025, we're definitely in CDT (UTC-5)
-      const centralOffset = -5; // CDT
+      const centralOffset = -5; // CDT (adjust to -6 for CST if needed)
       const manualCentralTime = new Date(utcTime + (centralOffset * 3600000));
-      
-      console.log(`[REMINDER] Server time: ${now.toLocaleString()}`);
-      console.log(`[REMINDER] Manual Central time: ${manualCentralTime.toLocaleString()}`);
-      console.log(`[REMINDER] Using manual CDT calculation (UTC-5)`);
-      
-      // Use the manual calculation
       var finalCentralTime = manualCentralTime;
     } else {
-      console.log(`[REMINDER] Server time: ${now.toLocaleString()}`);
-      console.log(`[REMINDER] Central time: ${centralNow.toLocaleString()}`);
-      
-      // Use the timezone conversion
       var finalCentralTime = centralNow;
     }
     
+    console.log(`[REMINDER] Current Central time: ${finalCentralTime.toLocaleString()}`);
+    
+    // Only set the test game ID once on startup
+    if (!hasInitializedTestGame) {
+      const gameIds = Object.keys(allGames);
+      TEST_GAME_ID = gameIds.length > 0 ? gameIds[gameIds.length - 1] : null;
+      
+      if (TEST_GAME_ID) {
+        console.log(`[REMINDER TEST] 🎯 Using most recent game for detailed logging: ${TEST_GAME_ID}`);
+      }
+      hasInitializedTestGame = true;
+    }
+    
+    // Check each game
     for (const [gameId, game] of Object.entries(allGames)) {
       // Skip cancelled games
       if (game.cancelled) {
         continue;
       }
       
-      // Create game datetime (assuming game times are stored in Central Time)
+      // Create the game date and time
       const gameDateTime = `${game.date}T${game.time}:00`;
       const gameTime = new Date(gameDateTime);
       
-      // Calculate 2 hours before game time
-      const twoHoursBefore = new Date(gameTime.getTime() - (2 * 60 * 60 * 1000));
-      
-      // Check if game is before 9am Central
-      const gameHour = gameTime.getHours();
-      const isEarlyMorningGame = gameHour < 9;
-      
-      // For early morning games, set reminder time to 8pm the night before
-      let reminderTime;
-      if (isEarlyMorningGame) {
-        const nightBefore = new Date(gameTime);
-        nightBefore.setDate(nightBefore.getDate() - 1);
-        nightBefore.setHours(20, 0, 0, 0); // 8:00 PM
-        reminderTime = nightBefore;
-      } else {
-        reminderTime = twoHoursBefore;
-      }
-      
-      console.log(`[REMINDER] Game ${gameId} at ${game.location}:`);
-      console.log(`  Game time: ${gameTime.toLocaleString()}`);
-      console.log(`  Reminder time: ${reminderTime.toLocaleString()}`);
-      console.log(`  Current Central time: ${finalCentralTime.toLocaleString()}`);
+      // Calculate exactly 24 hours before the game
+      const reminderTime = new Date(gameTime.getTime() - (24 * 60 * 60 * 1000));
       
       // Check if it's time to send reminders (within 5 minutes of reminder time)
-      const timeDiff = Math.abs(finalCentralTime.getTime() - reminderTime.getTime());
-      const fiveMinutes = 5 * 60 * 1000;
+      const timeDifference = Math.abs(finalCentralTime.getTime() - reminderTime.getTime());
+      const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
       
-      if (timeDiff <= fiveMinutes && finalCentralTime >= reminderTime) {
-        console.log(`[REMINDER] Time to send reminders for game ${gameId}`);
+      // Only show detailed logging for the test game if something interesting is happening
+      if (gameId === TEST_GAME_ID) {
+        const hoursUntilReminder = Math.round((reminderTime.getTime() - finalCentralTime.getTime()) / (1000 * 60 * 60));
+        
+        // Only log if: sending reminders, within 1 hour, or first time seeing this game
+        if (timeDifference <= fiveMinutes || Math.abs(hoursUntilReminder) <= 1) {
+          console.log(`[REMINDER TEST] 🎯 Game ${gameId} at ${game.location}:`);
+          console.log(`  Game time: ${gameTime.toLocaleString()}`);
+          console.log(`  24-hour reminder time: ${reminderTime.toLocaleString()}`);
+          console.log(`  Current time: ${finalCentralTime.toLocaleString()}`);
+          console.log(`  Time difference: ${Math.round((reminderTime.getTime() - finalCentralTime.getTime()) / (1000 * 60))} minutes`);
+        }
+      }
+      
+      // Only send if we're within 5 minutes of the reminder time and it's not in the past
+      if (timeDifference <= fiveMinutes && finalCentralTime >= reminderTime) {
+        // Only log sending details for test game
+        if (gameId === TEST_GAME_ID) {
+          console.log(`[REMINDER TEST] ✅ Time to send 24-hour reminders for game ${gameId}`);
+        } else {
+          console.log(`[REMINDER] ✅ Sending reminders for game ${gameId}`);
+        }
         
         // Send reminders to all confirmed players
         const confirmedPlayers = game.players || [];
@@ -115,54 +117,71 @@ async function checkAndSendReminders() {
         for (const player of confirmedPlayers) {
           // Skip players without phone numbers
           if (!player.phone) {
+            console.log(`[REMINDER] Skipping ${player.name} - no phone number`);
             continue;
           }
           
-          // Check if reminder already sent
-          const reminderType = isEarlyMorningGame ? 'evening_before' : 'two_hours';
-          const alreadySent = await hasReminderBeenSent(gameId, player.phone, reminderType);
+          // Check if we already sent this player a 24-hour reminder
+          const alreadySent = await hasReminderBeenSent(gameId, player.phone, 'twenty_four_hours');
           
           if (alreadySent) {
-            console.log(`[REMINDER] Already sent ${reminderType} reminder to ${player.phone} for game ${gameId}`);
+            console.log(`[REMINDER] Already sent 24-hour reminder to ${player.phone} for game ${gameId}`);
             continue;
           }
           
-          // Format reminder message
-          const gameTime = formatTimeForSMS(game.time);
-          const gameDate = formatDateForSMS(game.date);
+          // Format the game time and date for the message
+          const gameTimeFormatted = formatTimeForSMS(game.time);
+          const gameDateFormatted = formatDateForSMS(game.date);
           
-          let reminderMessage;
-          if (isEarlyMorningGame) {
-            reminderMessage = `🏓 Reminder: Your pickleball game is tomorrow morning at ${gameTime} at ${game.location}. Get a good night's sleep! Reply 2 for details or 9 to cancel.`;
-          } else {
-            reminderMessage = `🏓 Reminder: Your pickleball game starts in 2 hours at ${gameTime} at ${game.location}. See you on the court! Reply 2 for details or 9 to cancel.`;
-          }
-          
-          // Send SMS
+          // Create the reminder message
+// Include court number in location text like other SMS messages
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+  locationText += ` - ${game.courtNumber}`;
+}
+
+const reminderMessage = `🏓 Reminder: Your pickleball game is tomorrow at ${gameTimeFormatted} at ${locationText}. Looking forward to seeing you! Reply 2 for details or 9 to cancel.`;          
+          // Send the SMS
           const smsResult = await sendSMS(player.phone, reminderMessage, gameId);
           
           if (smsResult.success) {
-            await markReminderSent(gameId, player.phone, reminderType);
+            // Mark that we sent this reminder
+            await markReminderSent(gameId, player.phone, 'twenty_four_hours');
             remindersSent++;
-            console.log(`[REMINDER] Sent ${reminderType} reminder to ${player.name} (${player.phone}) for game ${gameId}`);
+            console.log(`[REMINDER] ✅ Sent 24-hour reminder to ${player.name} (${player.phone}) for game ${gameId}`);
           } else {
-            console.error(`[REMINDER] Failed to send reminder to ${player.phone}:`, smsResult.error);
+            console.error(`[REMINDER] ❌ Failed to send reminder to ${player.phone}:`, smsResult.error);
           }
         }
         
         if (remindersSent > 0) {
-          console.log(`[REMINDER] Sent ${remindersSent} reminders for game ${gameId} at ${game.location}`);
+          console.log(`[REMINDER] 📤 Sent ${remindersSent} total reminders for game ${gameId} at ${game.location}`);
+        } else {
+          console.log(`[REMINDER] 📭 No reminders sent for game ${gameId} (no eligible players)`);
+        }
+      } else {
+        // Only log detailed timing info for the test game
+        if (gameId === TEST_GAME_ID) {
+          const hoursUntilReminder = Math.round((reminderTime.getTime() - finalCentralTime.getTime()) / (1000 * 60 * 60));
+          if (hoursUntilReminder > 0) {
+            console.log(`[REMINDER TEST] ⏰ Game ${gameId} reminder in ${hoursUntilReminder} hours`);
+          } else if (hoursUntilReminder < -24) {
+            console.log(`[REMINDER TEST] ⏭️ Game ${gameId} is old, skipping`);
+          } else {
+            console.log(`[REMINDER TEST] ⏳ Game ${gameId} reminder window passed`);
+          }
         }
       }
     }
     
+    console.log('[REMINDER] ✅ Reminder check completed');
+    
   } catch (error) {
-    console.error('[REMINDER] Error in reminder system:', error);
+    console.error('[REMINDER] ❌ Error in reminder system:', error);
   }
 }
 
-// Update the createGameData function in game-logic.js
-// game-logic.js - UPDATED createGameData function
+// Create game data function
 function createGameData(formData) {
   console.log('[DEBUG] Creating game data, received:', formData);
   
@@ -179,7 +198,6 @@ function createGameData(formData) {
     message: formData.message,
     registrationMode: formData.registrationMode || 'fcfs',
     waitlist: [],
-    // FIX: Properly handle notification preferences
     notificationPreferences: {
       gameFull: formData.notificationPreferences?.gameFull ?? true,
       playerJoins: formData.notificationPreferences?.playerJoins ?? true,
@@ -187,7 +205,6 @@ function createGameData(formData) {
       oneSpotLeft: formData.notificationPreferences?.oneSpotLeft ?? true,
       waitlistStarts: formData.notificationPreferences?.waitlistStarts ?? true
     },
-    // Add hostPhone for easier access
     hostPhone: formData.organizerPhone ? formatPhoneNumber(formData.organizerPhone) : null,
     cancelled: false,
     created: new Date().toISOString()
@@ -213,7 +230,6 @@ function createGameData(formData) {
 
   return gameData;
 }
-
 
 // Player validation and processing
 function validatePlayerData(name, phone) {
@@ -254,7 +270,6 @@ function checkExistingPlayer(game, phone) {
 }
 
 // Add player to game (handles both confirmed and waitlist)
-// Update addPlayerToGame function in game-logic.js
 function addPlayerToGame(game, playerData, forceWaitlist = false) {
   const totalPlayers = parseInt(game.totalPlayers) || 4;
   const currentPlayerCount = game.players.length;
