@@ -35,7 +35,7 @@
             <!-- Desktop Tab Navigation -->
             <div class="tabs-container">
                 <div class="tabs">
-                    <button class="tab" onclick="openTab(event, 'Details')">📋 Game Details</button>
+                    <button class="tab active" onclick="openTab(event, 'Details')">📋 Game Details</button>
                     <button class="tab" onclick="openTab(event, 'Players')">👥 Players</button>
                     <button class="tab" onclick="openTab(event, 'Communication')">📢 Communication</button>
                     <button class="tab" onclick="openTab(event, 'Actions')">⚠️ Game Actions</button>
@@ -43,128 +43,124 @@
             </div>
             
             <!-- Game Details Tab -->
-            <div id="Details" class="tabcontent">
+            <div id="Details" class="tabcontent active">
                 <h2 class="section-title">📋 Edit Game Details</h2>
                 
-<!-- Updated edit form section in public/manage.html -->
-<div class="form-section">
-    <form id="editForm">
-        <div class="form-group">
-            <label for="location">📍 Location:</label>
-            <input type="text" id="location" name="location" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="courtNumber">🏟️ Court Number (optional):</label>
-            <input type="text" id="courtNumber" name="courtNumber" placeholder="e.g., Court 3, Courts 1-2, Center Court">
-            <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Specify which court(s) you'll be using at this location</small>
-        </div>
-        
-        <div class="form-group">
-            <label for="date">📅 Date:</label>
-            <input type="date" id="date" name="date" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="time">⏰ Start Time:</label>
-            <input type="time" id="time" name="time" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="duration">⏱️ Duration (minutes):</label>
-            <input type="number" id="duration" name="duration" min="30" step="15" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="players">👥 Number of Players:</label>
-            <input type="number" id="players" name="players" min="1" max="50" required>
-            <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Enter any number from 1 to 50 players</small>
-        </div>
-        
-        <div class="form-group">
-            <label for="message">💬 Optional Message:</label>
-            <textarea id="message" name="message" rows="3" placeholder="Any additional info for players..."></textarea>
-        </div>
+                <div class="form-section">
+                    <form id="editForm">
+                        <div class="form-group">
+                            <label for="location">📍 Location:</label>
+                            <input type="text" id="location" name="location" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="courtNumber">🏟️ Court Number (optional):</label>
+                            <input type="text" id="courtNumber" name="courtNumber" placeholder="e.g., Court 3, Courts 1-2, Center Court">
+                            <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Specify which court(s) you'll be using at this location</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="date">📅 Date:</label>
+                            <input type="date" id="date" name="date" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="time">⏰ Start Time:</label>
+                            <input type="time" id="time" name="time" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="duration">⏱️ Duration (minutes):</label>
+                            <input type="number" id="duration" name="duration" min="30" step="15" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="players">👥 Number of Players:</label>
+                            <input type="number" id="players" name="players" min="1" max="50" required>
+                            <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Enter any number from 1 to 50 players</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="message">💬 Optional Message:</label>
+                            <textarea id="message" name="message" rows="3" placeholder="Any additional info for players..."></textarea>
+                        </div>
 
-        <div class="form-group">
-    <!-- REPLACE the organizer notifications section in your manage page with this: -->
-
-<div class="form-group notifications-section">
-    <label>📱 Organizer Notifications:</label>
-    <small>Get SMS alerts when these events happen (optional)</small>
-    
-    <div class="notification-option" onclick="toggleManageNotification(this, 'notifyGameFull')">
-        <div class="notification-content">
-            <div class="notification-icon">🎯</div>
-            <div class="notification-text">
-                <div class="notification-title">Game becomes full</div>
-                <div class="notification-description">Get notified when all spots are taken</div>
-            </div>
-        </div>
-        <div class="toggle-switch"></div>
-        <input type="checkbox" id="notifyGameFull" name="notifyGameFull">
-    </div>
-    
-    <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerJoins')">
-        <div class="notification-content">
-            <div class="notification-icon">👋</div>
-            <div class="notification-text">
-                <div class="notification-title">Someone joins the game</div>
-                <div class="notification-description">Get notified each time a player signs up</div>
-            </div>
-        </div>
-        <div class="toggle-switch"></div>
-        <input type="checkbox" id="notifyPlayerJoins" name="notifyPlayerJoins">
-    </div>
-    
-    <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerCancels')">
-        <div class="notification-content">
-            <div class="notification-icon">❌</div>
-            <div class="notification-text">
-                <div class="notification-title">Someone cancels their spot</div>
-                <div class="notification-description">Get notified when players cancel</div>
-            </div>
-        </div>
-        <div class="toggle-switch"></div>
-        <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels">
-    </div>
-    
-    <div class="notification-option" onclick="toggleManageNotification(this, 'notifyOneSpotLeft')">
-        <div class="notification-content">
-            <div class="notification-icon">⚠️</div>
-            <div class="notification-text">
-                <div class="notification-title">Only one spot remaining</div>
-                <div class="notification-description">Get notified when almost full</div>
-            </div>
-        </div>
-        <div class="toggle-switch"></div>
-        <input type="checkbox" id="notifyOneSpotLeft" name="notifyOneSpotLeft">
-    </div>
-    
-    <div class="notification-option" onclick="toggleManageNotification(this, 'notifyWaitlistStarts')">
-        <div class="notification-content">
-            <div class="notification-icon">⏳</div>
-            <div class="notification-text">
-                <div class="notification-title">Waitlist starts</div>
-                <div class="notification-description">Get notified when first person is waitlisted</div>
-            </div>
-        </div>
-        <div class="toggle-switch"></div>
-        <input type="checkbox" id="notifyWaitlistStarts" name="notifyWaitlistStarts">
-    </div>
-</div>
-        
-        <button type="submit">💾 Update Game Details</button>
-    </form>
-</div>
-                
-<div class="share-section">
-    <div class="center-copy-section">
-        <p>Click the button below to copy a complete invitation message with all game details and registration link:</p>
-        <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
-        <p class="copy-description">This copies a complete invitation message that you can send via text, email, or social media. It includes all game details and the registration link.</p>
-    </div>
-</div>
+                        <div class="form-group notifications-section">
+                            <label>📱 Organizer Notifications:</label>
+                            <small>Get SMS alerts when these events happen (optional)</small>
+                            
+                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyGameFull')">
+                                <div class="notification-content">
+                                    <div class="notification-icon">🎯</div>
+                                    <div class="notification-text">
+                                        <div class="notification-title">Game becomes full</div>
+                                        <div class="notification-description">Get notified when all spots are taken</div>
+                                    </div>
+                                </div>
+                                <div class="toggle-switch"></div>
+                                <input type="checkbox" id="notifyGameFull" name="notifyGameFull">
+                            </div>
+                            
+                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerJoins')">
+                                <div class="notification-content">
+                                    <div class="notification-icon">👋</div>
+                                    <div class="notification-text">
+                                        <div class="notification-title">Someone joins the game</div>
+                                        <div class="notification-description">Get notified each time a player signs up</div>
+                                    </div>
+                                </div>
+                                <div class="toggle-switch"></div>
+                                <input type="checkbox" id="notifyPlayerJoins" name="notifyPlayerJoins">
+                            </div>
+                            
+                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerCancels')">
+                                <div class="notification-content">
+                                    <div class="notification-icon">❌</div>
+                                    <div class="notification-text">
+                                        <div class="notification-title">Someone cancels their spot</div>
+                                        <div class="notification-description">Get notified when players cancel</div>
+                                    </div>
+                                </div>
+                                <div class="toggle-switch"></div>
+                                <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels">
+                            </div>
+                            
+                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyOneSpotLeft')">
+                                <div class="notification-content">
+                                    <div class="notification-icon">⚠️</div>
+                                    <div class="notification-text">
+                                        <div class="notification-title">Only one spot remaining</div>
+                                        <div class="notification-description">Get notified when almost full</div>
+                                    </div>
+                                </div>
+                                <div class="toggle-switch"></div>
+                                <input type="checkbox" id="notifyOneSpotLeft" name="notifyOneSpotLeft">
+                            </div>
+                            
+                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyWaitlistStarts')">
+                                <div class="notification-content">
+                                    <div class="notification-icon">⏳</div>
+                                    <div class="notification-text">
+                                        <div class="notification-title">Waitlist starts</div>
+                                        <div class="notification-description">Get notified when first person is waitlisted</div>
+                                    </div>
+                                </div>
+                                <div class="toggle-switch"></div>
+                                <input type="checkbox" id="notifyWaitlistStarts" name="notifyWaitlistStarts">
+                            </div>
+                        </div>
+                        
+                        <button type="submit">💾 Update Game Details</button>
+                    </form>
+                </div>
+                        
+                <div class="share-section">
+                    <div class="center-copy-section">
+                        <p>Click the button below to copy a complete invitation message with all game details and registration link:</p>
+                        <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
+                        <p class="copy-description">This copies a complete invitation message that you can send via text, email, or social media. It includes all game details and the registration link.</p>
+                    </div>
+                </div>
             </div>
             
             <!-- Players Tab -->
@@ -248,34 +244,34 @@
                             <textarea id="announcementText" name="announcementText" rows="4" placeholder="Type your message to players..." required></textarea>
                         </div>
                         
-<div class="form-group">
-    <label>Send to:</label>
-    
-    <!-- Group Selection Row -->
-    <div class="recipient-groups">
-        <div class="checkbox-option">
-            <input type="checkbox" id="sendToAll" name="sendToAll" onchange="toggleAllPlayers(this.checked)">
-            <label for="sendToAll">👥 All Players</label>
-        </div>
-        <div class="checkbox-option">
-            <input type="checkbox" id="sendToPlayers" name="sendToPlayers" checked onchange="updateGroupSelections()">
-            <label for="sendToPlayers">✅ Confirmed Players</label>
-        </div>
-        <div class="checkbox-option">
-            <input type="checkbox" id="sendToWaitlist" name="sendToWaitlist" onchange="updateGroupSelections()">
-            <label for="sendToWaitlist">⏳ Waitlisted Players</label>
-        </div>
-    </div>
-    
-    <!-- Individual Players Section -->
-    <div id="individualPlayersSection" class="individual-players-section">
-        <label>Or Select Individual Players:</label>
-        <div id="playerCheckboxes" class="player-checkboxes">
-            <!-- Individual player checkboxes will be populated here -->
-        </div>
-    </div>
-</div>
-                        
+                        <div class="form-group">
+                            <label>Send to:</label>
+                            
+                            <!-- Group Selection Row -->
+                            <div class="recipient-groups">
+                                <div class="checkbox-option">
+                                    <input type="checkbox" id="sendToAll" name="sendToAll" onchange="toggleAllPlayers(this.checked)">
+                                    <label for="sendToAll">👥 All Players</label>
+                                </div>
+                                <div class="checkbox-option">
+                                    <input type="checkbox" id="sendToPlayers" name="sendToPlayers" checked onchange="updateGroupSelections()">
+                                    <label for="sendToPlayers">✅ Confirmed Players</label>
+                                </div>
+                                <div class="checkbox-option">
+                                    <input type="checkbox" id="sendToWaitlist" name="sendToWaitlist" onchange="updateGroupSelections()">
+                                    <label for="sendToWaitlist">⏳ Waitlisted Players</label>
+                                </div>
+                            </div>
+                            
+                            <!-- Individual Players Section -->
+                            <div id="individualPlayersSection" class="individual-players-section">
+                                <label>Or Select Individual Players:</label>
+                                <div id="playerCheckboxes" class="player-checkboxes">
+                                    <!-- Individual player checkboxes will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                                
                         <button type="submit">📤 Send Announcement</button>
                     </form>
                 </div>
