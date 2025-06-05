@@ -57,7 +57,7 @@ body {
     line-height: 1.6;
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     min-height: 100vh;
-    padding: 20px;
+    padding: 0px;
 }
 
 .container {
@@ -1028,4 +1028,20 @@ button:active {
     .collapsible-inner {
         padding: 20px;
     }
+
+    /* Extra small mobile devices */
+@media (max-width: 480px) {
+    body {
+        padding: 0;
+    }
+
+    .container {
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .page-header {
+        border-radius: 0;
+    }
+}
 }
