@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="footer-container">
                 <div class="footer-content">
                     <div class="footer-section">
-                        <h4>PicklePlay Scheduler</h4>
+                        <h4>In or Out</h4>
                         <p>Making pickleball game organization simple and fun. Connect with players, organize games, and never miss a match.</p>
                     </div>
                     
@@ -30,13 +30,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="footer-section">
                         <h4>Connect</h4>
                         <p>Questions? Feedback?</p>
-                        <p>Email: <a href="mailto:support@pickleplay.club">support@pickleplay.club</a></p>
+                        <p>Email: <a href="mailto:support@inorout.club">support@inorout.club</a></p>
                         <p><small>Response within 24 hours</small></p>
                     </div>
                 </div>
                 
                 <div class="footer-bottom">
-                    <p>&copy; 2025 PicklePlay Scheduler. All rights reserved.</p>
+                    <p>&copy; 2025 In or Out. All rights reserved.</p>
                 </div>
             </div>
         </footer>
