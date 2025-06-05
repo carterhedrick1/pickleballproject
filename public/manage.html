@@ -12,13 +12,18 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="page-header">⚙️ Game Management</h1>
+        <div class="page-header">
+            <div class="header-content">
+                <h1>⚙️ Game Management</h1>
+                <div class="subtitle">Manage your pickleball game with ease</div>
+            </div>
+        </div>
         
         <div id="status" class="status" style="display: none;"></div>
         
-        <div id="loading" style="padding: 40px; text-align: center; color: #6c757d;">
-            <div style="font-size: 24px; margin-bottom: 10px;">⏳</div>
-            Loading game details...
+        <div id="loading" class="loading-section">
+            <div class="loading-icon">⏳</div>
+            <div class="loading-text">Loading game details...</div>
         </div>
         
         <div id="gameManagement" style="display: none;">
@@ -44,9 +49,9 @@
             
             <!-- Game Details Tab -->
             <div id="Details" class="tabcontent active">
-                <h2 class="section-title">📋 Edit Game Details</h2>
-                
                 <div class="form-section">
+                    <h2 class="section-title">📋 Edit Game Details</h2>
+                    
                     <form id="editForm">
                         <div class="form-group">
                             <label for="location">📍 Location:</label>
@@ -56,7 +61,7 @@
                         <div class="form-group">
                             <label for="courtNumber">🏟️ Court Number (optional):</label>
                             <input type="text" id="courtNumber" name="courtNumber" placeholder="e.g., Court 3, Courts 1-2, Center Court">
-                            <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Specify which court(s) you'll be using at this location</small>
+                            <div class="form-help-text">Specify which court(s) you'll be using at this location</div>
                         </div>
                         
                         <div class="form-group">
@@ -77,7 +82,7 @@
                         <div class="form-group">
                             <label for="players">👥 Number of Players:</label>
                             <input type="number" id="players" name="players" min="1" max="50" required>
-                            <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Enter any number from 1 to 50 players</small>
+                            <div class="form-help-text">Enter any number from 1 to 50 players</div>
                         </div>
                         
                         <div class="form-group">
@@ -87,7 +92,7 @@
 
                         <div class="form-group notifications-section">
                             <label>📱 Organizer Notifications:</label>
-                            <small>Get SMS alerts when these events happen (optional)</small>
+                            <div class="form-help-text">Get SMS alerts when these events happen (optional)</div>
                             
                             <div class="notification-option" onclick="toggleManageNotification(this, 'notifyGameFull')">
                                 <div class="notification-content">
@@ -155,78 +160,81 @@
                 </div>
                         
                 <div class="share-section">
+                    <h3 class="share-title">🎉 Share Your Game</h3>
                     <div class="center-copy-section">
                         <p>Click the button below to copy a complete invitation message with all game details and registration link:</p>
                         <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
-                        <p class="copy-description">This copies a complete invitation message that you can send via text, email, or social media. It includes all game details and the registration link.</p>
+                        <p class="save-suggestion">This copies a complete invitation message that you can send via text, email, or social media. It includes all game details and the registration link.</p>
                     </div>
                 </div>
             </div>
             
             <!-- Players Tab -->
             <div id="Players" class="tabcontent">
-                <h2 class="section-title">👥 Player Management</h2>
-                
-                <div class="players-container">
-                    <div class="player-section confirmed">
-                        <h3 class="subsection-title">✅ Confirmed Players</h3>
-                        <div class="player-count">
-                            <span id="playerCount">0</span>/<span id="totalPlayers">0</span> spots filled
+                <div class="form-section">
+                    <h2 class="section-title">👥 Player Management</h2>
+                    
+                    <div class="players-container">
+                        <div class="player-section confirmed">
+                            <h3 class="subsection-title">✅ Confirmed Players</h3>
+                            <div class="player-count">
+                                <span id="playerCount">0</span>/<span id="totalPlayers">0</span> spots filled
+                            </div>
+                            <div id="confirmedPlayers" class="player-list">
+                                <!-- Player list will be populated here -->
+                            </div>
                         </div>
-                        <div id="confirmedPlayers" class="player-list">
-                            <!-- Player list will be populated here -->
+                        
+                        <div class="player-section waitlist">
+                            <h3 class="subsection-title">⏳ Waitlist</h3>
+                            <div class="player-count waitlist-count">
+                                <span id="waitlistCount">0</span> players waiting
+                            </div>
+                            <div id="waitlistPlayers" class="player-list">
+                                <!-- Waitlist will be populated here -->
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="player-section waitlist">
-                        <h3 class="subsection-title">⏳ Waitlist</h3>
-                        <div class="player-count waitlist-count">
-                            <span id="waitlistCount">0</span> players waiting
+                    <!-- Collapsible Add Player Section -->
+                    <div class="collapsible-section">
+                        <div class="collapsible-header" onclick="toggleCollapsible('addPlayerSection')">
+                            <h3>
+                                ➕ Add Player Manually
+                                <span class="collapse-icon">▼</span>
+                            </h3>
                         </div>
-                        <div id="waitlistPlayers" class="player-list">
-                            <!-- Waitlist will be populated here -->
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Collapsible Add Player Section -->
-                <div class="collapsible-section">
-                    <div class="collapsible-header" onclick="toggleCollapsible('addPlayerSection')">
-                        <h3>
-                            ➕ Add Player Manually
-                            <span class="collapse-icon">▼</span>
-                        </h3>
-                    </div>
-                    <div id="addPlayerSection" class="collapsible-content">
-                        <div class="collapsible-inner">
-                            <form id="addPlayerForm">
-                                <div class="form-group">
-                                    <label for="playerName">👤 Player Name:</label>
-                                    <input type="text" id="playerName" name="playerName" placeholder="Enter player's full name" required>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="playerPhone">📱 Phone Number (optional):</label>
-                                    <input type="tel" id="playerPhone" name="playerPhone" placeholder="(555) 123-4567">
-                                    <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">If provided, player will receive SMS notifications</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>Add to:</label>
-                                    <div class="radio-group">
-                                        <div class="radio-option">
-                                            <input type="radio" id="addToConfirmed" name="addTo" value="add" checked>
-                                            <label for="addToConfirmed">✅ Confirmed Players</label>
-                                        </div>
-                                        <div class="radio-option">
-                                            <input type="radio" id="addToWaitlist" name="addTo" value="waitlist">
-                                            <label for="addToWaitlist">⏳ Waitlist</label>
+                        <div id="addPlayerSection" class="collapsible-content">
+                            <div class="collapsible-inner">
+                                <form id="addPlayerForm">
+                                    <div class="form-group">
+                                        <label for="playerName">👤 Player Name:</label>
+                                        <input type="text" id="playerName" name="playerName" placeholder="Enter player's full name" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="playerPhone">📱 Phone Number (optional):</label>
+                                        <input type="tel" id="playerPhone" name="playerPhone" placeholder="(555) 123-4567">
+                                        <div class="form-help-text">If provided, player will receive SMS notifications</div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Add to:</label>
+                                        <div class="radio-group">
+                                            <div class="radio-option">
+                                                <input type="radio" id="addToConfirmed" name="addTo" value="add" checked>
+                                                <label for="addToConfirmed">✅ Confirmed Players</label>
+                                            </div>
+                                            <div class="radio-option">
+                                                <input type="radio" id="addToWaitlist" name="addTo" value="waitlist">
+                                                <label for="addToWaitlist">⏳ Waitlist</label>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <button type="submit">➕ Add Player</button>
-                            </form>
+                                    
+                                    <button type="submit">➕ Add Player</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -234,9 +242,9 @@
             
             <!-- Communication Tab -->
             <div id="Communication" class="tabcontent">
-                <h2 class="section-title">📢 Send Announcements</h2>
-                
                 <div class="form-section">
+                    <h2 class="section-title">📢 Send Announcements</h2>
+                    
                     <h3 class="subsection-title">✏️ Send Custom Message</h3>
                     <form id="announcementForm">
                         <div class="form-group">
@@ -274,9 +282,7 @@
                                 
                         <button type="submit">📤 Send Announcement</button>
                     </form>
-                </div>
-                
-                <div class="form-section">
+                    
                     <h3 class="subsection-title">⚡ Quick Messages</h3>
                     <div class="quick-actions">
                         <button id="sendReminder" class="quick-action-btn btn-secondary">
@@ -291,11 +297,11 @@
             
             <!-- Game Actions Tab -->
             <div id="Actions" class="tabcontent">
-                <h2 class="section-title">⚠️ Game Actions</h2>
-                
                 <div class="form-section">
+                    <h2 class="section-title">⚠️ Game Actions</h2>
+                    
                     <h3 class="subsection-title">🚫 Cancel Game</h3>
-                    <p style="color: #6c757d; margin-bottom: 20px;">This will notify all players that the game has been cancelled.</p>
+                    <p class="danger-warning">This will notify all players that the game has been cancelled.</p>
                     <div class="form-group">
                         <label for="cancellationReason">📝 Reason for Cancellation:</label>
                         <textarea id="cancellationReason" rows="3" placeholder="e.g., Weather conditions, court unavailable..."></textarea>

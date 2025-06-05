@@ -5,43 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Join Pickleball Game</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+        /* Chrome-specific font rendering fixes - targets only Chrome/Chromium browsers */
+        @supports (-webkit-mask: none) and (not (-webkit-backdrop-filter: blur(1px))) {
+            /* This targets Chrome specifically, excluding Safari */
+            
+            * {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                text-rendering: optimizeLegibility;
+            }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                font-weight: 400;
+                font-synthesis: none;
+            }
+            
+            /* Fix Chrome's tendency to make fonts too bold */
+            label,
+            .section-title,
+            .game-detail-label,
+            .confirmation-detail-label {
+                font-weight: 500 !important; /* Use 500 instead of bold for better Chrome rendering */
+            }
+            
+            .section-header h1 {
+                font-weight: 700 !important;
+                font-synthesis: none;
+            }
+            
+            .section-header .subtitle {
+                font-weight: 400 !important;
+                font-synthesis: none;
+            }
+            
+            button {
+                font-family: inherit;
+                font-weight: 500 !important;
+                text-rendering: optimizeLegibility;
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            input, select, textarea {
+                font-family: inherit;
+                font-weight: 400 !important;
+                -webkit-font-smoothing: antialiased;
+                text-rendering: optimizeLegibility;
+            }
         }
+
+        /* Additional Chrome-only fix using user agent detection */
+        @media screen and (-webkit-min-device-pixel-ratio:0) and (min-resolution:.001dpcm) {
+            /* This is another Chrome-specific selector */
+            
+            body {
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            label {
+                font-weight: 500;
+            }
+            
+            button {
+                font-weight: 500;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
         .container {
             max-width: 600px;
             margin: 0 auto;
             background: white;
-            padding: 0;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
             overflow: hidden;
         }
-        
-        /* Section styling */
-        .section {
-            padding: 25px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-        
-        .section:last-child {
-            border-bottom: none;
-        }
-        
+
+        /* Sleeker, smaller header with navy-to-green gradient */
         .section-header {
-            background: linear-gradient(135deg, #429046dd 0%, #429046dd 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #429046 100%);
             color: white;
-            padding: 20px 25px;
+            padding: 20px 32px 16px;
             margin: 0;
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
             position: relative;
             overflow: hidden;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px 20px 0 0;
         }
 
         .section-header::before {
@@ -52,252 +117,309 @@
             right: 0;
             bottom: 0;
             background-image: 
-                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
-                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
-                radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.4), transparent),
-                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.2), transparent),
-                radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.3), transparent);
+                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.15), transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.1), transparent),
+                radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.2), transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.1), transparent),
+                radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.15), transparent);
             background-repeat: repeat;
             background-size: 200px 100px;
-            animation: sparkle 8s linear infinite;
         }
 
-        @keyframes sparkle {
-            0%, 100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            50% {
-                opacity: 0.5;
-                transform: scale(1.1);
-            }
+        .section-header .header-content {
+            text-align: center;
+            z-index: 2;
+            position: relative;
         }
-        
+
+        .section-header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: -0.01em;
+        }
+
+        .section-header .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 400;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* Section styling */
+        .section {
+            padding: 32px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
         .section-title {
             color: #4CAF50;
-            font-size: 20px;
+            font-size: 24px;
             font-weight: bold;
-            margin: 0 0 15px 0;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #4CAF50;
+            margin: 0 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4CAF50;
             display: inline-block;
         }
-        
+
         /* Game details styling */
         .game-info {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 6px;
-            margin-bottom: 15px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
         }
-        
+
         .game-detail {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
+            margin-bottom: 16px;
             padding: 8px 0;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid #e5e7eb;
         }
-        
+
         .game-detail:last-child {
             border-bottom: none;
             margin-bottom: 0;
         }
-        
+
         .game-detail-label {
-            font-weight: bold;
-            color: #495057;
-            min-width: 80px;
+            font-weight: 600;
+            color: #374151;
+            min-width: 120px;
+            font-size: 14px;
         }
-        
+
         .game-detail-value {
-            color: #212529;
+            color: #1f2937;
             text-align: right;
             flex: 1;
+            font-weight: 500;
+            font-size: 14px;
         }
-        
+
         /* Players section */
         .players-section {
-            background-color: #e8f5e8;
+            background: white;
+            border-top: 3px solid #e5e7eb;
         }
-        
+
         .player-list {
-            background-color: white;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 15px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-        
+
         .player-list ul {
             list-style: none;
             padding: 0;
             margin: 0;
         }
-        
+
         .player-list li {
-            padding: 8px 0;
-            border-bottom: 1px solid #f0f0f0;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #374151;
+            font-weight: 500;
         }
-        
+
         .player-list li:last-child {
             border-bottom: none;
         }
-        
+
         .spots-available {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
             color: white;
-            padding: 12px 15px;
-            border-radius: 25px;
+            padding: 16px 20px;
+            border-radius: 12px;
             text-align: center;
-            font-weight: bold;
-            margin-bottom: 15px;
+            font-weight: 600;
+            margin-bottom: 20px;
             font-size: 16px;
-            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 4px 16px rgba(22, 163, 74, 0.3);
         }
-        
+
         .spots-full {
-            background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%);
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
             color: white;
-            padding: 12px 15px;
-            border-radius: 25px;
+            padding: 16px 20px;
+            border-radius: 12px;
             text-align: center;
-            font-weight: bold;
-            margin-bottom: 15px;
+            font-weight: 600;
+            margin-bottom: 20px;
             font-size: 16px;
-            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 4px 16px rgba(234, 88, 12, 0.3);
         }
-        
+
         .waitlist-info {
-            background-color: rgba(255,255,255,0.9);
-            border: 2px solid #fd7e14;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
             text-align: center;
         }
-        
+
         .waitlist-info h4 {
-            color: #fd7e14;
-            margin: 0 0 10px 0;
+            color: #1e40af;
+            margin: 0 0 12px 0;
             font-size: 16px;
+            font-weight: 600;
         }
-        
+
         .waitlist-info p {
-            margin: 5px 0;
+            margin: 8px 0;
             font-size: 14px;
-            color: #666;
+            color: #1e40af;
+            line-height: 1.5;
         }
-        
+
         /* Form styling */
         .signup-section {
-            background-color: #fff3cd;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-top: 3px solid #e5e7eb;
         }
-        
+
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
-        
+
         label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #495057;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+            letter-spacing: 0.025em;
         }
-        
+
         input {
             width: 100%;
-            padding: 12px;
+            padding: 14px 16px;
             box-sizing: border-box;
-            border: 2px solid #ddd;
-            border-radius: 6px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
             font-size: 16px;
-            transition: border-color 0.3s;
+            transition: all 0.2s ease;
+            background-color: white;
+            font-family: inherit;
         }
-        
+
         input:focus {
-            border-color: #4CAF50;
+            border-color: #429046;
             outline: none;
+            box-shadow: 0 0 0 3px rgba(66, 144, 70, 0.1);
+            transform: translateY(-1px);
         }
-        
+
         button {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
             color: white;
-            padding: 15px 20px;
+            padding: 16px 28px;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             cursor: pointer;
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 16px;
+            font-weight: 600;
             width: 100%;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
+            position: relative;
+            overflow: hidden;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        
-        button:hover {
-            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
         }
-        
+
+        button:hover {
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(66, 144, 70, 0.4);
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
         button:active {
             transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
         }
-        
+
         /* Status messages */
         .error {
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-            border: 2px solid #dc3545;
-            color: #721c24;
-            padding: 20px 25px;
-            margin: 20px 25px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 16px;
-            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
-            text-align: left;
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 1px solid #ef4444;
+            color: #991b1b;
+            padding: 14px 18px;
+            margin: 20px 32px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 14px;
         }
-        
+
         .success {
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 6px;
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border: 1px solid #16a34a;
+            color: #166534;
+            padding: 14px 18px;
+            margin: 20px 32px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 14px;
         }
-        
+
         .info {
-            background-color: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 6px;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+            padding: 14px 18px;
+            margin: 20px 32px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 14px;
         }
 
         /* Confirmation Page Styling */
         .confirmation-section {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
             text-align: center;
-            padding: 40px 25px;
+            padding: 40px 32px;
+            border-top: 3px solid #e5e7eb;
         }
 
         .confirmation-section.waitlist {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
         }
 
         .confirmation-section h2 {
-            color: #155724;
-            font-size: 32px;
+            color: #166534;
+            font-size: 28px;
             margin: 0 0 20px 0;
-            font-weight: bold;
+            font-weight: 700;
         }
 
         .confirmation-section.waitlist h2 {
-            color: #856404;
+            color: #1e40af;
         }
 
         .confirmation-icon {
@@ -308,31 +430,33 @@
 
         .confirmation-message {
             font-size: 18px;
-            color: #155724;
+            color: #166534;
             margin-bottom: 30px;
+            line-height: 1.5;
         }
 
         .confirmation-section.waitlist .confirmation-message {
-            color: #856404;
+            color: #1e40af;
         }
 
         .confirmation-details {
-            background: rgba(255,255,255,0.8);
-            border-radius: 12px;
-            padding: 25px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 16px;
+            padding: 24px;
             margin: 20px 0;
-            border: 2px solid #28a745;
+            border: 2px solid #16a34a;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
         }
 
         .confirmation-section.waitlist .confirmation-details {
-            border: 2px solid #ffc107;
+            border: 2px solid #3b82f6;
         }
 
         .confirmation-detail {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 16px;
             padding: 10px 0;
             font-size: 16px;
         }
@@ -342,28 +466,29 @@
         }
 
         .confirmation-detail-label {
-            font-weight: bold;
-            color: #2c3e50;
+            font-weight: 600;
+            color: #374151;
         }
 
         .confirmation-detail-value {
-            color: #155724;
-            font-weight: bold;
+            color: #166534;
+            font-weight: 600;
             text-align: right;
         }
 
         .next-steps {
             background: rgba(255,255,255,0.9);
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 20px;
             margin: 20px 0;
             text-align: left;
         }
 
         .next-steps h4 {
-            color: #2c3e50;
+            color: #374151;
             margin: 0 0 15px 0;
             text-align: center;
+            font-weight: 600;
         }
 
         .next-steps ul {
@@ -373,9 +498,11 @@
         }
 
         .next-steps li {
-            padding: 8px 0;
-            color: #495057;
-            border-bottom: 1px solid #e9ecef;
+            padding: 10px 0;
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            line-height: 1.5;
         }
 
         .next-steps li:last-child {
@@ -383,66 +510,105 @@
         }
 
         .back-to-game-btn {
-            background: linear-gradient(135deg, #2196F3 0%, #1976d2 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
             color: white;
-            padding: 12px 25px;
+            padding: 14px 28px;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 14px;
+            font-weight: 600;
             text-transform: none;
             letter-spacing: normal;
             width: auto;
             margin-top: 20px;
-            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+            box-shadow: 0 4px 16px rgba(30, 58, 138, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .back-to-game-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
         }
 
         .back-to-game-btn:hover {
-            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
-            box-shadow: 0 6px 12px rgba(33, 150, 243, 0.4);
+            background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+            box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
         }
-        
+
+        .back-to-game-btn:hover::before {
+            left: 100%;
+        }
+
+        /* Form helper text */
+        .form-help-text {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 12px;
+            font-size: 14px;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+
         /* Mobile responsiveness */
         @media (max-width: 768px) {
             body {
-                padding: 0;
+                padding: 10px;
                 margin: 0;
             }
-            
+
             .container {
-                border-radius: 0;
+                border-radius: 16px;
                 box-shadow: none;
             }
-            
-            .section {
-                padding: 20px 15px;
-            }
-            
+
             .section-header {
-                padding: 15px;
-                font-size: 20px;
-                position: relative;
-                overflow: hidden;
+                min-height: 60px;
+                padding: 16px 20px 12px;
+                border-radius: 16px 16px 0 0;
             }
-            
+
+            .section-header h1 {
+                font-size: 20px;
+            }
+
+            .section-header .subtitle {
+                font-size: 13px;
+            }
+
+            .section {
+                padding: 20px;
+            }
+
+            .section-title {
+                font-size: 20px;
+            }
+
             .game-detail {
                 flex-direction: column;
                 align-items: flex-start;
             }
-            
+
             .game-detail-value {
                 text-align: left;
                 margin-top: 4px;
-                font-weight: bold;
+                font-weight: 600;
             }
 
             .confirmation-section {
-                padding: 30px 15px;
+                padding: 30px 20px;
             }
 
             .confirmation-section h2 {
-                font-size: 28px;
+                font-size: 24px;
             }
 
             .confirmation-icon {
@@ -458,6 +624,14 @@
                 text-align: left;
                 margin-top: 5px;
             }
+
+            input, button {
+                padding: 12px 14px;
+            }
+
+            button {
+                font-size: 14px;
+            }
         }
     </style>
     <link rel="stylesheet" href="/css/header.css">
@@ -465,7 +639,12 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="section-header">Pickleball Game</h1>
+        <div class="section-header">
+            <div class="header-content">
+                <h1>🏓 Pickleball Game</h1>
+                <div class="subtitle">Join the fun on the court</div>
+            </div>
+        </div>
         
         <div id="status" style="display: none;"></div>
         
@@ -475,60 +654,30 @@
             <div id="loading">Loading game details...</div>
             <div id="details" style="display: none;">
                 <div class="game-info">
-<!-- Updated game details section in public/game.html -->
-<div class="game-info">
-    <div class="game-detail">
-        <span class="game-detail-label">📍 Location:</span>
-        <span class="game-detail-value" id="location"></span>
-    </div>
-    <div class="game-detail" id="courtDetail" style="display: none;">
-        <span class="game-detail-label">🏟️ Court:</span>
-        <span class="game-detail-value" id="courtNumber"></span>
-    </div>
-    <div class="game-detail">
-        <span class="game-detail-label">📅 Date:</span>
-        <span class="game-detail-value" id="date"></span>
-    </div>
-    <div class="game-detail">
-        <span class="game-detail-label">⏰ Time:</span>
-        <span class="game-detail-value" id="time"></span>
-    </div>
-    <div class="game-detail">
-        <span class="game-detail-label">⏱️ Duration:</span>
-        <span class="game-detail-value"><span id="duration"></span> minutes</span>
-    </div>
-    <div class="game-detail" id="messageDetail" style="display: none;">
-        <span class="game-detail-label">💬 Message:</span>
-        <span class="game-detail-value" id="message"></span>
-    </div>
-</div>
-
-<!-- Updated JavaScript for game.html -->
-<script>
-function displayGameData() {
-    document.getElementById('location').textContent = gameData.location;
-    
-    // Show court number if it exists
-    if (gameData.courtNumber && gameData.courtNumber.trim()) {
-        document.getElementById('courtNumber').textContent = gameData.courtNumber;
-        document.getElementById('courtDetail').style.display = 'flex';
-    } else {
-        document.getElementById('courtDetail').style.display = 'none';
-    }
-    
-    document.getElementById('date').textContent = formatDate(gameData.date);
-    document.getElementById('time').textContent = formatTime(gameData.time);
-    document.getElementById('duration').textContent = gameData.duration;
-    
-    // Show message only if it exists
-    if (gameData.message && gameData.message.trim()) {
-        document.getElementById('message').textContent = gameData.message;
-        document.getElementById('messageDetail').style.display = 'flex';
-    }
-    
-    updatePlayerList();
-}
-</script>
+                    <div class="game-detail">
+                        <span class="game-detail-label">📍 Location:</span>
+                        <span class="game-detail-value" id="location"></span>
+                    </div>
+                    <div class="game-detail" id="courtDetail" style="display: none;">
+                        <span class="game-detail-label">🏟️ Court:</span>
+                        <span class="game-detail-value" id="courtNumber"></span>
+                    </div>
+                    <div class="game-detail">
+                        <span class="game-detail-label">📅 Date:</span>
+                        <span class="game-detail-value" id="date"></span>
+                    </div>
+                    <div class="game-detail">
+                        <span class="game-detail-label">⏰ Time:</span>
+                        <span class="game-detail-value" id="time"></span>
+                    </div>
+                    <div class="game-detail">
+                        <span class="game-detail-label">⏱️ Duration:</span>
+                        <span class="game-detail-value"><span id="duration"></span> minutes</span>
+                    </div>
+                    <div class="game-detail" id="messageDetail" style="display: none;">
+                        <span class="game-detail-label">💬 Message:</span>
+                        <span class="game-detail-value" id="message"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -567,18 +716,18 @@ function displayGameData() {
             <form id="joinForm">
                 <div class="form-group">
                     <label for="playerName">Your Name:</label>
-                    <input type="text" id="playerName" name="playerName" required>
+                    <input type="text" id="playerName" name="playerName" placeholder="Enter your full name" required>
                 </div>
                 
                 <div class="form-group">
                     <label for="phoneNumber">Phone Number:</label>
-                    <input type="tel" id="phoneNumber" name="phoneNumber" required>
+                    <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="(555) 123-4567" required>
                 </div>
                 
                 <button type="submit" id="joinButton">COUNT ME IN!</button>
             </form>
             
-            <div style="margin-top: 20px; padding: 15px; background-color: rgba(255,255,255,0.8); border-radius: 6px; font-size: 14px; color: #666;">
+            <div class="form-help-text">
                 💡 <strong>Need to cancel later?</strong> Just reply "9" to any text message you receive about this game.
             </div>
         </div>
@@ -624,469 +773,469 @@ function displayGameData() {
 
     <script>
         // TIMEZONE-FIXED JavaScript for game.html
-// Replace the entire <script> section in your game.html with this:
+        // Replace the entire <script> section in your game.html with this:
 
-document.addEventListener('DOMContentLoaded', () => {
-    const statusDiv = document.getElementById('status');
-    let gameData;
-    
-    // TIMEZONE FIX FUNCTION - prevents date shifting
-    function formatDate(dateStr) {
-        if (!dateStr) return '';
-        
-        // Parse as local date to avoid timezone shift
-        const [year, month, day] = dateStr.split('-');
-        const date = new Date(year, month - 1, day); // Local date constructor
-        
-        return date.toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            month: 'long', 
-            day: 'numeric',
-            year: 'numeric'
-        });
-    }
-    
-    // Get game ID from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const gameId = urlParams.get('id');
-    
-    if (!gameId) {
-        showStatus("Game not found. Please check your link. The URL should include an 'id' parameter.", 'error');
-        return;
-    }
-    
-    // Fetch game data
-    showStatus("Fetching game data...", 'info');
-    
-    fetch(`/api/games/${gameId}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Server responded with status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            gameData = data;
-            console.log('Game data received:', gameData); // Debug log
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusDiv = document.getElementById('status');
+            let gameData;
             
-            // Display game details
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('details').style.display = 'block';
-            
-            // Check if we should show players section based on registration mode
-            const playerListSection = document.getElementById('playerList');
-            if (gameData.registrationMode === 'waitlist') {
-                // Hide players section for waitlist mode
-                if (playerListSection) {
-                    playerListSection.style.display = 'none';
-                }
-            } else {
-                // Show players section for regular mode
-                if (playerListSection) {
-                    playerListSection.style.display = 'block';
-                }
-            }
-            
-            document.getElementById('location').textContent = gameData.location;
-
-            // Show court number if it exists
-            if (gameData.courtNumber && gameData.courtNumber.trim()) {
-                document.getElementById('courtNumber').textContent = gameData.courtNumber;
-                document.getElementById('courtDetail').style.display = 'flex';
-            } else {
-                document.getElementById('courtDetail').style.display = 'none';
-            }
-
-            document.getElementById('date').textContent = formatDate(gameData.date);
-            document.getElementById('time').textContent = formatTime(gameData.time);
-            document.getElementById('duration').textContent = gameData.duration;
-            
-            console.log('Date formatted as:', formatDate(gameData.date)); // Debug log
-            
-            // Show message only if it exists
-            if (gameData.message && gameData.message.trim()) {
-                document.getElementById('message').textContent = gameData.message;
-                document.getElementById('messageDetail').style.display = 'flex';
-            }
-            
-            // Update player list
-            updatePlayerList();
-            
-            // Show signup form for new players
-            document.getElementById('signupForm').style.display = 'block';
-            
-            // Hide the status message since game loaded successfully
-            statusDiv.style.display = 'none';
-            
-            // Set up event handlers
-            setupEventHandlers();
-        })
-        .catch(error => {
-            console.error("Error fetching game:", error);
-            showStatus(`Game not found. Please check your link.`, 'error');
-        });
-
-    // AUTO-REFRESH: Add periodic refresh every 30 seconds
-    setInterval(() => {
-        if (!document.hidden && gameData) { // Only refresh if tab is visible and game loaded
-            fetchGameDataSilently();
-        }
-    }, 30000); // 30 seconds
-    
-    // AUTO-REFRESH: Refresh when tab becomes visible again
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && gameData) {
-            fetchGameDataSilently();
-        }
-    });
-    
-    // Silent refresh function (no loading messages)
-    function fetchGameDataSilently() {
-        fetch(`/api/games/${gameId}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Server responded with status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                const oldData = JSON.stringify(gameData);
-                const newData = JSON.stringify(data);
+            // TIMEZONE FIX FUNCTION - prevents date shifting
+            function formatDate(dateStr) {
+                if (!dateStr) return '';
                 
-                // Only update if data actually changed
-                if (oldData !== newData) {
+                // Parse as local date to avoid timezone shift
+                const [year, month, day] = dateStr.split('-');
+                const date = new Date(year, month - 1, day); // Local date constructor
+                
+                return date.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    month: 'long', 
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+            }
+            
+            // Get game ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('id');
+            
+            if (!gameId) {
+                showStatus("Game not found. Please check your link. The URL should include an 'id' parameter.", 'error');
+                return;
+            }
+            
+            // Fetch game data
+            showStatus("Fetching game data...", 'info');
+            
+            fetch(`/api/games/${gameId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server responded with status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
                     gameData = data;
+                    console.log('Game data received:', gameData); // Debug log
                     
-                    // Update all the game details - TIMEZONE FIXED
+                    // Display game details
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('details').style.display = 'block';
+                    
+                    // Check if we should show players section based on registration mode
+                    const playerListSection = document.getElementById('playerList');
+                    if (gameData.registrationMode === 'waitlist') {
+                        // Hide players section for waitlist mode
+                        if (playerListSection) {
+                            playerListSection.style.display = 'none';
+                        }
+                    } else {
+                        // Show players section for regular mode
+                        if (playerListSection) {
+                            playerListSection.style.display = 'block';
+                        }
+                    }
+                    
                     document.getElementById('location').textContent = gameData.location;
+
+                    // Show court number if it exists
+                    if (gameData.courtNumber && gameData.courtNumber.trim()) {
+                        document.getElementById('courtNumber').textContent = gameData.courtNumber;
+                        document.getElementById('courtDetail').style.display = 'flex';
+                    } else {
+                        document.getElementById('courtDetail').style.display = 'none';
+                    }
+
                     document.getElementById('date').textContent = formatDate(gameData.date);
                     document.getElementById('time').textContent = formatTime(gameData.time);
                     document.getElementById('duration').textContent = gameData.duration;
                     
-                    // Update message
+                    console.log('Date formatted as:', formatDate(gameData.date)); // Debug log
+                    
+                    // Show message only if it exists
                     if (gameData.message && gameData.message.trim()) {
                         document.getElementById('message').textContent = gameData.message;
                         document.getElementById('messageDetail').style.display = 'flex';
-                    } else {
-                        document.getElementById('messageDetail').style.display = 'none';
                     }
                     
+                    // Update player list
                     updatePlayerList();
                     
-                    // Show subtle update notification
-                    showUpdateNotification();
-                }
-            })
-            .catch(error => {
-                console.error("Silent refresh failed:", error);
-                // Fail silently - don't show error to user
-            });
-    }
-    
-    // Show subtle update notification
-    function showUpdateNotification() {
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-            z-index: 1000;
-            font-size: 14px;
-            font-weight: bold;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        `;
-        notification.textContent = '✨ Game details updated!';
-        
-        document.body.appendChild(notification);
-        
-        // Fade in
-        setTimeout(() => {
-            notification.style.opacity = '1';
-        }, 100);
-        
-        // Fade out and remove
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }, 3000);
-    }
-        
-    // Update the updatePlayerList function in public/game.html
-// Updated updatePlayerList function in public/game.html
-// REPLACE the entire updatePlayerList function in public/game.html with this:
-
-function updatePlayerList() {
-    const playersList = document.getElementById('players');
-    const spotsAvailable = document.getElementById('spotsAvailable');
-    const spotsAvailableBar = document.getElementById('spotsAvailableBar');
-    const spotsFullContainer = document.getElementById('spotsFullContainer');
-    const waitlistCount = document.getElementById('waitlistCount');
-    const joinSectionTitle = document.getElementById('joinSectionTitle');
-    const joinButton = document.getElementById('joinButton');
-    const playerListSection = document.getElementById('playerList'); // The entire players section
-    
-    if (!playersList || !spotsAvailable) {
-        return;
-    }
-    
-    // Check if game is in waitlist mode
-    const isWaitlistMode = gameData.registrationMode === 'waitlist';
-    
-    if (isWaitlistMode) {
-        // Hide the entire players section in waitlist mode - NO PLAYER INFO VISIBLE
-        if (playerListSection) {
-            playerListSection.style.display = 'none';
-        }
-        
-        // Update join section for waitlist mode
-        if (joinSectionTitle && joinButton) {
-            joinSectionTitle.textContent = '📝 Apply for This Game';
-            joinButton.textContent = 'SUBMIT APPLICATION';
-        }
-        
-        // Show signup form
-        const signupForm = document.getElementById('signupForm');
-        if (signupForm) {
-            signupForm.style.display = 'block';
-        }
-        
-        return; // Exit early for waitlist mode - NO PLAYER DATA SHOWN
-    }
-    
-    // Regular mode - show players section with full transparency
-    if (playerListSection) {
-        playerListSection.style.display = 'block';
-    }
-    
-    // Clear existing list
-    playersList.innerHTML = '';
-    
-    // Check if there are any players
-    if (gameData.players.length === 0) {
-        // No players yet - show helpful hint
-        const li = document.createElement('li');
-        li.style.fontStyle = 'italic';
-        li.style.color = '#999';
-        li.style.fontSize = '14px';
-        li.textContent = 'None yet - be the first to join!';
-        playersList.appendChild(li);
-    } else {
-        // Add players to list
-        gameData.players.forEach(player => {
-            const li = document.createElement('li');
-            li.textContent = player.name + (player.isOrganizer ? ' (Organizer)' : '');
-            playersList.appendChild(li);
-        });
-    }
-    
-    // Update spots available
-    const availableSpots = parseInt(gameData.totalPlayers) - gameData.players.length;
-    const waitlistLength = gameData.waitlist ? gameData.waitlist.length : 0;
-    
-    if (availableSpots > 0) {
-        // Show spots available
-        spotsAvailable.textContent = availableSpots;
-        spotsAvailableBar.style.display = 'block';
-        spotsFullContainer.style.display = 'none';
-        joinSectionTitle.textContent = '🏓 Join This Game';
-        joinButton.textContent = 'COUNT ME IN!';
-        
-        // FIXED: Update spots text to be singular/plural
-        const spotsText = document.getElementById('spotsText');
-        if (spotsText) {
-            spotsText.textContent = availableSpots === 1 ? 'spot' : 'spots';
-        }
-        
-    } else {
-        // Show game is full with waitlist info
-        spotsAvailableBar.style.display = 'none';
-        spotsFullContainer.style.display = 'block';
-        waitlistCount.textContent = waitlistLength;
-        joinSectionTitle.textContent = '🕐 Join the Waitlist';
-        joinButton.textContent = 'JOIN WAITLIST';
-    }
-    
-    // Always show signup form since they can join waitlist when full
-    const signupForm = document.getElementById('signupForm');
-    if (signupForm) {
-        signupForm.style.display = 'block';
-    }
-}
-
-// Update showConfirmation function in public/game.html
-// FIXED showConfirmation function for public/game.html
-function showConfirmation(data) {
-    // Hide other sections
-    document.getElementById('gameDetails').style.display = 'none';
-    document.getElementById('playerList').style.display = 'none';
-    document.getElementById('signupForm').style.display = 'none';
-    document.querySelector('.section-header').style.display = 'none';
-    
-    // Show confirmation section
-    const confirmationSection = document.getElementById('confirmationSection');
-    confirmationSection.style.display = 'block';
-    
-    const confirmTitle = document.getElementById('confirmationTitle');
-    const confirmMessage = document.getElementById('confirmationMessage');
-    const confirmStatus = document.getElementById('confirmStatus');
-    const confirmLocation = document.getElementById('confirmLocation');
-    const confirmDateTime = document.getElementById('confirmDateTime');
-    
-    if (data.status === 'confirmed') {
-        // Regular confirmed player
-        confirmationSection.classList.remove('waitlist');
-        confirmTitle.textContent = "You're In!";
-        confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
-        confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
-    } else if (data.status === 'waitlist') {
-        // Waitlisted player
-        confirmationSection.classList.add('waitlist');
-        
-        if (data.hidePosition || gameData.registrationMode === 'waitlist') {
-            // Waitlist mode - hide position, show application status
-            confirmTitle.textContent = "⏳ Application Submitted!";
-            confirmMessage.textContent = `Thanks for signing up! The organizer will review all applications and select players. You'll be notified if you're selected.`;
-            confirmStatus.textContent = `Application Under Review`;
-        } else {
-            // Regular waitlist - show position
-            confirmTitle.textContent = "⏳ You're on the Waitlist!";
-            confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
-            confirmStatus.textContent = `Waitlist Position #${data.position}`;
-        }
-    }
-    
-    // Include court number in confirmation location
-    let locationText = gameData.location;
-    if (gameData.courtNumber && gameData.courtNumber.trim()) {
-        locationText += ` - ${gameData.courtNumber}`;
-    }
-    
-    confirmLocation.textContent = locationText;
-    confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
-    
-    // Scroll to top to show confirmation
-    window.scrollTo(0, 0);
-}
-
-    window.showGameDetails = function() {
-        // Show game sections again AND the header
-        document.getElementById('gameDetails').style.display = 'block';
-        document.getElementById('playerList').style.display = 'block';
-        document.getElementById('signupForm').style.display = 'block';
-        document.querySelector('.section-header').style.display = 'block'; // Show the header again
-        
-        // Hide confirmation section
-        document.getElementById('confirmationSection').style.display = 'none';
-        
-        // Refresh the game data to show updated player list
-        fetch(`/api/games/${gameId}`)
-            .then(response => response.json())
-            .then(updatedData => {
-                gameData = updatedData;
-                updatePlayerList();
-            })
-            .catch(error => {
-                console.error('Error refreshing game data:', error);
-            });
-    }       
-    
-    function setupEventHandlers() {
-        // Set up join form submission
-        const joinForm = document.getElementById('joinForm');
-        joinForm.addEventListener('submit', event => {
-            event.preventDefault();
-            const playerName = document.getElementById('playerName').value;
-            const phoneNumber = document.getElementById('phoneNumber').value;
-            
-            showStatus('Processing your request...', 'info');
-            
-            // Send the player data to the server
-            fetch(`/api/games/${gameId}/players`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: playerName,
-                    phone: phoneNumber
+                    // Show signup form for new players
+                    document.getElementById('signupForm').style.display = 'block';
+                    
+                    // Hide the status message since game loaded successfully
+                    statusDiv.style.display = 'none';
+                    
+                    // Set up event handlers
+                    setupEventHandlers();
                 })
-            })
-            .then(async response => {
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'Failed to join game');
+                .catch(error => {
+                    console.error("Error fetching game:", error);
+                    showStatus(`Game not found. Please check your link.`, 'error');
+                });
+
+            // AUTO-REFRESH: Add periodic refresh every 30 seconds
+            setInterval(() => {
+                if (!document.hidden && gameData) { // Only refresh if tab is visible and game loaded
+                    fetchGameDataSilently();
                 }
-                return response.json();
-            })
-            .then(data => {
-                // Hide status message
-                statusDiv.style.display = 'none';
+            }, 30000); // 30 seconds
+            
+            // AUTO-REFRESH: Refresh when tab becomes visible again
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && gameData) {
+                    fetchGameDataSilently();
+                }
+            });
+            
+            // Silent refresh function (no loading messages)
+            function fetchGameDataSilently() {
+                fetch(`/api/games/${gameId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Server responded with status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        const oldData = JSON.stringify(gameData);
+                        const newData = JSON.stringify(data);
+                        
+                        // Only update if data actually changed
+                        if (oldData !== newData) {
+                            gameData = data;
+                            
+                            // Update all the game details - TIMEZONE FIXED
+                            document.getElementById('location').textContent = gameData.location;
+                            document.getElementById('date').textContent = formatDate(gameData.date);
+                            document.getElementById('time').textContent = formatTime(gameData.time);
+                            document.getElementById('duration').textContent = gameData.duration;
+                            
+                            // Update message
+                            if (gameData.message && gameData.message.trim()) {
+                                document.getElementById('message').textContent = gameData.message;
+                                document.getElementById('messageDetail').style.display = 'flex';
+                            } else {
+                                document.getElementById('messageDetail').style.display = 'none';
+                            }
+                            
+                            updatePlayerList();
+                            
+                            // Show subtle update notification
+                            showUpdateNotification();
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Silent refresh failed:", error);
+                        // Fail silently - don't show error to user
+                    });
+            }
+            
+            // Show subtle update notification
+            function showUpdateNotification() {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+                    z-index: 1000;
+                    font-size: 14px;
+                    font-weight: bold;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                `;
+                notification.textContent = '✨ Game details updated!';
                 
-                // Show confirmation page
-                showConfirmation(data);
+                document.body.appendChild(notification);
                 
-                // Clear the form
-                document.getElementById('playerName').value = '';
-                document.getElementById('phoneNumber').value = '';
+                // Fade in
+                setTimeout(() => {
+                    notification.style.opacity = '1';
+                }, 100);
                 
-                // Update game data in background
+                // Fade out and remove
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 3000);
+            }
+                
+            // Update the updatePlayerList function in public/game.html
+            // Updated updatePlayerList function in public/game.html
+            // REPLACE the entire updatePlayerList function in public/game.html with this:
+
+            function updatePlayerList() {
+                const playersList = document.getElementById('players');
+                const spotsAvailable = document.getElementById('spotsAvailable');
+                const spotsAvailableBar = document.getElementById('spotsAvailableBar');
+                const spotsFullContainer = document.getElementById('spotsFullContainer');
+                const waitlistCount = document.getElementById('waitlistCount');
+                const joinSectionTitle = document.getElementById('joinSectionTitle');
+                const joinButton = document.getElementById('joinButton');
+                const playerListSection = document.getElementById('playerList'); // The entire players section
+                
+                if (!playersList || !spotsAvailable) {
+                    return;
+                }
+                
+                // Check if game is in waitlist mode
+                const isWaitlistMode = gameData.registrationMode === 'waitlist';
+                
+                if (isWaitlistMode) {
+                    // Hide the entire players section in waitlist mode - NO PLAYER INFO VISIBLE
+                    if (playerListSection) {
+                        playerListSection.style.display = 'none';
+                    }
+                    
+                    // Update join section for waitlist mode
+                    if (joinSectionTitle && joinButton) {
+                        joinSectionTitle.textContent = '📝 Apply for This Game';
+                        joinButton.textContent = 'SUBMIT APPLICATION';
+                    }
+                    
+                    // Show signup form
+                    const signupForm = document.getElementById('signupForm');
+                    if (signupForm) {
+                        signupForm.style.display = 'block';
+                    }
+                    
+                    return; // Exit early for waitlist mode - NO PLAYER DATA SHOWN
+                }
+                
+                // Regular mode - show players section with full transparency
+                if (playerListSection) {
+                    playerListSection.style.display = 'block';
+                }
+                
+                // Clear existing list
+                playersList.innerHTML = '';
+                
+                // Check if there are any players
+                if (gameData.players.length === 0) {
+                    // No players yet - show helpful hint
+                    const li = document.createElement('li');
+                    li.style.fontStyle = 'italic';
+                    li.style.color = '#999';
+                    li.style.fontSize = '14px';
+                    li.textContent = 'None yet - be the first to join!';
+                    playersList.appendChild(li);
+                } else {
+                    // Add players to list
+                    gameData.players.forEach(player => {
+                        const li = document.createElement('li');
+                        li.textContent = player.name + (player.isOrganizer ? ' (Organizer)' : '');
+                        playersList.appendChild(li);
+                    });
+                }
+                
+                // Update spots available
+                const availableSpots = parseInt(gameData.totalPlayers) - gameData.players.length;
+                const waitlistLength = gameData.waitlist ? gameData.waitlist.length : 0;
+                
+                if (availableSpots > 0) {
+                    // Show spots available
+                    spotsAvailable.textContent = availableSpots;
+                    spotsAvailableBar.style.display = 'block';
+                    spotsFullContainer.style.display = 'none';
+                    joinSectionTitle.textContent = '🏓 Join This Game';
+                    joinButton.textContent = 'COUNT ME IN!';
+                    
+                    // FIXED: Update spots text to be singular/plural
+                    const spotsText = document.getElementById('spotsText');
+                    if (spotsText) {
+                        spotsText.textContent = availableSpots === 1 ? 'spot' : 'spots';
+                    }
+                    
+                } else {
+                    // Show game is full with waitlist info
+                    spotsAvailableBar.style.display = 'none';
+                    spotsFullContainer.style.display = 'block';
+                    waitlistCount.textContent = waitlistLength;
+                    joinSectionTitle.textContent = '🕐 Join the Waitlist';
+                    joinButton.textContent = 'JOIN WAITLIST';
+                }
+                
+                // Always show signup form since they can join waitlist when full
+                const signupForm = document.getElementById('signupForm');
+                if (signupForm) {
+                    signupForm.style.display = 'block';
+                }
+            }
+
+            // Update showConfirmation function in public/game.html
+            // FIXED showConfirmation function for public/game.html
+            function showConfirmation(data) {
+                // Hide other sections
+                document.getElementById('gameDetails').style.display = 'none';
+                document.getElementById('playerList').style.display = 'none';
+                document.getElementById('signupForm').style.display = 'none';
+                document.querySelector('.section-header').style.display = 'none';
+                
+                // Show confirmation section
+                const confirmationSection = document.getElementById('confirmationSection');
+                confirmationSection.style.display = 'block';
+                
+                const confirmTitle = document.getElementById('confirmationTitle');
+                const confirmMessage = document.getElementById('confirmationMessage');
+                const confirmStatus = document.getElementById('confirmStatus');
+                const confirmLocation = document.getElementById('confirmLocation');
+                const confirmDateTime = document.getElementById('confirmDateTime');
+                
+                if (data.status === 'confirmed') {
+                    // Regular confirmed player
+                    confirmationSection.classList.remove('waitlist');
+                    confirmTitle.textContent = "You're In!";
+                    confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
+                    confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
+                } else if (data.status === 'waitlist') {
+                    // Waitlisted player
+                    confirmationSection.classList.add('waitlist');
+                    
+                    if (data.hidePosition || gameData.registrationMode === 'waitlist') {
+                        // Waitlist mode - hide position, show application status
+                        confirmTitle.textContent = "⏳ Application Submitted!";
+                        confirmMessage.textContent = `Thanks for signing up! The organizer will review all applications and select players. You'll be notified if you're selected.`;
+                        confirmStatus.textContent = `Application Under Review`;
+                    } else {
+                        // Regular waitlist - show position
+                        confirmTitle.textContent = "⏳ You're on the Waitlist!";
+                        confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
+                        confirmStatus.textContent = `Waitlist Position #${data.position}`;
+                    }
+                }
+                
+                // Include court number in confirmation location
+                let locationText = gameData.location;
+                if (gameData.courtNumber && gameData.courtNumber.trim()) {
+                    locationText += ` - ${gameData.courtNumber}`;
+                }
+                
+                confirmLocation.textContent = locationText;
+                confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
+                
+                // Scroll to top to show confirmation
+                window.scrollTo(0, 0);
+            }
+
+            window.showGameDetails = function() {
+                // Show game sections again AND the header
+                document.getElementById('gameDetails').style.display = 'block';
+                document.getElementById('playerList').style.display = 'block';
+                document.getElementById('signupForm').style.display = 'block';
+                document.querySelector('.section-header').style.display = 'block'; // Show the header again
+                
+                // Hide confirmation section
+                document.getElementById('confirmationSection').style.display = 'none';
+                
+                // Refresh the game data to show updated player list
                 fetch(`/api/games/${gameId}`)
                     .then(response => response.json())
                     .then(updatedData => {
                         gameData = updatedData;
+                        updatePlayerList();
                     })
                     .catch(error => {
                         console.error('Error refreshing game data:', error);
                     });
-            })
-            .catch(error => {
-                console.error('Error joining game:', error);
-                showStatus(error.message, 'error');
-            });
+            }       
+            
+            function setupEventHandlers() {
+                // Set up join form submission
+                const joinForm = document.getElementById('joinForm');
+                joinForm.addEventListener('submit', event => {
+                    event.preventDefault();
+                    const playerName = document.getElementById('playerName').value;
+                    const phoneNumber = document.getElementById('phoneNumber').value;
+                    
+                    showStatus('Processing your request...', 'info');
+                    
+                    // Send the player data to the server
+                    fetch(`/api/games/${gameId}/players`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: playerName,
+                            phone: phoneNumber
+                        })
+                    })
+                    .then(async response => {
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.error || 'Failed to join game');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Hide status message
+                        statusDiv.style.display = 'none';
+                        
+                        // Show confirmation page
+                        showConfirmation(data);
+                        
+                        // Clear the form
+                        document.getElementById('playerName').value = '';
+                        document.getElementById('phoneNumber').value = '';
+                        
+                        // Update game data in background
+                        fetch(`/api/games/${gameId}`)
+                            .then(response => response.json())
+                            .then(updatedData => {
+                                gameData = updatedData;
+                            })
+                            .catch(error => {
+                                console.error('Error refreshing game data:', error);
+                            });
+                    })
+                    .catch(error => {
+                        console.error('Error joining game:', error);
+                        showStatus(error.message, 'error');
+                    });
+                });
+            }
+            
+            function formatTime(timeStr) {
+                const [hours, minutes] = timeStr.split(':');
+                const hour = parseInt(hours);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const hour12 = hour % 12 || 12;
+                return `${hour12}:${minutes} ${ampm}`;
+            }
+            
+            function showStatus(message, type) {
+                statusDiv.textContent = message;
+                statusDiv.className = type;
+                statusDiv.style.display = 'block';
+                
+                // Auto-scroll to show the status message  
+                statusDiv.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+                
+                if (type === 'error') {
+                    document.getElementById('loading').style.display = 'none';
+                }
+                
+                // Auto-hide success messages after 5 seconds
+                if (type === 'success' || type === 'info') {
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 5000);
+                }
+            }
         });
-    }
-    
-    function formatTime(timeStr) {
-        const [hours, minutes] = timeStr.split(':');
-        const hour = parseInt(hours);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const hour12 = hour % 12 || 12;
-        return `${hour12}:${minutes} ${ampm}`;
-    }
-    
-    function showStatus(message, type) {
-        statusDiv.textContent = message;
-        statusDiv.className = type;
-        statusDiv.style.display = 'block';
-        
-        // Auto-scroll to show the status message  
-        statusDiv.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-        });
-        
-        if (type === 'error') {
-            document.getElementById('loading').style.display = 'none';
-        }
-        
-        // Auto-hide success messages after 5 seconds
-        if (type === 'success' || type === 'info') {
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 5000);
-        }
-    }
-});
     </script>
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>

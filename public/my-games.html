@@ -2,384 +2,517 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>My Games - PicklePlay</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+        /* Chrome-specific font rendering fixes - targets only Chrome/Chromium browsers */
+        @supports (-webkit-mask: none) and (not (-webkit-backdrop-filter: blur(1px))) {
+            /* This targets Chrome specifically, excluding Safari */
+            
+            * {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                text-rendering: optimizeLegibility;
+            }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                font-weight: 400;
+                font-synthesis: none;
+            }
+            
+            /* Fix Chrome's tendency to make fonts too bold */
+            label,
+            .section-title,
+            .game-title,
+            .game-detail-label {
+                font-weight: 500 !important; /* Use 500 instead of bold for better Chrome rendering */
+            }
+            
+            .page-header h1 {
+                font-weight: 700 !important;
+                font-synthesis: none;
+            }
+            
+            .page-header .subtitle {
+                font-weight: 400 !important;
+                font-synthesis: none;
+            }
+            
+            button {
+                font-family: inherit;
+                font-weight: 500 !important;
+                text-rendering: optimizeLegibility;
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            .game-detail-value,
+            .no-games p {
+                font-weight: 400 !important;
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            .create-game-btn {
+                font-weight: 500 !important;
+            }
         }
+
+        /* Additional Chrome-only fix using user agent detection */
+        @media screen and (-webkit-min-device-pixel-ratio:0) and (min-resolution:.001dpcm) {
+            /* This is another Chrome-specific selector */
+            
+            body {
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            label {
+                font-weight: 500;
+            }
+            
+            button {
+                font-weight: 500;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
         .container {
             max-width: 800px;
             margin: 0 auto;
             background: white;
-            padding: 0;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
             overflow: hidden;
         }
-        
-        /* Header styling */
-.page-header {
-    background: linear-gradient(135deg, #429046dd 0%, #429046dd 100%);
-    color: white;
-    padding: 25px;
-    margin: 0;
-    font-size: 28px;
-    font-weight: bold;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
 
-.page-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-        radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
-        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
-        radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.4), transparent),
-        radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.2), transparent),
-        radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.3), transparent);
-    background-repeat: repeat;
-    background-size: 200px 100px;
-    animation: sparkle 8s linear infinite;
-}
+        /* Sleeker, smaller header with navy-to-green gradient */
+        .page-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #429046 100%);
+            color: white;
+            padding: 20px 32px 16px;
+            margin: 0;
+            position: relative;
+            overflow: hidden;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px 20px 0 0;
+        }
 
-@keyframes sparkle {
-    0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.5;
-        transform: scale(1.1);
-    }
-}
-        
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.15), transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.1), transparent),
+                radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.2), transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.1), transparent),
+                radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.15), transparent);
+            background-repeat: repeat;
+            background-size: 200px 100px;
+        }
+
+        .page-header .header-content {
+            text-align: center;
+            z-index: 2;
+            position: relative;
+        }
+
+        .page-header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: -0.01em;
+        }
+
+        .page-header .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 400;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
         /* Content section */
         .content-section {
-            padding: 30px;
+            padding: 32px;
+            background-color: white;
         }
-        
+
         .section-title {
             color: #4CAF50;
             font-size: 24px;
             font-weight: bold;
-            margin: 0 0 25px 0;
+            margin: 0 0 20px 0;
             padding-bottom: 10px;
             border-bottom: 3px solid #4CAF50;
             display: inline-block;
         }
-        
+
         /* Game cards */
         .game-item {
             background: white;
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            padding: 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 24px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
         }
-        
+
         .game-item:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-            border-color: #4CAF50;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            border-color: #429046;
         }
-        
-        .game-info {
-            flex: 1;
-        }
-        
+
         .game-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
-        
+
         .game-title {
             font-size: 20px;
-            font-weight: bold;
-            color: #2c3e50;
+            font-weight: 600;
+            color: #1f2937;
             margin: 0;
             display: flex;
             align-items: center;
             gap: 10px;
         }
-        
+
         .game-status {
             display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
+            padding: 8px 16px;
+            border-radius: 12px;
             font-size: 12px;
-            font-weight: bold;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        
+
         .status-active {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            color: #155724;
-            border: 2px solid #28a745;
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            color: #166534;
+            border: 2px solid #16a34a;
         }
-        
+
         .status-cancelled {
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-            color: #721c24;
-            border: 2px solid #dc3545;
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #991b1b;
+            border: 2px solid #ef4444;
         }
-        
+
         .status-completed {
-            background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
-            color: #383d41;
-            border: 2px solid #6c757d;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            color: #475569;
+            border: 2px solid #64748b;
         }
-        
+
         .game-details {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
         }
-        
+
         .game-detail-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
             padding: 4px 0;
         }
-        
+
         .game-detail-row:last-child {
             margin-bottom: 0;
         }
-        
+
         .game-detail-label {
             font-weight: 600;
-            color: #495057;
+            color: #374151;
             display: flex;
             align-items: center;
             gap: 8px;
+            font-size: 14px;
         }
-        
+
         .game-detail-value {
-            color: #212529;
+            color: #1f2937;
             font-weight: 500;
+            font-size: 14px;
         }
-        
+
         .game-actions {
             display: flex;
             gap: 12px;
-            margin-top: 15px;
+            margin-top: 20px;
         }
-        
+
         .game-actions a,
         .game-actions button {
-            padding: 10px 16px;
+            padding: 14px 20px;
             text-decoration: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 14px;
-            font-weight: bold;
+            font-weight: 600;
             cursor: pointer;
             border: none;
             transition: all 0.3s ease;
             text-align: center;
             flex: 1;
+            position: relative;
+            overflow: hidden;
         }
-        
+
+        .game-actions a::before,
+        .game-actions button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .game-actions a:hover::before,
+        .game-actions button:hover::before {
+            left: 100%;
+        }
+
         .btn-manage {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
             color: white;
-            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
         }
-        
+
         .btn-manage:hover {
-            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
             transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.4);
+            box-shadow: 0 6px 20px rgba(66, 144, 70, 0.4);
         }
-        
+
         .btn-view {
-            background: linear-gradient(135deg, #2196F3 0%, #1976d2 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
             color: white;
-            box-shadow: 0 2px 6px rgba(33, 150, 243, 0.3);
+            box-shadow: 0 4px 16px rgba(30, 58, 138, 0.3);
         }
-        
+
         .btn-view:hover {
-            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
             transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.4);
+            box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
         }
-        
+
         .btn-delete {
-            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: white;
-            box-shadow: 0 2px 6px rgba(244, 67, 54, 0.3);
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
         }
-        
+
         .btn-delete:hover {
-            background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
             transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(244, 67, 54, 0.4);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
         }
-        
+
         /* No games state */
         .no-games {
             text-align: center;
             padding: 60px 40px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 12px;
-            border: 2px dashed #dee2e6;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 16px;
+            border: 2px dashed #cbd5e1;
         }
-        
+
         .no-games-icon {
             font-size: 64px;
             margin-bottom: 20px;
-            opacity: 0.5;
+            opacity: 0.6;
         }
-        
+
         .no-games h3 {
-            color: #6c757d;
+            color: #475569;
             margin: 0 0 15px 0;
             font-size: 24px;
+            font-weight: 600;
         }
-        
+
         .no-games p {
-            color: #868e96;
+            color: #64748b;
             margin: 0 0 25px 0;
             font-size: 16px;
+            line-height: 1.5;
         }
-        
+
         .create-game-btn {
             display: inline-block;
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
             color: white;
-            padding: 15px 30px;
+            padding: 16px 32px;
             text-decoration: none;
-            border-radius: 8px;
-            font-weight: bold;
+            border-radius: 12px;
+            font-weight: 600;
             font-size: 16px;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
             text-transform: uppercase;
             letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
         }
-        
+
+        .create-game-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
         .create-game-btn:hover {
-            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
+            box-shadow: 0 8px 25px rgba(66, 144, 70, 0.4);
         }
-        
+
+        .create-game-btn:hover::before {
+            left: 100%;
+        }
+
         /* Status messages */
         .status {
-            margin: 20px 30px;
-            padding: 15px;
-            border-radius: 8px;
-            font-weight: bold;
+            margin: 20px 32px;
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 14px;
         }
-        
+
         .success {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            border: 2px solid #28a745;
-            color: #155724;
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border: 1px solid #16a34a;
+            color: #166534;
         }
-        
+
         .error {
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-            border: 2px solid #dc3545;
-            color: #721c24;
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 1px solid #ef4444;
+            color: #991b1b;
         }
-        
+
         .info {
-            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-            border: 2px solid #17a2b8;
-            color: #0c5460;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #3b82f6;
+            color: #1e40af;
         }
-        
+
         /* Footer note */
         .footer-note {
             text-align: center;
-            padding: 20px 30px;
-            background-color: #f8f9fa;
-            border-top: 1px solid #dee2e6;
-            color: #6c757d;
+            padding: 20px 32px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-top: 1px solid #e5e7eb;
+            color: #64748b;
             font-style: italic;
             font-size: 14px;
         }
 
         @media (max-width: 768px) {
             body {
-                padding: 0;
+                padding: 10px;
                 margin: 0;
             }
-            
+
             .container {
-                border-radius: 0;
+                border-radius: 16px;
                 box-shadow: none;
             }
-            
-.page-header {
-    padding: 20px 15px;
-    font-size: 24px;
-    position: relative;
-    overflow: hidden;
-}
-            
-            .content-section {
-                padding: 20px 15px;
+
+            .page-header {
+                min-height: 60px;
+                padding: 16px 20px 12px;
+                border-radius: 16px 16px 0 0;
             }
-            
+
+            .page-header h1 {
+                font-size: 20px;
+            }
+
+            .page-header .subtitle {
+                font-size: 13px;
+            }
+
+            .content-section {
+                padding: 20px;
+            }
+
             .section-title {
                 font-size: 20px;
             }
-            
+
             .game-item {
-                padding: 15px;
+                padding: 20px;
                 margin-bottom: 15px;
             }
-            
+
             .game-header {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 10px;
             }
-            
+
             .game-actions {
                 flex-direction: column;
                 gap: 8px;
             }
-            
+
             .game-actions a,
             .game-actions button {
                 padding: 12px 16px;
                 font-size: 14px;
             }
-            
+
             .game-detail-row {
                 flex-direction: column;
                 gap: 4px;
             }
-            
+
             .no-games {
                 padding: 40px 20px;
             }
-            
+
             .no-games-icon {
                 font-size: 48px;
             }
-            
+
             .footer-note {
                 padding: 15px 20px;
             }
@@ -390,7 +523,12 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="page-header">🏓 My Games</h1>
+        <div class="page-header">
+            <div class="header-content">
+                <h1>🏓 My Games</h1>
+                <div class="subtitle">Manage all your created games</div>
+            </div>
+        </div>
         
         <div id="status" class="status" style="display: none;"></div>
         
@@ -414,174 +552,174 @@
 
     <script>
         // TIMEZONE-FIXED JavaScript for home/my-games page
-// Replace the entire <script> section in your home page with this:
+        // Replace the entire <script> section in your home page with this:
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadMyGames();
-});
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMyGames();
+        });
 
-// TIMEZONE FIX FUNCTION - prevents date shifting
-function formatDateForDisplay(dateStr) {
-    if (!dateStr) return '';
-    
-    // Parse as local date to avoid timezone shift
-    const [year, month, day] = dateStr.split('-');
-    const date = new Date(year, month - 1, day); // Local date constructor
-    
-    return date.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short', 
-        day: 'numeric',
-        year: 'numeric'
-    });
-}
-
-function loadMyGames() {
-    // Get games from localStorage
-    const games = JSON.parse(localStorage.getItem('myGames') || '[]');
-    
-    const gamesList = document.getElementById('gamesList');
-    
-    if (games.length === 0) {
-        gamesList.innerHTML = `
-            <div class="no-games">
-                <div class="no-games-icon">🏓</div>
-                <h3>No Games Yet</h3>
-                <p>Games you create will appear here for easy management.</p>
-                <a href="/" class="create-game-btn">Create Your First Game</a>
-            </div>
-        `;
-        return;
-    }
-    
-    // Sort games by date (newest first)
-    games.sort((a, b) => new Date(b.created) - new Date(a.created));
-    
-    let gamesHTML = '';
-    
-    games.forEach(game => {
-        console.log('Processing game with date:', game.date); // Debug log
-        
-        // TIMEZONE FIX: Use proper date parsing
-        const [year, month, day] = game.date.split('-');
-        const gameDate = new Date(year, month - 1, day); // Local date constructor
-        const now = new Date();
-        
-        let status = 'active';
-        let statusText = 'Active';
-        let statusIcon = '🟢';
-        
-        if (game.cancelled) {
-            status = 'cancelled';
-            statusText = 'Cancelled';
-            statusIcon = '🔴';
-        } else if (gameDate < now) {
-            status = 'completed';
-            statusText = 'Completed';
-            statusIcon = '✅';
+        // TIMEZONE FIX FUNCTION - prevents date shifting
+        function formatDateForDisplay(dateStr) {
+            if (!dateStr) return '';
+            
+            // Parse as local date to avoid timezone shift
+            const [year, month, day] = dateStr.split('-');
+            const date = new Date(year, month - 1, day); // Local date constructor
+            
+            return date.toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric'
+            });
         }
-        
-        // TIMEZONE FIX: Use the fixed date formatting function
-        const formattedDate = formatDateForDisplay(game.date);
-        console.log('Date formatted as:', formattedDate); // Debug log
-        
-        const formattedTime = formatTime(game.time);
-        
-        gamesHTML += `
-            <div class="game-item">
-                <div class="game-header">
-                    <h3 class="game-title">
-                        📍 ${game.location}
-                    </h3>
-                    <span class="game-status status-${status}">
-                        ${statusIcon} ${statusText}
-                    </span>
-                </div>
+
+        function loadMyGames() {
+            // Get games from localStorage
+            const games = JSON.parse(localStorage.getItem('myGames') || '[]');
+            
+            const gamesList = document.getElementById('gamesList');
+            
+            if (games.length === 0) {
+                gamesList.innerHTML = `
+                    <div class="no-games">
+                        <div class="no-games-icon">🏓</div>
+                        <h3>No Games Yet</h3>
+                        <p>Games you create will appear here for easy management.</p>
+                        <a href="/" class="create-game-btn">Create Your First Game</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort games by date (newest first)
+            games.sort((a, b) => new Date(b.created) - new Date(a.created));
+            
+            let gamesHTML = '';
+            
+            games.forEach(game => {
+                console.log('Processing game with date:', game.date); // Debug log
                 
-                <div class="game-details">
-                    <div class="game-detail-row">
-                        <span class="game-detail-label">📅 Date & Time:</span>
-                        <span class="game-detail-value">${formattedDate} at ${formattedTime}</span>
-                    </div>
-                    <div class="game-detail-row">
-                        <span class="game-detail-label">👥 Players:</span>
-                        <span class="game-detail-value">${game.totalPlayers} spots</span>
-                    </div>
-                    <div class="game-detail-row">
-                        <span class="game-detail-label">⏱️ Duration:</span>
-                        <span class="game-detail-value">${game.duration} minutes</span>
-                    </div>
-                    ${game.message ? `
-                        <div class="game-detail-row">
-                            <span class="game-detail-label">💬 Message:</span>
-                            <span class="game-detail-value">${game.message}</span>
+                // TIMEZONE FIX: Use proper date parsing
+                const [year, month, day] = game.date.split('-');
+                const gameDate = new Date(year, month - 1, day); // Local date constructor
+                const now = new Date();
+                
+                let status = 'active';
+                let statusText = 'Active';
+                let statusIcon = '🟢';
+                
+                if (game.cancelled) {
+                    status = 'cancelled';
+                    statusText = 'Cancelled';
+                    statusIcon = '🔴';
+                } else if (gameDate < now) {
+                    status = 'completed';
+                    statusText = 'Completed';
+                    statusIcon = '✅';
+                }
+                
+                // TIMEZONE FIX: Use the fixed date formatting function
+                const formattedDate = formatDateForDisplay(game.date);
+                console.log('Date formatted as:', formattedDate); // Debug log
+                
+                const formattedTime = formatTime(game.time);
+                
+                gamesHTML += `
+                    <div class="game-item">
+                        <div class="game-header">
+                            <h3 class="game-title">
+                                📍 ${game.location}${game.courtNumber ? ` - ${game.courtNumber}` : ''}
+                            </h3>
+                            <span class="game-status status-${status}">
+                                ${statusIcon} ${statusText}
+                            </span>
                         </div>
-                    ` : ''}
-                </div>
-                
-                <div class="game-actions">
-                    <a href="/manage.html?id=${game.id}&token=${game.hostToken}" class="btn-manage">
-                        ⚙️ Manage
-                    </a>
-                    <a href="/game.html?id=${game.id}" class="btn-view">
-                        👀 View
-                    </a>
-                    <button onclick="deleteGame('${game.id}')" class="btn-delete">
-                        🗑️ Delete
-                    </button>
-                </div>
-            </div>
-        `;
-    });
-    
-    gamesList.innerHTML = gamesHTML;
-}
+                        
+                        <div class="game-details">
+                            <div class="game-detail-row">
+                                <span class="game-detail-label">📅 Date & Time:</span>
+                                <span class="game-detail-value">${formattedDate} at ${formattedTime}</span>
+                            </div>
+                            <div class="game-detail-row">
+                                <span class="game-detail-label">👥 Players:</span>
+                                <span class="game-detail-value">${game.totalPlayers} spots</span>
+                            </div>
+                            <div class="game-detail-row">
+                                <span class="game-detail-label">⏱️ Duration:</span>
+                                <span class="game-detail-value">${game.duration} minutes</span>
+                            </div>
+                            ${game.message ? `
+                                <div class="game-detail-row">
+                                    <span class="game-detail-label">💬 Message:</span>
+                                    <span class="game-detail-value">${game.message}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="game-actions">
+                            <a href="/manage.html?id=${game.id}&token=${game.hostToken}" class="btn-manage">
+                                ⚙️ Manage
+                            </a>
+                            <a href="/game.html?id=${game.id}" class="btn-view">
+                                👀 View
+                            </a>
+                            <button onclick="deleteGame('${game.id}')" class="btn-delete">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            gamesList.innerHTML = gamesHTML;
+        }
 
-function formatTime(timeStr) {
-    if (!timeStr) return '';
-    const [hours, minutes] = timeStr.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
-}
+        function formatTime(timeStr) {
+            if (!timeStr) return '';
+            const [hours, minutes] = timeStr.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const hour12 = hour % 12 || 12;
+            return `${hour12}:${minutes} ${ampm}`;
+        }
 
-function deleteGame(gameId) {
-    if (!confirm('Are you sure you want to delete this game? This action cannot be undone.')) {
-        return;
-    }
-    
-    // Remove from localStorage
-    let games = JSON.parse(localStorage.getItem('myGames') || '[]');
-    const gameToDelete = games.find(game => game.id === gameId);
-    games = games.filter(game => game.id !== gameId);
-    localStorage.setItem('myGames', JSON.stringify(games));
-    
-    // Show success message
-    if (gameToDelete) {
-        showStatus(`Game "${gameToDelete.location}" deleted successfully!`, 'success');
-    } else {
-        showStatus('Game deleted successfully!', 'success');
-    }
-    
-    // Reload the games list
-    setTimeout(() => {
-        loadMyGames();
-    }, 1000);
-}
+        function deleteGame(gameId) {
+            if (!confirm('Are you sure you want to delete this game? This action cannot be undone.')) {
+                return;
+            }
+            
+            // Remove from localStorage
+            let games = JSON.parse(localStorage.getItem('myGames') || '[]');
+            const gameToDelete = games.find(game => game.id === gameId);
+            games = games.filter(game => game.id !== gameId);
+            localStorage.setItem('myGames', JSON.stringify(games));
+            
+            // Show success message
+            if (gameToDelete) {
+                showStatus(`Game "${gameToDelete.location}" deleted successfully!`, 'success');
+            } else {
+                showStatus('Game deleted successfully!', 'success');
+            }
+            
+            // Reload the games list
+            setTimeout(() => {
+                loadMyGames();
+            }, 1000);
+        }
 
-function showStatus(message, type) {
-    const statusDiv = document.getElementById('status');
-    statusDiv.textContent = message;
-    statusDiv.className = `status ${type}`;
-    statusDiv.style.display = 'block';
-    
-    if (type === 'success' || type === 'info') {
-        setTimeout(() => {
-            statusDiv.style.display = 'none';
-        }, 3000);
-    }
-}
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
     </script>
     <script src="/js/header.js"></script>
     <script src="/js/footer.js"></script>
