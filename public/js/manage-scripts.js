@@ -457,9 +457,32 @@ function updatePlayerLists() {
     totalPlayers.textContent = gameData.totalPlayers;
     waitlistCount.textContent = gameData.waitlist.length;
 
-    const outCount = document.getElementById('outCount');
+    
+
+// Add this new code for dynamic text:
+const playerCountElement = document.querySelector('.player-section.confirmed .player-count');
+if (playerCountElement) {
+    const count = gameData.players.length;
+    const total = gameData.totalPlayers;
+    const playerText = count === 1 ? 'player' : 'players';
+    playerCountElement.innerHTML = `<span id="playerCount">${count}</span>/<span id="totalPlayers">${total}</span> ${playerText}`;
+}
+
+const waitlistCountElement = document.querySelector('.player-section.waitlist .player-count');
+if (waitlistCountElement) {
+    const count = gameData.waitlist.length;
+    const playerText = count === 1 ? 'player' : 'players';
+    waitlistCountElement.innerHTML = `<span id="waitlistCount">${count}</span> ${playerText} waiting`;
+}
+
+const outCount = document.getElementById('outCount');
 if (outCount) {
-    outCount.textContent = (gameData.outPlayers || []).length;
+    const count = (gameData.outPlayers || []).length;
+    const outCountElement = document.querySelector('.player-section.out-players .player-count');
+    if (outCountElement) {
+        const playerText = count === 1 ? 'player' : 'players';
+        outCountElement.innerHTML = `<span id="outCount">${count}</span> ${playerText} can't make it`;
+    }
 }
     
     // Populate confirmed players
