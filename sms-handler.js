@@ -142,6 +142,62 @@ async function handleNumberResponse(fromNumber, cleanedFromNumber, messageText, 
   }
 }
 
+async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
+  try {
+    const allGames = await getAllGames();
+    const hostGames = await getUserHostGames(cleanedFromNumber, allGames);
+    
+    console.log(`[SMS] User ${cleanedFromNumber} has ${hostGames.length} host games`);
+    console.log(`[SMS DEBUG] Host games found:`, hostGames.map(g => `${g.game.location}`));
+    
+    if (hostGames.length === 0) {
+      await sendSMS(fromNumber, `Sorry, we couldn't find any upcoming games that you're hosting.`);
+    } else if (hostGames.length === 1) {
+      console.log(`[SMS] Sending single management link for: ${hostGames[0].game.location}`);
+      const { id, game, hostInfo } = hostGames[0];
+      const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
+      const managementLink = `${baseUrl}/manage.html?id=${id}&token=${hostInfo.hostToken}`;
+      const gameDate = formatDateForSMS(game.date);
+      const gameTime = formatTimeForSMS(game.time);
+      
+      let locationText = game.location;
+      if (game.courtNumber && game.courtNumber.trim()) {
+        locationText += ` - ${game.courtNumber}`;
+      }
+      
+      await sendSMS(fromNumber, `Here's your management link for ${locationText} on ${gameDate} at ${gameTime}: ${managementLink}`);
+    } else {
+      console.log(`[SMS] User has ${hostGames.length} host games, sending all links`);
+      let responseMessage = `You have ${hostGames.length} upcoming games:\n\n`;
+      
+      hostGames.forEach(({ id, game, hostInfo }, index) => {
+        const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
+        const managementLink = `${baseUrl}/manage.html?id=${id}&token=${hostInfo.hostToken}`;
+        const gameDate = formatDateForSMS(game.date);
+        const gameTime = formatTimeForSMS(game.time);
+        
+        let locationText = game.location;
+        if (game.courtNumber && game.courtNumber.trim()) {
+          locationText += ` - ${game.courtNumber}`;
+        }
+        
+        responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime}\n${managementLink}\n\n`;
+      });
+      
+      // Check message length and truncate if needed
+      if (responseMessage.length > 1500) {
+        console.log(`[SMS DEBUG] Message too long (${responseMessage.length} chars), sending shortened version`);
+        responseMessage = `You have ${hostGames.length} upcoming games. Please visit the website to manage them.`;
+      }
+      
+      await sendSMS(fromNumber, responseMessage);
+    }
+  } catch (error) {
+    console.error('Error in handleManagementLinkRequest:', error);
+    await sendSMS(fromNumber, `Sorry, there was an error retrieving your management links. Please try again.`);
+  }
+}
+
 // Handle game details selection
 async function handleGameDetailsSelection(fromNumber, cleanedFromNumber, selection) {
   try {
@@ -185,58 +241,44 @@ async function handleCancellationSelection(fromNumber, cleanedFromNumber, select
 }
 
 // Handle management link requests (command "1")
-async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
-  try {
-    const allGames = await getAllGames();
-    const hostGames = [];
-    
-    for (const [id, game] of Object.entries(allGames)) {
-      if (isGameUpcoming(game.date)) {
-        const hostInfo = await getGameHostInfo(id);
-        if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-          hostGames.push({ id, game, hostInfo });
-        }
-      }
+async function getUserHostGames(cleanedFromNumber, allGames) {
+  const gameEntries = Object.entries(allGames);
+  console.log(`[SMS DEBUG] Checking ${gameEntries.length} total games for host privileges for user ${cleanedFromNumber}`);
+  
+  // Pre-fetch all host info in parallel for efficiency
+  const hostInfoPromises = gameEntries.map(async ([id, game]) => {
+    try {
+      const hostInfo = await getGameHostInfo(id);
+      return { id, hostInfo };
+    } catch (error) {
+      console.error(`Error getting host info for game ${id}:`, error);
+      return { id, hostInfo: null };
+    }
+  });
+  
+  const allHostInfo = await Promise.all(hostInfoPromises);
+  const hostInfoMap = new Map(allHostInfo.map(({ id, hostInfo }) => [id, hostInfo]));
+  
+  const hostGames = [];
+  
+  for (const [id, game] of gameEntries) {
+    // Only check upcoming games
+    if (!isGameUpcoming(game.date)) {
+      console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
+      continue;
     }
     
-    if (hostGames.length === 0) {
-      await sendSMS(fromNumber, `Sorry, we couldn't find any upcoming games that you're hosting.`);
-    } else if (hostGames.length === 1) {
-      const { id, game, hostInfo } = hostGames[0];
-      const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
-      const managementLink = `${baseUrl}/manage.html?id=${id}&token=${hostInfo.hostToken}`;
-      const gameDate = formatDateForSMS(game.date);
-      const gameTime = formatTimeForSMS(game.time);
-      
-let locationText = game.location;
-if (game.courtNumber && game.courtNumber.trim()) {
-    locationText += ` - ${game.courtNumber}`;
-}
-await sendSMS(fromNumber, `Here's your management link for ${locationText} on ${gameDate} at ${gameTime}: ${managementLink}`);    } else {
-      let responseMessage = `You have ${hostGames.length} upcoming games:\n\n`;
-      
-      hostGames.forEach(({ id, game, hostInfo }, index) => {
-        const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
-        const managementLink = `${baseUrl}/manage.html?id=${id}&token=${hostInfo.hostToken}`;
-        const gameDate = formatDateForSMS(game.date);
-        const gameTime = formatTimeForSMS(game.time);
-        
-let locationText = game.location;
-if (game.courtNumber && game.courtNumber.trim()) {
-    locationText += ` - ${game.courtNumber}`;
-}
-responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime}\n${managementLink}\n\n`;      });
-      
-      if (responseMessage.length > 1500) {
-        responseMessage = `You have ${hostGames.length} upcoming games. Please visit the website to manage them.`;
-      }
-      
-      await sendSMS(fromNumber, responseMessage);
+    const hostInfo = hostInfoMap.get(id);
+    if (hostInfo && hostInfo.phone === cleanedFromNumber) {
+      console.log(`[SMS DEBUG] ✅ User is host of game ${id}: ${game.location}`);
+      hostGames.push({ id, game, hostInfo });
+    } else {
+      console.log(`[SMS DEBUG] ❌ User is NOT host of game ${id}: ${game.location}`);
     }
-  } catch (error) {
-    console.error('Error in handleManagementLinkRequest:', error);
-    await sendSMS(fromNumber, `Sorry, there was an error retrieving your management links. Please try again.`);
   }
+  
+  console.log(`[SMS DEBUG] Final result: ${hostGames.length} host games for user ${cleanedFromNumber}`);
+  return hostGames;
 }
 
 // Handle game details requests (command "2")
