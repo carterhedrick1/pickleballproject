@@ -43,7 +43,8 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
 ⏱️ Duration: ${gameData.duration} minutes
 👥 ${spotsText}: ${totalPlayers} ${spotsWord}${gameData.message ? '\n💬 ' + gameData.message : ''}
 
-🎯 Let us know if you're **IN or OUT** by clicking the link below:  
+🎯 Let us know if you're IN or OUT by clicking the link below:  
+
 ${gameLink}
 
 Even if you can't make it, your response helps us plan and find additional players if needed.
