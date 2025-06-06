@@ -43,10 +43,10 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
 ⏱️ Duration: ${gameData.duration} minutes
 👥 ${spotsText}: ${totalPlayers} ${spotsWord}${gameData.message ? '\n💬 ' + gameData.message : ''}
 
-🎯 PLEASE CLICK THE LINK to let us know if you're IN or OUT:
+🎯 Let us know if you're **IN or OUT** by clicking the link below:  
 ${gameLink}
 
-👆 Everyone please - even if you can't make it! This helps us plan and find substitutes if needed.
+Even if you can't make it, your response helps us plan and find additional players if needed.
 
 You'll get text confirmations and can easily cancel by replying "9" to any message. See you on the court! 🏓`;
 
