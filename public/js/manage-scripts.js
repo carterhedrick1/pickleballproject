@@ -610,7 +610,7 @@ async function updateGameDetails() {
         // Force refresh game data to verify the save
         await fetchGameData();
         
-        showStatus('Game details updated successfully!', 'success');
+        showStatus(responseData.message || 'Game details updated successfully!', 'success');
         
     } catch (error) {
         console.error('[CLIENT] Error updating game:', error);
