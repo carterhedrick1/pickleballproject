@@ -487,16 +487,19 @@ app.post('/api/games/:id/players', async (req, res) => {
 
     // Send organizer notifications (if preferences are set)
     if (result.status === 'confirmed') {
+      // Always send player joined notification first
+      await sendOrganizerNotification(gameId, game, 'playerJoins', playerData.name);
+      
       // Check if game is now full
       if (game.players.length === parseInt(game.totalPlayers)) {
         await sendOrganizerNotification(gameId, game, 'gameFull');
       }
-      // Check if only one spot left
+      // Only send "one spot left" if they DON'T have "player joins" enabled
       else if (game.players.length === parseInt(game.totalPlayers) - 1) {
-        await sendOrganizerNotification(gameId, game, 'oneSpotLeft');
+        if (!game.notificationPreferences?.playerJoins) {
+          await sendOrganizerNotification(gameId, game, 'oneSpotLeft');
+        }
       }
-      // Player joined notification
-      await sendOrganizerNotification(gameId, game, 'playerJoins', playerData.name);
     } else if (result.status === 'waitlist') {
       // Check if this is the first person on waitlist
       if ((game.waitlist || []).length === 1) {
