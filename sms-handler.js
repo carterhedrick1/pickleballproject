@@ -246,10 +246,13 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
     const userGames = await getUserGames(cleanedFromNumber, allGames);
     
     console.log(`[SMS] User ${cleanedFromNumber} has ${userGames.length} upcoming games`);
+    console.log(`[SMS DEBUG] Games found:`, userGames.map(g => `${g.game.location} (${g.role})`));
     
     if (userGames.length === 0) {
       await sendSMS(fromNumber, `You don't have any upcoming games registered to this phone number.`);
     } else if (userGames.length === 1) {
+      // FIXED: Only show single game details if truly one game
+      console.log(`[SMS] Showing details for single game: ${userGames[0].game.location}`);
       const { game, role } = userGames[0];
       
       // Check if this is a waitlist mode game and user is not host
@@ -260,6 +263,8 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
         await sendSMS(fromNumber, responseMessage);
       }
     } else {
+      // FIXED: Always show list first for multiple games - this should be the behavior you want
+      console.log(`[SMS] User has ${userGames.length} games, showing selection list`);
       await saveLastCommand(cleanedFromNumber, 'details_selection');
       const responseMessage = await buildGameListMessage(userGames);
       await sendSMS(fromNumber, responseMessage);
@@ -269,6 +274,7 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
     await sendSMS(fromNumber, `Sorry, there was an error retrieving your game details. Please try again.`);
   }
 }
+
 
 // Handle cancellation requests (command "9")
 async function handleCancellationRequest(fromNumber, cleanedFromNumber) {
@@ -295,6 +301,7 @@ async function handleCancellationRequest(fromNumber, cleanedFromNumber) {
 // Helper function to get user's games - OPTIMIZED VERSION
 async function getUserGames(cleanedFromNumber, allGames) {
   const gameEntries = Object.entries(allGames);
+  console.log(`[SMS DEBUG] Checking ${gameEntries.length} total games for user ${cleanedFromNumber}`);
   
   // Pre-fetch all host info in parallel for efficiency
   const hostInfoPromises = gameEntries.map(async ([id, game]) => {
@@ -315,6 +322,7 @@ async function getUserGames(cleanedFromNumber, allGames) {
   for (const [id, game] of gameEntries) {
     // Only check upcoming games
     if (!isGameUpcoming(game.date)) {
+      console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
       continue;
     }
     
@@ -324,6 +332,7 @@ async function getUserGames(cleanedFromNumber, allGames) {
     const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber);
     if (playerInConfirmed) {
       userRole = playerInConfirmed.isOrganizer ? 'host' : 'confirmed';
+      console.log(`[SMS DEBUG] Found user in confirmed players: ${game.location} (${userRole})`);
     }
     
     // Check waitlist
@@ -331,6 +340,7 @@ async function getUserGames(cleanedFromNumber, allGames) {
       const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
       if (playerInWaitlist) {
         userRole = 'waitlist';
+        console.log(`[SMS DEBUG] Found user in waitlist: ${game.location} (${userRole})`);
       }
     }
     
@@ -339,14 +349,18 @@ async function getUserGames(cleanedFromNumber, allGames) {
       const hostInfo = hostInfoMap.get(id);
       if (hostInfo && hostInfo.phone === cleanedFromNumber) {
         userRole = 'host';
+        console.log(`[SMS DEBUG] Found user as host: ${game.location} (${userRole})`);
       }
     }
     
     if (userRole) {
       userGames.push({ id, game, role: userRole });
+    } else {
+      console.log(`[SMS DEBUG] User not found in game: ${game.location}`);
     }
   }
   
+  console.log(`[SMS DEBUG] Final result: ${userGames.length} games for user ${cleanedFromNumber}`);
   return userGames;
 }
 
