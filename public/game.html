@@ -365,6 +365,50 @@
             box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
         }
 
+        /* Button group styling - FIXED FOR ALL DEVICES */
+        .button-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .button-group button {
+            flex: 1;
+            margin-top: 0;
+        }
+
+        /* "I'm Out" button styling */
+        .btn-out {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3) !important;
+        }
+
+        .btn-out:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4) !important;
+        }
+
+        .btn-out::before {
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent) !important;
+        }
+
+        /* "Out" confirmation styling */
+        .confirmation-section.out {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        }
+
+        .confirmation-section.out h2 {
+            color: #991b1b;
+        }
+
+        .confirmation-section.out .confirmation-message {
+            color: #991b1b;
+        }
+
+        .confirmation-section.out .confirmation-details {
+            border: 2px solid #ef4444;
+        }
+
         /* Status messages */
         .error {
             background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
@@ -629,7 +673,16 @@
                 padding: 12px 14px;
             }
 
-            button {
+            /* Button styling for mobile - keeps side by side layout */
+            .button-group {
+                display: flex;
+                gap: 15px;
+                margin-top: 20px;
+            }
+
+            .button-group button {
+                flex: 1;
+                margin-top: 0;
                 font-size: 14px;
             }
         }
@@ -648,7 +701,14 @@
             .section-header {
                 border-radius: 0;
             }
+
+            /* Keep buttons side by side even on very small screens */
+            .button-group {
+                gap: 12px;
+            }
         }
+
+        
     </style>
     <link rel="stylesheet" href="/css/header.css">
     <link rel="stylesheet" href="/css/footer.css">
@@ -740,7 +800,10 @@
                     <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="(555) 123-4567" required>
                 </div>
                 
-                <button type="submit" id="joinButton">COUNT ME IN!</button>
+                <div class="button-group">
+    <button type="submit" id="joinButton" data-action="join">COUNT ME IN!</button>
+    <button type="submit" id="outButton" data-action="out" class="btn-out">I'M OUT</button>
+</div>
             </form>
             
             <div class="form-help-text">
@@ -771,15 +834,16 @@
                 </div>
             </div>
 
-            <div class="next-steps">
-                <h4>What's Next?</h4>
-                <ul>
-                    <li>📲 You'll receive a confirmation text message shortly</li>
-                    <li>👥 Want to see whose playing? Just reply "2" to any text message before the game</li>
-                    <li>❌ Need to cancel? Just reply "9" to any text message</li>
-                    <li>📧 Game updates will be sent via text</li>
-                </ul>
-            </div>
+<!-- Only show "What's Next?" if not marked as "out" -->
+<div class="next-steps" id="nextStepsSection">
+    <h4>What's Next?</h4>
+    <ul>
+        <li>📲 You'll receive a confirmation text message shortly</li>
+        <li>👥 Want to see whose playing? Just reply "2" to any text message before the game</li>
+        <li>❌ Need to cancel? Just reply "9" to any text message</li>
+        <li>📧 Game updates will be sent via text</li>
+    </ul>
+</div>
 
             <button class="back-to-game-btn" onclick="showGameDetails()">
                 ← Back to Game Details
@@ -1091,57 +1155,73 @@
             // Update showConfirmation function in public/game.html
             // FIXED showConfirmation function for public/game.html
             function showConfirmation(data) {
-                // Hide other sections
-                document.getElementById('gameDetails').style.display = 'none';
-                document.getElementById('playerList').style.display = 'none';
-                document.getElementById('signupForm').style.display = 'none';
-                document.querySelector('.section-header').style.display = 'none';
-                
-                // Show confirmation section
-                const confirmationSection = document.getElementById('confirmationSection');
-                confirmationSection.style.display = 'block';
-                
-                const confirmTitle = document.getElementById('confirmationTitle');
-                const confirmMessage = document.getElementById('confirmationMessage');
-                const confirmStatus = document.getElementById('confirmStatus');
-                const confirmLocation = document.getElementById('confirmLocation');
-                const confirmDateTime = document.getElementById('confirmDateTime');
-                
-                if (data.status === 'confirmed') {
-                    // Regular confirmed player
-                    confirmationSection.classList.remove('waitlist');
-                    confirmTitle.textContent = "You're In!";
-                    confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
-                    confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
-                } else if (data.status === 'waitlist') {
-                    // Waitlisted player
-                    confirmationSection.classList.add('waitlist');
-                    
-                    if (data.hidePosition || gameData.registrationMode === 'waitlist') {
-                        // Waitlist mode - hide position, show application status
-                        confirmTitle.textContent = "⏳ Application Submitted!";
-                        confirmMessage.textContent = `Thanks for signing up! The organizer will review all applications and select players. You'll be notified if you're selected.`;
-                        confirmStatus.textContent = `Application Under Review`;
-                    } else {
-                        // Regular waitlist - show position
-                        confirmTitle.textContent = "⏳ You're on the Waitlist!";
-                        confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
-                        confirmStatus.textContent = `Waitlist Position #${data.position}`;
-                    }
-                }
-                
-                // Include court number in confirmation location
-                let locationText = gameData.location;
-                if (gameData.courtNumber && gameData.courtNumber.trim()) {
-                    locationText += ` - ${gameData.courtNumber}`;
-                }
-                
-                confirmLocation.textContent = locationText;
-                confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
-                
-                // Scroll to top to show confirmation
-                window.scrollTo(0, 0);
-            }
+    // Hide other sections
+    document.getElementById('gameDetails').style.display = 'none';
+    document.getElementById('playerList').style.display = 'none';
+    document.getElementById('signupForm').style.display = 'none';
+    document.querySelector('.section-header').style.display = 'none';
+    
+    // Show confirmation section
+    const confirmationSection = document.getElementById('confirmationSection');
+    confirmationSection.style.display = 'block';
+    
+    const confirmTitle = document.getElementById('confirmationTitle');
+    const confirmMessage = document.getElementById('confirmationMessage');
+    const confirmStatus = document.getElementById('confirmStatus');
+    const confirmLocation = document.getElementById('confirmLocation');
+    const confirmDateTime = document.getElementById('confirmDateTime');
+    
+    if (data.action === 'out') {
+        // "I'm Out" response
+        confirmationSection.classList.remove('waitlist');
+        confirmationSection.classList.add('out');
+        confirmTitle.textContent = "Thanks for Letting Us Know!";
+        confirmMessage.textContent = `We've recorded that you can't make this game. Thanks for being courteous to other players!`;
+        confirmStatus.textContent = `Marked as "Out"`;
+    } else if (data.status === 'confirmed') {
+        // Regular confirmed player
+        confirmationSection.classList.remove('waitlist', 'out');
+        confirmTitle.textContent = "You're In!";
+        confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
+        confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
+    } else if (data.status === 'waitlist') {
+        // Waitlisted player
+        confirmationSection.classList.add('waitlist');
+        confirmationSection.classList.remove('out');
+        
+        if (data.hidePosition || gameData.registrationMode === 'waitlist') {
+            confirmTitle.textContent = "⏳ Application Submitted!";
+            confirmMessage.textContent = `Thanks for signing up! The organizer will review all applications and select players. You'll be notified if you're selected.`;
+            confirmStatus.textContent = `Application Under Review`;
+        } else {
+            confirmTitle.textContent = "⏳ You're on the Waitlist!";
+            confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
+            confirmStatus.textContent = `Waitlist Position #${data.position}`;
+        }
+    }
+    
+    // Include court number in confirmation location
+    let locationText = gameData.location;
+    if (gameData.courtNumber && gameData.courtNumber.trim()) {
+        locationText += ` - ${gameData.courtNumber}`;
+    }
+    
+    confirmLocation.textContent = locationText;
+    confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
+    
+    // Handle "What's Next?" section visibility
+    const nextStepsSection = document.getElementById('nextStepsSection');
+    if (nextStepsSection) {
+        if (data.action === 'out') {
+            nextStepsSection.style.display = 'none';
+        } else {
+            nextStepsSection.style.display = 'block';
+        }
+    }
+    
+    // Scroll to top to show confirmation
+    window.scrollTo(0, 0);
+}
 
             window.showGameDetails = function() {
                 // Show game sections again AND the header
@@ -1183,7 +1263,8 @@
                         },
                         body: JSON.stringify({
                             name: playerName,
-                            phone: phoneNumber
+                            phone: phoneNumber,
+                            action: event.submitter.dataset.action || 'join'
                         })
                     })
                     .then(async response => {

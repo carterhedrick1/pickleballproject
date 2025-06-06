@@ -226,6 +226,8 @@ function createGameData(formData) {
     ];
   } else {
     gameData.players = [];
+    gameData.outPlayers = [];
+
   }
 
   return gameData;

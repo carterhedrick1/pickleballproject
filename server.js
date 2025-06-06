@@ -402,7 +402,47 @@ app.post('/api/games/:id/players', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    const { name, phone } = req.body;
+    const { name, phone, action } = req.body;
+    
+    // Handle "I'm Out" responses
+    if (action === 'out') {
+      const playerData = validatePlayerData(name, phone);
+      
+      // Add to "out" list
+      if (!game.outPlayers) {
+        game.outPlayers = [];
+      }
+      
+      const outPlayer = {
+        id: Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+        ...playerData,
+        joinedAt: new Date().toISOString()
+      };
+      
+      game.outPlayers.push(outPlayer);
+      await saveGame(gameId, game, game.hostToken, game.hostPhone);
+      
+      // Send SMS confirmation if phone provided
+      let smsResult = null;
+      if (playerData.phone) {
+        const gameDate = formatDateForSMS(game.date);
+        const gameTime = formatTimeForSMS(game.time);
+        
+        let locationText = game.location;
+        if (game.courtNumber && game.courtNumber.trim()) {
+          locationText += ` - ${game.courtNumber}`;
+        }
+        
+        const message = `Thanks for letting us know you can't make the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. We appreciate the heads up!`;
+        smsResult = await sendSMS(playerData.phone, message, gameId);
+      }
+      
+      return res.status(201).json({ 
+        action: 'out',
+        playerId: outPlayer.id,
+        sms: smsResult
+      });
+    }
     
     // Validate player data
     const playerData = validatePlayerData(name, phone);
@@ -852,6 +892,45 @@ app.post('/api/games/:id/announcement-individual', async (req, res) => {
   } catch (error) {
     console.error('Error sending individual announcement:', error);
     res.status(500).json({ error: 'Failed to send announcement' });
+  }
+});
+
+// Remove "out" player
+app.delete('/api/games/:id/out-players/:playerId', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const playerId = req.params.playerId;
+    const token = req.query.token;
+    
+    const game = await getGame(gameId);
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    if (game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    // Find and remove the out player
+    if (!game.outPlayers) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+    
+    const playerIndex = game.outPlayers.findIndex(p => p.id === playerId);
+    if (playerIndex === -1) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+    
+    const removedPlayer = game.outPlayers.splice(playerIndex, 1)[0];
+    await saveGame(gameId, game, game.hostToken, game.hostPhone);
+    
+    res.json({ 
+      success: true,
+      message: `${removedPlayer.name} removed from "out" list`
+    });
+  } catch (error) {
+    console.error('Error removing out player:', error);
+    res.status(500).json({ error: 'Failed to remove player' });
   }
 });
 

@@ -406,6 +406,17 @@ button:active {
     color: #991b1b;
 }
 
+/* Out players section styling */
+.player-section.out-players {
+    border-color: #ef4444;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+.out-count {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
 .info {
     background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
     border: 1px solid #3b82f6;

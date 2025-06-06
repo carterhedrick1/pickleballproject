@@ -456,6 +456,11 @@ function updatePlayerLists() {
     playerCount.textContent = gameData.players.length;
     totalPlayers.textContent = gameData.totalPlayers;
     waitlistCount.textContent = gameData.waitlist.length;
+
+    const outCount = document.getElementById('outCount');
+if (outCount) {
+    outCount.textContent = (gameData.outPlayers || []).length;
+}
     
     // Populate confirmed players
     if (gameData.players.length === 0) {
@@ -510,6 +515,31 @@ function updatePlayerLists() {
             waitlistPlayers.appendChild(playerItem);
         });
     }
+
+    // Populate out players
+const outPlayersContainer = document.getElementById('outPlayers');
+if (outPlayersContainer) {
+    if (!gameData.outPlayers || gameData.outPlayers.length === 0) {
+        outPlayersContainer.innerHTML = '<p style="text-align: center; color: #6c757d; font-style: italic;">No one marked as out</p>';
+    } else {
+        gameData.outPlayers.forEach((player) => {
+            const playerItem = document.createElement('div');
+            playerItem.className = 'player-item';
+            
+            playerItem.innerHTML = `
+                <div class="player-info">
+                    <div class="player-name">${player.name}</div>
+                    ${player.phone ? '<div class="player-phone">📱 ' + player.phone + '</div>' : ''}
+                </div>
+                <div class="player-actions">
+                    <button class="btn-danger" onclick="removeOutPlayer('${player.id}')">❌ Remove</button>
+                </div>
+            `;
+            
+            outPlayersContainer.appendChild(playerItem);
+        });
+    }
+}
     
     // Update player checkboxes for messaging
     updatePlayerCheckboxes();
@@ -1593,6 +1623,41 @@ function updatePlayerCheckboxes() {
     }
 }
 
+async function removeOutPlayer(playerId) {
+  try {
+    showConfirmModal(
+      'Remove Player', 
+      'Are you sure you want to remove this player from the "out" list?', 
+      async () => {
+        try {
+          showStatus('Removing player...', 'info');
+          
+          const response = await fetch(`/api/games/${gameId}/out-players/${playerId}?token=${hostToken}`, {
+            method: 'DELETE'
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to remove player');
+          }
+          
+          // Refresh game data
+          await fetchGameData();
+          
+          showStatus('Player removed from "out" list', 'success');
+          
+        } catch (error) {
+          console.error('Error removing out player:', error);
+          showStatus('Error removing player: ' + error.message, 'error');
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error removing out player:', error);
+    showStatus('Error removing player: ' + error.message, 'error');
+  }
+}
+
 // Also call the styling function when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     // ... existing DOMContentLoaded code ...
@@ -1602,3 +1667,4 @@ document.addEventListener('DOMContentLoaded', () => {
         updateGroupCheckboxStyling();
     }, 200);
 });
+
