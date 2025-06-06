@@ -231,6 +231,34 @@
             border: 2px solid #64748b;
         }
 
+        /* Completed games - greyed out styling */
+.game-item.completed {
+    opacity: 0.6;
+    background: #f8f9fa !important;
+    border-color: #d1d5db !important;
+    filter: grayscale(30%);
+}
+
+.game-item.completed .game-title {
+    color: #6b7280 !important;
+}
+
+.game-item.completed .game-detail-label,
+.game-item.completed .game-detail-value {
+    color: #9ca3af !important;
+}
+
+.game-item.completed:hover {
+    transform: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    border-color: #d1d5db !important;
+}
+
+.game-item.completed .game-actions a,
+.game-item.completed .game-actions button {
+    opacity: 0.8;
+}
+
         .game-details {
             background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
             padding: 20px;
@@ -642,7 +670,7 @@
                 const formattedTime = formatTime(game.time);
                 
                 gamesHTML += `
-                    <div class="game-item">
+    <div class="game-item${status === 'completed' ? ' completed' : ''}">
                         <div class="game-header">
                             <h3 class="game-title">
                                 📍 ${game.location}${game.courtNumber ? ` - ${game.courtNumber}` : ''}

@@ -284,53 +284,55 @@
 
         /* SMS info styling */
         .sms-info {
-            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-            border: 1px solid #429046;
-            padding: 14px;
-            border-radius: 10px;
-            margin-top: 10px;
-            font-size: 13px;
-            color: #166534;
-            line-height: 1.4;
-        }
+    background: linear-gradient(135deg, #fed7aa 0%, #eeb77c 100%);
+    border: 1px solid #ea580c;
+    padding: 14px;
+    border-radius: 10px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: #9a3412;
+    line-height: 1.4;
+}
 
         /* Checkbox styling */
         .checkbox-inline {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 16px;
-            background: #f8fafc;
-            border-radius: 12px;
-            border: 1px solid #e5e7eb;
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
 
-        .checkbox-inline:hover {
-            border-color: #429046;
-            background: #f0fdf4;
-        }
+.checkbox-inline:hover {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
 
-        .checkbox-inline input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            margin: 0;
-            padding: 0;
-            flex-shrink: 0;
-            cursor: pointer;
-            accent-color: #429046;
-        }
+.checkbox-inline input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
 
-        .checkbox-inline label {
-            margin: 0;
-            font-weight: 400;
-            cursor: pointer;
-            flex: 1;
-            font-size: 14px;
-            color: #4b5563;
-            line-height: 1.4;
-        }
+.checkbox-inline label {
+    margin: 0;
+    font-weight: 400;
+    cursor: pointer;
+    flex: 1;
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 1.4;
+}
 
         /* Status messages */
         #status {
@@ -880,69 +882,69 @@
                 <!-- REPLACE your organizer notifications section with this: -->
                 <!-- REPLACE your notifications section HTML with this: -->
                 <div class="form-group notifications-section">
-                    <label for="notifications">📱 Organizer Notifications:</label>
-                    <small>Get SMS alerts when these events happen (optional)</small>
-                    
-                    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyGameFull')">
-                        <div class="notification-content">
-                            <div class="notification-icon">🎯</div>
-                            <div class="notification-text">
-                                <div class="notification-title">Game becomes full</div>
-                                <div class="notification-description">Get notified when all spots are taken</div>
-                            </div>
-                        </div>
-                        <div class="toggle-switch"></div>
-                        <input type="checkbox" id="notifyGameFull" name="notifyGameFull" checked>
-                    </div>
-                    
-                    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyPlayerJoins')">
-                        <div class="notification-content">
-                            <div class="notification-icon">👋</div>
-                            <div class="notification-text">
-                                <div class="notification-title">Someone joins the game</div>
-                                <div class="notification-description">Get notified each time a player signs up</div>
-                            </div>
-                        </div>
-                        <div class="toggle-switch"></div>
-                        <input type="checkbox" id="notifyPlayerJoins" name="notifyPlayerJoins" checked>
-                    </div>
-                    
-                    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyPlayerCancels')">
-                        <div class="notification-content">
-                            <div class="notification-icon">❌</div>
-                            <div class="notification-text">
-                                <div class="notification-title">Someone cancels their spot</div>
-                                <div class="notification-description">Get notified when players cancel</div>
-                            </div>
-                        </div>
-                        <div class="toggle-switch"></div>
-                        <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels" checked>
-                    </div>
-                    
-                    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyOneSpotLeft')">
-                        <div class="notification-content">
-                            <div class="notification-icon">⚠️</div>
-                            <div class="notification-text">
-                                <div class="notification-title">Only one spot remaining</div>
-                                <div class="notification-description">Get notified when almost full</div>
-                            </div>
-                        </div>
-                        <div class="toggle-switch"></div>
-                        <input type="checkbox" id="notifyOneSpotLeft" name="notifyOneSpotLeft" checked>
-                    </div>
-                    
-                    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyWaitlistStarts')">
-                        <div class="notification-content">
-                            <div class="notification-icon">⏳</div>
-                            <div class="notification-text">
-                                <div class="notification-title">Waitlist starts</div>
-                                <div class="notification-description">Get notified when first person is waitlisted</div>
-                            </div>
-                        </div>
-                        <div class="toggle-switch"></div>
-                        <input type="checkbox" id="notifyWaitlistStarts" name="notifyWaitlistStarts" checked>
-                    </div>
-                </div>
+    <label for="notifications">📱 Organizer Notifications:</label>
+    <small>Get SMS alerts when these events happen (optional)</small>
+    
+    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyGameFull')">
+        <div class="notification-content">
+            <div class="notification-icon">🎯</div>
+            <div class="notification-text">
+                <div class="notification-title">Game becomes full</div>
+                <div class="notification-description">Get notified when all spots are taken</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyGameFull" name="notifyGameFull" checked>
+    </div>
+    
+    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyPlayerCancels')">
+        <div class="notification-content">
+            <div class="notification-icon">❌</div>
+            <div class="notification-text">
+                <div class="notification-title">Someone cancels their spot</div>
+                <div class="notification-description">Get notified when players cancel</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels" checked>
+    </div>
+    
+    <div class="notification-option" onclick="toggleNotification(this, 'notifyPlayerJoins')">
+        <div class="notification-content">
+            <div class="notification-icon">👋</div>
+            <div class="notification-text">
+                <div class="notification-title">Someone joins the game</div>
+                <div class="notification-description">Get notified each time a player signs up</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyPlayerJoins" name="notifyPlayerJoins">
+    </div>
+    
+    <div class="notification-option" onclick="toggleNotification(this, 'notifyOneSpotLeft')">
+        <div class="notification-content">
+            <div class="notification-icon">⚠️</div>
+            <div class="notification-text">
+                <div class="notification-title">Only one spot remaining</div>
+                <div class="notification-description">Get notified when almost full</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyOneSpotLeft" name="notifyOneSpotLeft">
+    </div>
+    
+    <div class="notification-option" onclick="toggleNotification(this, 'notifyWaitlistStarts')">
+        <div class="notification-content">
+            <div class="notification-icon">⏳</div>
+            <div class="notification-text">
+                <div class="notification-title">Waitlist starts</div>
+                <div class="notification-description">Get notified when first person is waitlisted</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyWaitlistStarts" name="notifyWaitlistStarts">
+    </div>
+</div>
 
                 <button type="submit">Create Game</button>
             </form>
