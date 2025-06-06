@@ -517,6 +517,7 @@ if (outCount) {
     }
 
     // Populate out players
+// Populate out players
 const outPlayersContainer = document.getElementById('outPlayers');
 if (outPlayersContainer) {
     if (!gameData.outPlayers || gameData.outPlayers.length === 0) {
@@ -530,9 +531,6 @@ if (outPlayersContainer) {
                 <div class="player-info">
                     <div class="player-name">${player.name}</div>
                     ${player.phone ? '<div class="player-phone">📱 ' + player.phone + '</div>' : ''}
-                </div>
-                <div class="player-actions">
-                    <button class="btn-danger" onclick="removeOutPlayer('${player.id}')">❌ Remove</button>
                 </div>
             `;
             

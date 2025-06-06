@@ -412,9 +412,9 @@ button:active {
     background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
 }
 
-.out-count {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
+.player-section.out-players .player-count.out-count {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    color: white !important;
 }
 
 .info {
