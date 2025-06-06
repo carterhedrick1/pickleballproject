@@ -1205,60 +1205,16 @@
         }
 
         function copyToClipboard() {
-            // Build the game link using the stored game ID
-            const baseUrl = window.location.origin;
-            const gameLink = `${baseUrl}/game.html?id=${window.currentGameId}`;
-            
-            // Get the current game data from the form or stored data
-            const currentGameData = getCurrentGameData();
-            
-            let locationText = currentGameData.location;
-            if (currentGameData.courtNumber && currentGameData.courtNumber.trim()) {
-                locationText += ` - ${currentGameData.courtNumber}`;
-            }
-            
-            // FIXED: Handle singular/plural spots
-            const totalPlayers = parseInt(currentGameData.totalPlayers);
-            const spotsText = totalPlayers === 1 ? 'Spot' : 'Spots';
-            const spotsWord = totalPlayers === 1 ? 'spot' : 'spots';
-            
-            // Create a complete message with the link and instructions
-            const message = `🏓 Join our pickleball game!
-
-📍 Location: ${locationText}
-📅 Date: ${currentGameData.formattedDate}
-⏰ Time: ${currentGameData.formattedTime}
-⏱️ Duration: ${currentGameData.duration} minutes
-👥 ${spotsText}: ${totalPlayers} ${spotsWord}${currentGameData.message ? '\n💬 ' + currentGameData.message : ''}
-
-Click this link to sign up:
-${gameLink}
-
-You'll get text confirmations and can easily cancel by replying "9" to any message. See you on the court! 🏓`;
-            
-            try {
-                // Copy the complete message to clipboard
-                navigator.clipboard.writeText(message).then(() => {
-                    // Show feedback
-                    const button = document.getElementById('copyLink');
-                    const originalText = button.textContent;
-                    button.textContent = '✅ Message Copied!';
-                    button.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
-                    
-                    setTimeout(() => {
-                        button.textContent = originalText;
-                        button.style.background = '';
-                    }, 3000);
-                }).catch(() => {
-                    // Fallback for older browsers
-                    fallbackCopy(message);
-                });
-                
-            } catch (err) {
-                // Fallback for older browsers
-                fallbackCopy(message);
-            }
-        }
+    // Get the current game data
+    const currentGameData = InvitationGenerator.getCurrentGameDataFromStorage();
+    
+    // Use the shared invitation generator
+    InvitationGenerator.copyInvitationToClipboard(
+        currentGameData,
+        window.currentGameId,
+        'copyLink'
+    );
+}
 
         function fallbackCopy(text) {
             // Create a temporary textarea for older browsers
@@ -1343,6 +1299,7 @@ You'll get text confirmations and can easily cancel by replying "9" to any messa
             }
         }
     </script>
+    <script src="/js/invitation-generator.js"></script>
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>
 </body>

@@ -1042,55 +1042,12 @@ function populateShareLinks() {
 }
 
 function copyPlayerInvitation() {
-    const gameLink = `${window.location.origin}/game.html?id=${gameId}`;    
-    // TIMEZONE FIX: Use proper date formatting for invitation
-    const formattedDate = formatDateForDisplay(gameData.date);
-    const formattedTime = formatTime(gameData.time);
-
-    let locationText = gameData.location;
-    if (gameData.courtNumber && gameData.courtNumber.trim()) {
-        locationText += ` - ${gameData.courtNumber}`;
-    }
-    
-    // FIXED: Handle singular/plural spots
-    const totalPlayers = parseInt(gameData.totalPlayers);
-    const spotsText = totalPlayers === 1 ? 'Spot' : 'Spots';
-    const spotsWord = totalPlayers === 1 ? 'spot' : 'spots';
-    
-    // Create a complete message with the link and instructions
-    const message = `🏓 Join our pickleball game!
-
-📍 Location: ${locationText}
-📅 Date: ${formattedDate}
-⏰ Time: ${formattedTime}
-⏱️ Duration: ${gameData.duration} minutes
-👥 ${spotsText}: ${totalPlayers} ${spotsWord}${gameData.message ? '\n💬 ' + gameData.message : ''}
-
-Click this link to sign up:
-${gameLink}
-
-You'll get text confirmations and can easily cancel by replying "9" to any message. See you on the court! 🏓`;
-    
-    try {
-        // Copy the complete message to clipboard
-        navigator.clipboard.writeText(message).then(() => {
-            // Show feedback
-            const button = document.getElementById('copyPlayerLink');
-            const originalText = button.textContent;
-            button.textContent = '✅ Copied!';
-            
-            setTimeout(() => {
-                button.textContent = originalText;
-            }, 2000);
-        }).catch(() => {
-            // Fallback for older browsers
-            fallbackCopyMessage(message);
-        });
-        
-    } catch (err) {
-        // Fallback for older browsers
-        fallbackCopyMessage(message);
-    }
+    // Use the shared invitation generator with current game data
+    InvitationGenerator.copyInvitationToClipboard(
+        gameData, // This is the global gameData variable in manage-scripts.js
+        gameId,   // This is the global gameId variable in manage-scripts.js
+        'copyPlayerLink'
+    );
 }
 
 function fallbackCopyMessage(text) {
