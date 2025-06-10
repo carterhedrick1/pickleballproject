@@ -1112,6 +1112,8 @@ async function createGame(e) {
         const data = await response.json();
         console.log('[CLIENT] Game created successfully:', data);
         
+        // REPLACE the localStorage save section in your createGame function in public/index.html:
+
         // Save game to localStorage for My Games page - NOW INCLUDING REGISTRATION MODE
         let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
         myGames.push({
@@ -1123,12 +1125,15 @@ async function createGame(e) {
             time: gameData.time,
             duration: gameData.duration,
             totalPlayers: gameData.totalPlayers,
+            organizerPlaying: gameData.organizerPlaying, // ✅ ADD THIS LINE
+            registrationMode: gameData.registrationMode, // ✅ KEEP THIS LINE
             message: gameData.message,
-            registrationMode: gameData.registrationMode, // ✅ ADD THIS LINE
             created: new Date().toISOString(),
             cancelled: false
         });
         localStorage.setItem('myGames', JSON.stringify(myGames));
+
+        console.log('[CREATE] Saved to localStorage with registration mode:', gameData.registrationMode);
 
         
         // Show game links
@@ -1210,17 +1215,28 @@ async function createGame(e) {
             document.getElementById('shareLink').scrollIntoView({ behavior: 'smooth' });
         }
 
+        // REPLACE your copyToClipboard function in public/index.html with this:
+
         function copyToClipboard() {
-    // Get the current game data
-    const currentGameData = InvitationGenerator.getCurrentGameDataFromStorage();
-    
-    // Use the shared invitation generator
-    InvitationGenerator.copyInvitationToClipboard(
-        currentGameData,
-        window.currentGameId,
-        'copyLink'
-    );
-}
+            // Get the current game data
+            const currentGameData = InvitationGenerator.getCurrentGameDataFromStorage();
+            
+            console.log('[CREATE COPY] Game data from storage:', currentGameData);
+            console.log('[CREATE COPY] Registration mode:', currentGameData.registrationMode);
+            
+            // Ensure registrationMode is set correctly
+            if (!currentGameData.registrationMode) {
+                currentGameData.registrationMode = 'fcfs'; // Default fallback
+                console.log('[CREATE COPY] No registration mode found, defaulting to fcfs');
+            }
+            
+            // Use the shared invitation generator
+            InvitationGenerator.copyInvitationToClipboard(
+                currentGameData,
+                window.currentGameId,
+                'copyLink'
+            );
+        }
 
         function fallbackCopy(text) {
             // Create a temporary textarea for older browsers

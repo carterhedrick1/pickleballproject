@@ -1,4 +1,4 @@
-// public/js/invitation-generator.js - Shared invitation message generator
+// public/js/invitation-generator.js - Fixed registration mode handling
 
 /**
  * Generates a complete invitation message for a pickleball game
@@ -10,7 +10,7 @@
  * @param {number} gameData.duration - Game duration in minutes
  * @param {number} gameData.totalPlayers - Total number of players
  * @param {boolean} gameData.organizerPlaying - Whether organizer is playing
- * @param {string} gameData.gameMode - Game mode ('first-come' or 'waiting-list')
+ * @param {string} gameData.registrationMode - Registration mode ('fcfs' or 'waitlist')
  * @param {string} gameData.message - Optional message (optional)
  * @param {string} gameId - Game ID for generating the link
  * @param {string} baseUrl - Base URL for the application (optional, defaults to current origin)
@@ -40,14 +40,19 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
     const spotsText = availableSpots === 1 ? 'Spot' : 'Spots';
     const spotsWord = availableSpots === 1 ? 'spot' : 'spots';
     
+    // Get registration mode - check multiple possible property names
+    const registrationMode = gameData.registrationMode || gameData.gameMode || 'fcfs';
+    
+    console.log('[INVITATION] Registration mode detected:', registrationMode); // Debug log
+    console.log('[INVITATION] Game data:', gameData); // Debug log
+    
     // Determine if we should add "First X are in" message
     // Only show for first-come-first-serve mode
-    const registrationMode = gameData.registrationMode;
-    
-    // Check for first-come-first-serve mode
     const isFirstCome = registrationMode === 'fcfs';
     
     const firstComeMessage = isFirstCome ? `\nFirst ${availableSpots} are in.` : '';
+    
+    console.log('[INVITATION] First come mode:', isFirstCome, '- Message:', firstComeMessage); // Debug log
     
     // Build the complete invitation message
     const message = `🏓 Join our pickleball game!
@@ -63,10 +68,12 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
 ${gameLink}
 
 Even if you can't make it, your response helps us plan and find additional players if needed. Please use the link above to respond - do not reply to this text message.
+${firstComeMessage}
 
 See you on the court!🏓
 `;
 
+    console.log('[INVITATION] Final message generated:', message); // Debug log
     return message;
 }
 
@@ -112,6 +119,8 @@ function formatTime(timeStr) {
  * @param {string} baseUrl - Base URL (optional)
  */
 function copyInvitationToClipboard(gameData, gameId, buttonId, baseUrl = null) {
+    console.log('[COPY] Copying invitation with game data:', gameData); // Debug log
+    
     const message = generateInvitationMessage(gameData, gameId, baseUrl);
     
     try {
@@ -207,13 +216,22 @@ function getCurrentGameDataFromStorage() {
             duration: '90',
             totalPlayers: '4',
             organizerPlaying: true,
-            registrationMode: 'fcfs', // ← CHANGE FROM gameMode to registrationMode
+            registrationMode: 'fcfs', // Ensure this is set
             message: ''
         };
     }
     
     // Return the most recent game
-    return myGames[myGames.length - 1];
+    const mostRecentGame = myGames[myGames.length - 1];
+    
+    // Ensure registrationMode is set, default to 'fcfs' if missing
+    if (!mostRecentGame.registrationMode) {
+        mostRecentGame.registrationMode = 'fcfs';
+    }
+    
+    console.log('[STORAGE] Retrieved game data:', mostRecentGame); // Debug log
+    
+    return mostRecentGame;
 }
 
 // Export functions for use in other scripts
