@@ -1027,6 +1027,56 @@ button:active {
     cursor: not-allowed !important;
 }
 
+.copy-btn.disabled,
+.copy-btn:disabled {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+    color: #adb5bd !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.2) !important;
+    pointer-events: none !important;
+    transform: none !important;
+}
+
+.copy-btn.disabled:hover,
+.copy-btn:disabled:hover {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.2) !important;
+}
+
+.copy-btn.disabled::before,
+.copy-btn:disabled::before {
+    display: none !important;
+}
+
+/* Style the share section when disabled */
+.share-section.disabled {
+    opacity: 0.7;
+    background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%) !important;
+}
+
+.share-section.disabled .share-title {
+    color: #6c757d !important;
+}
+
+.share-section.disabled p {
+    color: #868e96 !important;
+}
+
+/* Expired games - disable entire share section */
+.gameManagement.expired .share-section {
+    opacity: 0.6 !important;
+    pointer-events: none !important;
+    background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%) !important;
+}
+
+.gameManagement.expired .share-section .copy-btn {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
     body {

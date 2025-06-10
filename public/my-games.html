@@ -573,6 +573,40 @@ body {
     font-size: 14px;
 }
 
+/* Disabled copy button styling */
+.btn-copy.disabled {
+    background: linear-gradient(135deg, #adb5bd 0%, #868e96 100%) !important;
+    color: #6c757d !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+}
+
+.btn-copy.disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    background: linear-gradient(135deg, #adb5bd 0%, #868e96 100%) !important;
+}
+
+/* Enhanced styling for cancelled games copy buttons */
+.game-item.cancelled .btn-copy {
+    background: linear-gradient(135deg, #adb5bd 0%, #868e96 100%) !important;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+    position: relative;
+    z-index: 2;
+}
+
+/* Enhanced styling for completed games copy buttons */
+.game-item.completed .btn-copy {
+    background: linear-gradient(135deg, #adb5bd 0%, #868e96 100%) !important;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}
+
 /* Mobile responsive design */
 @media (max-width: 768px) {
     body {
@@ -765,6 +799,7 @@ function loadMyGames() {
         let statusText = 'Active';
         let statusIcon = '🟢';
         let gameClasses = 'game-item'; // Start with base class
+        let canCopy = true; // Track if copy should be enabled
         
         // FIXED: Check cancelled status FIRST
         if (game.cancelled === true || game.cancelled === 'true') {
@@ -772,12 +807,14 @@ function loadMyGames() {
             statusText = 'Cancelled';
             statusIcon = '🔴';
             gameClasses += ' cancelled';
+            canCopy = false; // Disable copy for cancelled games
             console.log('Game marked as cancelled:', game.location);
         } else if (isGameCompleted(game.date, game.time)) {
             status = 'completed';
             statusText = 'Completed';
             statusIcon = '✅';
             gameClasses += ' completed';
+            canCopy = false; // Disable copy for completed games
             console.log('Game marked as completed:', game.location);
         } else {
             console.log('Game still active:', game.location);
@@ -785,6 +822,11 @@ function loadMyGames() {
         
         const formattedDate = formatDateForDisplay(game.date);
         const formattedTime = formatTime(game.time);
+        
+        // Generate copy button with conditional functionality
+        const copyButton = canCopy 
+            ? `<button onclick="copyInvitationMessage('${game.id}')" class="btn-copy">📋 Copy Link</button>`
+            : `<button class="btn-copy disabled" disabled title="Cannot share invitations for ${status} games">📋 Copy Link</button>`;
         
         gamesHTML += `
             <div class="${gameClasses}">
@@ -831,9 +873,7 @@ function loadMyGames() {
                     <a href="/game.html?id=${game.id}" class="btn-view">
                         👀 View
                     </a>
-                    <button onclick="copyInvitationMessage('${game.id}')" class="btn-copy ${status === 'cancelled' ? 'disabled' : ''}">
-                        📋 Copy Link
-                    </button>
+                    ${copyButton}
                 </div>
             </div>
         `;
@@ -852,37 +892,34 @@ function loadMyGames() {
         }
 
         function copyInvitationMessage(gameId) {
-            // Find the game in localStorage
-            const games = JSON.parse(localStorage.getItem('myGames') || '[]');
-            const game = games.find(g => g.id === gameId);
-            
-            if (!game) {
-                showStatus('Game not found', 'error');
-                return;
-            }
-            
-            // Use the same invitation generator function from the manage page
-            if (typeof generateInvitationMessage === 'function') {
-                // Pass both the game data AND the gameId as separate parameters
-                const invitationMessage = generateInvitationMessage(game, gameId);
-                
-                // Copy to clipboard
-                navigator.clipboard.writeText(invitationMessage).then(() => {
-                    showStatus('Invitation message copied to clipboard!', 'success');
-                }).catch(() => {
-                    // Fallback for older browsers
-                    const textArea = document.createElement('textarea');
-                    textArea.value = invitationMessage;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    showStatus('Invitation message copied to clipboard!', 'success');
-                });
-            } else {
-                showStatus('Invitation generator not available', 'error');
-            }
-        }
+    // Find the game in localStorage
+    const games = JSON.parse(localStorage.getItem('myGames') || '[]');
+    const game = games.find(g => g.id === gameId);
+    
+    if (!game) {
+        showStatus('Game not found', 'error');
+        return;
+    }
+    
+    // Check if game is cancelled or completed
+    if (game.cancelled === true || game.cancelled === 'true') {
+        showStatus('Cannot share invitations for cancelled games', 'error');
+        return;
+    }
+    
+    if (isGameCompleted(game.date, game.time)) {
+        showStatus('Cannot share invitations for completed games', 'error');
+        return;
+    }
+    
+    // Use the invitation generator function
+    if (typeof InvitationGenerator !== 'undefined' && InvitationGenerator.copyInvitationToClipboard) {
+        InvitationGenerator.copyInvitationToClipboard(game, gameId, 'copyButton-' + gameId);
+        showStatus('Invitation message copied to clipboard!', 'success');
+    } else {
+        showStatus('Invitation generator not available', 'error');
+    }
+}
 
         function deleteGame(gameId) {
             if (!confirm('Are you sure you want to delete this game? This action cannot be undone.')) {
