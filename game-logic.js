@@ -34,6 +34,48 @@ function formatPhoneNumber(phoneNumber) {
   return cleaned;
 }
 
+// ADDED: Game expiration functions
+/**
+ * Checks if a game has expired (finished)
+ * @param {Object} game - Game object with date, time, duration
+ * @returns {boolean} True if game has finished
+ */
+function isGameExpired(game) {
+  if (!game.date || !game.time) return false;
+  
+  try {
+    // Create game start time
+    const gameDateTime = new Date(`${game.date}T${game.time}:00`);
+    
+    // Add duration to get end time
+    const duration = parseInt(game.duration) || 90; // Default 90 minutes
+    const gameEndTime = new Date(gameDateTime.getTime() + (duration * 60 * 1000));
+    
+    const now = new Date();
+    
+    // Game is expired if end time has passed
+    return gameEndTime < now;
+  } catch (error) {
+    console.error('[SERVER] Error checking game expiration:', error);
+    return false;
+  }
+}
+
+/**
+ * Middleware function to check game expiration for player actions
+ * @param {Object} game - Game object
+ * @returns {Object} Error status and message
+ */
+function checkGameNotExpired(game) {
+  if (isGameExpired(game)) {
+    return {
+      error: true,
+      message: 'This game has ended and no longer accepts new registrations'
+    };
+  }
+  return { error: false };
+}
+
 // Game reminder system
 async function checkAndSendReminders() {
   try {
@@ -354,6 +396,7 @@ function removePlayerFromGame(game, playerId) {
   return { status: 'not_found' };
 }
 
+// UPDATED: module.exports with new functions added
 module.exports = {
   checkAndSendReminders,
   createGameData,
@@ -362,5 +405,7 @@ module.exports = {
   addPlayerToGame,
   removePlayerFromGame,
   isValidPhoneNumber,
-  formatPhoneNumber
+  formatPhoneNumber,
+  isGameExpired,           // ADDED
+  checkGameNotExpired      // ADDED
 };

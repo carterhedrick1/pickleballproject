@@ -4,6 +4,7 @@ let gameData = null;
 let gameId = '';
 let hostToken = '';
 
+
 // TIMEZONE FIX FUNCTIONS
 function formatDateForInput(dateStr) {
     // Convert date string to proper format for HTML date input without timezone shift
@@ -277,9 +278,25 @@ async function fetchGameData() {
         console.log('[CLIENT] Game data received:', gameData);
         console.log('[CLIENT] Notification preferences received:', gameData.notificationPreferences);
         
+        // Check if game is expired
+        const gameStatus = GameUtils.getGameStatus(gameData);
+        isGameExpired = !gameStatus.canEdit;
+        
+        console.log('[CLIENT] Game status:', gameStatus);
+        console.log('[CLIENT] Is game expired?', isGameExpired);
+        
         // Show management interface
         document.getElementById('loading').style.display = 'none';
         document.getElementById('gameManagement').style.display = 'block';
+        
+        // Show expired warning if needed
+        if (isGameExpired) {
+            showExpiredGameWarning();
+            // Add expired class to disable editing
+            document.getElementById('gameManagement').classList.add('expired');
+            // Update page title
+            document.title = '[ENDED] ' + document.title;
+        }
         
         // Populate game details (this will set notification preferences)
         populateGameDetails();
@@ -287,13 +304,30 @@ async function fetchGameData() {
         // Populate player lists
         updatePlayerLists();
         
-        // Generate share links
-        populateShareLinks();
+        // Generate share links (only if not expired)
+        if (!isGameExpired) {
+            populateShareLinks();
+        }
+        
+        // If game is expired, force switch to Players tab (read-only)
+        if (isGameExpired) {
+            // Force switch to Players tab since it's the only useful one for expired games
+            setTimeout(() => {
+                openTabFromSelect('Players');
+            }, 100);
+        }
         
     } catch (error) {
         console.error('Error:', error);
         showStatus('Error loading game: ' + error.message, 'error');
         document.getElementById('loading').style.display = 'none';
+    }
+}
+
+function showExpiredGameWarning() {
+    const warningSection = document.getElementById('expiredGameWarning');
+    if (warningSection) {
+        warningSection.style.display = 'block';
     }
 }
 
@@ -570,6 +604,11 @@ if (outPlayersContainer) {
 // UPDATE your updateGameDetails function in manage-scripts.js:
 
 async function updateGameDetails() {
+    if (isGameExpired) {
+        showStatus('Cannot update expired games', 'error');
+        return;
+    }
+    
     try {
         showStatus('Updating game details...', 'info');
         
@@ -637,6 +676,34 @@ async function updateGameDetails() {
         console.error('[CLIENT] Error updating game:', error);
         showStatus('Error updating game: ' + error.message, 'error');
     }
+    try {
+    let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+    
+    // Find and update the game in localStorage
+    const gameIndex = myGames.findIndex(game => game.id === gameId);
+    
+    if (gameIndex >= 0) {
+        // Update the localStorage entry with the new values
+        myGames[gameIndex] = {
+            ...myGames[gameIndex], // Keep existing data
+            location: document.getElementById('location').value,
+            courtNumber: document.getElementById('courtNumber').value || '',
+            date: document.getElementById('date').value,
+            time: document.getElementById('time').value,
+            duration: parseInt(document.getElementById('duration').value),
+            totalPlayers: parseInt(document.getElementById('players').value),
+            message: document.getElementById('message').value,
+            // Keep other existing properties like id, hostToken, created, etc.
+        };
+        
+        // Save back to localStorage
+        localStorage.setItem('myGames', JSON.stringify(myGames));
+        console.log('[CLIENT] Updated localStorage for game:', gameId);
+    }
+} catch (error) {
+    console.error('[CLIENT] Error updating localStorage:', error);
+    // Don't throw error - this is not critical
+}
 }
 
 function debugNotificationPreferences() {
@@ -659,59 +726,64 @@ function debugNotificationPreferences() {
 
 // Updated addPlayerManually function - enhanced to show SMS status  
 async function addPlayerManually() {
-  try {
-    const name = document.getElementById('playerName').value;
-    const phone = document.getElementById('playerPhone').value;
-    const action = document.querySelector('input[name="addTo"]:checked').value;
-    
-    showStatus('Adding player...', 'info');
-    
-    const response = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name,
-        phone,
-        action,
-        token: hostToken
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to add player');
+    if (isGameExpired) {
+        showStatus('Cannot add players to expired games', 'error');
+        return;
     }
     
-    const data = await response.json();
-    console.log('Player added manually:', data);
-    
-    // Reset form
-    document.getElementById('playerName').value = '';
-    document.getElementById('playerPhone').value = '';
-    
-    // Refresh game data
-    await fetchGameData();
-    
-    // Build status message
-    let statusMessage = `Player ${name} added successfully`;
-    
-    // Add SMS status info
-    if (phone && data.sms && data.sms.success) {
-      statusMessage += ' and notified via SMS';
-    } else if (phone && data.sms && !data.sms.success) {
-      statusMessage += ' (SMS notification failed)';
-    } else if (!phone) {
-      statusMessage += ' (no phone number provided)';
+    try {
+        const name = document.getElementById('playerName').value;
+        const phone = document.getElementById('playerPhone').value;
+        const action = document.querySelector('input[name="addTo"]:checked').value;
+        
+        showStatus('Adding player...', 'info');
+        
+        const response = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name,
+                phone,
+                action,
+                token: hostToken
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to add player');
+        }
+        
+        const data = await response.json();
+        console.log('Player added manually:', data);
+        
+        // Reset form
+        document.getElementById('playerName').value = '';
+        document.getElementById('playerPhone').value = '';
+        
+        // Refresh game data
+        await fetchGameData();
+        
+        // Build status message
+        let statusMessage = `Player ${name} added successfully`;
+        
+        // Add SMS status info
+        if (phone && data.sms && data.sms.success) {
+            statusMessage += ' and notified via SMS';
+        } else if (phone && data.sms && !data.sms.success) {
+            statusMessage += ' (SMS notification failed)';
+        } else if (!phone) {
+            statusMessage += ' (no phone number provided)';
+        }
+        
+        showStatus(statusMessage, 'success');
+        
+    } catch (error) {
+        console.error('Error adding player:', error);
+        showStatus('Error adding player: ' + error.message, 'error');
     }
-    
-    showStatus(statusMessage, 'success');
-    
-  } catch (error) {
-    console.error('Error adding player:', error);
-    showStatus('Error adding player: ' + error.message, 'error');
-  }
 }
 
 // Updated moveToWaitlist function - now uses dedicated endpoint with SMS
@@ -943,6 +1015,11 @@ async function removeWaitlisted(playerId) {
 }
 
 async function sendAnnouncement() {
+    if (isGameExpired) {
+        showStatus('Cannot send announcements for expired games', 'error');
+        return;
+    }
+    
     try {
         const message = document.getElementById('announcementText').value;
         
@@ -992,6 +1069,7 @@ async function sendAnnouncement() {
     }
 }
 
+
 function sendQuickMessage(type) {
     let message = '';
     
@@ -1013,7 +1091,14 @@ function sendQuickMessage(type) {
     openTabFromSelect('Communication');
 }
 
+// REPLACE your entire cancelGame function with this:
+
 async function cancelGame() {
+    if (isGameExpired) {
+        showStatus('Cannot cancel expired games', 'error');
+        return;
+    }
+    
     try {
         const reason = document.getElementById('cancellationReason').value || 'No reason provided';
         
@@ -1042,11 +1127,40 @@ async function cancelGame() {
         gameData.cancelled = true;
         gameData.cancellationReason = reason;
         
+        // FIXED: Update localStorage to show game as cancelled
+        try {
+            let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+            console.log('[CANCEL] Looking for game ID in localStorage:', gameId);
+            
+            // Find and update the game in localStorage
+            const gameIndex = myGames.findIndex(game => game.id === gameId);
+            console.log('[CANCEL] Found game at index:', gameIndex);
+            
+            if (gameIndex >= 0) {
+                // Mark game as cancelled in localStorage
+                myGames[gameIndex] = {
+                    ...myGames[gameIndex], // Keep existing data
+                    cancelled: true,
+                    cancellationReason: reason
+                };
+                
+                // Save back to localStorage
+                localStorage.setItem('myGames', JSON.stringify(myGames));
+                console.log('[CANCEL] ✅ Updated localStorage - game marked as cancelled:', gameId);
+                console.log('[CANCEL] Game data now:', myGames[gameIndex]);
+            } else {
+                console.log('[CANCEL] ❌ Game not found in localStorage');
+                console.log('[CANCEL] Available games:', myGames.map(g => ({id: g.id, location: g.location})));
+            }
+        } catch (error) {
+            console.error('[CANCEL] ❌ Error updating localStorage for cancellation:', error);
+        }
+        
         showStatus('Game cancelled successfully! All players have been notified.', 'success');
         
         // Refresh after a short delay
         setTimeout(() => {
-            window.location.href = '/';
+            window.location.href = '/my-games.html'; // Go to My Games instead of home
         }, 3000);
         
     } catch (error) {
@@ -1094,6 +1208,11 @@ function populateShareLinks() {
 
 
 function copyPlayerInvitation() {
+
+        if (isGameExpired) {
+        showStatus('Cannot share invitations for expired games', 'error');
+        return;
+    }
     console.log('[COPY] Original game data from server:', gameData);
     
     // Make sure we include registrationMode from the server data

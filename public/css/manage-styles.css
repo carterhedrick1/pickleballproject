@@ -930,6 +930,103 @@ button:active {
     font-style: italic;
 }
 
+/* Expired game warning */
+.expired-game-warning {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border: 2px solid #ef4444;
+    border-radius: 16px;
+    padding: 20px;
+    margin: 20px 32px;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+}
+
+.expired-game-warning .warning-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.expired-game-warning .warning-icon {
+    font-size: 32px;
+}
+
+.expired-game-warning .warning-text h3 {
+    color: #991b1b;
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.expired-game-warning .warning-text p {
+    color: #991b1b;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Disabled tabs and sections for expired games */
+.gameManagement.expired .tab[onclick*="Details"],
+.gameManagement.expired .tab[onclick*="Communication"],
+.gameManagement.expired .tab[onclick*="Actions"] {
+    opacity: 0.5;
+    pointer-events: none;
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+}
+
+.gameManagement.expired #Details,
+.gameManagement.expired #Communication,
+.gameManagement.expired #Actions {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.gameManagement.expired #Details .form-section,
+.gameManagement.expired #Communication .form-section,
+.gameManagement.expired #Actions .form-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+}
+
+.gameManagement.expired #Details input,
+.gameManagement.expired #Details textarea,
+.gameManagement.expired #Details button,
+.gameManagement.expired #Communication input,
+.gameManagement.expired #Communication textarea,
+.gameManagement.expired #Communication button,
+.gameManagement.expired #Actions input,
+.gameManagement.expired #Actions textarea,
+.gameManagement.expired #Actions button {
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    cursor: not-allowed !important;
+    border-color: #dee2e6 !important;
+}
+
+/* Keep Players tab functional but show read-only notice */
+.gameManagement.expired #Players .player-actions {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.gameManagement.expired #Players .collapsible-section {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Disable share section for expired games */
+.gameManagement.expired .share-section {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.gameManagement.expired .share-section .copy-btn {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+    cursor: not-allowed !important;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
     body {
@@ -1038,6 +1135,14 @@ button:active {
 
     .collapsible-inner {
         padding: 20px;
+    }
+
+    .expired-game-warning .warning-content {
+        flex-direction: column;
+    }
+    
+    .expired-game-warning {
+        margin: 20px;
     }
 
     /* Extra small mobile devices */

@@ -1309,17 +1309,27 @@ async function createGame(e) {
         }
 
         function showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.textContent = message;
-            statusDiv.className = type;
-            statusDiv.style.display = 'block';
-            
-            if (type === 'success' || type === 'info') {
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 5000);
-            }
-        }
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = message;
+    statusDiv.className = type;
+    statusDiv.style.display = 'block';
+    
+    // Scroll to top to show the status message
+    statusDiv.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+    });
+    
+    // Auto-hide success and info messages
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+    
+    // Keep error messages visible until manually dismissed
+    // You could add a click handler to dismiss errors if desired
+}
     </script>
     <script src="/js/invitation-generator.js"></script>
     <script src="/js/footer.js"></script>

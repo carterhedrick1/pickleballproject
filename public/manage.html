@@ -25,6 +25,17 @@
             <div class="loading-icon">⏳</div>
             <div class="loading-text">Loading game details...</div>
         </div>
+
+        <!-- Game Status Warning for Expired Games -->
+        <div id="expiredGameWarning" class="expired-game-warning" style="display: none;">
+            <div class="warning-content">
+                <div class="warning-icon">⏰</div>
+                <div class="warning-text">
+                    <h3>Game Has Ended</h3>
+                    <p>This game has finished. You can still view player information but cannot make changes or send new invitations.</p>
+                </div>
+            </div>
+        </div>
         
         <div id="gameManagement" style="display: none;">
             <!-- Mobile Tab Selection -->
@@ -342,9 +353,10 @@
     </div>
 
     <!-- Load our separated JavaScript files -->
-     <script src="/js/invitation-generator.js"></script>
+    <script src="/js/invitation-generator.js"></script>
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>
+    <script src="/js/game-utils.js"></script>
     <script src="/js/manage-scripts.js"></script>
 </body>
 </html>

@@ -757,6 +757,115 @@
                 </div>
             </div>
         </div>
+
+        <!-- ADD this section right after the game details section in game.html -->
+        <!-- ADD this right after the game-info div and before the players section -->
+
+        <!-- Game Status Warning (for expired/cancelled games) -->
+        <div id="gameStatusWarning" class="game-status-warning" style="display: none;">
+            <div class="warning-content">
+                <div class="warning-icon">⚠️</div>
+                <div class="warning-text">
+                    <h3 id="warningTitle">Game No Longer Available</h3>
+                    <p id="warningMessage">This game has ended and is no longer accepting registrations.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADD this CSS to the <style> section in game.html -->
+        <style>
+        /* Game status warning styling */
+.game-status-warning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #f59e0b;
+    border-radius: 16px;
+    padding: 24px 32px; /* UPDATED: Added horizontal padding */
+    margin: 20px 32px; /* UPDATED: Added horizontal margin */
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.2);
+}
+
+.game-status-warning.expired {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-color: #ef4444;
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+    margin: 20px 32px; /* UPDATED: Added horizontal margin */
+    padding: 24px 32px; /* UPDATED: Added horizontal padding */
+}
+
+        .warning-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .warning-icon {
+            font-size: 32px;
+        }
+
+        .warning-text h3 {
+            color: #92400e;
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .game-status-warning.expired .warning-text h3 {
+            color: #991b1b;
+        }
+
+        .warning-text p {
+            color: #92400e;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .game-status-warning.expired .warning-text p {
+            color: #991b1b;
+        }
+
+        /* Disabled signup form styling */
+        .signup-section.disabled {
+            opacity: 0.6;
+            pointer-events: none;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+        }
+
+        .signup-section.disabled .section-title {
+            color: #64748b !important;
+        }
+
+        .signup-section.disabled input,
+        .signup-section.disabled button {
+            background-color: #f1f5f9 !important;
+            color: #64748b !important;
+            cursor: not-allowed !important;
+        }
+
+        @media (max-width: 768px) {
+            .warning-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .warning-icon {
+                font-size: 28px;
+            }
+
+                .game-status-warning {
+        margin: 20px 20px; /* Better mobile margins */
+        padding: 20px 24px; /* Better mobile padding */
+    }
+    
+    .game-status-warning.expired {
+        margin: 20px 20px; /* Better mobile margins */
+        padding: 20px 24px; /* Better mobile padding */
+    }
+        }
+        </style>
         
         <!-- Players Section -->
         <div id="playerList" class="section players-section" style="display: none;">
@@ -890,72 +999,127 @@
             showStatus("Fetching game data...", 'info');
             
             fetch(`/api/games/${gameId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Server responded with status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    gameData = data;
-                    console.log('Game data received:', gameData); // Debug log
-                    
-                    // Display game details
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('details').style.display = 'block';
-                    
-                    // Check if we should show players section based on registration mode
-                    const playerListSection = document.getElementById('playerList');
-                    if (gameData.registrationMode === 'waitlist') {
-                        // Hide players section for waitlist mode
-                        if (playerListSection) {
-                            playerListSection.style.display = 'none';
-                        }
-                    } else {
-                        // Show players section for regular mode
-                        if (playerListSection) {
-                            playerListSection.style.display = 'block';
-                        }
-                    }
-                    
-                    document.getElementById('location').textContent = gameData.location;
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Server responded with status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        gameData = data;
+        console.log('Game data received:', gameData);
+        
+        // Check if game is expired or cancelled
+        const gameStatus = GameUtils.getGameStatus(gameData);
+        console.log('Game status:', gameStatus);
+        
+        // Display game details
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('details').style.display = 'block';
+        
+        // Show status warning if game is expired or cancelled
+        if (!gameStatus.canJoin) {
+            showGameStatusWarning(gameStatus);
+        }
+        
+        // Check if we should show players section based on registration mode AND game status
+        const playerListSection = document.getElementById('playerList');
+        if (gameData.registrationMode === 'waitlist' || !gameStatus.canJoin) {
+            // Hide players section for waitlist mode OR expired games
+            if (playerListSection) {
+                playerListSection.style.display = 'none';
+            }
+        } else {
+            // Show players section for regular mode on active games
+            if (playerListSection) {
+                playerListSection.style.display = 'block';
+            }
+        }
+        
+        // Populate game details
+        document.getElementById('location').textContent = gameData.location;
 
-                    // Show court number if it exists
-                    if (gameData.courtNumber && gameData.courtNumber.trim()) {
-                        document.getElementById('courtNumber').textContent = gameData.courtNumber;
-                        document.getElementById('courtDetail').style.display = 'flex';
-                    } else {
-                        document.getElementById('courtDetail').style.display = 'none';
-                    }
+        // Show court number if it exists
+        if (gameData.courtNumber && gameData.courtNumber.trim()) {
+            document.getElementById('courtNumber').textContent = gameData.courtNumber;
+            document.getElementById('courtDetail').style.display = 'flex';
+        } else {
+            document.getElementById('courtDetail').style.display = 'none';
+        }
 
-                    document.getElementById('date').textContent = formatDate(gameData.date);
-                    document.getElementById('time').textContent = formatTime(gameData.time);
-                    document.getElementById('duration').textContent = gameData.duration;
-                    
-                    console.log('Date formatted as:', formatDate(gameData.date)); // Debug log
-                    
-                    // Show message only if it exists
-                    if (gameData.message && gameData.message.trim()) {
-                        document.getElementById('message').textContent = gameData.message;
-                        document.getElementById('messageDetail').style.display = 'flex';
-                    }
-                    
-                    // Update player list
-                    updatePlayerList();
-                    
-                    // Show signup form for new players
-                    document.getElementById('signupForm').style.display = 'block';
-                    
-                    // Hide the status message since game loaded successfully
-                    statusDiv.style.display = 'none';
-                    
-                    // Set up event handlers
-                    setupEventHandlers();
-                })
-                .catch(error => {
-                    console.error("Error fetching game:", error);
-                    showStatus(`Game not found. Please check your link.`, 'error');
-                });
+        document.getElementById('date').textContent = formatDate(gameData.date);
+        document.getElementById('time').textContent = formatTime(gameData.time);
+        document.getElementById('duration').textContent = gameData.duration;
+        
+        console.log('Date formatted as:', formatDate(gameData.date));
+        
+        // Show message only if it exists
+        if (gameData.message && gameData.message.trim()) {
+            document.getElementById('message').textContent = gameData.message;
+            document.getElementById('messageDetail').style.display = 'flex';
+        }
+        
+        // Update player list (only if game allows joining)
+        if (gameStatus.canJoin) {
+            updatePlayerList();
+        }
+        
+        // Show signup form only for active games
+        const signupSection = document.getElementById('signupForm');
+        if (signupSection) {
+            if (gameStatus.canJoin) {
+                signupSection.style.display = 'block';
+                signupSection.classList.remove('disabled');
+            } else {
+                signupSection.style.display = 'none';
+                signupSection.classList.add('disabled');
+            }
+        }
+        
+        // Hide the status message since game loaded successfully
+        statusDiv.style.display = 'none';
+        
+        // Set up event handlers (only for active games)
+        if (gameStatus.canJoin) {
+            setupEventHandlers();
+        }
+    })
+    .catch(error => {
+        console.error("Error fetching game:", error);
+        showStatus(`Game not found. Please check your link.`, 'error');
+    });
+
+
+// ADD this new function to game.html JavaScript:
+
+function showGameStatusWarning(gameStatus) {
+    const warningSection = document.getElementById('gameStatusWarning');
+    const warningTitle = document.getElementById('warningTitle');
+    const warningMessage = document.getElementById('warningMessage');
+    
+    if (!warningSection || !warningTitle || !warningMessage) return;
+    
+    // Configure warning based on status type
+    if (gameStatus.type === 'cancelled') {
+        warningSection.className = 'game-status-warning cancelled';
+        warningTitle.textContent = 'Game Cancelled';
+        warningMessage.textContent = gameData.cancellationReason || 'This game has been cancelled and is no longer available.';
+    } else if (gameStatus.type === 'expired') {
+        warningSection.className = 'game-status-warning expired';
+        warningTitle.textContent = 'Game Has Ended';
+        warningMessage.textContent = 'This game has finished and is no longer accepting registrations. Check with the organizer for future games.';
+    }
+    
+    // Show the warning
+    warningSection.style.display = 'block';
+    
+    // Update page title to indicate status
+    if (gameStatus.type === 'expired') {
+        document.title = '[ENDED] ' + document.title;
+    } else if (gameStatus.type === 'cancelled') {
+        document.title = '[CANCELLED] ' + document.title;
+    }
+}
 
             // AUTO-REFRESH: Add periodic refresh every 30 seconds
             setInterval(() => {
@@ -1338,5 +1502,7 @@
     </script>
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>
+    <script src="/js/game-utils.js"></script>
+
 </body>
 </html>
