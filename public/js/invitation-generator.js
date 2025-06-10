@@ -9,6 +9,8 @@
  * @param {string} gameData.time - Game time (HH:MM format)
  * @param {number} gameData.duration - Game duration in minutes
  * @param {number} gameData.totalPlayers - Total number of players
+ * @param {boolean} gameData.organizerPlaying - Whether organizer is playing
+ * @param {string} gameData.gameMode - Game mode ('first-come' or 'waiting-list')
  * @param {string} gameData.message - Optional message (optional)
  * @param {string} gameId - Game ID for generating the link
  * @param {string} baseUrl - Base URL for the application (optional, defaults to current origin)
@@ -29,10 +31,23 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
         locationText += ` - ${gameData.courtNumber}`;
     }
     
-    // Handle singular/plural spots
+    // Calculate available spots
     const totalPlayers = parseInt(gameData.totalPlayers);
-    const spotsText = totalPlayers === 1 ? 'Spot' : 'Spots';
-    const spotsWord = totalPlayers === 1 ? 'spot' : 'spots';
+    const organizerPlaying = gameData.organizerPlaying !== false; // Default to true if not specified
+    const availableSpots = organizerPlaying ? totalPlayers - 1 : totalPlayers;
+    
+    // Handle singular/plural spots
+    const spotsText = availableSpots === 1 ? 'Spot' : 'Spots';
+    const spotsWord = availableSpots === 1 ? 'spot' : 'spots';
+    
+    // Determine if we should add "First X are in" message
+    // Only show for first-come-first-serve mode
+    const registrationMode = gameData.registrationMode;
+    
+    // Check for first-come-first-serve mode
+    const isFirstCome = registrationMode === 'fcfs';
+    
+    const firstComeMessage = isFirstCome ? `\nFirst ${availableSpots} are in.` : '';
     
     // Build the complete invitation message
     const message = `🏓 Join our pickleball game!
@@ -41,15 +56,16 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
 📅 Date: ${formattedDate}
 ⏰ Time: ${formattedTime}
 ⏱️ Duration: ${gameData.duration} minutes
-👥 ${spotsText}: ${totalPlayers} ${spotsWord}${gameData.message ? '\n💬 ' + gameData.message : ''}
+👥 ${spotsText}: ${availableSpots} ${spotsWord}${gameData.message ? '\n💬 ' + gameData.message : ''}
 
 🎯 Let us know if you're IN or OUT by clicking the link below:  
 
 ${gameLink}
 
-Even if you can't make it, your response helps us plan and find additional players if needed.
+Even if you can't make it, your response helps us plan and find additional players if needed. Please use the link above to respond - do not reply to this text message.
 
-You'll get text confirmations and can easily cancel by replying "9" to any message. See you on the court! 🏓`;
+See you on the court!🏓
+`;
 
     return message;
 }
@@ -190,6 +206,8 @@ function getCurrentGameDataFromStorage() {
             time: '18:00', // 6 PM default
             duration: '90',
             totalPlayers: '4',
+            organizerPlaying: true,
+            registrationMode: 'fcfs', // ← CHANGE FROM gameMode to registrationMode
             message: ''
         };
     }

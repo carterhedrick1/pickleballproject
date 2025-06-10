@@ -28,16 +28,17 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Get form data
             // Get form data
-            const gameData = {
-                location: document.getElementById('location').value,
-                date: document.getElementById('date').value,
-                time: document.getElementById('time').value,
-                duration: document.getElementById('duration').value,
-                totalPlayers: document.getElementById('players').value,
-                message: document.getElementById('message').value,
-                organizer: document.getElementById('organizerName').value,
-                organizerPlaying: document.getElementById('organizerPlaying').checked
-            };
+const gameData = {
+    location: document.getElementById('location').value,
+    date: document.getElementById('date').value,
+    time: document.getElementById('time').value,
+    duration: document.getElementById('duration').value,
+    totalPlayers: document.getElementById('players').value,
+    message: document.getElementById('message').value,
+    organizer: document.getElementById('organizerName').value,
+    organizerPlaying: document.getElementById('organizerPlaying').checked,
+    registrationMode: document.getElementById('registrationMode').value // Add this line
+};
             
             console.log("Submitting game data:", gameData);
             showStatus('Creating game...', 'info');

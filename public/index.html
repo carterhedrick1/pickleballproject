@@ -1054,110 +1054,114 @@
         // Updated createGame function in public/index.html script section
         // REPLACE your createGame function in public/index.html with this:
 
-        async function createGame(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(e.target);
-            
-            // DEBUG: Log form data collection
-            console.log('[CLIENT] Collecting form data...');
-            
-            // Collect notification preferences explicitly
-            const notificationPreferences = {
-                gameFull: formData.get('notifyGameFull') === 'on',
-                playerJoins: formData.get('notifyPlayerJoins') === 'on',
-                playerCancels: formData.get('notifyPlayerCancels') === 'on',
-                oneSpotLeft: formData.get('notifyOneSpotLeft') === 'on',
-                waitlistStarts: formData.get('notifyWaitlistStarts') === 'on'
-            };
-            
-            console.log('[CLIENT] Notification preferences collected:', notificationPreferences);
-            
-            const gameData = {
-                location: formData.get('location'),
-                courtNumber: formData.get('courtNumber') || '',
-                organizerName: formData.get('organizerName'),
-                organizerPhone: formData.get('organizerPhone'),
-                organizerPlaying: formData.get('organizerPlaying') === 'on',
-                date: formData.get('date'),
-                time: formData.get('time'),
-                duration: parseInt(formData.get('duration')),
-                totalPlayers: parseInt(formData.get('players')),
-                message: formData.get('message'),
-                registrationMode: formData.get('registrationMode'),
-                notificationPreferences: notificationPreferences,
-                hostPhone: formData.get('organizerPhone')
-            };
-            
-            console.log('[CLIENT] Final game data being sent:', gameData);
-            
-            try {
-                showStatus('Creating game...', 'info');
-                
-                const response = await fetch('/api/games', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(gameData)
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to create game');
-                }
-                
-                const data = await response.json();
-                console.log('[CLIENT] Game created successfully:', data);
-                
-                // Save game to localStorage for My Games page
-                let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
-                myGames.push({
-                    id: data.gameId,
-                    hostToken: data.hostToken,
-                    location: gameData.location,
-                    courtNumber: gameData.courtNumber,
-                    date: gameData.date,
-                    time: gameData.time,
-                    duration: gameData.duration,
-                    totalPlayers: gameData.totalPlayers,
-                    message: gameData.message,
-                    created: new Date().toISOString(),
-                    cancelled: false
-                });
-                localStorage.setItem('myGames', JSON.stringify(myGames));
-                
-                // Show game links
-                showGameLinks(data.gameId);
-                
-                // Clear form
-                document.getElementById('gameForm').reset();
-                
-                // Set tomorrow's date again
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                const year = tomorrow.getFullYear();
-                const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
-                const day = String(tomorrow.getDate()).padStart(2, '0');
-                const tomorrowStr = `${year}-${month}-${day}`;
-                document.getElementById('date').value = tomorrowStr;
-                
-                // Check SMS status and show appropriate message
-                if (data.hostSms && data.hostSms.success) {
-                    showStatus('Game created successfully! Check your phone for confirmation. Reply "1" to get your management link.', 'success');
-                } else if (data.hostSms && !data.hostSms.success) {
-                    showStatus('Game created successfully! However, we couldn\'t send the confirmation text.', 'success');
-                } else if (data.hostSms && data.hostSms.dev) {
-                    showStatus('Game created successfully! (SMS confirmation disabled in development mode)', 'success');
-                } else {
-                    showStatus('Game created successfully!', 'success');
-                }
-                
-            } catch (error) {
-                console.error('[CLIENT] Error creating game:', error);
-                showStatus('Error creating game: ' + error.message, 'error');
-            }
+        // REPLACE your createGame function in public/index.html with this updated version:
+
+async function createGame(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    
+    // DEBUG: Log form data collection
+    console.log('[CLIENT] Collecting form data...');
+    
+    // Collect notification preferences explicitly
+    const notificationPreferences = {
+        gameFull: formData.get('notifyGameFull') === 'on',
+        playerJoins: formData.get('notifyPlayerJoins') === 'on',
+        playerCancels: formData.get('notifyPlayerCancels') === 'on',
+        oneSpotLeft: formData.get('notifyOneSpotLeft') === 'on',
+        waitlistStarts: formData.get('notifyWaitlistStarts') === 'on'
+    };
+    
+    console.log('[CLIENT] Notification preferences collected:', notificationPreferences);
+    
+    const gameData = {
+        location: formData.get('location'),
+        courtNumber: formData.get('courtNumber') || '',
+        organizerName: formData.get('organizerName'),
+        organizerPhone: formData.get('organizerPhone'),
+        organizerPlaying: formData.get('organizerPlaying') === 'on',
+        date: formData.get('date'),
+        time: formData.get('time'),
+        duration: parseInt(formData.get('duration')),
+        totalPlayers: parseInt(formData.get('players')),
+        message: formData.get('message'),
+        registrationMode: formData.get('registrationMode'), // This gets sent to server
+        notificationPreferences: notificationPreferences,
+        hostPhone: formData.get('organizerPhone')
+    };
+    
+    console.log('[CLIENT] Final game data being sent:', gameData);
+    
+    try {
+        showStatus('Creating game...', 'info');
+        
+        const response = await fetch('/api/games', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gameData)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create game');
         }
+        
+        const data = await response.json();
+        console.log('[CLIENT] Game created successfully:', data);
+        
+        // Save game to localStorage for My Games page - NOW INCLUDING REGISTRATION MODE
+        let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+        myGames.push({
+            id: data.gameId,
+            hostToken: data.hostToken,
+            location: gameData.location,
+            courtNumber: gameData.courtNumber,
+            date: gameData.date,
+            time: gameData.time,
+            duration: gameData.duration,
+            totalPlayers: gameData.totalPlayers,
+            message: gameData.message,
+            registrationMode: gameData.registrationMode, // ✅ ADD THIS LINE
+            created: new Date().toISOString(),
+            cancelled: false
+        });
+        localStorage.setItem('myGames', JSON.stringify(myGames));
+
+        
+        // Show game links
+        showGameLinks(data.gameId);
+        
+        // Clear form
+        document.getElementById('gameForm').reset();
+        
+        // Set tomorrow's date again
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const year = tomorrow.getFullYear();
+        const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const day = String(tomorrow.getDate()).padStart(2, '0');
+        const tomorrowStr = `${year}-${month}-${day}`;
+        document.getElementById('date').value = tomorrowStr;
+        
+        // Check SMS status and show appropriate message
+        if (data.hostSms && data.hostSms.success) {
+            showStatus('Game created successfully! Check your phone for confirmation. Reply "1" to get your management link.', 'success');
+        } else if (data.hostSms && !data.hostSms.success) {
+            showStatus('Game created successfully! However, we couldn\'t send the confirmation text.', 'success');
+        } else if (data.hostSms && data.hostSms.dev) {
+            showStatus('Game created successfully! (SMS confirmation disabled in development mode)', 'success');
+        } else {
+            showStatus('Game created successfully!', 'success');
+        }
+        
+    } catch (error) {
+        console.error('[CLIENT] Error creating game:', error);
+        showStatus('Error creating game: ' + error.message, 'error');
+    }
+}
 
         // Updated getCurrentGameData function to include court number
         function getCurrentGameData() {

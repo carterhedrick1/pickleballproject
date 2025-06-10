@@ -1092,11 +1092,20 @@ function populateShareLinks() {
     // The copy function will build the links when needed
 }
 
+// REPLACE your copyPlayerInvitation function in manage-scripts.js with this:
+
 function copyPlayerInvitation() {
-    // Use the shared invitation generator with current game data
+    // Make sure we include registrationMode from the server data
+    const gameDataForInvitation = {
+        ...gameData,
+        registrationMode: gameData.registrationMode || 'fcfs' // Ensure it exists
+    };
+    
+    console.log('[DEBUG] Game data for invitation:', gameDataForInvitation);
+    
     InvitationGenerator.copyInvitationToClipboard(
-        gameData, // This is the global gameData variable in manage-scripts.js
-        gameId,   // This is the global gameId variable in manage-scripts.js
+        gameDataForInvitation,
+        gameId,
         'copyPlayerLink'
     );
 }
