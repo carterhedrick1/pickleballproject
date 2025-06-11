@@ -116,6 +116,18 @@
                                 <div class="toggle-switch"></div>
                                 <input type="checkbox" id="notifyGameFull" name="notifyGameFull">
                             </div>
+
+                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerCancels')">
+                                <div class="notification-content">
+                                    <div class="notification-icon">❌</div>
+                                    <div class="notification-text">
+                                        <div class="notification-title">Someone cancels their spot</div>
+                                        <div class="notification-description">Get notified when players cancel</div>
+                                    </div>
+                                </div>
+                                <div class="toggle-switch"></div>
+                                <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels">
+                            </div>
                             
                             <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerJoins')">
                                 <div class="notification-content">
@@ -129,17 +141,7 @@
                                 <input type="checkbox" id="notifyPlayerJoins" name="notifyPlayerJoins">
                             </div>
                             
-                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerCancels')">
-                                <div class="notification-content">
-                                    <div class="notification-icon">❌</div>
-                                    <div class="notification-text">
-                                        <div class="notification-title">Someone cancels their spot</div>
-                                        <div class="notification-description">Get notified when players cancel</div>
-                                    </div>
-                                </div>
-                                <div class="toggle-switch"></div>
-                                <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels">
-                            </div>
+                            
                             
                             <div class="notification-option" onclick="toggleManageNotification(this, 'notifyOneSpotLeft')">
                                 <div class="notification-content">

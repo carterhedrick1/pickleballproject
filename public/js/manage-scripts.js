@@ -5,6 +5,7 @@ let gameId = '';
 let hostToken = '';
 
 
+
 // TIMEZONE FIX FUNCTIONS
 function formatDateForInput(dateStr) {
     // Convert date string to proper format for HTML date input without timezone shift
@@ -280,7 +281,7 @@ async function fetchGameData() {
         
         // Check if game is expired
         const gameStatus = GameUtils.getGameStatus(gameData);
-        isGameExpired = !gameStatus.canEdit;
+        const isGameExpired = !gameStatus.canEdit;
         
         console.log('[CLIENT] Game status:', gameStatus);
         console.log('[CLIENT] Is game expired?', isGameExpired);
@@ -290,7 +291,7 @@ async function fetchGameData() {
         document.getElementById('gameManagement').style.display = 'block';
         
         // Show expired warning if needed
-        if (isGameExpired) {
+        if (!GameUtils.getGameStatus(gameData).canEdit) {
             showExpiredGameWarning();
             // Add expired class to disable editing
             document.getElementById('gameManagement').classList.add('expired');
@@ -305,12 +306,12 @@ async function fetchGameData() {
         updatePlayerLists();
         
         // Generate share links (only if not expired)
-        if (!isGameExpired) {
+        if (!GameUtils.getGameStatus(gameData).canEdit) {
             populateShareLinks();
         }
         
         // If game is expired, force switch to Players tab (read-only)
-        if (isGameExpired) {
+        if (!GameUtils.getGameStatus(gameData).canEdit) {
             // Force switch to Players tab since it's the only useful one for expired games
             setTimeout(() => {
                 openTabFromSelect('Players');
@@ -604,7 +605,7 @@ if (outPlayersContainer) {
 // UPDATE your updateGameDetails function in manage-scripts.js:
 
 async function updateGameDetails() {
-    if (isGameExpired) {
+    if (!GameUtils.getGameStatus(gameData).canEdit) {
         showStatus('Cannot update expired games', 'error');
         return;
     }
@@ -726,7 +727,7 @@ function debugNotificationPreferences() {
 
 // Updated addPlayerManually function - enhanced to show SMS status  
 async function addPlayerManually() {
-    if (isGameExpired) {
+    if (!GameUtils.getGameStatus(gameData).canEdit) {
         showStatus('Cannot add players to expired games', 'error');
         return;
     }
@@ -1015,7 +1016,7 @@ async function removeWaitlisted(playerId) {
 }
 
 async function sendAnnouncement() {
-    if (isGameExpired) {
+    if (!GameUtils.getGameStatus(gameData).canEdit) {
         showStatus('Cannot send announcements for expired games', 'error');
         return;
     }
@@ -1094,7 +1095,7 @@ function sendQuickMessage(type) {
 // REPLACE your entire cancelGame function with this:
 
 async function cancelGame() {
-    if (isGameExpired) {
+    if (!GameUtils.getGameStatus(gameData).canEdit) {
         showStatus('Cannot cancel expired games', 'error');
         return;
     }
@@ -1265,7 +1266,7 @@ function populateShareLinks() {
 
 function copyPlayerInvitation() {
     // Check if game is expired or cancelled
-    if (isGameExpired) {
+    if (!GameUtils.getGameStatus(gameData).canEdit) {
         showStatus('Cannot share invitations for expired games', 'error');
         return;
     }
