@@ -141,15 +141,21 @@
         }
 
         function formatDate(dateStr) {
-            // Parse the date as local time to avoid timezone shifts
-            const [year, month, day] = dateStr.split('-');
-            const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            // Parse the date string manually to avoid timezone issues
+            // dateStr format is "YYYY-MM-DD"
+            const [year, month, day] = dateStr.split('-').map(num => parseInt(num));
             
-            return date.toLocaleDateString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric' 
-            });
+            // Create date object and format manually to avoid any timezone confusion
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
+            // Create the date in local time
+            const date = new Date(year, month - 1, day);
+            const dayName = days[date.getDay()];
+            const monthName = months[date.getMonth()];
+            
+            return `${dayName}, ${monthName} ${day}`;
         }
 
         function formatTime(timeStr) {
