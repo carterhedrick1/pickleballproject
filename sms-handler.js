@@ -1,4 +1,4 @@
-// sms-handler.js - PROTECTED VERSION with comprehensive logging and safeguards
+// sms-handler.js - All SMS-related functions - FINAL PRODUCTION VERSION
 const { 
   getAllGames, 
   getGameHostInfo, 
@@ -8,181 +8,7 @@ const {
   clearLastCommand
 } = require('./database');
 
-// ============================================================================
-// SMS PROTECTION & MONITORING SYSTEM
-// ============================================================================
-
-// Global SMS tracking and protection
-const SMS_PROTECTION = {
-  // Rate limiting: phone number -> array of timestamps
-  rateLimits: new Map(),
-  
-  // Daily counters
-  dailyCount: 0,
-  dailyLimit: parseInt(process.env.SMS_DAILY_LIMIT) || 2000, // Default 2000/day
-  dailyDate: new Date().toDateString(),
-  
-  // Per-minute tracking
-  minuteCount: 0,
-  minuteLimit: parseInt(process.env.SMS_MINUTE_LIMIT) || 10, // Default 10/minute
-  minuteStart: Date.now(),
-  
-  // Total session counter
-  sessionCount: 0,
-  
-  // Emergency brake
-  emergencyStop: false,
-  
-  // Suspicious pattern detection
-  suspiciousPatterns: new Map() // phone -> count in last hour
-};
-
-// Check and update daily counter
-function checkDailyReset() {
-  const today = new Date().toDateString();
-  if (SMS_PROTECTION.dailyDate !== today) {
-    console.log(`[SMS PROTECTION] 🔄 Daily reset: Previous day had ${SMS_PROTECTION.dailyCount} SMS sent`);
-    SMS_PROTECTION.dailyCount = 0;
-    SMS_PROTECTION.dailyDate = today;
-  }
-}
-
-// Check and update minute counter
-function checkMinuteReset() {
-  const now = Date.now();
-  const minutesPassed = Math.floor((now - SMS_PROTECTION.minuteStart) / 60000);
-  
-  if (minutesPassed >= 1) {
-    if (SMS_PROTECTION.minuteCount > 0) {
-      console.log(`[SMS PROTECTION] ⏱️ Minute reset: Previous minute had ${SMS_PROTECTION.minuteCount} SMS sent`);
-    }
-    SMS_PROTECTION.minuteCount = 0;
-    SMS_PROTECTION.minuteStart = now;
-  }
-}
-
-// Rate limiting check (max 1 SMS per phone per 30 seconds)
-function checkRateLimit(phoneNumber) {
-  const now = Date.now();
-  const phoneHistory = SMS_PROTECTION.rateLimits.get(phoneNumber) || [];
-  
-  // Remove entries older than 30 seconds
-  const recent = phoneHistory.filter(timestamp => (now - timestamp) < 30000);
-  
-  if (recent.length > 0) {
-    const lastSent = Math.max(...recent);
-    const secondsAgo = Math.floor((now - lastSent) / 1000);
-    console.log(`[SMS PROTECTION] ⚠️ Rate limit triggered for ${phoneNumber} (last SMS ${secondsAgo}s ago)`);
-    return false;
-  }
-  
-  // Update history
-  recent.push(now);
-  SMS_PROTECTION.rateLimits.set(phoneNumber, recent);
-  return true;
-}
-
-// Suspicious pattern detection
-function checkSuspiciousPatterns(phoneNumber) {
-  const now = Date.now();
-  const hourAgo = now - (60 * 60 * 1000);
-  
-  // Get or create pattern tracking for this phone
-  const patterns = SMS_PROTECTION.suspiciousPatterns.get(phoneNumber) || [];
-  
-  // Remove entries older than 1 hour
-  const recentPatterns = patterns.filter(timestamp => timestamp > hourAgo);
-  
-  // Add current attempt
-  recentPatterns.push(now);
-  SMS_PROTECTION.suspiciousPatterns.set(phoneNumber, recentPatterns);
-  
-  // Check if suspicious (more than 20 SMS in 1 hour to same number)
-  if (recentPatterns.length > 20) {
-    console.log(`[SMS PROTECTION] 🚨 SUSPICIOUS PATTERN: ${recentPatterns.length} SMS to ${phoneNumber} in last hour`);
-    return true;
-  }
-  
-  return false;
-}
-
-// Check all protection systems
-function checkAllProtections(phoneNumber) {
-  checkDailyReset();
-  checkMinuteReset();
-  
-  // Emergency stop check
-  if (SMS_PROTECTION.emergencyStop) {
-    return { allowed: false, reason: 'Emergency stop activated' };
-  }
-  
-  // Daily limit check
-  if (SMS_PROTECTION.dailyCount >= SMS_PROTECTION.dailyLimit) {
-    console.log(`[SMS PROTECTION] 🛑 DAILY LIMIT REACHED: ${SMS_PROTECTION.dailyCount}/${SMS_PROTECTION.dailyLimit}`);
-    return { allowed: false, reason: `Daily limit reached (${SMS_PROTECTION.dailyLimit})` };
-  }
-  
-  // Per-minute limit check
-  if (SMS_PROTECTION.minuteCount >= SMS_PROTECTION.minuteLimit) {
-    console.log(`[SMS PROTECTION] 🛑 MINUTE LIMIT REACHED: ${SMS_PROTECTION.minuteCount}/${SMS_PROTECTION.minuteLimit}`);
-    return { allowed: false, reason: `Per-minute limit reached (${SMS_PROTECTION.minuteLimit})` };
-  }
-  
-  // Rate limiting check
-  if (!checkRateLimit(phoneNumber)) {
-    return { allowed: false, reason: 'Rate limited (30 second cooldown per phone)' };
-  }
-  
-  // Suspicious pattern check
-  if (checkSuspiciousPatterns(phoneNumber)) {
-    return { allowed: false, reason: 'Suspicious pattern detected (too many SMS to same number)' };
-  }
-  
-  return { allowed: true };
-}
-
-// Update protection counters after successful send
-function updateProtectionCounters() {
-  SMS_PROTECTION.dailyCount++;
-  SMS_PROTECTION.minuteCount++;
-  SMS_PROTECTION.sessionCount++;
-  
-  // Log milestone warnings
-  if (SMS_PROTECTION.dailyCount % 50 === 0) {
-    console.log(`[SMS PROTECTION] ⚠️ Daily SMS count: ${SMS_PROTECTION.dailyCount}/${SMS_PROTECTION.dailyLimit}`);
-  }
-  
-  if (SMS_PROTECTION.sessionCount % 100 === 0) {
-    console.log(`[SMS PROTECTION] 📊 Session SMS count: ${SMS_PROTECTION.sessionCount} total sent`);
-  }
-}
-
-// Get protection status for logging
-// Change this function to return the format the dashboard expects:
-function getProtectionStatus() {
-  return {
-    daily: `${SMS_PROTECTION.dailyCount}/${SMS_PROTECTION.dailyLimit}`,  // ← Add this format
-    minute: `${SMS_PROTECTION.minuteCount}/${SMS_PROTECTION.minuteLimit}`, // ← Add this format
-    session: SMS_PROTECTION.sessionCount,
-    emergencyStop: SMS_PROTECTION.emergencyStop
-  };
-}
-
-// Emergency stop function (can be called externally)
-function activateEmergencyStop() {
-  SMS_PROTECTION.emergencyStop = true;
-  console.log(`[SMS PROTECTION] 🚨 EMERGENCY STOP ACTIVATED! All SMS sending halted.`);
-}
-
-function deactivateEmergencyStop() {
-  SMS_PROTECTION.emergencyStop = false;
-  console.log(`[SMS PROTECTION] ✅ Emergency stop deactivated. SMS sending resumed.`);
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
+// Helper Functions
 function formatPhoneNumber(phoneNumber) {
   const cleaned = ('' + phoneNumber).replace(/\D/g, '');
   if (cleaned.length === 10) {
@@ -206,93 +32,28 @@ function formatTimeForSMS(timeStr) {
   return `${hour12}:${minutes} ${ampm}`;
 }
 
+// Helper function to check if a game date is today or in the future
 function isGameUpcoming(gameDate) {
   const today = new Date();
   const game = new Date(gameDate);
+  
+  // Set both dates to start of day for fair comparison
   today.setHours(0, 0, 0, 0);
   game.setHours(0, 0, 0, 0);
+  
   return game >= today;
 }
 
-// ============================================================================
-// ENHANCED SMS SENDING FUNCTION
-// ============================================================================
-
-// Add this new function before sendSMS
-async function checkTextBeltQuota() {
-  try {
-    if (!process.env.TEXTBELT_API_KEY) {
-      return { success: false, reason: 'No API key in dev mode' };
-    }
-    
-    const response = await fetch(`https://textbelt.com/quota/${process.env.TEXTBELT_API_KEY}`);
-    const data = await response.json();
-    
-    return {
-      success: true,
-      quotaRemaining: data.quotaRemaining || 0,
-      quotaUsed: data.quotaUsed || 0
-    };
-  } catch (error) {
-    console.log(`[QUOTA CHECK] ❌ Failed to check TextBelt quota: ${error.message}`);
-    return { success: false, error: error.message };
-  }
-}
-
+// SMS sending function
 async function sendSMS(to, message, gameId = null) {
-  const startTime = Date.now();
-  const cleanedTo = formatPhoneNumber(to);
-  const protection = getProtectionStatus();
-  
-  // Enhanced logging - BEFORE sending
-  console.log(`[SMS REQUEST] ==========================================`);
-  console.log(`[SMS REQUEST] 📱 To: ${cleanedTo}`);
-  console.log(`[SMS REQUEST] 🎮 Game ID: ${gameId || 'N/A'}`);
-  console.log(`[SMS REQUEST] 📝 Message length: ${message.length} chars`);
-  console.log(`[SMS REQUEST] 📊 Protection status: Daily ${protection.daily}, Minute ${protection.minute}, Session ${protection.session}`);
-  console.log(`[SMS REQUEST] 💬 Message preview: "${message.substring(0, 100)}${message.length > 100 ? '...' : ''}"`);
-
-  const quotaCheck = await checkTextBeltQuota();
-if (quotaCheck.success) {
-  console.log(`[SMS REQUEST] 💰 TextBelt quota: ${quotaCheck.quotaRemaining} remaining, ${quotaCheck.quotaUsed || 'Unknown'} used`);
-} else {
-  console.log(`[SMS REQUEST] 💰 TextBelt quota: ${quotaCheck.reason || quotaCheck.error}`);
-}
-  
   try {
-    // Check all protection systems
-    const protectionCheck = checkAllProtections(cleanedTo);
-    
-    if (!protectionCheck.allowed) {
-      console.log(`[SMS BLOCKED] ❌ ${protectionCheck.reason}`);
-      console.log(`[SMS BLOCKED] Protection status: ${JSON.stringify(protection)}`);
-      console.log(`[SMS BLOCKED] ==========================================`);
-      return { 
-        success: false, 
-        error: protectionCheck.reason,
-        blocked: true,
-        protection: protection
-      };
-    }
-    
-    // Development mode check
     if (!process.env.TEXTBELT_API_KEY) {
-      console.log(`[SMS DEV] 🔧 Development mode - SMS simulated`);
-      console.log(`[SMS DEV] ==========================================`);
-      
-      // Still update counters in dev mode for testing
-      updateProtectionCounters();
-      
-      return { 
-        success: true, 
-        dev: true,
-        protection: getProtectionStatus()
-      };
+      console.log(`[DEV MODE] SMS would be sent to ${to}: ${message}`);
+      return { success: true, dev: true };
     }
     
-    // Prepare TextBelt parameters
     const params = {
-      phone: cleanedTo,
+      phone: to,
       message: message,
       key: process.env.TEXTBELT_API_KEY
     };
@@ -302,9 +63,6 @@ if (quotaCheck.success) {
       params.webhookData = gameId;
     }
     
-    console.log(`[SMS SEND] 🚀 Sending to TextBelt...`);
-    
-    // Send to TextBelt
     const response = await fetch('https://textbelt.com/text', {
       method: 'POST',
       headers: {
@@ -314,98 +72,30 @@ if (quotaCheck.success) {
     });
 
     const result = await response.json();
-    const endTime = Date.now();
-    const duration = endTime - startTime;
     
     if (result.success) {
-      // Update protection counters
-      updateProtectionCounters();
-      const newProtection = getProtectionStatus();
-      
-      console.log(`[SMS SUCCESS] ✅ SMS sent successfully!`);
-      console.log(`[SMS SUCCESS] 🆔 TextBelt ID: ${result.textId}`);
-      console.log(`[SMS SUCCESS] ⏱️ Duration: ${duration}ms`);
-      console.log(`[SMS SUCCESS] 📊 Updated counts: Daily ${newProtection.daily}, Session ${newProtection.session}`);
-      console.log(`[SMS SUCCESS] 💰 Estimated remaining credits: ${result.quotaRemaining || 'Unknown'}`);
-      console.log(`[SMS SUCCESS] ==========================================`);
-      
-      return { 
-        success: true, 
-        textId: result.textId,
-        quotaRemaining: result.quotaRemaining,
-        duration: duration,
-        protection: newProtection
-      };
+      console.log(`SMS sent to ${to}. TextID: ${result.textId}`);
+      return { success: true, textId: result.textId };
     } else {
-      console.log(`[SMS ERROR] ❌ TextBelt error: ${result.error}`);
-      console.log(`[SMS ERROR] 💰 Quota remaining: ${result.quotaRemaining || 'Unknown'}`);
-      console.log(`[SMS ERROR] ⏱️ Duration: ${duration}ms`);
-      console.log(`[SMS ERROR] Protection status: ${JSON.stringify(protection)}`);
-      console.log(`[SMS ERROR] ==========================================`);
-      
-      return { 
-        success: false, 
-        error: result.error,
-        quotaRemaining: result.quotaRemaining,
-        duration: duration,
-        protection: protection
-      };
+      console.error('TextBelt error:', result.error);
+      return { success: false, error: result.error };
     }
   } catch (error) {
-    const endTime = Date.now();
-    const duration = endTime - startTime;
-    
-    console.log(`[SMS EXCEPTION] 💥 SMS sending failed with exception:`);
-    console.log(`[SMS EXCEPTION] Error: ${error.message}`);
-    console.log(`[SMS EXCEPTION] Duration: ${duration}ms`);
-    console.log(`[SMS EXCEPTION] Protection status: ${JSON.stringify(protection)}`);
-    console.log(`[SMS EXCEPTION] ==========================================`);
-    
-    return { 
-      success: false, 
-      error: error.message,
-      exception: true,
-      duration: duration,
-      protection: protection
-    };
+    console.error('SMS sending failed:', error);
+    return { success: false, error: error.message };
   }
 }
 
-// ============================================================================
-// SMS WEBHOOK HANDLER (Enhanced with protection)
-// ============================================================================
-
+// Main SMS webhook handler
 async function handleIncomingSMS(req, res) {
-  const requestTime = Date.now();
-  console.log(`[SMS WEBHOOK] 📨 Incoming SMS webhook received`);
-  console.log(`[SMS WEBHOOK] Headers: ${JSON.stringify(req.headers, null, 2)}`);
-  console.log(`[SMS WEBHOOK] Body: ${JSON.stringify(req.body, null, 2)}`);
-  
   try {
     const { fromNumber, text, data: gameId } = req.body;
     
-    if (!fromNumber || !text) {
-      console.log(`[SMS WEBHOOK] ❌ Missing required fields: fromNumber=${fromNumber}, text=${text}`);
-      return res.json({ success: false, error: 'Missing required fields' });
-    }
+    console.log(`Received SMS from ${fromNumber}: "${text}" for game ${gameId}`);
     
     const cleanedFromNumber = formatPhoneNumber(fromNumber);
     const messageText = text.trim();
-    
-    console.log(`[SMS WEBHOOK] 📱 From: ${cleanedFromNumber}`);
-    console.log(`[SMS WEBHOOK] 💬 Message: "${messageText}"`);
-    console.log(`[SMS WEBHOOK] 🎮 Game ID: ${gameId || 'N/A'}`);
-    
-    // Get last command for this user
     const lastCommand = await getLastCommand(cleanedFromNumber);
-    console.log(`[SMS WEBHOOK] 📋 Last command: ${lastCommand || 'None'}`);
-    
-    // Protection check before processing
-    const protectionCheck = checkAllProtections(cleanedFromNumber);
-    if (!protectionCheck.allowed) {
-      console.log(`[SMS WEBHOOK] 🛑 Response blocked by protection: ${protectionCheck.reason}`);
-      return res.json({ success: true, message: 'Response blocked by protection system' });
-    }
 
     // Handle numbered responses first when we're expecting them
     if (/^\d+$/.test(messageText) && lastCommand) {
@@ -426,63 +116,44 @@ async function handleIncomingSMS(req, res) {
     } 
     // Default response for unrecognized commands
     else {
-      console.log(`[SMS WEBHOOK] ❓ Unrecognized command: "${messageText}"`);
       await sendSMS(fromNumber, `Reply 1 for host management, 2 for your game details, or 9 to cancel a spot. If you need anything else, reach out to the organizer.`);
       await clearLastCommand(cleanedFromNumber);
     }
     
-    const duration = Date.now() - requestTime;
-    console.log(`[SMS WEBHOOK] ✅ Webhook processed successfully in ${duration}ms`);
     res.json({ success: true });
     
   } catch (error) {
-    const duration = Date.now() - requestTime;
-    console.log(`[SMS WEBHOOK] 💥 Error processing webhook after ${duration}ms:`);
-    console.log(`[SMS WEBHOOK] Error: ${error.message}`);
-    console.log(`[SMS WEBHOOK] Stack: ${error.stack}`);
-    
-    res.json({ 
-      success: true, 
-      message: "Error processing webhook, please try again or contact support.",
-      error: error.message
-    });
+    console.error('Error handling incoming SMS:', error);
+    res.json({ success: true, message: "Error processing webhook, please try again or contact support." });
   }
 }
 
-// ============================================================================
-// WEBHOOK HANDLER FUNCTIONS (keeping existing logic but with better logging)
-// ============================================================================
-
+// Handle numbered responses (1, 2, 3, etc.)
 async function handleNumberResponse(fromNumber, cleanedFromNumber, messageText, lastCommand) {
   const selection = parseInt(messageText) - 1;
-  console.log(`[SMS HANDLER] 🔢 Number response: ${messageText} (selection: ${selection}) for command: ${lastCommand}`);
   
   if (lastCommand === 'details_selection') {
     await handleGameDetailsSelection(fromNumber, cleanedFromNumber, selection);
   } else if (lastCommand === 'cancellation_selection') {
     await handleCancellationSelection(fromNumber, cleanedFromNumber, selection);
   } else {
-    console.log(`[SMS HANDLER] ❓ Unknown last command: ${lastCommand}`);
     await clearLastCommand(cleanedFromNumber);
     await sendSMS(fromNumber, `Reply "1" for management link, "2" for game details, or "9" to cancel your reservation.`);
   }
 }
 
-// Continue with all the other handler functions (keeping existing logic but with enhanced logging)...
-// [The rest of the functions remain largely the same but with console.log statements added]
-
 async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
-  console.log(`[SMS HANDLER] 🎯 Management link request from ${cleanedFromNumber}`);
-  
   try {
     const allGames = await getAllGames();
     const hostGames = await getUserHostGames(cleanedFromNumber, allGames);
     
-    console.log(`[SMS HANDLER] Found ${hostGames.length} host games for ${cleanedFromNumber}`);
+    console.log(`[SMS] User ${cleanedFromNumber} has ${hostGames.length} host games`);
+    console.log(`[SMS DEBUG] Host games found:`, hostGames.map(g => `${g.game.location}`));
     
     if (hostGames.length === 0) {
       await sendSMS(fromNumber, `Sorry, we couldn't find any upcoming games that you're hosting.`);
     } else if (hostGames.length === 1) {
+      console.log(`[SMS] Sending single management link for: ${hostGames[0].game.location}`);
       const { id, game, hostInfo } = hostGames[0];
       const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
       const managementLink = `${baseUrl}/manage.html?id=${id}&token=${hostInfo.hostToken}`;
@@ -496,6 +167,7 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
       
       await sendSMS(fromNumber, `Here's your management link for ${locationText} on ${gameDate} at ${gameTime}: ${managementLink}`);
     } else {
+      console.log(`[SMS] User has ${hostGames.length} host games, sending all links`);
       let responseMessage = `You have ${hostGames.length} upcoming games:\n\n`;
       
       hostGames.forEach(({ id, game, hostInfo }, index) => {
@@ -512,35 +184,120 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
         responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime}\n${managementLink}\n\n`;
       });
       
+      // Check message length and truncate if needed
       if (responseMessage.length > 1500) {
-        console.log(`[SMS HANDLER] ⚠️ Message too long (${responseMessage.length} chars), shortening`);
+        console.log(`[SMS DEBUG] Message too long (${responseMessage.length} chars), sending shortened version`);
         responseMessage = `You have ${hostGames.length} upcoming games. Please visit the website to manage them.`;
       }
       
       await sendSMS(fromNumber, responseMessage);
     }
   } catch (error) {
-    console.log(`[SMS HANDLER] ❌ Error in handleManagementLinkRequest: ${error.message}`);
+    console.error('Error in handleManagementLinkRequest:', error);
     await sendSMS(fromNumber, `Sorry, there was an error retrieving your management links. Please try again.`);
   }
 }
 
-// Continue with all remaining functions... (I'll include a few more key ones)
-
-async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
-  console.log(`[SMS HANDLER] 📋 Game details request from ${cleanedFromNumber}`);
-  
+// Handle game details selection
+async function handleGameDetailsSelection(fromNumber, cleanedFromNumber, selection) {
   try {
     const allGames = await getAllGames();
     const userGames = await getUserGames(cleanedFromNumber, allGames);
     
-    console.log(`[SMS HANDLER] Found ${userGames.length} user games for ${cleanedFromNumber}`);
+    if (selection >= 0 && selection < userGames.length) {
+      const { game, role } = userGames[selection];
+      const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
+      await sendSMS(fromNumber, responseMessage);
+      await clearLastCommand(cleanedFromNumber);
+    } else {
+      await sendSMS(fromNumber, `Invalid game number. Please reply with a number from 1 to ${userGames.length}, or text "2" to see the list again.`);
+    }
+  } catch (error) {
+    console.error('Error in handleGameDetailsSelection:', error);
+    await clearLastCommand(cleanedFromNumber);
+    await sendSMS(fromNumber, `Sorry, there was an error. Please text "2" to try again.`);
+  }
+}
+
+// Handle cancellation selection
+async function handleCancellationSelection(fromNumber, cleanedFromNumber, selection) {
+  try {
+    const allGames = await getAllGames();
+    const playerGames = await getPlayerGames(cleanedFromNumber, allGames);
+    
+    if (selection >= 0 && selection < playerGames.length) {
+      const { id, game, player, status } = playerGames[selection];
+      await cancelPlayerFromGame(id, game, player, status, fromNumber);
+      await clearLastCommand(cleanedFromNumber);
+    } else {
+      await sendSMS(fromNumber, `Invalid selection. Please reply with a valid number from the list or text "9" to try cancelling again.`);
+      await clearLastCommand(cleanedFromNumber);
+    }
+  } catch (error) {
+    console.error('Error in handleCancellationSelection:', error);
+    await clearLastCommand(cleanedFromNumber);
+    await sendSMS(fromNumber, `Sorry, there was an error. Please text "9" to try again.`);
+  }
+}
+
+// Handle management link requests (command "1")
+async function getUserHostGames(cleanedFromNumber, allGames) {
+  const gameEntries = Object.entries(allGames);
+  console.log(`[SMS DEBUG] Checking ${gameEntries.length} total games for host privileges for user ${cleanedFromNumber}`);
+  
+  // Pre-fetch all host info in parallel for efficiency
+  const hostInfoPromises = gameEntries.map(async ([id, game]) => {
+    try {
+      const hostInfo = await getGameHostInfo(id);
+      return { id, hostInfo };
+    } catch (error) {
+      console.error(`Error getting host info for game ${id}:`, error);
+      return { id, hostInfo: null };
+    }
+  });
+  
+  const allHostInfo = await Promise.all(hostInfoPromises);
+  const hostInfoMap = new Map(allHostInfo.map(({ id, hostInfo }) => [id, hostInfo]));
+  
+  const hostGames = [];
+  
+  for (const [id, game] of gameEntries) {
+    // Only check upcoming games
+    if (!isGameUpcoming(game.date)) {
+      console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
+      continue;
+    }
+    
+    const hostInfo = hostInfoMap.get(id);
+    if (hostInfo && hostInfo.phone === cleanedFromNumber) {
+      console.log(`[SMS DEBUG] ✅ User is host of game ${id}: ${game.location}`);
+      hostGames.push({ id, game, hostInfo });
+    } else {
+      console.log(`[SMS DEBUG] ❌ User is NOT host of game ${id}: ${game.location}`);
+    }
+  }
+  
+  console.log(`[SMS DEBUG] Final result: ${hostGames.length} host games for user ${cleanedFromNumber}`);
+  return hostGames;
+}
+
+// Handle game details requests (command "2")
+async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
+  try {
+    const allGames = await getAllGames();
+    const userGames = await getUserGames(cleanedFromNumber, allGames);
+    
+    console.log(`[SMS] User ${cleanedFromNumber} has ${userGames.length} upcoming games`);
+    console.log(`[SMS DEBUG] Games found:`, userGames.map(g => `${g.game.location} (${g.role})`));
     
     if (userGames.length === 0) {
       await sendSMS(fromNumber, `You don't have any upcoming games registered to this phone number.`);
     } else if (userGames.length === 1) {
+      // FIXED: Only show single game details if truly one game
+      console.log(`[SMS] Showing details for single game: ${userGames[0].game.location}`);
       const { game, role } = userGames[0];
       
+      // Check if this is a waitlist mode game and user is not host
       if (game.registrationMode === 'waitlist' && role !== 'host' && role === 'waitlist') {
         await sendSMS(fromNumber, `Your application for the pickleball game is under review. You'll be notified if selected. Reply 9 to cancel your application.`);
       } else {
@@ -548,43 +305,299 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
         await sendSMS(fromNumber, responseMessage);
       }
     } else {
-      console.log(`[SMS HANDLER] Multiple games found, showing selection list`);
+      // FIXED: Always show list first for multiple games - this should be the behavior you want
+      console.log(`[SMS] User has ${userGames.length} games, showing selection list`);
       await saveLastCommand(cleanedFromNumber, 'details_selection');
       const responseMessage = await buildGameListMessage(userGames);
       await sendSMS(fromNumber, responseMessage);
     }
   } catch (error) {
-    console.log(`[SMS HANDLER] ❌ Error in handleGameDetailsRequest: ${error.message}`);
+    console.error('Error in handleGameDetailsRequest:', error);
     await sendSMS(fromNumber, `Sorry, there was an error retrieving your game details. Please try again.`);
   }
 }
 
-// [Include all the remaining helper functions with enhanced logging...]
 
-// ============================================================================
-// EXPORT FUNCTIONS + PROTECTION CONTROLS
-// ============================================================================
+// Handle cancellation requests (command "9")
+async function handleCancellationRequest(fromNumber, cleanedFromNumber) {
+  try {
+    const allGames = await getAllGames();
+    const playerGames = await getPlayerGames(cleanedFromNumber, allGames);
+    
+    if (playerGames.length === 0) {
+      await sendSMS(fromNumber, `We couldn't find any upcoming game registrations for your number.`);
+    } else if (playerGames.length === 1) {
+      const { id, game, player, status } = playerGames[0];
+      await cancelPlayerFromGame(id, game, player, status, fromNumber);
+    } else {
+      const responseMessage = await buildCancellationListMessage(playerGames);
+      await sendSMS(fromNumber, responseMessage);
+      await saveLastCommand(cleanedFromNumber, 'cancellation_selection');
+    }
+  } catch (error) {
+    console.error('Error in handleCancellationRequest:', error);
+    await sendSMS(fromNumber, `Sorry, there was an error processing your cancellation request. Please try again.`);
+  }
+}
+
+// Helper function to get user's games - OPTIMIZED VERSION
+async function getUserGames(cleanedFromNumber, allGames) {
+  const gameEntries = Object.entries(allGames);
+  console.log(`[SMS DEBUG] Checking ${gameEntries.length} total games for user ${cleanedFromNumber}`);
+  
+  // Pre-fetch all host info in parallel for efficiency
+  const hostInfoPromises = gameEntries.map(async ([id, game]) => {
+    try {
+      const hostInfo = await getGameHostInfo(id);
+      return { id, hostInfo };
+    } catch (error) {
+      console.error(`Error getting host info for game ${id}:`, error);
+      return { id, hostInfo: null };
+    }
+  });
+  
+  const allHostInfo = await Promise.all(hostInfoPromises);
+  const hostInfoMap = new Map(allHostInfo.map(({ id, hostInfo }) => [id, hostInfo]));
+  
+  const userGames = [];
+  
+  for (const [id, game] of gameEntries) {
+    // Only check upcoming games
+    if (!isGameUpcoming(game.date)) {
+      console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
+      continue;
+    }
+    
+    let userRole = null;
+    
+    // Check confirmed players
+    const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber);
+    if (playerInConfirmed) {
+      userRole = playerInConfirmed.isOrganizer ? 'host' : 'confirmed';
+      console.log(`[SMS DEBUG] Found user in confirmed players: ${game.location} (${userRole})`);
+    }
+    
+    // Check waitlist
+    if (!userRole) {
+      const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
+      if (playerInWaitlist) {
+        userRole = 'waitlist';
+        console.log(`[SMS DEBUG] Found user in waitlist: ${game.location} (${userRole})`);
+      }
+    }
+    
+    // Check if they're the host
+    if (!userRole) {
+      const hostInfo = hostInfoMap.get(id);
+      if (hostInfo && hostInfo.phone === cleanedFromNumber) {
+        userRole = 'host';
+        console.log(`[SMS DEBUG] Found user as host: ${game.location} (${userRole})`);
+      }
+    }
+    
+    if (userRole) {
+      userGames.push({ id, game, role: userRole });
+    } else {
+      console.log(`[SMS DEBUG] User not found in game: ${game.location}`);
+    }
+  }
+  
+  console.log(`[SMS DEBUG] Final result: ${userGames.length} games for user ${cleanedFromNumber}`);
+  return userGames;
+}
+
+// Helper function to get player's games (for cancellation)
+async function getPlayerGames(cleanedFromNumber, allGames) {
+  const playerGames = [];
+  
+  for (const [id, game] of Object.entries(allGames)) {
+    if (!isGameUpcoming(game.date)) {
+      continue;
+    }
+    
+    const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber && !p.isOrganizer);
+    const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
+    
+    if (playerInConfirmed || playerInWaitlist) {
+      playerGames.push({
+        id,
+        game,
+        player: playerInConfirmed || playerInWaitlist,
+        status: playerInConfirmed ? 'confirmed' : 'waitlist'
+      });
+    }
+  }
+  
+  return playerGames;
+}
+
+// Update buildGameDetailsMessage function in sms-handler.js
+// 1. Fix buildGameDetailsMessage function
+async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
+  const gameDate = formatDateForSMS(game.date);
+  const gameTime = formatTimeForSMS(game.time);
+  
+  let locationText = game.location;
+  if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+  }
+  
+  let responseMessage = `🏓 ${locationText}\n📅 ${gameDate} at ${gameTime}\n⏱️ Duration: ${game.duration} minutes\n\n`;
+  
+  // Only show player details if NOT in waitlist mode OR if user is the host
+  if (game.registrationMode !== 'waitlist' || role === 'host') {
+    responseMessage += `👥 Confirmed Players (${game.players.length}/${game.totalPlayers}):\n`;
+    if (game.players.length === 0) {
+      responseMessage += `• None yet\n`;
+    } else {
+      game.players.forEach(player => {
+        responseMessage += `• ${player.name}${player.isOrganizer ? ' (Organizer)' : ''}\n`;
+      });
+    }
+    
+    if (game.waitlist && game.waitlist.length > 0) {
+      responseMessage += `\n⏳ Waitlist (${game.waitlist.length}):\n`;
+      
+      // Check if game is in waitlist mode
+      if (game.registrationMode === 'waitlist') {
+        responseMessage += `• Applications under review\n`;
+      } else {
+        game.waitlist.forEach((player, index) => {
+          responseMessage += `• ${player.name} (#${index + 1})\n`;
+        });
+      }
+    }
+  } else {
+    // Waitlist mode - hide player info from non-hosts
+    responseMessage += `👥 Player selection in progress\n`;
+    responseMessage += `The organizer will review all applications and select players.\n`;
+  }
+  
+  if (role === 'host') {
+    responseMessage += `\nYou are: 🎯 Host/Organizer\nReply "1" for management link`;
+  } else if (role === 'confirmed') {
+    responseMessage += `\nYou are: ✅ Confirmed Player\nReply "9" to cancel`;
+  } else if (role === 'waitlist') {
+    if (game.registrationMode === 'waitlist') {
+      responseMessage += `\nYou are: ⏳ Application Submitted\nReply "9" to cancel application`;
+    } else {
+      const waitlistPosition = game.waitlist.findIndex(p => p.phone === cleanedFromNumber) + 1;
+      responseMessage += `\nYou are: ⏳ Waitlist #${waitlistPosition}\nReply "9" to cancel`;
+    }
+  }
+  
+  return responseMessage;
+}
+
+// Helper function to build game list message
+async function buildGameListMessage(userGames) {
+  let responseMessage = `You have ${userGames.length} upcoming games. Reply with just the number (1, 2, 3, etc.) to see details:\n\n`;
+  
+  userGames.forEach(({ game, role }, index) => {
+    const gameDate = formatDateForSMS(game.date);
+    const gameTime = formatTimeForSMS(game.time);
+    
+    let statusIcon = '';
+    let roleText = '';
+    
+    if (role === 'host') {
+      statusIcon = '🎯';
+      roleText = ' (Host)';
+    } else if (role === 'confirmed') {
+      statusIcon = '✅';
+    } else {
+      statusIcon = '⏳';
+    }
+    
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+}
+responseMessage += `${index + 1}. ${statusIcon} ${locationText}${roleText}\n${gameDate} at ${gameTime}\n\n`;  });
+  
+  return responseMessage;
+}
+
+// Helper function to build cancellation list message
+async function buildCancellationListMessage(playerGames) {
+  let responseMessage = `You're registered for ${playerGames.length} upcoming games. Reply with the number of the game you want to cancel:\n\n`;
+  
+  playerGames.forEach(({ game, status }, index) => {
+    const gameDate = formatDateForSMS(game.date);
+    const gameTime = formatTimeForSMS(game.time);
+    const statusText = status === 'confirmed' ? 'Confirmed' : 'Waitlist';
+    
+let locationText = game.location;
+if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
+}
+responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime} (${statusText})\n\n`;  });
+  
+  return responseMessage;
+}
+
+// Helper function to cancel player from game
+// Update cancelPlayerFromGame function in sms-handler.js
+async function cancelPlayerFromGame(gameId, game, player, status, fromNumber) {
+  try {
+    if (status === 'confirmed') {
+      const playerIndex = game.players.findIndex(p => p.id === player.id);
+      game.players.splice(playerIndex, 1);
+      
+      if (game.waitlist && game.waitlist.length > 0) {
+        const promotedPlayer = game.waitlist.shift();
+        game.players.push(promotedPlayer);
+        
+        const gameDate = formatDateForSMS(game.date);
+        const gameTime = formatTimeForSMS(game.time);
+        let locationText = game.location;
+        if (game.courtNumber && game.courtNumber.trim()) {
+          locationText += ` - ${game.courtNumber}`;
+        }
+        
+        // Different promotion message based on game mode
+        let promotionMessage;
+        if (game.registrationMode === 'waitlist') {
+          promotionMessage = `Good news! You've been selected for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 9 to cancel if needed.`;
+        } else {
+          promotionMessage = `Good news! You've been selected for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 2 for game details or 9 to cancel.`;
+        }
+        await sendSMS(promotedPlayer.phone, promotionMessage, gameId);
+      }
+    } else {
+      const waitlistIndex = game.waitlist.findIndex(p => p.id === player.id);
+      game.waitlist.splice(waitlistIndex, 1);
+    }
+    
+    await saveGame(gameId, game, game.hostToken, game.hostPhone);
+    
+    const gameDate = formatDateForSMS(game.date);
+    const gameTime = formatTimeForSMS(game.time);
+    let locationText = game.location;
+    if (game.courtNumber && game.courtNumber.trim()) {
+      locationText += ` - ${game.courtNumber}`;
+    }
+    
+    // Different message based on status and game mode
+    let statusText;
+    if (status === 'confirmed') {
+      statusText = 'reservation';
+    } else {
+      // Check if waitlist mode
+      statusText = (game.registrationMode === 'waitlist') ? 'application' : 'waitlist spot';
+    }
+    
+    await sendSMS(fromNumber, `Your pickleball ${statusText} at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`);
+  } catch (error) {
+    console.error('Error cancelling player from game:', error);
+    await sendSMS(fromNumber, `Sorry, there was an error cancelling your registration. Please try again or contact the organizer.`);
+  }
+}
 
 module.exports = {
   sendSMS,
   handleIncomingSMS,
   formatPhoneNumber,
   formatDateForSMS,
-  formatTimeForSMS,
-  
-  // Protection system controls
-  activateEmergencyStop,
-  deactivateEmergencyStop,
-  getProtectionStatus,
-  
-  // For monitoring/debugging
-  getSMSStats: () => ({
-    daily: SMS_PROTECTION.dailyCount,
-    session: SMS_PROTECTION.sessionCount,
-    limits: {
-      daily: SMS_PROTECTION.dailyLimit,
-      minute: SMS_PROTECTION.minuteLimit
-    },
-    emergencyStop: SMS_PROTECTION.emergencyStop
-  })
+  formatTimeForSMS
 };
