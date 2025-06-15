@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Your Games</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input[type="tel"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .sms-button {
+            background-color: #27ae60;
+        }
+        .sms-button:hover {
+            background-color: #219a52;
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .game-card {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .game-card.cancelled {
+            border-left-color: #e74c3c;
+            opacity: 0.7;
+        }
+        .game-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .game-details {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .management-link {
+            background-color: #3498db;
+            color: white;
+            padding: 8px 15px;
+            text-decoration: none;
+            border-radius: 3px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .management-link:hover {
+            background-color: #2980b9;
+        }
+        .error {
+            color: #e74c3c;
+            background-color: #fdf2f2;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .success {
+            color: #27ae60;
+            background-color: #f2fdf2;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎾 Find Your Pickleball Games</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Enter your phone number to find all your hosted pickleball games and get management links.
+        </p>
+        
+        <div class="input-group">
+            <label for="phone">Enter your phone number:</label>
+            <input type="tel" id="phone" placeholder="(555) 123-4567" />
+        </div>
+        
+        <button onclick="lookupGames()">Find My Games</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function formatPhoneForDisplay(phone) {
+            const cleaned = phone.replace(/\D/g, '');
+            if (cleaned.length === 10) {
+                return `(${cleaned.slice(0,3)}) ${cleaned.slice(3,6)}-${cleaned.slice(6)}`;
+            }
+            return phone;
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+
+        function formatTime(timeStr) {
+            const [hours, minutes] = timeStr.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour % 12 || 12;
+            return `${displayHour}:${minutes} ${ampm}`;
+        }
+
+        async function lookupGames() {
+            const phone = document.getElementById('phone').value.trim();
+            const resultsDiv = document.getElementById('results');
+            
+            if (!phone) {
+                resultsDiv.innerHTML = '<div class="error">Please enter a phone number.</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<div>Looking up your games...</div>';
+            
+            try {
+                const response = await fetch(`/api/games/by-phone/${encodeURIComponent(phone)}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to lookup games');
+                }
+                
+                if (data.games.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="results">
+                            <h3>No Games Found</h3>
+                            <p>No recent or upcoming games found for ${formatPhoneForDisplay(data.phoneNumber)}.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = `
+                    <div class="results">
+                        <h3>Found ${data.games.length} Game${data.games.length > 1 ? 's' : ''}</h3>
+                        <p>For phone number: ${formatPhoneForDisplay(data.phoneNumber)}</p>
+                `;
+                
+                data.games.forEach(game => {
+                    const statusClass = game.cancelled ? 'cancelled' : '';
+                    const statusText = game.cancelled ? ' (CANCELLED)' : ` (${game.playerCount}/${game.totalPlayers} players)`;
+                    const courtText = game.courtNumber ? ` - ${game.courtNumber}` : '';
+                    
+                    html += `
+                        <div class="game-card ${statusClass}">
+                            <div class="game-title">${game.location}${courtText}${statusText}</div>
+                            <div class="game-details">
+                                ${formatDate(game.date)} at ${formatTime(game.time)}
+                                ${game.waitlistCount > 0 ? ` • ${game.waitlistCount} on waitlist` : ''}
+                            </div>
+                            <a href="${game.managementLink}" class="management-link" target="_blank">
+                                Manage This Game
+                            </a>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function sendSMSLinks() {
+            const phone = document.getElementById('phone').value.trim();
+            const resultsDiv = document.getElementById('results');
+            
+            if (!phone) {
+                resultsDiv.innerHTML = '<div class="error">Please enter a phone number.</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<div>Sending SMS with your game links...</div>';
+            
+            try {
+                const response = await fetch('/api/games/lookup-and-notify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        phone: phone,
+                        sendSms: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to send SMS');
+                }
+                
+                if (data.gamesFound === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="results">
+                            <div class="error">No recent or upcoming games found for ${formatPhoneForDisplay(data.phoneNumber)}.</div>
+                        </div>
+                    `;
+                } else if (data.smsResult && data.smsResult.success) {
+                    resultsDiv.innerHTML = `
+                        <div class="results">
+                            <div class="success">
+                                ✅ Text message sent to ${formatPhoneForDisplay(data.phoneNumber)} with your management link${data.gamesFound > 1 ? 's' : ''}!
+                                <br><br>
+                                Found ${data.gamesFound} game${data.gamesFound > 1 ? 's' : ''}.
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div class="results">
+                            <div class="error">
+                                Found ${data.gamesFound} game${data.gamesFound > 1 ? 's' : ''}, but failed to send SMS. 
+                                ${data.smsResult ? data.smsResult.error : 'Unknown error'}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Allow Enter key to trigger lookup
+        document.getElementById('phone').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                lookupGames();
+            }
+        });
+    </script>
+</body>
+</html>

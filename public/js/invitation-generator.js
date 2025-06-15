@@ -46,7 +46,8 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
     console.log('[INVITATION] Registration mode detected:', registrationMode); // Debug log
     console.log('[INVITATION] Game data:', gameData); // Debug log
     
-    // Determine if we should add "First X are in" message
+    // Determine if we should add "First X are in" mes
+    // sage
     // Only show for first-come-first-serve mode
     const isFirstCome = registrationMode === 'fcfs';
     

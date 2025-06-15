@@ -392,6 +392,151 @@ app.delete('/api/games/:id', async (req, res) => {
   }
 });
 
+// Add these endpoints to your server.js file, around line 400-500 where your other API endpoints are
+
+// Get management links for a specific phone number
+app.get('/api/games/by-phone/:phone', async (req, res) => {
+  console.log(`[PHONE LOOKUP] 🔍 Looking up games for phone: ${req.params.phone}`);
+  
+  try {
+    const phoneNumber = formatPhoneNumber(req.params.phone);
+    console.log(`[PHONE LOOKUP] Formatted phone: ${phoneNumber}`);
+    
+    const allGames = await getAllGames();
+    const hostGames = [];
+    
+    // Find all games where this phone number is the host
+    for (const [gameId, gameData] of Object.entries(allGames)) {
+      // Get the full game data including hostPhone and hostToken
+      const fullGame = await getGame(gameId);
+      
+      if (fullGame && fullGame.hostPhone === phoneNumber) {
+        // Don't include cancelled games older than 7 days
+        const gameDate = new Date(fullGame.date);
+        const daysSinceGame = (new Date() - gameDate) / (1000 * 60 * 60 * 24);
+        
+        if (!fullGame.cancelled || daysSinceGame <= 7) {
+          hostGames.push({
+            gameId,
+            location: fullGame.location,
+            courtNumber: fullGame.courtNumber,
+            date: fullGame.date,
+            time: fullGame.time,
+            cancelled: fullGame.cancelled || false,
+            playerCount: fullGame.players ? fullGame.players.length : 0,
+            totalPlayers: fullGame.totalPlayers,
+            waitlistCount: fullGame.waitlist ? fullGame.waitlist.length : 0,
+            managementLink: `/manage.html?id=${gameId}&token=${fullGame.hostToken}`,
+            playerLink: `/game.html?id=${gameId}`,
+            created: fullGame.created
+          });
+        }
+      }
+    }
+    
+    // Sort by date (newest first)
+    hostGames.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    console.log(`[PHONE LOOKUP] Found ${hostGames.length} games for phone ${phoneNumber}`);
+    
+    res.json({
+      phoneNumber,
+      gamesFound: hostGames.length,
+      games: hostGames
+    });
+    
+  } catch (error) {
+    console.error(`[PHONE LOOKUP] ❌ Error looking up games:`, error);
+    res.status(500).json({ error: 'Failed to lookup games' });
+  }
+});
+
+// Send management links via SMS
+app.post('/api/games/lookup-and-notify', async (req, res) => {
+  console.log(`[PHONE LOOKUP SMS] 📱 Looking up and notifying phone: ${req.body.phone}`);
+  
+  try {
+    const { phone, sendSms = false } = req.body;
+    const phoneNumber = formatPhoneNumber(phone);
+    
+    const allGames = await getAllGames();
+    const recentGames = [];
+    
+    // Find recent games (last 30 days) where this phone number is the host
+    for (const [gameId, gameData] of Object.entries(allGames)) {
+      const fullGame = await getGame(gameId);
+      
+      if (fullGame && fullGame.hostPhone === phoneNumber) {
+        const gameDate = new Date(fullGame.date);
+        const daysSinceGame = (new Date() - gameDate) / (1000 * 60 * 60 * 24);
+        
+        // Include games from last 30 days or future games
+        if (daysSinceGame <= 30 || gameDate > new Date()) {
+          recentGames.push({
+            gameId,
+            location: fullGame.location,
+            courtNumber: fullGame.courtNumber,
+            date: fullGame.date,
+            time: fullGame.time,
+            cancelled: fullGame.cancelled || false,
+            managementLink: `${req.protocol}://${req.get('host')}/manage.html?id=${gameId}&token=${fullGame.hostToken}`
+          });
+        }
+      }
+    }
+    
+    let smsResult = null;
+    if (sendSms && recentGames.length > 0) {
+      trackSMSAttempt('management_link_lookup', `Games: ${recentGames.length}`);
+      
+      let message;
+      if (recentGames.length === 1) {
+        const game = recentGames[0];
+        const gameDate = formatDateForSMS(game.date);
+        const gameTime = formatTimeForSMS(game.time);
+        let locationText = game.location;
+        if (game.courtNumber && game.courtNumber.trim()) {
+          locationText += ` - ${game.courtNumber}`;
+        }
+        message = `🎾 Your pickleball game management link:\n\n${locationText}\n${gameDate} at ${gameTime}\n\n${game.managementLink}`;
+      } else {
+        // Sort by date and get the most recent upcoming game
+        recentGames.sort((a, b) => new Date(a.date) - new Date(b.date));
+        const upcomingGames = recentGames.filter(g => new Date(g.date) >= new Date());
+        const gameToShow = upcomingGames.length > 0 ? upcomingGames[0] : recentGames[0];
+        
+        const gameDate = formatDateForSMS(gameToShow.date);
+        const gameTime = formatTimeForSMS(gameToShow.time);
+        let locationText = gameToShow.location;
+        if (gameToShow.courtNumber && gameToShow.courtNumber.trim()) {
+          locationText += ` - ${gameToShow.courtNumber}`;
+        }
+        
+        message = `🎾 You have ${recentGames.length} recent games. Here's your ${upcomingGames.length > 0 ? 'next' : 'most recent'} game:\n\n${locationText}\n${gameDate} at ${gameTime}\n\n${gameToShow.managementLink}`;
+      }
+      
+      smsResult = await sendSMS(phoneNumber, message);
+      
+      if (smsResult.success) {
+        updateSMSStats('success');
+      } else {
+        updateSMSStats(smsResult.blocked ? 'blocked' : 'error');
+      }
+    }
+    
+    res.json({
+      phoneNumber,
+      gamesFound: recentGames.length,
+      games: recentGames,
+      smsResult
+    });
+    
+  } catch (error) {
+    console.error(`[PHONE LOOKUP SMS] ❌ Error:`, error);
+    res.status(500).json({ error: 'Failed to lookup and notify' });
+  }
+});
+
 // Add player to game (regular signup)
 app.post('/api/games/:id/players', async (req, res) => {
   try {
