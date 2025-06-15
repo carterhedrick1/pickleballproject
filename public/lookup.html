@@ -126,6 +126,7 @@
         </div>
         
         <button onclick="lookupGames()">Find My Games</button>
+        <button onclick="sendSMSLinks()" class="sms-button">Text Me My Links</button>
         
         <div id="results"></div>
     </div>
@@ -140,7 +141,10 @@
         }
 
         function formatDate(dateStr) {
-            const date = new Date(dateStr);
+            // Parse the date as local time to avoid timezone shifts
+            const [year, month, day] = dateStr.split('-');
+            const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            
             return date.toLocaleDateString('en-US', { 
                 weekday: 'short', 
                 month: 'short', 
