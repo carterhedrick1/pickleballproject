@@ -6,6 +6,8 @@ const {
   markReminderSent 
 } = require('./database');
 const { sendSMS, formatDateForSMS, formatTimeForSMS } = require('./sms-handler');
+const sentRemindersCache = new Map(); // In-memory cache to prevent duplicate sends
+
 
 // Test logging variables
 let TEST_GAME_ID = null;
@@ -145,6 +147,13 @@ async function checkAndSendReminders() {
       
       // Only send if we're within 5 minutes of the reminder time and it's not in the past
       if (timeDifference <= fiveMinutes && finalCentralTime >= reminderTime) {
+        // **NEW SAFETY CHECK**: Check in-memory cache first
+        const cacheKey = `${gameId}_${game.date}_${game.time}`;
+        if (sentRemindersCache.has(cacheKey)) {
+          console.log(`[REMINDER SAFETY] ❌ Already sent reminders for game ${gameId} (cached), skipping`);
+          continue;
+        }
+        
         // Only log sending details for test game
         if (gameId === TEST_GAME_ID) {
           console.log(`[REMINDER TEST] ✅ Time to send 24-hour reminders for game ${gameId}`);
@@ -152,11 +161,21 @@ async function checkAndSendReminders() {
           console.log(`[REMINDER] ✅ Sending reminders for game ${gameId}`);
         }
         
+        // **NEW SAFETY CHECK**: Mark in cache BEFORE sending any SMS
+        sentRemindersCache.set(cacheKey, Date.now());
+        
         // Send reminders to all confirmed players
         const confirmedPlayers = game.players || [];
         let remindersSent = 0;
+        let maxRemindersPerGame = 20; // **NEW SAFETY LIMIT**
         
         for (const player of confirmedPlayers) {
+          // **NEW SAFETY CHECK**: Hard limit on reminders per game
+          if (remindersSent >= maxRemindersPerGame) {
+            console.log(`[REMINDER SAFETY] ❌ Hit safety limit of ${maxRemindersPerGame} reminders for game ${gameId}`);
+            break;
+          }
+          
           // Skip players without phone numbers
           if (!player.phone) {
             console.log(`[REMINDER] Skipping ${player.name} - no phone number`);
@@ -176,13 +195,14 @@ async function checkAndSendReminders() {
           const gameDateFormatted = formatDateForSMS(game.date);
           
           // Create the reminder message
-// Include court number in location text like other SMS messages
-let locationText = game.location;
-if (game.courtNumber && game.courtNumber.trim()) {
-  locationText += ` - ${game.courtNumber}`;
-}
+          // Include court number in location text like other SMS messages
+          let locationText = game.location;
+          if (game.courtNumber && game.courtNumber.trim()) {
+            locationText += ` - ${game.courtNumber}`;
+          }
 
-const reminderMessage = `🏓 Reminder: Your pickleball game is tomorrow at ${gameTimeFormatted} at ${locationText}. Looking forward to seeing you! Reply 2 for details or 9 to cancel.`;          
+          const reminderMessage = `🏓 Reminder: Your pickleball game is tomorrow at ${gameTimeFormatted} at ${locationText}. Looking forward to seeing you! Reply 2 for details or 9 to cancel.`;          
+          
           // Send the SMS
           const smsResult = await sendSMS(player.phone, reminderMessage, gameId);
           
@@ -213,6 +233,14 @@ const reminderMessage = `🏓 Reminder: Your pickleball game is tomorrow at ${ga
             console.log(`[REMINDER TEST] ⏳ Game ${gameId} reminder window passed`);
           }
         }
+      }
+    }
+    
+    // **NEW**: Clean up old cache entries (older than 48 hours)
+    const twoDaysAgo = Date.now() - (48 * 60 * 60 * 1000);
+    for (const [key, timestamp] of sentRemindersCache.entries()) {
+      if (timestamp < twoDaysAgo) {
+        sentRemindersCache.delete(key);
       }
     }
     
