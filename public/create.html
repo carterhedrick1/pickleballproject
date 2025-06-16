@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Create a Game</title>
+    <style>
+        /* Chrome-specific font rendering fixes - targets only Chrome/Chromium browsers */
+        @supports (-webkit-mask: none) and (not (-webkit-backdrop-filter: blur(1px))) {
+            /* This targets Chrome specifically, excluding Safari */
+            
+            * {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                text-rendering: optimizeLegibility;
+            }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                font-weight: 400;
+                font-synthesis: none;
+            }
+            
+            /* Fix Chrome's tendency to make fonts too bold */
+            label,
+            .section-title,
+            .notification-title,
+            .mode-option .notification-title {
+                font-weight: 500 !important; /* Use 500 instead of bold for better Chrome rendering */
+            }
+            
+            .page-header h1 {
+                font-weight: 700 !important;
+                font-synthesis: none;
+            }
+            
+            .page-header .subtitle {
+                font-weight: 400 !important;
+                font-synthesis: none;
+            }
+            
+            button {
+                font-family: inherit;
+                font-weight: 500 !important;
+                text-rendering: optimizeLegibility;
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            input, select, textarea {
+                font-family: inherit;
+                font-weight: 400 !important;
+                -webkit-font-smoothing: antialiased;
+                text-rendering: optimizeLegibility;
+            }
+            
+            .notification-title,
+            .mode-option .notification-title {
+                font-weight: 500 !important;
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            .notification-description,
+            .mode-option .notification-description {
+                font-weight: 400 !important;
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            .share-title,
+            .management-reminder h4 {
+                font-weight: 500 !important;
+            }
+        }
+
+        /* Additional Chrome-only fix using user agent detection */
+        @media screen and (-webkit-min-device-pixel-ratio:0) and (min-resolution:.001dpcm) {
+            /* This is another Chrome-specific selector */
+            
+            body {
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            label {
+                font-weight: 500;
+            }
+            
+            button {
+                font-weight: 500;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        /* Sleeker, smaller header with navy-to-green gradient */
+        .page-header {
+            background: linear-gradient(135deg, #475569 0%, #429046 100%);
+            color: white;
+            padding: 20px 32px 16px;
+            margin: 0;
+            position: relative;
+            overflow: hidden;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.15), transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.1), transparent),
+                radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.2), transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.1), transparent),
+                radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.15), transparent);
+            background-repeat: repeat;
+            background-size: 200px 100px;
+        }
+
+        .page-header .header-content {
+            text-align: center;
+            z-index: 2;
+            position: relative;
+        }
+
+        .page-header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: -0.01em;
+        }
+
+        .page-header .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 400;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* Form section */
+        .form-section {
+            padding: 32px;
+            background-color: white;
+        }
+
+        .section-title {
+            color: #4CAF50;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4CAF50;
+            display: inline-block;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+            letter-spacing: 0.025em;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 14px 16px;
+            box-sizing: border-box;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            background-color: white;
+            font-family: inherit;
+        }
+
+        input[type="date"], input[type="time"] {
+            width: 100% !important;
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
+
+        input[type="time"] {
+            min-height: 44px;
+            line-height: 1.5;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        input[type="time"]::-webkit-datetime-edit {
+            width: 100%;
+            display: flex;
+            justify-content: left;
+            align-items: left;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: #429046;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(66, 144, 70, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .form-help-text {
+            color: #6b7280;
+            font-size: 12px;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        button {
+            background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
+            color: white;
+            padding: 16px 28px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(66, 144, 70, 0.4);
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
+        }
+
+        /* SMS info styling */
+        .sms-info {
+    background: linear-gradient(135deg, #fed7aa 0%, #eeb77c 100%);
+    border: 1px solid #ea580c;
+    padding: 14px;
+    border-radius: 10px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: #9a3412;
+    line-height: 1.4;
+}
+
+        /* Checkbox styling */
+        .checkbox-inline {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.checkbox-inline:hover {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.checkbox-inline input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+.checkbox-inline label {
+    margin: 0;
+    font-weight: 400;
+    cursor: pointer;
+    flex: 1;
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 1.4;
+}
+
+        /* Status messages */
+        #status {
+            margin: 20px 32px;
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .success {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border: 1px solid #16a34a;
+            color: #166534;
+        }
+
+        .error {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+
+        .info {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+        }
+
+        /* Share section styling */
+        .share-section {
+            padding: 32px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .share-title {
+            color: #1f2937;
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0 0 20px 0;
+            text-align: center;
+        }
+
+        .save-suggestion {
+            font-style: italic;
+            color: #666;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .center-copy-section {
+            text-align: center;
+            padding: 16px 0;
+        }
+
+        .center-copy-section p {
+            color: #6b7280;
+            margin: 14px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .save-suggestion {
+            font-style: italic;
+            color: #666;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        /* Updated CSS for the copy button */
+        .copy-btn {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            color: white;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            width: 100%;
+            max-width: 260px;
+            margin: 16px auto;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(30, 58, 138, 0.3);
+            display: block;
+        }
+
+        .copy-btn:hover {
+            background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
+        }
+
+        .copy-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 16px rgba(30, 58, 138, 0.3);
+        }
+
+        .management-reminder {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #f59e0b;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .management-reminder h4 {
+            color: #92400e;
+            margin: 0 0 10px 0;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .management-reminder p {
+            color: #92400e;
+            margin: 6px 0;
+            font-size: 13px;
+        }
+
+        /* REPLACE your notifications CSS - MOVE this OUTSIDE the @media query and BEFORE the @media (max-width: 768px) section */
+
+        /* UPDATE your notifications section CSS: */
+
+        /* REPLACE your notifications section CSS with this: */
+
+        .notifications-section {
+            margin-top: 40px;
+            margin-bottom: 30px;
+            /* REMOVED: padding, background, border, box-shadow */
+        }
+
+        .notifications-section > label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057; /* CHANGED: Match other form labels */
+            font-size: 16px; /* CHANGED: Match other form labels */
+        }
+
+        .notifications-section small {
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        /* Modern Toggle-Style Checkboxes */
+        .notification-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .notification-option:hover {
+            border-color: #429046;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(66, 144, 70, 0.1);
+        }
+
+        .notification-option.checked {
+            border-color: #429046;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.15);
+        }
+
+        .notification-content {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex: 1;
+        }
+
+        .notification-icon {
+            font-size: 18px;
+            width: 22px;
+            text-align: center;
+        }
+
+        .notification-text {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1f2937;
+            margin: 0 0 3px 0;
+            line-height: 1.3;
+        }
+
+        .notification-description {
+            font-size: 12px;
+            color: #6b7280;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .notification-option.checked .notification-title {
+            color: #166534;
+        }
+
+        .notification-option.checked .notification-description {
+            color: #4b5563;
+        }
+
+        /* Custom Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background-color: #d1d5db;
+            border-radius: 12px;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .toggle-switch::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .notification-option.checked .toggle-switch {
+            background-color: #429046;
+        }
+
+        .notification-option.checked .toggle-switch::before {
+            transform: translateX(20px);
+        }
+
+        /* Hide the actual checkbox */
+        .notification-option input[type="checkbox"] {
+            display: none;
+        }
+
+        /* Better button spacing */
+        .notifications-section + button {
+            margin-top: 40px;
+        }
+
+        /* MAKE REGISTRATION MODE LOOK LIKE NOTIFICATION TOGGLES */
+        /* REPLACE your .mode-selector CSS with this: */
+
+        .mode-selector {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .mode-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px;
+            margin-bottom: 0;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .mode-option:hover {
+            border-color: #429046;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(66, 144, 70, 0.1);
+        }
+
+        .mode-option.checked {
+            border-color: #429046;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.15);
+        }
+
+        /* Hide the radio buttons */
+        .mode-option input[type="radio"] {
+            display: none;
+        }
+
+        /* Mode options use the same structure as notifications */
+        .mode-option .notification-content {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex: 1;
+        }
+
+        .mode-option .notification-icon {
+            font-size: 18px;
+            width: 22px;
+            text-align: center;
+        }
+
+        .mode-option .notification-text {
+            flex: 1;
+        }
+
+        .mode-option .notification-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1f2937;
+            margin: 0 0 3px 0;
+            line-height: 1.3;
+        }
+
+        .mode-option .notification-description {
+            font-size: 12px;
+            color: #6b7280;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        /* Toggle switch styling for mode options */
+        .mode-option .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background-color: #d1d5db;
+            border-radius: 12px;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .mode-option .toggle-switch::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .mode-option.checked .toggle-switch {
+            background-color: #429046;
+        }
+
+        .mode-option.checked .toggle-switch::before {
+            transform: translateX(20px);
+        }
+
+        .mode-option.checked .notification-title {
+            color: #166534;
+        }
+
+        .mode-option.checked .notification-description {
+            color: #4a5568;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                margin: 0;
+            }
+
+            .container {
+                border-radius: 16px;
+                box-shadow: none;
+            }
+
+            .page-header {
+                min-height: 60px;
+                padding: 16px 20px 12px;
+                border-radius: 16px 16px 0 0;
+            }
+
+            .page-header h1 {
+                font-size: 20px;
+            }
+
+            .page-header .subtitle {
+                font-size: 13px;
+            }
+
+            .form-section, .share-section {
+                padding: 20px;
+            }
+
+            .section-title {
+                font-size: 20px;
+            }
+
+            input, select, textarea {
+                padding: 12px 14px;
+            }
+
+            button {
+                padding: 14px 20px;
+                font-size: 15px;
+            }
+
+            .copy-btn {
+                width: 100%;
+                margin-top: 10px;
+            }
+
+            .notification-option, .mode-option {
+                padding: 14px 16px;
+            }
+
+            /* Extra small mobile devices */
+@media (max-width: 480px) {
+    body {
+        padding: 0;
+    }
+
+    .container {
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .page-header {
+        border-radius: 0;
+    }
+}
+
+            /* ADD this CSS to your existing <style> section for better spacing */
+        }
+    </style>
+    <link rel="stylesheet" href="/css/footer.css">
+    <link rel="stylesheet" href="/css/header.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Create Game</h1>
+                <div class="subtitle">Set up your pickleball match in seconds</div>
+            </div>
+        </div>
+        
+        <div id="status" style="display:none;"></div>
+        
+        <div class="form-section">
+            
+            <form id="gameForm">
+                <div class="form-group">
+                    <label for="location">📍 Location:</label>
+                    <input type="text" id="location" name="location" placeholder="e.g., Oak Park Courts" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="courtNumber">🏟️ Court Number (optional):</label>
+                    <input type="text" id="courtNumber" name="courtNumber" placeholder="e.g., Court 3, Courts 1-2, Center Court">
+                    <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Specify which court(s) you'll be using at this location</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="organizerName">👤 Your Name (Organizer):</label>
+                    <input type="text" id="organizerName" name="organizerName" placeholder="Enter your full name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="organizerPhone">📱 Your Phone Number:</label>
+                    <input type="tel" id="organizerPhone" name="organizerPhone" placeholder="(555) 123-4567" required>
+                    <div class="sms-info">
+                        By entering your number, you agree to receive a confirmation text where you can manage your game. Msg & data rates may apply. See Terms & Privacy.
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-inline">
+                        <input type="checkbox" id="organizerPlaying" name="organizerPlaying" checked>
+                        <label for="organizerPlaying">I will be playing in this game (uncheck if organizing for others)</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="date">📅 Date:</label>
+                    <input type="date" id="date" name="date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="time">⏰ Start Time:</label>
+                    <input type="time" id="time" name="time" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="duration">⏱️ Duration (minutes):</label>
+                    <input type="number" id="duration" name="duration" value="90" min="30" step="15" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="players">👥 Number of Players Needed:</label>
+                    <input type="number" id="players" name="players" value="4" min="1" max="50" required>
+                    <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Enter any number from 1 to 50 players. Include yourself if you are playing</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">💬 Optional Message:</label>
+                    <textarea id="message" name="message" placeholder="Any additional info for players (e.g., 'Bring water and sunscreen!')"></textarea>
+                </div>
+
+                <!-- Add this after the "Number of Players" field in public/index.html -->
+                <!-- Replace the Registration Mode section in public/index.html -->
+                <div class="form-group">
+                    <label>🎯 Registration Mode:</label>
+                    <div class="mode-selector">
+                        <div class="mode-option checked" onclick="toggleRegistrationMode(this, 'fcfsMode')">
+                            <div class="notification-content">
+                                <div class="notification-icon">⚡</div>
+                                <div class="notification-text">
+                                    <div class="notification-title">First-Come First-Served</div>
+                                    <div class="notification-description">Players are automatically confirmed as they sign up</div>
+                                </div>
+                            </div>
+                            <div class="toggle-switch"></div>
+                            <input type="radio" id="fcfsMode" name="registrationMode" value="fcfs" checked>
+                        </div>
+                        
+                        <div class="mode-option" onclick="toggleRegistrationMode(this, 'waitlistMode')">
+                            <div class="notification-content">
+                                <div class="notification-icon">⏳</div>
+                                <div class="notification-text">
+                                    <div class="notification-title">Waitlist Mode</div>
+                                    <div class="notification-description">You manually select players from all signups</div>
+                                </div>
+                            </div>
+                            <div class="toggle-switch"></div>
+                            <input type="radio" id="waitlistMode" name="registrationMode" value="waitlist">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REPLACE your organizer notifications section with this: -->
+                <!-- REPLACE your notifications section HTML with this: -->
+                <div class="form-group notifications-section">
+    <label for="notifications">📱 Organizer Notifications:</label>
+    <small>Get SMS alerts when these events happen (optional)</small>
+    
+    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyGameFull')">
+        <div class="notification-content">
+            <div class="notification-icon">🎯</div>
+            <div class="notification-text">
+                <div class="notification-title">Game becomes full</div>
+                <div class="notification-description">Get notified when all spots are taken</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyGameFull" name="notifyGameFull" checked>
+    </div>
+    
+    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyPlayerCancels')">
+        <div class="notification-content">
+            <div class="notification-icon">❌</div>
+            <div class="notification-text">
+                <div class="notification-title">Someone cancels their spot</div>
+                <div class="notification-description">Get notified when players cancel</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels" checked>
+    </div>
+    
+    <div class="notification-option" onclick="toggleNotification(this, 'notifyPlayerJoins')">
+        <div class="notification-content">
+            <div class="notification-icon">👋</div>
+            <div class="notification-text">
+                <div class="notification-title">Someone joins the game</div>
+                <div class="notification-description">Get notified each time a player signs up</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyPlayerJoins" name="notifyPlayerJoins">
+    </div>
+    
+    <div class="notification-option" onclick="toggleNotification(this, 'notifyOneSpotLeft')">
+        <div class="notification-content">
+            <div class="notification-icon">⚠️</div>
+            <div class="notification-text">
+                <div class="notification-title">Only one spot remaining</div>
+                <div class="notification-description">Get notified when almost full</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyOneSpotLeft" name="notifyOneSpotLeft">
+    </div>
+    
+    <div class="notification-option" onclick="toggleNotification(this, 'notifyWaitlistStarts')">
+        <div class="notification-content">
+            <div class="notification-icon">⏳</div>
+            <div class="notification-text">
+                <div class="notification-title">Waitlist starts</div>
+                <div class="notification-description">Get notified when first person is waitlisted</div>
+            </div>
+        </div>
+        <div class="toggle-switch"></div>
+        <input type="checkbox" id="notifyWaitlistStarts" name="notifyWaitlistStarts">
+    </div>
+</div>
+
+                <button type="submit">Create Game</button>
+            </form>
+        </div>
+
+        <!-- MOVE the shareLink section INSIDE the container but OUTSIDE the form-section: -->
+        <div id="shareLink" class="share-section" style="display: none;">
+            <h3 class="share-title">🎉 Your Game has been Created!</h3>
+            
+            <div class="center-copy-section">
+                <p>Click the button below to copy a complete invitation message with all game details and registration link:</p>
+                <button id="copyLink" class="copy-btn">Copy Invitation Message</button>
+                <p class="save-suggestion">This copies a complete invitation message that you can send via text, email, or social media. It includes all game details and the registration link.</p>
+            </div>
+            
+            <div class="management-reminder">
+                <h4>📱 To Manage Your Game</h4>
+                <p>Reply <strong>"1"</strong> to the confirmation text you received to get your management link.</p>
+                <p><small>You can edit players, send announcements, and cancel the game with that link.</small></p>
+            </div>
+        </div>
+    </div> <!-- Close container -->
+
+    <script>
+        // TIMEZONE-FIXED JavaScript for create game form
+        // Replace the entire <script> section in your create game HTML with this:
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up form submission
+            const gameForm = document.getElementById('gameForm');
+            gameForm.addEventListener('submit', createGame);
+            
+            // Set up copy button - simplified
+            document.getElementById('copyLink').addEventListener('click', copyToClipboard);
+            // TIMEZONE FIX: Set default date to tomorrow using local date
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            // Format date as YYYY-MM-DD for HTML date input (local timezone)
+            const year = tomorrow.getFullYear();
+            const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+            const day = String(tomorrow.getDate()).padStart(2, '0');
+            const tomorrowStr = `${year}-${month}-${day}`;
+            
+            document.getElementById('date').value = tomorrowStr;
+            console.log('Default date set to:', tomorrowStr); // Debug log
+        });
+
+        // TIMEZONE FIX FUNCTION - formats dates safely
+        function formatDateForDisplay(dateStr) {
+            if (!dateStr) return '';
+            
+            // Parse as local date to avoid timezone shift
+            const [year, month, day] = dateStr.split('-');
+            const date = new Date(year, month - 1, day); // Local date constructor
+            
+            return date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        // ADD this JavaScript function to your existing <script> section:
+
+        function toggleNotification(element, checkboxId) {
+            const checkbox = document.getElementById(checkboxId);
+            const isCurrentlyChecked = checkbox.checked;
+            
+            // Toggle the checkbox
+            checkbox.checked = !isCurrentlyChecked;
+            
+            // Toggle the visual state
+            if (checkbox.checked) {
+                element.classList.add('checked');
+            } else {
+                element.classList.remove('checked');
+            }
+            
+            // Prevent the event from bubbling up
+            event.stopPropagation();
+        }
+
+        function toggleRegistrationMode(element, radioId) {
+            // Get all mode options
+            const allModeOptions = document.querySelectorAll('.mode-option');
+            const selectedRadio = document.getElementById(radioId);
+            
+            // Remove checked class from all options
+            allModeOptions.forEach(option => {
+                option.classList.remove('checked');
+            });
+            
+            // Add checked class to clicked option
+            element.classList.add('checked');
+            
+            // Check the corresponding radio button
+            selectedRadio.checked = true;
+            
+            // Prevent event bubbling
+            if (event) {
+                event.stopPropagation();
+            }
+        }
+
+        // Updated createGame function in public/index.html script section
+        // Updated createGame function in public/index.html script section
+        // REPLACE your createGame function in public/index.html with this:
+
+        // REPLACE your createGame function in public/index.html with this updated version:
+
+async function createGame(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    
+    // DEBUG: Log form data collection
+    console.log('[CLIENT] Collecting form data...');
+    
+    // Collect notification preferences explicitly
+    const notificationPreferences = {
+        gameFull: formData.get('notifyGameFull') === 'on',
+        playerJoins: formData.get('notifyPlayerJoins') === 'on',
+        playerCancels: formData.get('notifyPlayerCancels') === 'on',
+        oneSpotLeft: formData.get('notifyOneSpotLeft') === 'on',
+        waitlistStarts: formData.get('notifyWaitlistStarts') === 'on'
+    };
+    
+    console.log('[CLIENT] Notification preferences collected:', notificationPreferences);
+    
+    const gameData = {
+        location: formData.get('location'),
+        courtNumber: formData.get('courtNumber') || '',
+        organizerName: formData.get('organizerName'),
+        organizerPhone: formData.get('organizerPhone'),
+        organizerPlaying: formData.get('organizerPlaying') === 'on',
+        date: formData.get('date'),
+        time: formData.get('time'),
+        duration: parseInt(formData.get('duration')),
+        totalPlayers: parseInt(formData.get('players')),
+        message: formData.get('message'),
+        registrationMode: formData.get('registrationMode'), // This gets sent to server
+        notificationPreferences: notificationPreferences,
+        hostPhone: formData.get('organizerPhone')
+    };
+    
+    console.log('[CLIENT] Final game data being sent:', gameData);
+    
+    try {
+        showStatus('Creating game...', 'info');
+        
+        const response = await fetch('/api/games', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gameData)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create game');
+        }
+        
+        const data = await response.json();
+        console.log('[CLIENT] Game created successfully:', data);
+        
+        // REPLACE the localStorage save section in your createGame function in public/index.html:
+
+        // Save game to localStorage for My Games page - NOW INCLUDING REGISTRATION MODE
+        let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+        myGames.push({
+            id: data.gameId,
+            hostToken: data.hostToken,
+            location: gameData.location,
+            courtNumber: gameData.courtNumber,
+            date: gameData.date,
+            time: gameData.time,
+            duration: gameData.duration,
+            totalPlayers: gameData.totalPlayers,
+            organizerPlaying: gameData.organizerPlaying, // ✅ ADD THIS LINE
+            registrationMode: gameData.registrationMode, // ✅ KEEP THIS LINE
+            message: gameData.message,
+            created: new Date().toISOString(),
+            cancelled: false
+        });
+        localStorage.setItem('myGames', JSON.stringify(myGames));
+
+        console.log('[CREATE] Saved to localStorage with registration mode:', gameData.registrationMode);
+
+        
+        // Show game links
+        showGameLinks(data.gameId);
+        
+        // Clear form
+        document.getElementById('gameForm').reset();
+        
+        // Set tomorrow's date again
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const year = tomorrow.getFullYear();
+        const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const day = String(tomorrow.getDate()).padStart(2, '0');
+        const tomorrowStr = `${year}-${month}-${day}`;
+        document.getElementById('date').value = tomorrowStr;
+        
+        // Check SMS status and show appropriate message
+        if (data.hostSms && data.hostSms.success) {
+            showStatus('Game created successfully! Check your phone for confirmation. Reply "1" to get your management link.', 'success');
+        } else if (data.hostSms && !data.hostSms.success) {
+            showStatus('Game created successfully! However, we couldn\'t send the confirmation text.', 'success');
+        } else if (data.hostSms && data.hostSms.dev) {
+            showStatus('Game created successfully! (SMS confirmation disabled in development mode)', 'success');
+        } else {
+            showStatus('Game created successfully!', 'success');
+        }
+        
+    } catch (error) {
+        console.error('[CLIENT] Error creating game:', error);
+        showStatus('Error creating game: ' + error.message, 'error');
+    }
+}
+
+        // Updated getCurrentGameData function to include court number
+        function getCurrentGameData() {
+            const myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+            
+            if (myGames.length === 0) {
+                return {
+                    location: 'Game Location',
+                    courtNumber: '',
+                    formattedDate: 'Game Date',
+                    formattedTime: 'Game Time',
+                    duration: '90',
+                    totalPlayers: '4',
+                    message: ''
+                };
+            }
+            
+            const latestGame = myGames[myGames.length - 1];
+            const formattedDate = formatDateForDisplay(latestGame.date);
+            
+            const [hours, minutes] = latestGame.time.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const hour12 = hour % 12 || 12;
+            const formattedTime = `${hour12}:${minutes} ${ampm}`;
+            
+            return {
+                location: latestGame.location,
+                courtNumber: latestGame.courtNumber || '',
+                formattedDate: formattedDate,
+                formattedTime: formattedTime,
+                duration: latestGame.duration,
+                totalPlayers: latestGame.totalPlayers,
+                message: latestGame.message || ''
+            };
+        }
+
+        function showGameLinks(gameId) {
+            // Store the game ID for the copy function
+            window.currentGameId = gameId;
+            
+            // Show the share link section
+            document.getElementById('shareLink').style.display = 'block';
+            
+            // Scroll to the links
+            document.getElementById('shareLink').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // REPLACE your copyToClipboard function in public/index.html with this:
+
+        function copyToClipboard() {
+            // Get the current game data
+            const currentGameData = InvitationGenerator.getCurrentGameDataFromStorage();
+            
+            console.log('[CREATE COPY] Game data from storage:', currentGameData);
+            console.log('[CREATE COPY] Registration mode:', currentGameData.registrationMode);
+            
+            // Ensure registrationMode is set correctly
+            if (!currentGameData.registrationMode) {
+                currentGameData.registrationMode = 'fcfs'; // Default fallback
+                console.log('[CREATE COPY] No registration mode found, defaulting to fcfs');
+            }
+            
+            // Use the shared invitation generator
+            InvitationGenerator.copyInvitationToClipboard(
+                currentGameData,
+                window.currentGameId,
+                'copyLink'
+            );
+        }
+
+        function fallbackCopy(text) {
+            // Create a temporary textarea for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                
+                const button = document.getElementById('copyLink');
+                const originalText = button.textContent;
+                button.textContent = 'Message Copied!';
+                button.style.backgroundColor = '#4CAF50';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.backgroundColor = '#2196F3';
+                }, 3000);
+                
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                showStatus('Failed to copy to clipboard', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function getCurrentGameData() {
+            // Get the most recently created game from localStorage
+            const myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+            
+            if (myGames.length === 0) {
+                return {
+                    location: 'Game Location',
+                    courtNumber: '',
+                    formattedDate: 'Game Date',
+                    formattedTime: 'Game Time',
+                    duration: '90',
+                    totalPlayers: '4',
+                    message: ''
+                };
+            }
+            
+            // Get the most recent game
+            const latestGame = myGames[myGames.length - 1];
+            console.log('Getting current game data for:', latestGame.date); // Debug log
+            
+            // TIMEZONE FIX: Format the date and time safely
+            const formattedDate = formatDateForDisplay(latestGame.date);
+            
+            const [hours, minutes] = latestGame.time.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const hour12 = hour % 12 || 12;
+            const formattedTime = `${hour12}:${minutes} ${ampm}`;
+            
+            console.log('Date formatted as:', formattedDate); // Debug log
+            
+            return {
+                location: latestGame.location,
+                courtNumber: latestGame.courtNumber || '', // Include court number
+                formattedDate: formattedDate,
+                formattedTime: formattedTime,
+                duration: latestGame.duration,
+                totalPlayers: latestGame.totalPlayers,
+                message: latestGame.message || ''
+            };
+        }
+
+        function showStatus(message, type) {
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = message;
+    statusDiv.className = type;
+    statusDiv.style.display = 'block';
+    
+    // Scroll to top to show the status message
+    statusDiv.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+    });
+    
+    // Auto-hide success and info messages
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+    
+    // Keep error messages visible until manually dismissed
+    // You could add a click handler to dismiss errors if desired
+}
+    </script>
+    <script src="/js/invitation-generator.js"></script>
+    <script src="/js/footer.js"></script>
+    <script src="/js/header.js"></script>
+</body>
+</html>
