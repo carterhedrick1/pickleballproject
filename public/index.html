@@ -106,9 +106,9 @@
 
         /* Table of Contents */
         .toc-section {
-            padding: 32px 40px;
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            background: white;
             border-bottom: 1px solid #e5e7eb;
+            padding: 32px 40px;
         }
 
         .toc-title {
@@ -129,23 +129,18 @@
             background: white;
             padding: 16px 20px;
             border-radius: 12px;
-            border-left: 4px solid #e5e7eb;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1.5px solid #e2e8f0;
+            box-shadow: 0 4px 16px rgba(22, 163, 74, 0.08), 0 1.5px 4px rgba(0,0,0,0.04);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s cubic-bezier(.4,0,.2,1);
         }
 
-        .toc-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(22, 163, 74, 0.15);
-            border-left-color: #16a34a;
-        }
-
-        .toc-item.active {
-            border-left-color: #16a34a;
-            background: white;
-            box-shadow: 0 4px 16px rgba(22, 163, 74, 0.2);
-            border: 2px solid #16a34a;
+        .toc-item:hover, .toc-item:focus-visible {
+            box-shadow: 0 8px 32px rgba(22, 163, 74, 0.15), 0 2px 8px rgba(0,0,0,0.06);
+            border-color: #16a34a;
+            background: #f6fef9;
+            transform: translateY(-2px) scale(1.02);
+            transition: all 0.18s cubic-bezier(.4,0,.2,1);
         }
 
         .toc-item h4 {
@@ -1324,10 +1319,11 @@
         }
 
         .mock-join-section {
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            background: white;
             padding: 20px;
             border-radius: 12px;
             margin-top: 20px;
+            border: 1px solid #e5e7eb;
         }
 
         .mock-join-title {
@@ -1367,6 +1363,10 @@
             gap: 12px;
             margin-top: 16px;
             align-items: center;
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
         }
 
         .mock-button {
@@ -1727,6 +1727,59 @@
         .content-section {
             scroll-margin-top: 20px;
         }
+
+        .section-nav-buttons {
+          display: flex;
+          justify-content: center;
+          gap: 24px;
+          margin: 48px 0 0 0;
+        }
+        .section-nav-btn {
+          background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
+          color: white;
+          padding: 14px 28px;
+          border: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 16px;
+          cursor: pointer;
+          box-shadow: 0 4px 16px rgba(66, 144, 70, 0.18);
+          transition: background 0.2s, transform 0.2s;
+          text-align: center;
+          text-transform: none;
+          letter-spacing: 0.5px;
+          min-width: 220px;
+          flex: 1 1 0;
+          max-width: 260px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .section-nav-btn.close {
+          background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        }
+        .section-nav-btn:hover {
+          background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+          transform: translateY(-2px) scale(1.03);
+        }
+        .section-nav-btn.close:hover {
+          background: linear-gradient(135deg, #374151 0%, #111827 100%);
+        }
+        @media (max-width: 600px) {
+          .section-nav-buttons {
+            flex-direction: column;
+            gap: 12px;
+            margin: 32px 0 0 0;
+            padding: 0 16px;
+          }
+          .section-nav-btn {
+            min-width: 0;
+            max-width: 100%;
+            width: 100%;
+            font-size: 17px;
+            padding: 16px 0;
+          }
+        }
     </style>
     <link rel="stylesheet" href="/css/header.css">
     <link rel="stylesheet" href="/css/footer.css">
@@ -1946,18 +1999,6 @@
                         <p><strong>Competitive tournaments, skill-level specific games, private group events, exclusive gatherings, team balancing scenarios.</strong> Complete control over team composition and player selection with privacy.</p>
                     </div>
                 </div>
-            </div>
-
-            <div class="subsection">
-                <h3>🤔 Still Not Sure Which Mode?</h3>
-                
-                <div class="highlight-box">
-                    <h4>Quick Decision Guide:</h4>
-                    <p><strong>Choose First Come First Serve if:</strong> You want fairness, transparency, minimal management, and automatic flow<br><br>
-                    <strong>Choose Waitlist Mode if:</strong> You want control, privacy, strategic selection, and don't mind manual management</p>
-                </div>
-
-                <p style="margin-top: 20px; color: #6b7280; font-style: italic;">Remember: You can always try both modes with different games to see which works better for your group!</p>
             </div>
         </div>
 
@@ -3179,28 +3220,6 @@
 
                 <div class="faq-steps">
                     <div class="faq-step">
-                        <h4 class="faq-question">😰 I lost my management link! How do I get it back?</h4>
-                        <div class="faq-answer">
-                            <strong>Don't panic! Try these steps in order:</strong>
-                            <ol class="steps-list">
-                                <li>
-                                    <div class="step-number">1</div>
-                                    <div class="step-text"><strong>"My Games" page:</strong> On the same device and browser where you created the game, go to IN or OUT and click "My Games"</div>
-                                </li>
-                                <li>
-                                    <div class="step-number">2</div>
-                                    <div class="step-text"><strong>Reply "1" to any SMS:</strong> Text "1" to any message you received about your game - instant management link</div>
-                                </li>
-                                <li>
-                                    <div class="step-number">3</div>
-                                    <div class="step-text"><strong>Contact IN or OUT support:</strong> If both above fail, reach out with your game details (date, location, your phone number)</div>
-                                </li>
-                            </ol>
-                            <strong>Pro tip:</strong> Once you get your link back, bookmark it or save it somewhere safe!
-                        </div>
-                    </div>
-
-                    <div class="faq-step">
                         <h4 class="faq-question">📱 Players aren't getting SMS messages - what's wrong?</h4>
                         <div class="faq-answer">
                             <strong>Check these common issues:</strong>
@@ -3248,20 +3267,6 @@
                                 <li>"Reply '2' to any text about the game for details"</li>
                                 <li>"Reply '9' to any text to cancel your spot"</li>
                             </ul>
-                        </div>
-                    </div>
-
-                    <div class="faq-step">
-                        <h4 class="faq-question">🌧️ Weather looks bad - should I cancel?</h4>
-                        <div class="faq-answer">
-                            <strong>Consider your options:</strong>
-                            <ul>
-                                <li><strong>Cancel proactively:</strong> If conditions will clearly be unplayable</li>
-                                <li><strong>Send weather update:</strong> "Game still on but monitoring weather - will update by [time]"</li>
-                                <li><strong>Move indoors:</strong> Edit location if you have backup courts</li>
-                                <li><strong>Postpone:</strong> Cancel this game and create a new one for a different date</li>
-                            </ul>
-                            <strong>Always communicate early and clearly</strong> - players appreciate advance notice rather than last-minute changes.
                         </div>
                     </div>
 
@@ -3350,5 +3355,83 @@
 
     <script src="/js/header.js"></script>
     <script src="/js/footer.js"></script>
+
+    <!-- Place these just before </body> -->
+    <script>
+    // Section order and labels
+    const sectionOrder = [
+      {id: 'game-modes', label: 'Game Modes Explained'},
+      {id: 'creating-games', label: 'Creating a Game'},
+      {id: 'managing-players', label: 'Managing Your Game'},
+      {id: 'sms-examples', label: 'SMS Messages'},
+      {id: 'player-experience', label: 'Player Experience'},
+      {id: 'tips-tricks', label: 'FAQs'}
+    ];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add nav buttons to each section
+      sectionOrder.forEach((section, idx) => {
+        const sec = document.getElementById(section.id);
+        if (!sec) return;
+        // Create nav container
+        const navDiv = document.createElement('div');
+        navDiv.className = 'section-nav-buttons';
+        // Previous button
+        const prevIdx = (idx === 0) ? sectionOrder.length - 1 : idx - 1;
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'section-nav-btn prev';
+        prevBtn.innerHTML = `← Previous: ${sectionOrder[prevIdx].label}`;
+        prevBtn.setAttribute('data-section', sectionOrder[prevIdx].id);
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'section-nav-btn close';
+        closeBtn.innerHTML = '✖ Close';
+        closeBtn.setAttribute('type', 'button');
+        // Next button
+        const nextIdx = (idx === sectionOrder.length - 1) ? 0 : idx + 1;
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'section-nav-btn next';
+        nextBtn.innerHTML = `Next: ${sectionOrder[nextIdx].label} →`;
+        nextBtn.setAttribute('data-section', sectionOrder[nextIdx].id);
+        // Responsive order: mobile = close, prev, next; desktop = prev, close, next
+        if (window.innerWidth <= 600) {
+          navDiv.appendChild(closeBtn);
+          navDiv.appendChild(prevBtn);
+          navDiv.appendChild(nextBtn);
+        } else {
+          navDiv.appendChild(prevBtn);
+          navDiv.appendChild(closeBtn);
+          navDiv.appendChild(nextBtn);
+        }
+        // Insert navDiv at end of section
+        sec.appendChild(navDiv);
+      });
+
+      // Button click handler
+      document.body.addEventListener('click', function(e) {
+        if (e.target.classList.contains('section-nav-btn')) {
+          if (e.target.classList.contains('close')) {
+            // Hide all sections and remove active from TOC
+            document.querySelectorAll('.content-section').forEach(section => {
+              section.classList.remove('active');
+            });
+            document.querySelectorAll('.toc-item').forEach(item => {
+              item.classList.remove('active');
+            });
+            window.scrollTo({top: 0, behavior: 'smooth'});
+            return;
+          }
+          const sectionId = e.target.getAttribute('data-section');
+          // Find the corresponding TOC item
+          const tocItem = document.querySelector(`.toc-item[data-section='${sectionId}']`);
+          if (tocItem) {
+            showSection(sectionId, tocItem);
+          } else {
+            showSection(sectionId, null);
+          }
+        }
+      });
+    });
+    </script>
 </body>
 </html>

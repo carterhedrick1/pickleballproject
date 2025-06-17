@@ -46,8 +46,7 @@ const headerHTML = `
  </a>
  </div>
  <nav class="header-nav">
- <a href="/" class="${currentPage === 'home' ? 'active' : ''}">How It Works</a>
-<a href="/create.html" class="${currentPage === 'create' ? 'active' : ''}">Create Game</a>
+ <a href="/create.html" class="${currentPage === 'create' ? 'active' : ''}">Create Game</a>
 <a href="/my-games.html" class="${currentPage === 'my-games' ? 'active' : ''}">My Games</a>
  </nav>
  </div>

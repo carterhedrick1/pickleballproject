@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <ul>
                             <li><a href="/">How It Works</a></li>
                             <li><a href="/create.html">Create Game</a></li>
-                            <li><a href="#support">Support</a></li>
+                            <li><a href="/my-games.html">My Games</a></li>
                         </ul>
                     </div>
                     
@@ -23,13 +23,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         <ul>
                             <li><a href="/privacy.html">Privacy Policy</a></li>
                             <li><a href="/terms.html">Terms of Service</a></li>
-                            <li><a href="#contact">Contact Us</a></li>
                         </ul>
                     </div>
                     
                     <div class="footer-section">
                         <h4>Connect</h4>
-                        <p>Questions? Feedback?</p>
                         <p>Email: <a href="mailto:support@inorout.club">support@inorout.club</a></p>
                         <p><small>Response within 24 hours</small></p>
                     </div>
