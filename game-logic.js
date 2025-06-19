@@ -384,6 +384,9 @@ function addPlayerToGame(game, playerData, forceWaitlist = false) {
 }
 
 // Remove player from game (handles promotion from waitlist)
+// game-logic.js - REPLACE the removePlayerFromGame function with this fixed version:
+
+// Remove player from game (handles promotion from waitlist)
 function removePlayerFromGame(game, playerId) {
   // Try to find in confirmed players
   const playerIndex = game.players.findIndex(p => p.id === playerId);
@@ -393,8 +396,11 @@ function removePlayerFromGame(game, playerId) {
     
     let promotedPlayer = null;
     
-    // Promote from waitlist if available
-    if (game.waitlist && game.waitlist.length > 0) {
+    // 🔧 FIX: Only auto-promote in FCFS mode, NOT in waitlist mode
+    const isWaitlistMode = game.registrationMode === 'waitlist';
+    
+    if (!isWaitlistMode && game.waitlist && game.waitlist.length > 0) {
+      // Only promote from waitlist in first-come-first-served mode
       promotedPlayer = game.waitlist.shift();
       game.players.push(promotedPlayer);
     }
@@ -403,7 +409,7 @@ function removePlayerFromGame(game, playerId) {
       status: 'removed',
       from: 'confirmed',
       removedPlayer,
-      promotedPlayer,
+      promotedPlayer, // Will be null in waitlist mode
       isOrganizer: removedPlayer.isOrganizer || false
     };
   }
