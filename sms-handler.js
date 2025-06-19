@@ -282,6 +282,7 @@ async function getUserHostGames(cleanedFromNumber, allGames) {
 }
 
 // Handle game details requests (command "2")
+// Handle game details requests (command "2")
 async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
   try {
     const allGames = await getAllGames();
@@ -292,35 +293,36 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
     
     if (userGames.length === 0) {
       await sendSMS(fromNumber, `You don't have any upcoming games registered to this phone number.`);
-    } else if (userGames.length === 1) {
+      return;
+    } 
+    
+    if (userGames.length === 1) {
       console.log(`[SMS] Showing details for single game: ${userGames[0].game.location}`);
-      const { game, role } = userGames[0];
+      const { game, role, id: gameId } = userGames[0];
       
-      // Check if this is a waitlist mode game and user is not host
-      if (game.registrationMode === 'waitlist' && role !== 'host' && role === 'waitlist') {
-        // FIXED: Clear last command to prevent processing future messages
-        await clearLastCommand(cleanedFromNumber);
-        // FIXED: Don't include gameId to prevent webhook setup for this response
-        await sendSMS(fromNumber, `Your application for the pickleball game is under review. You'll be notified if selected. Reply 9 to cancel your application.`);
-        return; // ADD THIS LINE TO STOP EXECUTION
-
-      } else {
-        const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
-        // FIXED: Include gameId to maintain proper webhook functionality for non-waitlist games
-        const gameId = userGames[0].id;
-        await sendSMS(fromNumber, responseMessage, gameId);
+      // FIXED: Check waitlist mode FIRST and handle specially
+      // Check if this is a waitlist mode game and user is on waitlist
+      if (game.registrationMode === 'waitlist' && role === 'waitlist') {
+        console.log(`[SMS] Waitlist user ${cleanedFromNumber} requested details - no response sent to prevent issues`);
+        return; // No SMS sent, prevents quota drain
       }
-    } else {
-      // FIXED: Always show list first for multiple games
-      console.log(`[SMS] User has ${userGames.length} games, showing selection list`);
-      await saveLastCommand(cleanedFromNumber, 'details_selection');
-      const responseMessage = await buildGameListMessage(userGames);
-      // FIXED: Use first game's ID for webhook or don't include if all are waitlist
-      const firstGameId = userGames[0].id;
-      await sendSMS(fromNumber, responseMessage, firstGameId);
-    }
+      
+      // For all other cases (confirmed players, hosts, FCFS waitlist)
+      const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
+      await sendSMS(fromNumber, responseMessage, gameId);
+      return;
+    } 
+    
+    // Multiple games case
+    console.log(`[SMS] User has ${userGames.length} games, showing selection list`);
+    await saveLastCommand(cleanedFromNumber, 'details_selection');
+    const responseMessage = await buildGameListMessage(userGames);
+    const firstGameId = userGames[0].id;
+    await sendSMS(fromNumber, responseMessage, firstGameId);
+    
   } catch (error) {
     console.error('Error in handleGameDetailsRequest:', error);
+    await clearLastCommand(cleanedFromNumber);
     await sendSMS(fromNumber, `Sorry, there was an error retrieving your game details. Please try again.`);
   }
 }
