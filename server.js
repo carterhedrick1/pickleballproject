@@ -923,7 +923,7 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
     }
     
 // Send organizer notification for cancellation
-if (removedPlayer && !removedPlayer.isOrganizer && token) {
+if (removedPlayer && !removedPlayer.isOrganizer) {
   await sendOrganizerNotification(gameId, game, 'playerCancels', removedPlayer.name);
 }
 
