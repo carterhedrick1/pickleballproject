@@ -302,6 +302,8 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
         await clearLastCommand(cleanedFromNumber);
         // FIXED: Don't include gameId to prevent webhook setup for this response
         await sendSMS(fromNumber, `Your application for the pickleball game is under review. You'll be notified if selected. Reply 9 to cancel your application.`);
+        return; // ADD THIS LINE TO STOP EXECUTION
+
       } else {
         const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
         // FIXED: Include gameId to maintain proper webhook functionality for non-waitlist games
