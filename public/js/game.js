@@ -207,6 +207,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 confirmation.style.display = 'block';
                 confirmationMessage.textContent = 
                     `You are Player ${data.position} of ${gameData.totalPlayers}.`;
+                
+                // Hide the 'text 2' instruction if waitlist game
+                if (gameData.registrationMode === 'waitlist') {
+                    const seeWhosPlayingInstruction = document.getElementById('seeWhosPlayingInstruction');
+                    if (seeWhosPlayingInstruction) {
+                        seeWhosPlayingInstruction.style.display = 'none';
+                    }
+                }
             } else if (signupForm && waitlist && waitlistPosition) {
                 // Show waitlist confirmation
                 signupForm.style.display = 'none';
