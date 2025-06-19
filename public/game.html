@@ -1376,14 +1376,24 @@ function showGameStatusWarning(gameStatus) {
     confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
     
     // Handle "What's Next?" section visibility
-    const nextStepsSection = document.getElementById('nextStepsSection');
-    if (nextStepsSection) {
-        if (data.action === 'out') {
-            nextStepsSection.style.display = 'none';
-        } else {
-            nextStepsSection.style.display = 'block';
+// Handle "What's Next?" section visibility
+const nextStepsSection = document.getElementById('nextStepsSection');
+const seeWhosPlayingInstruction = document.getElementById('seeWhosPlayingInstruction');
+
+if (nextStepsSection) {
+    if (data.action === 'out') {
+        nextStepsSection.style.display = 'none';
+    } else {
+        nextStepsSection.style.display = 'block';
+        
+        // Hide "text 2" instruction for waitlist games
+        if (seeWhosPlayingInstruction && gameData.registrationMode === 'waitlist') {
+            seeWhosPlayingInstruction.style.display = 'none';
+        } else if (seeWhosPlayingInstruction) {
+            seeWhosPlayingInstruction.style.display = 'block';
         }
     }
+}
     
     // Scroll to top to show confirmation
     window.scrollTo(0, 0);
