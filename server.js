@@ -15,6 +15,34 @@ const {
   isProduction
 } = require('./database');
 
+// Add organizer notification function
+async function sendOrganizerNotification(gameId, game, eventType, playerName = null) {
+  try {
+    if (!game.hostPhone || !game.notificationPreferences) {
+      return;
+    }
+    
+    const prefs = game.notificationPreferences;
+    
+    if (eventType === 'playerCancels' && prefs.playerCancels === true && playerName) {
+      const gameDate = formatDateForSMS(game.date);
+      const gameTime = formatTimeForSMS(game.time);
+      let locationText = game.location;
+      if (game.courtNumber && game.courtNumber.trim()) {
+        locationText += ` - ${game.courtNumber}`;
+      }
+      
+      const spotsLeft = parseInt(game.totalPlayers) - game.players.length;
+      const message = `🎯 HOST ALERT: ${playerName} cancelled their spot for your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} now available.`;
+      
+      await sendSMS(game.hostPhone, message, gameId);
+      console.log('[SMS ORGANIZER NOTIFICATION] Sent cancellation notification for:', playerName);
+    }
+  } catch (error) {
+    console.error('Error sending SMS organizer notification:', error);
+  }
+}
+
 const { 
   sendSMS, 
   handleIncomingSMS, 
@@ -322,6 +350,11 @@ app.put('/api/games/:id', async (req, res) => {
     console.log('[SERVER] Saving game with notification preferences:', game.notificationPreferences);
     
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
+
+    // Send organizer notification for cancellation
+if (!player.isOrganizer) {
+  await sendOrganizerNotification(gameId, game, 'playerCancels', player.name);
+}
     
     // Verify the save worked by reading it back
     const savedGame = await getGame(gameId);
