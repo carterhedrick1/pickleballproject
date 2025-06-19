@@ -479,46 +479,46 @@ function populateGameDetails() {
 function updatePlayerLists() {
     const confirmedPlayers = document.getElementById('confirmedPlayers');
     const waitlistPlayers = document.getElementById('waitlistPlayers');
+    const outPlayersContainer = document.getElementById('outPlayers'); // Add this line
     const playerCount = document.getElementById('playerCount');
     const totalPlayers = document.getElementById('totalPlayers');
     const waitlistCount = document.getElementById('waitlistCount');
     
-    // Clear existing lists
+    // Clear existing lists - MAKE SURE TO CLEAR OUT PLAYERS TOO
     confirmedPlayers.innerHTML = '';
     waitlistPlayers.innerHTML = '';
+    outPlayersContainer.innerHTML = ''; // Add this line to clear out players
     
     // Update counts
     playerCount.textContent = gameData.players.length;
     totalPlayers.textContent = gameData.totalPlayers;
     waitlistCount.textContent = gameData.waitlist.length;
 
-    
-
-// Add this new code for dynamic text:
-const playerCountElement = document.querySelector('.player-section.confirmed .player-count');
-if (playerCountElement) {
-    const count = gameData.players.length;
-    const total = gameData.totalPlayers;
-    const playerText = count === 1 ? 'player' : 'players';
-    playerCountElement.innerHTML = `<span id="playerCount">${count}</span>/<span id="totalPlayers">${total}</span> ${playerText}`;
-}
-
-const waitlistCountElement = document.querySelector('.player-section.waitlist .player-count');
-if (waitlistCountElement) {
-    const count = gameData.waitlist.length;
-    const playerText = count === 1 ? 'player' : 'players';
-    waitlistCountElement.innerHTML = `<span id="waitlistCount">${count}</span> ${playerText} waiting`;
-}
-
-const outCount = document.getElementById('outCount');
-if (outCount) {
-    const count = (gameData.outPlayers || []).length;
-    const outCountElement = document.querySelector('.player-section.out-players .player-count');
-    if (outCountElement) {
+    // Add this new code for dynamic text:
+    const playerCountElement = document.querySelector('.player-section.confirmed .player-count');
+    if (playerCountElement) {
+        const count = gameData.players.length;
+        const total = gameData.totalPlayers;
         const playerText = count === 1 ? 'player' : 'players';
-        outCountElement.innerHTML = `<span id="outCount">${count}</span> ${playerText} can't make it`;
+        playerCountElement.innerHTML = `<span id="playerCount">${count}</span>/<span id="totalPlayers">${total}</span> ${playerText}`;
     }
-}
+
+    const waitlistCountElement = document.querySelector('.player-section.waitlist .player-count');
+    if (waitlistCountElement) {
+        const count = gameData.waitlist.length;
+        const playerText = count === 1 ? 'player' : 'players';
+        waitlistCountElement.innerHTML = `<span id="waitlistCount">${count}</span> ${playerText} waiting`;
+    }
+
+    const outCount = document.getElementById('outCount');
+    if (outCount) {
+        const count = (gameData.outPlayers || []).length;
+        const outCountElement = document.querySelector('.player-section.out-players .player-count');
+        if (outCountElement) {
+            const playerText = count === 1 ? 'player' : 'players';
+            outCountElement.innerHTML = `<span id="outCount">${count}</span> ${playerText} can't make it`;
+        }
+    }
     
     // Populate confirmed players
     if (gameData.players.length === 0) {
@@ -574,10 +574,7 @@ if (outCount) {
         });
     }
 
-    // Populate out players
-// Populate out players
-const outPlayersContainer = document.getElementById('outPlayers');
-if (outPlayersContainer) {
+    // Populate out players - FIXED VERSION
     if (!gameData.outPlayers || gameData.outPlayers.length === 0) {
         outPlayersContainer.innerHTML = '<p style="text-align: center; color: #6c757d; font-style: italic;">No one marked as out</p>';
     } else {
@@ -595,7 +592,6 @@ if (outPlayersContainer) {
             outPlayersContainer.appendChild(playerItem);
         });
     }
-}
     
     // Update player checkboxes for messaging
     updatePlayerCheckboxes();
