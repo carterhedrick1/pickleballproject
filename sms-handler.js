@@ -293,23 +293,29 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
     if (userGames.length === 0) {
       await sendSMS(fromNumber, `You don't have any upcoming games registered to this phone number.`);
     } else if (userGames.length === 1) {
-      // FIXED: Only show single game details if truly one game
       console.log(`[SMS] Showing details for single game: ${userGames[0].game.location}`);
       const { game, role } = userGames[0];
       
       // Check if this is a waitlist mode game and user is not host
       if (game.registrationMode === 'waitlist' && role !== 'host' && role === 'waitlist') {
+        // FIXED: Clear last command to prevent processing future messages
+        await clearLastCommand(cleanedFromNumber);
+        // FIXED: Don't include gameId to prevent webhook setup for this response
         await sendSMS(fromNumber, `Your application for the pickleball game is under review. You'll be notified if selected. Reply 9 to cancel your application.`);
       } else {
         const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
-        await sendSMS(fromNumber, responseMessage);
+        // FIXED: Include gameId to maintain proper webhook functionality for non-waitlist games
+        const gameId = userGames[0].id;
+        await sendSMS(fromNumber, responseMessage, gameId);
       }
     } else {
-      // FIXED: Always show list first for multiple games - this should be the behavior you want
+      // FIXED: Always show list first for multiple games
       console.log(`[SMS] User has ${userGames.length} games, showing selection list`);
       await saveLastCommand(cleanedFromNumber, 'details_selection');
       const responseMessage = await buildGameListMessage(userGames);
-      await sendSMS(fromNumber, responseMessage);
+      // FIXED: Use first game's ID for webhook or don't include if all are waitlist
+      const firstGameId = userGames[0].id;
+      await sendSMS(fromNumber, responseMessage, firstGameId);
     }
   } catch (error) {
     console.error('Error in handleGameDetailsRequest:', error);
