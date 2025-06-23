@@ -588,9 +588,40 @@ app.post('/api/games/:id/players', async (req, res) => {
         sms: smsResult
       });
     }
-    
-    // Validate player data
-    const playerData = validatePlayerData(name, phone);
+        // Enhanced validation with better error messages
+    let playerData;
+    try {
+      playerData = validatePlayerData(name, phone);
+    } catch (validationError) {
+      console.log('[SERVER] Validation error details:');
+      console.log('  - Error message:', validationError.message);
+      console.log('  - Phone input:', phone);
+      console.log('  - User agent:', req.headers['user-agent']);
+      
+      // Check if this might be a Chrome iOS specific issue
+      const userAgent = req.headers['user-agent'] || '';
+      const isChromeIOS = userAgent.includes('CriOS');
+      
+      if (isChromeIOS && validationError.message.includes('valid US phone number')) {
+        console.log('[SERVER] Detected Chrome iOS phone validation issue');
+        
+        // Try a more lenient validation for Chrome iOS
+        const cleaned = phone ? phone.replace(/\D/g, '') : '';
+        if (cleaned.length >= 10 && cleaned.length <= 15) {
+          console.log('[SERVER] Accepting phone number with lenient validation for Chrome iOS');
+          playerData = {
+            name: name ? name.trim() : '',
+            phone: cleaned.length === 11 && cleaned.startsWith('1') ? cleaned.substring(1) : cleaned
+          };
+        } else {
+          return res.status(400).json({ 
+            error: 'Please enter a valid phone number. For Chrome iOS users: try entering just the 10 digits (e.g., 5551234567).' 
+          });
+        }
+      } else {
+        return res.status(400).json({ error: validationError.message });
+      }
+    }
     
     // Check if player already exists
     const existingCheck = checkExistingPlayer(game, playerData.phone);

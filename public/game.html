@@ -906,7 +906,7 @@
                 
                 <div class="form-group">
                     <label for="phoneNumber">Phone Number:</label>
-                    <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="(555) 123-4567" required>
+                    <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="(555) 123-4567" autocomplete="tel" inputmode="tel" pattern="[0-9\s\(\)\-\+\.]*" maxlength="20" required>
                 </div>
                 
                 <div class="button-group">
@@ -969,6 +969,33 @@
         document.addEventListener('DOMContentLoaded', () => {
             const statusDiv = document.getElementById('status');
             let gameData;
+
+            // Chrome iOS compatibility fixes
+            const phoneInput = document.getElementById('phoneNumber');
+            if (phoneInput) {
+                const isChromeIOS = /CriOS/.test(navigator.userAgent);
+                
+                if (isChromeIOS) {
+                    console.log('[CHROME iOS] Detected Chrome iOS, applying compatibility fixes');
+                    
+                    // Handle paste events which might cause formatting issues
+                    phoneInput.addEventListener('paste', function(e) {
+                        console.log('[CHROME iOS] Paste detected');
+                        
+                        setTimeout(() => {
+                            const pastedValue = e.target.value;
+                            console.log('[CHROME iOS] Pasted value:', pastedValue);
+                            
+                            // Clean the pasted value
+                            const cleaned = pastedValue.replace(/[^\d\s\(\)\-\+\.]/g, '');
+                            if (cleaned !== pastedValue) {
+                                e.target.value = cleaned;
+                                console.log('[CHROME iOS] Cleaned pasted value:', cleaned);
+                            }
+                        }, 10);
+                    });
+                }
+            }
             
             // TIMEZONE FIX FUNCTION - prevents date shifting
             function formatDate(dateStr) {
@@ -1420,6 +1447,25 @@ if (nextStepsSection) {
                         console.error('Error refreshing game data:', error);
                     });
             }       
+
+            // Client-side phone validation
+            function validatePhoneClientSide(phoneNumber) {
+                if (!phoneNumber) return true; // Optional field
+                
+                const cleaned = ('' + phoneNumber).replace(/\D/g, '');
+                
+                console.log('[CLIENT VALIDATION] Original:', phoneNumber);
+                console.log('[CLIENT VALIDATION] Cleaned:', cleaned);
+                console.log('[CLIENT VALIDATION] Length:', cleaned.length);
+                
+                // Check basic length requirements
+                if (cleaned.length === 10 || (cleaned.length === 11 && cleaned.startsWith('1'))) {
+                    return true;
+                }
+                
+                console.log('[CLIENT VALIDATION] Failed - cleaned digits:', cleaned);
+                return false;
+            }
             
             function setupEventHandlers() {
                 // Set up join form submission
@@ -1428,6 +1474,17 @@ if (nextStepsSection) {
                     event.preventDefault();
                     const playerName = document.getElementById('playerName').value;
                     const phoneNumber = document.getElementById('phoneNumber').value;
+                    
+                    // Pre-validate on client side for better error messages
+                    if (phoneNumber && !validatePhoneClientSide(phoneNumber)) {
+                        const isChromeIOS = /CriOS/.test(navigator.userAgent);
+                        const errorMsg = isChromeIOS 
+                            ? 'Please check your phone number format. Try entering just the 10 digits (e.g., 5551234567) or with dashes (555-123-4567).'
+                            : 'Please enter a valid US phone number (e.g., (555) 123-4567)';
+                        
+                        showStatus(errorMsg, 'error');
+                        return;
+                    }
                     
                     showStatus('Processing your request...', 'info');
                     
