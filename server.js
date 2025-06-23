@@ -834,7 +834,7 @@ app.post('/api/games/:id/promote-from-waitlist/:playerId', async (req, res) => {
         locationText += ` - ${game.courtNumber}`;
       }
       
-      const message = `Great news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
+      const message = `Great news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for who is playing and details or 9 to cancel.`;
       smsResult = await sendSMS(player.phone, message, gameId);
     }
     

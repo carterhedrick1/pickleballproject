@@ -593,7 +593,7 @@ async function cancelPlayerFromGame(gameId, game, player, status, fromNumber) {
         if (game.registrationMode === 'waitlist') {
           promotionMessage = `Good news! You've been selected for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 9 to cancel if needed.`;
         } else {
-          promotionMessage = `Good news! You've been selected for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 2 for game details or 9 to cancel.`;
+          promotionMessage = `Good news! You've been selected for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 2 for who is playing and details or 9 to cancel.`;
         }
         await sendSMS(promotedPlayer.phone, promotionMessage, gameId);
       }
