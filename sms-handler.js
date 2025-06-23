@@ -234,6 +234,8 @@ async function handleGameDetailsSelection(fromNumber, cleanedFromNumber, selecti
     
     if (selection >= 0 && selection < userGames.length) {
       const { game, role } = userGames[selection];
+      
+      // Send details for all users - buildGameDetailsMessage handles the logic
       const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
       await sendSMS(fromNumber, responseMessage);
       await clearLastCommand(cleanedFromNumber);
@@ -310,7 +312,6 @@ async function getUserHostGames(cleanedFromNumber, allGames) {
 }
 
 // Handle game details requests (command "2")
-// Handle game details requests (command "2")
 async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
   try {
     const allGames = await getAllGames();
@@ -328,14 +329,7 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
       console.log(`[SMS] Showing details for single game: ${userGames[0].game.location}`);
       const { game, role, id: gameId } = userGames[0];
       
-      // FIXED: Check waitlist mode FIRST and handle specially
-      // Check if this is a waitlist mode game and user is on waitlist
-      if (game.registrationMode === 'waitlist' && role === 'waitlist') {
-        console.log(`[SMS] Waitlist user ${cleanedFromNumber} requested details - no response sent to prevent issues`);
-        return; // No SMS sent, prevents quota drain
-      }
-      
-      // For all other cases (confirmed players, hosts, FCFS waitlist)
+      // Send details for all users - buildGameDetailsMessage handles the logic
       const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
       await sendSMS(fromNumber, responseMessage, gameId);
       return;
@@ -482,8 +476,8 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
   
   let responseMessage = `🏓 ${locationText}\n📅 ${gameDate} at ${gameTime}\n⏱️ Duration: ${game.duration} minutes\n\n`;
   
-  // Only show player details if NOT in waitlist mode OR if user is the host
-  if (game.registrationMode !== 'waitlist' || role === 'host') {
+  // Show player details to confirmed players and hosts, even in waitlist mode
+  if (game.registrationMode !== 'waitlist' || role === 'host' || role === 'confirmed') {
     responseMessage += `👥 Confirmed Players (${game.players.length}/${game.totalPlayers}):\n`;
     if (game.players.length === 0) {
       responseMessage += `• None yet\n`;
@@ -493,7 +487,8 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
       });
     }
     
-    if (game.waitlist && game.waitlist.length > 0) {
+    // Only show waitlist info to hosts, not to confirmed players in waitlist mode
+    if (game.waitlist && game.waitlist.length > 0 && (game.registrationMode !== 'waitlist' || role === 'host')) {
       responseMessage += `\n⏳ Waitlist (${game.waitlist.length}):\n`;
       
       // Check if game is in waitlist mode
@@ -506,7 +501,7 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
       }
     }
   } else {
-    // Waitlist mode - hide player info from non-hosts
+    // Waitlist mode - hide player info from waitlist users only
     responseMessage += `👥 Player selection in progress\n`;
     responseMessage += `The organizer will review all applications and select players.\n`;
   }
