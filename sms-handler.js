@@ -61,15 +61,26 @@ function formatTimeForSMS(timeStr) {
 }
 
 // Helper function to check if a game date is today or in the future
-function isGameUpcoming(gameDate) {
-  const today = new Date();
-  const game = new Date(gameDate);
+function isGameUpcoming(gameDate, gameTime) {
+  // Get current time in Central Time (same as reminder system)
+  const now = new Date();
+  const centralNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}));
   
-  // Set both dates to start of day for fair comparison
-  today.setHours(0, 0, 0, 0);
-  game.setHours(0, 0, 0, 0);
+  // If timezone conversion fails, use manual calculation (same fallback as reminders)
+  if (isNaN(centralNow.getTime())) {
+    console.log('[SMS] Timezone conversion failed, using manual calculation');
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const centralOffset = -6; // CST (adjust to -5 for CDT if needed)
+    var finalCentralTime = new Date(utcTime + (centralOffset * 3600000));
+  } else {
+    var finalCentralTime = centralNow;
+  }
   
-  return game >= today;
+  // Create full game datetime by combining date and time (assumes game is in Central Time)
+  const gameDateTime = new Date(`${gameDate}T${gameTime}:00`);
+  
+  // Game is upcoming if it's in the future relative to Central Time
+  return gameDateTime > finalCentralTime;
 }
 
 // SMS sending function
@@ -293,7 +304,8 @@ async function getUserHostGames(cleanedFromNumber, allGames) {
   
   for (const [id, game] of gameEntries) {
     // Only check upcoming games
-    if (!isGameUpcoming(game.date)) {
+// Only check upcoming games
+    if (!isGameUpcoming(game.date, game.time)) {
       console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
       continue;
     }
@@ -395,7 +407,7 @@ async function getUserGames(cleanedFromNumber, allGames) {
   
   for (const [id, game] of gameEntries) {
     // Only check upcoming games
-    if (!isGameUpcoming(game.date)) {
+    if (!isGameUpcoming(game.date, game.time)) {
       console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
       continue;
     }
@@ -443,7 +455,7 @@ async function getPlayerGames(cleanedFromNumber, allGames) {
   const playerGames = [];
   
   for (const [id, game] of Object.entries(allGames)) {
-    if (!isGameUpcoming(game.date)) {
+    if (!isGameUpcoming(game.date, game.time)) {
       continue;
     }
     
