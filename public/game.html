@@ -365,16 +365,28 @@
             box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
         }
 
-        /* Button group styling - FIXED FOR ALL DEVICES */
+        /* Button group styling with "or" divider */
         .button-group {
             display: flex;
-            gap: 20px;
+            align-items: center;
+            gap: 15px;
             margin-top: 20px;
         }
 
         .button-group button {
             flex: 1;
             margin-top: 0;
+        }
+
+        .button-or {
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 20px;
+            text-align: center;
+            padding: 0 5px;
         }
 
         /* "I'm Out" button styling */
@@ -602,6 +614,77 @@
             border: 1px solid #e5e7eb;
         }
 
+        /* Game status warning styling */
+        .game-status-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 16px;
+            padding: 24px 32px;
+            margin: 20px 32px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(245, 158, 11, 0.2);
+        }
+
+        .game-status-warning.expired {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-color: #ef4444;
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+            margin: 20px 32px;
+            padding: 24px 32px;
+        }
+
+        .warning-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .warning-icon {
+            font-size: 32px;
+        }
+
+        .warning-text h3 {
+            color: #92400e;
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .game-status-warning.expired .warning-text h3 {
+            color: #991b1b;
+        }
+
+        .warning-text p {
+            color: #92400e;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .game-status-warning.expired .warning-text p {
+            color: #991b1b;
+        }
+
+        /* Disabled signup form styling */
+        .signup-section.disabled {
+            opacity: 0.6;
+            pointer-events: none;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+        }
+
+        .signup-section.disabled .section-title {
+            color: #64748b !important;
+        }
+
+        .signup-section.disabled input,
+        .signup-section.disabled button {
+            background-color: #f1f5f9 !important;
+            color: #64748b !important;
+            cursor: not-allowed !important;
+        }
+
         /* Mobile responsiveness */
         @media (max-width: 768px) {
             body {
@@ -676,7 +759,8 @@
             /* Button styling for mobile - keeps side by side layout */
             .button-group {
                 display: flex;
-                gap: 15px;
+                align-items: center;
+                gap: 12px;
                 margin-top: 20px;
             }
 
@@ -684,6 +768,25 @@
                 flex: 1;
                 margin-top: 0;
                 font-size: 14px;
+            }
+
+            .warning-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .warning-icon {
+                font-size: 28px;
+            }
+
+            .game-status-warning {
+                margin: 20px 20px;
+                padding: 20px 24px;
+            }
+            
+            .game-status-warning.expired {
+                margin: 20px 20px;
+                padding: 20px 24px;
             }
         }
 
@@ -704,11 +807,9 @@
 
             /* Keep buttons side by side even on very small screens */
             .button-group {
-                gap: 12px;
+                gap: 10px;
             }
         }
-
-        
     </style>
     <link rel="stylesheet" href="/css/header.css">
     <link rel="stylesheet" href="/css/footer.css">
@@ -758,9 +859,6 @@
             </div>
         </div>
 
-        <!-- ADD this section right after the game details section in game.html -->
-        <!-- ADD this right after the game-info div and before the players section -->
-
         <!-- Game Status Warning (for expired/cancelled games) -->
         <div id="gameStatusWarning" class="game-status-warning" style="display: none;">
             <div class="warning-content">
@@ -771,101 +869,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- ADD this CSS to the <style> section in game.html -->
-        <style>
-        /* Game status warning styling */
-.game-status-warning {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border: 2px solid #f59e0b;
-    border-radius: 16px;
-    padding: 24px 32px; /* UPDATED: Added horizontal padding */
-    margin: 20px 32px; /* UPDATED: Added horizontal margin */
-    text-align: center;
-    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.2);
-}
-
-.game-status-warning.expired {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    border-color: #ef4444;
-    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
-    margin: 20px 32px; /* UPDATED: Added horizontal margin */
-    padding: 24px 32px; /* UPDATED: Added horizontal padding */
-}
-
-        .warning-content {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        .warning-icon {
-            font-size: 32px;
-        }
-
-        .warning-text h3 {
-            color: #92400e;
-            margin: 0 0 8px 0;
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .game-status-warning.expired .warning-text h3 {
-            color: #991b1b;
-        }
-
-        .warning-text p {
-            color: #92400e;
-            margin: 0;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-
-        .game-status-warning.expired .warning-text p {
-            color: #991b1b;
-        }
-
-        /* Disabled signup form styling */
-        .signup-section.disabled {
-            opacity: 0.6;
-            pointer-events: none;
-            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
-        }
-
-        .signup-section.disabled .section-title {
-            color: #64748b !important;
-        }
-
-        .signup-section.disabled input,
-        .signup-section.disabled button {
-            background-color: #f1f5f9 !important;
-            color: #64748b !important;
-            cursor: not-allowed !important;
-        }
-
-        @media (max-width: 768px) {
-            .warning-content {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .warning-icon {
-                font-size: 28px;
-            }
-
-                .game-status-warning {
-        margin: 20px 20px; /* Better mobile margins */
-        padding: 20px 24px; /* Better mobile padding */
-    }
-    
-    .game-status-warning.expired {
-        margin: 20px 20px; /* Better mobile margins */
-        padding: 20px 24px; /* Better mobile padding */
-    }
-        }
-        </style>
         
         <!-- Players Section -->
         <div id="playerList" class="section players-section" style="display: none;">
@@ -910,15 +913,16 @@
                 </div>
                 
                 <div class="button-group">
-    <button type="submit" id="joinButton" data-action="join">COUNT ME IN!</button>
-    <button type="submit" id="outButton" data-action="out" class="btn-out">OUT</button>
-</div>
+                    <button type="submit" id="joinButton" data-action="join">IN</button>
+                    <div class="button-or">or</div>
+                    <button type="submit" id="outButton" data-action="out" class="btn-out">OUT</button>
+                </div>
             </form>
             
             <div class="form-help-text">
+                <span id="waitlistModeInfo" style="display: none;">📝 <strong>How it works:</strong> The organizer will review all applications and select players. You'll be notified if you're chosen!<br><br></span>
                 💡 <strong>Need to cancel later?</strong> Just reply "9" to any text message you receive about this game.<br><br>
                 🤝 <strong>Can't make it?</strong> Please still select the "OUT" option so we don't send reminder texts if we're short on players as game time approaches.
-
             </div>
         </div>
 
@@ -945,16 +949,16 @@
                 </div>
             </div>
 
-<!-- Only show "What's Next?" if not marked as "out" -->
-<div class="next-steps" id="nextStepsSection">
-    <h4>What's Next?</h4>
-    <ul>
-        <li>📲 You'll receive a confirmation text message shortly</li>
-        <li id="seeWhosPlayingInstruction">👥 Want to see whose playing? Just reply "2" to any text message before the game</li>
-        <li>❌ Need to cancel? Just reply "9" to any text message</li>
-        <li>📧 Game updates will be sent via text</li>
-    </ul>
-</div>
+            <!-- Only show "What's Next?" if not marked as "out" -->
+            <div class="next-steps" id="nextStepsSection">
+                <h4>What's Next?</h4>
+                <ul>
+                    <li>📲 You'll receive a confirmation text message shortly</li>
+                    <li id="seeWhosPlayingInstruction">👥 Want to see whose playing? Just reply "2" to any text message before the game</li>
+                    <li>❌ Need to cancel? Just reply "9" to any text message</li>
+                    <li>📧 Game updates will be sent via text</li>
+                </ul>
+            </div>
 
             <button class="back-to-game-btn" onclick="showGameDetails()">
                 ← Back to Game Details
@@ -964,8 +968,6 @@
 
     <script>
         // TIMEZONE-FIXED JavaScript for game.html
-        // Replace the entire <script> section in your game.html with this:
-
         document.addEventListener('DOMContentLoaded', () => {
             const statusDiv = document.getElementById('status');
             let gameData;
@@ -1026,127 +1028,124 @@
             showStatus("Fetching game data...", 'info');
             
             fetch(`/api/games/${gameId}`)
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`Server responded with status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        gameData = data;
-        console.log('Game data received:', gameData);
-        
-        // Check if game is expired or cancelled
-        const gameStatus = GameUtils.getGameStatus(gameData);
-        console.log('Game status:', gameStatus);
-        
-        // Display game details
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('details').style.display = 'block';
-        
-        // Show status warning if game is expired or cancelled
-        if (!gameStatus.canJoin) {
-            showGameStatusWarning(gameStatus);
-        }
-        
-        // Check if we should show players section based on registration mode AND game status
-        const playerListSection = document.getElementById('playerList');
-        if (gameData.registrationMode === 'waitlist' || !gameStatus.canJoin) {
-            // Hide players section for waitlist mode OR expired games
-            if (playerListSection) {
-                playerListSection.style.display = 'none';
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server responded with status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    gameData = data;
+                    console.log('Game data received:', gameData);
+                    
+                    // Check if game is expired or cancelled
+                    const gameStatus = GameUtils.getGameStatus(gameData);
+                    console.log('Game status:', gameStatus);
+                    
+                    // Display game details
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('details').style.display = 'block';
+                    
+                    // Show status warning if game is expired or cancelled
+                    if (!gameStatus.canJoin) {
+                        showGameStatusWarning(gameStatus);
+                    }
+                    
+                    // Check if we should show players section based on registration mode AND game status
+                    const playerListSection = document.getElementById('playerList');
+                    if (gameData.registrationMode === 'waitlist' || !gameStatus.canJoin) {
+                        // Hide players section for waitlist mode OR expired games
+                        if (playerListSection) {
+                            playerListSection.style.display = 'none';
+                        }
+                    } else {
+                        // Show players section for regular mode on active games
+                        if (playerListSection) {
+                            playerListSection.style.display = 'block';
+                        }
+                    }
+                    
+                    // Populate game details
+                    document.getElementById('location').textContent = gameData.location;
+
+                    // Show court number if it exists
+                    if (gameData.courtNumber && gameData.courtNumber.trim()) {
+                        document.getElementById('courtNumber').textContent = gameData.courtNumber;
+                        document.getElementById('courtDetail').style.display = 'flex';
+                    } else {
+                        document.getElementById('courtDetail').style.display = 'none';
+                    }
+
+                    document.getElementById('date').textContent = formatDate(gameData.date);
+                    document.getElementById('time').textContent = formatTime(gameData.time);
+                    document.getElementById('duration').textContent = gameData.duration;
+                    
+                    console.log('Date formatted as:', formatDate(gameData.date));
+                    
+                    // Show message only if it exists
+                    if (gameData.message && gameData.message.trim()) {
+                        document.getElementById('message').textContent = gameData.message;
+                        document.getElementById('messageDetail').style.display = 'flex';
+                    }
+                    
+                    // Update player list (only if game allows joining)
+                    if (gameStatus.canJoin) {
+                        updatePlayerList();
+                    }
+                    
+                    // Show signup form only for active games
+                    const signupSection = document.getElementById('signupForm');
+                    if (signupSection) {
+                        if (gameStatus.canJoin) {
+                            signupSection.style.display = 'block';
+                            signupSection.classList.remove('disabled');
+                        } else {
+                            signupSection.style.display = 'none';
+                            signupSection.classList.add('disabled');
+                        }
+                    }
+                    
+                    // Hide the status message since game loaded successfully
+                    statusDiv.style.display = 'none';
+                    
+                    // Set up event handlers (only for active games)
+                    if (gameStatus.canJoin) {
+                        setupEventHandlers();
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching game:", error);
+                    showStatus(`Game not found. Please check your link.`, 'error');
+                });
+
+            function showGameStatusWarning(gameStatus) {
+                const warningSection = document.getElementById('gameStatusWarning');
+                const warningTitle = document.getElementById('warningTitle');
+                const warningMessage = document.getElementById('warningMessage');
+                
+                if (!warningSection || !warningTitle || !warningMessage) return;
+                
+                // Configure warning based on status type
+                if (gameStatus.type === 'cancelled') {
+                    warningSection.className = 'game-status-warning cancelled';
+                    warningTitle.textContent = 'Game Cancelled';
+                    warningMessage.textContent = gameData.cancellationReason || 'This game has been cancelled and is no longer available.';
+                } else if (gameStatus.type === 'expired') {
+                    warningSection.className = 'game-status-warning expired';
+                    warningTitle.textContent = 'Game Has Ended';
+                    warningMessage.textContent = 'This game has finished and is no longer accepting registrations. Check with the organizer for future games.';
+                }
+                
+                // Show the warning
+                warningSection.style.display = 'block';
+                
+                // Update page title to indicate status
+                if (gameStatus.type === 'expired') {
+                    document.title = '[ENDED] ' + document.title;
+                } else if (gameStatus.type === 'cancelled') {
+                    document.title = '[CANCELLED] ' + document.title;
+                }
             }
-        } else {
-            // Show players section for regular mode on active games
-            if (playerListSection) {
-                playerListSection.style.display = 'block';
-            }
-        }
-        
-        // Populate game details
-        document.getElementById('location').textContent = gameData.location;
-
-        // Show court number if it exists
-        if (gameData.courtNumber && gameData.courtNumber.trim()) {
-            document.getElementById('courtNumber').textContent = gameData.courtNumber;
-            document.getElementById('courtDetail').style.display = 'flex';
-        } else {
-            document.getElementById('courtDetail').style.display = 'none';
-        }
-
-        document.getElementById('date').textContent = formatDate(gameData.date);
-        document.getElementById('time').textContent = formatTime(gameData.time);
-        document.getElementById('duration').textContent = gameData.duration;
-        
-        console.log('Date formatted as:', formatDate(gameData.date));
-        
-        // Show message only if it exists
-        if (gameData.message && gameData.message.trim()) {
-            document.getElementById('message').textContent = gameData.message;
-            document.getElementById('messageDetail').style.display = 'flex';
-        }
-        
-        // Update player list (only if game allows joining)
-        if (gameStatus.canJoin) {
-            updatePlayerList();
-        }
-        
-        // Show signup form only for active games
-        const signupSection = document.getElementById('signupForm');
-        if (signupSection) {
-            if (gameStatus.canJoin) {
-                signupSection.style.display = 'block';
-                signupSection.classList.remove('disabled');
-            } else {
-                signupSection.style.display = 'none';
-                signupSection.classList.add('disabled');
-            }
-        }
-        
-        // Hide the status message since game loaded successfully
-        statusDiv.style.display = 'none';
-        
-        // Set up event handlers (only for active games)
-        if (gameStatus.canJoin) {
-            setupEventHandlers();
-        }
-    })
-    .catch(error => {
-        console.error("Error fetching game:", error);
-        showStatus(`Game not found. Please check your link.`, 'error');
-    });
-
-
-// ADD this new function to game.html JavaScript:
-
-function showGameStatusWarning(gameStatus) {
-    const warningSection = document.getElementById('gameStatusWarning');
-    const warningTitle = document.getElementById('warningTitle');
-    const warningMessage = document.getElementById('warningMessage');
-    
-    if (!warningSection || !warningTitle || !warningMessage) return;
-    
-    // Configure warning based on status type
-    if (gameStatus.type === 'cancelled') {
-        warningSection.className = 'game-status-warning cancelled';
-        warningTitle.textContent = 'Game Cancelled';
-        warningMessage.textContent = gameData.cancellationReason || 'This game has been cancelled and is no longer available.';
-    } else if (gameStatus.type === 'expired') {
-        warningSection.className = 'game-status-warning expired';
-        warningTitle.textContent = 'Game Has Ended';
-        warningMessage.textContent = 'This game has finished and is no longer accepting registrations. Check with the organizer for future games.';
-    }
-    
-    // Show the warning
-    warningSection.style.display = 'block';
-    
-    // Update page title to indicate status
-    if (gameStatus.type === 'expired') {
-        document.title = '[ENDED] ' + document.title;
-    } else if (gameStatus.type === 'cancelled') {
-        document.title = '[CANCELLED] ' + document.title;
-    }
-}
 
             // AUTO-REFRESH: Add periodic refresh every 30 seconds
             setInterval(() => {
@@ -1243,10 +1242,7 @@ function showGameStatusWarning(gameStatus) {
                 }, 3000);
             }
                 
-            // Update the updatePlayerList function in public/game.html
-            // Updated updatePlayerList function in public/game.html
-            // REPLACE the entire updatePlayerList function in public/game.html with this:
-
+            // Updated updatePlayerList function - removes "Submit Application" text for waitlist mode
             function updatePlayerList() {
                 const playersList = document.getElementById('players');
                 const spotsAvailable = document.getElementById('spotsAvailable');
@@ -1255,7 +1251,7 @@ function showGameStatusWarning(gameStatus) {
                 const waitlistCount = document.getElementById('waitlistCount');
                 const joinSectionTitle = document.getElementById('joinSectionTitle');
                 const joinButton = document.getElementById('joinButton');
-                const playerListSection = document.getElementById('playerList'); // The entire players section
+                const playerListSection = document.getElementById('playerList');
                 
                 if (!playersList || !spotsAvailable) {
                     return;
@@ -1270,10 +1266,16 @@ function showGameStatusWarning(gameStatus) {
                         playerListSection.style.display = 'none';
                     }
                     
-                    // Update join section for waitlist mode
+                    // Update join section for waitlist mode - CHANGED: Now just shows "Join This Game" and "IN"
                     if (joinSectionTitle && joinButton) {
-                        joinSectionTitle.textContent = '📝 Apply for This Game';
-                        joinButton.textContent = 'SUBMIT APPLICATION';
+                        joinSectionTitle.textContent = '🏓 Join This Game';
+                        joinButton.textContent = 'IN';
+                    }
+                    
+                    // Show waitlist mode info at top of tips
+                    const waitlistModeInfo = document.getElementById('waitlistModeInfo');
+                    if (waitlistModeInfo) {
+                        waitlistModeInfo.style.display = 'inline';
                     }
                     
                     // Show signup form
@@ -1288,6 +1290,12 @@ function showGameStatusWarning(gameStatus) {
                 // Regular mode - show players section with full transparency
                 if (playerListSection) {
                     playerListSection.style.display = 'block';
+                }
+                
+                // Hide waitlist mode info for regular games
+                const waitlistModeInfo = document.getElementById('waitlistModeInfo');
+                if (waitlistModeInfo) {
+                    waitlistModeInfo.style.display = 'none';
                 }
                 
                 // Clear existing list
@@ -1335,7 +1343,7 @@ function showGameStatusWarning(gameStatus) {
                     spotsFullContainer.style.display = 'block';
                     waitlistCount.textContent = waitlistLength;
                     joinSectionTitle.textContent = '🕐 Join the Waitlist';
-                    joinButton.textContent = 'JOIN WAITLIST';
+                    joinButton.textContent = 'IN'; // CHANGED: Now uses "IN" instead of "JOIN WAITLIST"
                 }
                 
                 // Always show signup form since they can join waitlist when full
@@ -1345,93 +1353,91 @@ function showGameStatusWarning(gameStatus) {
                 }
             }
 
-            // Update showConfirmation function in public/game.html
             // FIXED showConfirmation function for public/game.html
             function showConfirmation(data) {
-    // Hide other sections
-    document.getElementById('gameDetails').style.display = 'none';
-    document.getElementById('playerList').style.display = 'none';
-    document.getElementById('signupForm').style.display = 'none';
-    document.querySelector('.section-header').style.display = 'none';
-    
-    // Show confirmation section
-    const confirmationSection = document.getElementById('confirmationSection');
-    confirmationSection.style.display = 'block';
-    
-    const confirmTitle = document.getElementById('confirmationTitle');
-    const confirmMessage = document.getElementById('confirmationMessage');
-    const confirmStatus = document.getElementById('confirmStatus');
-    const confirmLocation = document.getElementById('confirmLocation');
-    const confirmDateTime = document.getElementById('confirmDateTime');
-    
-    if (data.action === 'out') {
-        // "I'm Out" response
-        confirmationSection.classList.remove('waitlist');
-        confirmationSection.classList.add('out');
-        confirmTitle.textContent = "Thanks for Letting Us Know!";
-        confirmMessage.textContent = `We've recorded that you can't make this game. Thanks for being courteous to other players!`;
-        confirmStatus.textContent = `Marked as "Out"`;
-    } else if (data.status === 'confirmed') {
-        // Regular confirmed player
-        confirmationSection.classList.remove('waitlist', 'out');
-        confirmTitle.textContent = "You're In!";
-        confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
-        confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
-    } else if (data.status === 'waitlist') {
-        // Waitlisted player
-        confirmationSection.classList.add('waitlist');
-        confirmationSection.classList.remove('out');
-        
-        if (data.hidePosition || gameData.registrationMode === 'waitlist') {
-            confirmTitle.textContent = "⏳ Application Submitted!";
-            confirmMessage.textContent = `Thanks for signing up! The organizer will review all applications and select players. You'll be notified if you're selected.`;
-            confirmStatus.textContent = `Application Under Review`;
-        } else {
-            confirmTitle.textContent = "⏳ You're on the Waitlist!";
-            confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
-            confirmStatus.textContent = `Waitlist Position #${data.position}`;
-        }
-    }
-    
-    // Include court number in confirmation location
-    let locationText = gameData.location;
-    if (gameData.courtNumber && gameData.courtNumber.trim()) {
-        locationText += ` - ${gameData.courtNumber}`;
-    }
-    
-    confirmLocation.textContent = locationText;
-    confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
-    
-    // Handle "What's Next?" section visibility
-// Handle "What's Next?" section visibility
-const nextStepsSection = document.getElementById('nextStepsSection');
-const seeWhosPlayingInstruction = document.getElementById('seeWhosPlayingInstruction');
+                // Hide other sections
+                document.getElementById('gameDetails').style.display = 'none';
+                document.getElementById('playerList').style.display = 'none';
+                document.getElementById('signupForm').style.display = 'none';
+                document.querySelector('.section-header').style.display = 'none';
+                
+                // Show confirmation section
+                const confirmationSection = document.getElementById('confirmationSection');
+                confirmationSection.style.display = 'block';
+                
+                const confirmTitle = document.getElementById('confirmationTitle');
+                const confirmMessage = document.getElementById('confirmationMessage');
+                const confirmStatus = document.getElementById('confirmStatus');
+                const confirmLocation = document.getElementById('confirmLocation');
+                const confirmDateTime = document.getElementById('confirmDateTime');
+                
+                if (data.action === 'out') {
+                    // "I'm Out" response
+                    confirmationSection.classList.remove('waitlist');
+                    confirmationSection.classList.add('out');
+                    confirmTitle.textContent = "Thanks for Letting Us Know!";
+                    confirmMessage.textContent = `We've recorded that you can't make this game. Thanks for being courteous to other players!`;
+                    confirmStatus.textContent = `Marked as "Out"`;
+                } else if (data.status === 'confirmed') {
+                    // Regular confirmed player
+                    confirmationSection.classList.remove('waitlist', 'out');
+                    confirmTitle.textContent = "You're In!";
+                    confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
+                    confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
+                } else if (data.status === 'waitlist') {
+                    // Waitlisted player
+                    confirmationSection.classList.add('waitlist');
+                    confirmationSection.classList.remove('out');
+                    
+                    if (data.hidePosition || gameData.registrationMode === 'waitlist') {
+                        confirmTitle.textContent = "⏳ Application Submitted!";
+                        confirmMessage.textContent = `Thanks for signing up! The organizer will review all applications and select players. You'll be notified if you're selected.`;
+                        confirmStatus.textContent = `Application Under Review`;
+                    } else {
+                        confirmTitle.textContent = "⏳ You're on the Waitlist!";
+                        confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
+                        confirmStatus.textContent = `Waitlist Position #${data.position}`;
+                    }
+                }
+                
+                // Include court number in confirmation location
+                let locationText = gameData.location;
+                if (gameData.courtNumber && gameData.courtNumber.trim()) {
+                    locationText += ` - ${gameData.courtNumber}`;
+                }
+                
+                confirmLocation.textContent = locationText;
+                confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
+                
+                // Handle "What's Next?" section visibility
+                const nextStepsSection = document.getElementById('nextStepsSection');
+                const seeWhosPlayingInstruction = document.getElementById('seeWhosPlayingInstruction');
 
-if (nextStepsSection) {
-    if (data.action === 'out') {
-        nextStepsSection.style.display = 'none';
-    } else {
-        nextStepsSection.style.display = 'block';
-        
-        // Hide "text 2" instruction for waitlist games
-        if (seeWhosPlayingInstruction && gameData.registrationMode === 'waitlist') {
-            seeWhosPlayingInstruction.style.display = 'none';
-        } else if (seeWhosPlayingInstruction) {
-            seeWhosPlayingInstruction.style.display = 'block';
-        }
-    }
-}
-    
-    // Scroll to top to show confirmation
-    window.scrollTo(0, 0);
-}
+                if (nextStepsSection) {
+                    if (data.action === 'out') {
+                        nextStepsSection.style.display = 'none';
+                    } else {
+                        nextStepsSection.style.display = 'block';
+                        
+                        // Hide "text 2" instruction for waitlist games
+                        if (seeWhosPlayingInstruction && gameData.registrationMode === 'waitlist') {
+                            seeWhosPlayingInstruction.style.display = 'none';
+                        } else if (seeWhosPlayingInstruction) {
+                            seeWhosPlayingInstruction.style.display = 'block';
+                        }
+                    }
+                }
+                
+                // Scroll to top to show confirmation
+                window.scrollTo(0, 0);
+            }
 
             window.showGameDetails = function() {
                 // Show game sections again AND the header
                 document.getElementById('gameDetails').style.display = 'block';
                 document.getElementById('playerList').style.display = 'block';
                 document.getElementById('signupForm').style.display = 'block';
-                document.querySelector('.section-header').style.display = 'block'; // Show the header again
+                document.querySelector('.section-header').style.display = 'block';
                 
                 // Hide confirmation section
                 document.getElementById('confirmationSection').style.display = 'none';
