@@ -56,22 +56,20 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
     console.log('[INVITATION] First come mode:', isFirstCome, '- Message:', firstComeMessage); // Debug log
     
     // Build the complete invitation message
-    const message = `🏓 Join our pickleball game!
-
-📍 Location: ${locationText}
-📅 Date: ${formattedDate}
-⏰ Time: ${formattedTime}
-⏱️ Duration: ${gameData.duration} minutes
-👥 ${spotsText}: ${availableSpots} ${spotsWord}${gameData.message ? '\n💬 ' + gameData.message : ''}
-
-🎯 Let us know if you're IN or OUT by clicking the link below:  
+    const message = `Let us know if you're IN or OUT for pickleball by clicking the link below:  
 
 ${gameLink}
+
+Location: ${locationText}
+Date: ${formattedDate}
+Time: ${formattedTime}
+Duration: ${gameData.duration} minutes
+${spotsText}: ${availableSpots} 
+${gameData.message ? '\n' + gameData.message : ''}
 
 Even if you can't make it, your response helps us plan and find additional players if needed. Please use the link above to respond - do not reply to this text message.
 ${firstComeMessage}
 
-See you on the court!🏓
 `;
 
     console.log('[INVITATION] Final message generated:', message); // Debug log
