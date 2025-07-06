@@ -538,6 +538,7 @@ app.post('/api/games/lookup-and-notify', async (req, res) => {
 });
 
 // Add player to game (regular signup)
+// Add player to game (regular signup)
 app.post('/api/games/:id/players', async (req, res) => {
   try {
     const gameId = req.params.id;
@@ -631,6 +632,8 @@ app.post('/api/games/:id/players', async (req, res) => {
     
     // Add player to game
     const result = addPlayerToGame(game, playerData);
+    
+    // MOVED: Save game BEFORE sending notifications
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
     
     // Send confirmation SMS to the player
@@ -661,7 +664,7 @@ app.post('/api/games/:id/players', async (req, res) => {
       smsResult = await sendSMS(playerData.phone, message, gameId);
     }
 
-    // Send organizer notifications (if preferences are set)
+    // Send organizer notifications (now after saving)
     if (result.status === 'confirmed') {
       // Always send player joined notification first
       await sendOrganizerNotification(gameId, game, 'playerJoins', playerData.name);
