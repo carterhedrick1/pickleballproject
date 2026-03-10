@@ -137,7 +137,7 @@ const {
 } = require('./game-logic');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Tell Express to trust proxy headers (for rate limiting on platforms like Render)
 app.set('trust proxy', 1);
