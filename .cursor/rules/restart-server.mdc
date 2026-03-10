@@ -1,0 +1,25 @@
+---
+description: Restart the Node server when code changes require it
+alwaysApply: true
+---
+
+# Server Restart Rule
+
+When changes are made that require the server to pick up new code, **restart the server for the user**.
+
+## When to Restart
+
+Restart the server when you have modified any of:
+- `server.js`
+- `database.js`
+- `game-logic.js`
+- `sms-handler.js`
+- `package.json` (scripts or dependencies)
+- `.env` or environment variables
+
+## How to Restart
+
+1. Stop any running `node server.js` or `npm start` process
+2. Start the server again with `npm start`
+
+If the server is running in a terminal, run the restart in that same terminal or a new one. Do not ask the user to restart manually—do it yourself.

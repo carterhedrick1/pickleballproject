@@ -5,13 +5,11 @@ const {
   hasReminderBeenSent, 
   markReminderSent 
 } = require('./database');
-const { sendSMS, formatDateForSMS, formatTimeForSMS } = require('./sms-handler');
+const { sendSMS, formatDateForSMS, formatTimeForSMS, formatPhoneNumber, formatLocationForSMS } = require('./sms-handler');
+const { getCentralTimeNow } = require('./utils/central-time');
 const sentRemindersCache = new Map(); // In-memory cache to prevent duplicate sends
 
-
-// Test logging variables
-let TEST_GAME_ID = null;
-let hasInitializedTestGame = false;
+const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 
 // Validation functions
 function isValidPhoneNumber(phoneNumber) {
@@ -21,39 +19,28 @@ function isValidPhoneNumber(phoneNumber) {
   const cleaned = ('' + phoneNumber)
     .replace(/\D/g, '')  // Remove all non-digits
     .trim();             // Remove whitespace
-  
-  console.log('[PHONE VALIDATION] Original:', phoneNumber);
-  console.log('[PHONE VALIDATION] Cleaned:', cleaned);
+
+  if (DEBUG) {
+    console.log('[PHONE VALIDATION] Original:', phoneNumber, 'Cleaned:', cleaned);
+  }
   
   // Check length first
   if (cleaned.length === 10 || (cleaned.length === 11 && cleaned.startsWith('1'))) {
     // Additional validation with the validator library
     try {
       const isValid = validator.isMobilePhone(phoneNumber, 'en-US');
-      console.log('[PHONE VALIDATION] Validator result:', isValid);
+      if (DEBUG) console.log('[PHONE VALIDATION] Validator result:', isValid);
       return isValid;
     } catch (error) {
-      console.log('[PHONE VALIDATION] Validator error:', error);
-      // Fallback to length-based validation if validator fails
+      if (DEBUG) console.log('[PHONE VALIDATION] Validator error:', error);
       return true;
     }
   }
-  
-  console.log('[PHONE VALIDATION] Invalid length:', cleaned.length);
+
+  if (DEBUG) console.log('[PHONE VALIDATION] Invalid length:', cleaned.length);
   return false;
 }
 
-function formatPhoneNumber(phoneNumber) {
-  const cleaned = ('' + phoneNumber).replace(/\D/g, '');
-  if (cleaned.length === 10) {
-    return cleaned;
-  } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
-    return cleaned.substring(1);
-  }
-  return cleaned;
-}
-
-// ADDED: Game expiration functions
 /**
  * Checks if a game has expired (finished)
  * @param {Object} game - Game object with date, time, duration
@@ -101,35 +88,12 @@ async function checkAndSendReminders() {
     console.log('[REMINDER] Checking for games that need reminders...');
     
     const allGames = await getAllGames();
-    
-    // Get current time in Central Time
-    const now = new Date();
-    const centralNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}));
-    
-    // If timezone conversion fails, use manual calculation
-    if (isNaN(centralNow.getTime())) {
-      console.log('[REMINDER] Timezone conversion failed, using manual calculation');
-      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-      const centralOffset = -5; // CDT (adjust to -6 for CST if needed)
-      const manualCentralTime = new Date(utcTime + (centralOffset * 3600000));
-      var finalCentralTime = manualCentralTime;
-    } else {
-      var finalCentralTime = centralNow;
+    const finalCentralTime = getCentralTimeNow();
+
+    if (DEBUG) {
+      console.log(`[REMINDER] Current Central time: ${finalCentralTime.toLocaleString()}`);
     }
-    
-    console.log(`[REMINDER] Current Central time: ${finalCentralTime.toLocaleString()}`);
-    
-    // Only set the test game ID once on startup
-    if (!hasInitializedTestGame) {
-      const gameIds = Object.keys(allGames);
-      TEST_GAME_ID = gameIds.length > 0 ? gameIds[gameIds.length - 1] : null;
-      
-      if (TEST_GAME_ID) {
-        console.log(`[REMINDER TEST] 🎯 Using most recent game for detailed logging: ${TEST_GAME_ID}`);
-      }
-      hasInitializedTestGame = true;
-    }
-    
+
     // Check each game
     for (const [gameId, game] of Object.entries(allGames)) {
       // Skip cancelled games
@@ -147,36 +111,26 @@ async function checkAndSendReminders() {
       // Check if it's time to send reminders (within 5 minutes of reminder time)
       const timeDifference = Math.abs(finalCentralTime.getTime() - reminderTime.getTime());
       const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
-      
-      // Only show detailed logging for the test game if something interesting is happening
-      if (gameId === TEST_GAME_ID) {
+
+      if (DEBUG) {
         const hoursUntilReminder = Math.round((reminderTime.getTime() - finalCentralTime.getTime()) / (1000 * 60 * 60));
-        
-        // Only log if: sending reminders, within 1 hour, or first time seeing this game
         if (timeDifference <= fiveMinutes || Math.abs(hoursUntilReminder) <= 1) {
-          console.log(`[REMINDER TEST] 🎯 Game ${gameId} at ${game.location}:`);
-          console.log(`  Game time: ${gameTime.toLocaleString()}`);
-          console.log(`  24-hour reminder time: ${reminderTime.toLocaleString()}`);
-          console.log(`  Current time: ${finalCentralTime.toLocaleString()}`);
-          console.log(`  Time difference: ${Math.round((reminderTime.getTime() - finalCentralTime.getTime()) / (1000 * 60))} minutes`);
+          console.log(`[REMINDER] Game ${gameId} at ${game.location}:`);
+          console.log(`  Game time: ${gameTime.toLocaleString()}, 24h reminder: ${reminderTime.toLocaleString()}`);
+          console.log(`  Time diff: ${Math.round((reminderTime.getTime() - finalCentralTime.getTime()) / (1000 * 60))} min`);
         }
       }
-      
+
       // Only send if we're within 5 minutes of the reminder time and it's not in the past
       if (timeDifference <= fiveMinutes && finalCentralTime >= reminderTime) {
         // **NEW SAFETY CHECK**: Check in-memory cache first
         const cacheKey = `${gameId}_${game.date}_${game.time}`;
         if (sentRemindersCache.has(cacheKey)) {
-          console.log(`[REMINDER SAFETY] ❌ Already sent reminders for game ${gameId} (cached), skipping`);
+          if (DEBUG) console.log(`[REMINDER] Already sent reminders for game ${gameId} (cached), skipping`);
           continue;
         }
-        
-        // Only log sending details for test game
-        if (gameId === TEST_GAME_ID) {
-          console.log(`[REMINDER TEST] ✅ Time to send 24-hour reminders for game ${gameId}`);
-        } else {
-          console.log(`[REMINDER] ✅ Sending reminders for game ${gameId}`);
-        }
+
+        if (DEBUG) console.log(`[REMINDER] Sending 24-hour reminders for game ${gameId}`);
         
         // **NEW SAFETY CHECK**: Mark in cache BEFORE sending any SMS
         sentRemindersCache.set(cacheKey, Date.now());
@@ -189,13 +143,12 @@ async function checkAndSendReminders() {
         for (const player of confirmedPlayers) {
           // **NEW SAFETY CHECK**: Hard limit on reminders per game
           if (remindersSent >= maxRemindersPerGame) {
-            console.log(`[REMINDER SAFETY] ❌ Hit safety limit of ${maxRemindersPerGame} reminders for game ${gameId}`);
+            if (DEBUG) console.log(`[REMINDER] Hit safety limit of ${maxRemindersPerGame} reminders for game ${gameId}`);
             break;
           }
           
-          // Skip players without phone numbers
           if (!player.phone) {
-            console.log(`[REMINDER] Skipping ${player.name} - no phone number`);
+            if (DEBUG) console.log(`[REMINDER] Skipping ${player.name} - no phone number`);
             continue;
           }
           
@@ -203,52 +156,36 @@ async function checkAndSendReminders() {
           const alreadySent = await hasReminderBeenSent(gameId, player.phone, 'twenty_four_hours');
           
           if (alreadySent) {
-            console.log(`[REMINDER] Already sent 24-hour reminder to ${player.phone} for game ${gameId}`);
+            if (DEBUG) console.log(`[REMINDER] Already sent 24-hour reminder to ${player.phone} for game ${gameId}`);
             continue;
           }
           
           // Format the game time and date for the message
           const gameTimeFormatted = formatTimeForSMS(game.time);
           const gameDateFormatted = formatDateForSMS(game.date);
-          
-          // Create the reminder message
-          // Include court number in location text like other SMS messages
-          let locationText = game.location;
-          if (game.courtNumber && game.courtNumber.trim()) {
-            locationText += ` - ${game.courtNumber}`;
-          }
+          const locationText = formatLocationForSMS(game);
 
-          const reminderMessage = `🏓 Reminder: Your pickleball game is tomorrow at ${gameTimeFormatted} at ${locationText}. Looking forward to seeing you! Reply 2 for details or 9 to cancel.`;          
+          const reminderMessage = `Reminder: Your pickleball game is tomorrow at ${gameTimeFormatted} at ${locationText}. Looking forward to seeing you! Reply 2 for details or 9 to cancel.`;          
           
           // Send the SMS
           const smsResult = await sendSMS(player.phone, reminderMessage, gameId);
           
           if (smsResult.success) {
-            // Mark that we sent this reminder
             await markReminderSent(gameId, player.phone, 'twenty_four_hours');
             remindersSent++;
-            console.log(`[REMINDER] ✅ Sent 24-hour reminder to ${player.name} (${player.phone}) for game ${gameId}`);
+            if (DEBUG) console.log(`[REMINDER] Sent 24-hour reminder to ${player.name} for game ${gameId}`);
           } else {
-            console.error(`[REMINDER] ❌ Failed to send reminder to ${player.phone}:`, smsResult.error);
+            console.error(`[REMINDER] Failed to send reminder to ${player.phone}:`, smsResult.error);
           }
         }
         
-        if (remindersSent > 0) {
-          console.log(`[REMINDER] 📤 Sent ${remindersSent} total reminders for game ${gameId} at ${game.location}`);
-        } else {
-          console.log(`[REMINDER] 📭 No reminders sent for game ${gameId} (no eligible players)`);
+        if (DEBUG && remindersSent > 0) {
+          console.log(`[REMINDER] Sent ${remindersSent} reminders for game ${gameId}`);
         }
-      } else {
-        // Only log detailed timing info for the test game
-        if (gameId === TEST_GAME_ID) {
-          const hoursUntilReminder = Math.round((reminderTime.getTime() - finalCentralTime.getTime()) / (1000 * 60 * 60));
-          if (hoursUntilReminder > 0) {
-            console.log(`[REMINDER TEST] ⏰ Game ${gameId} reminder in ${hoursUntilReminder} hours`);
-          } else if (hoursUntilReminder < -24) {
-            console.log(`[REMINDER TEST] ⏭️ Game ${gameId} is old, skipping`);
-          } else {
-            console.log(`[REMINDER TEST] ⏳ Game ${gameId} reminder window passed`);
-          }
+      } else if (DEBUG) {
+        const hoursUntilReminder = Math.round((reminderTime.getTime() - finalCentralTime.getTime()) / (1000 * 60 * 60));
+        if (Math.abs(hoursUntilReminder) <= 24) {
+          console.log(`[REMINDER] Game ${gameId} reminder in ${hoursUntilReminder} hours`);
         }
       }
     }
@@ -261,16 +198,16 @@ async function checkAndSendReminders() {
       }
     }
     
-    console.log('[REMINDER] ✅ Reminder check completed');
-    
+    if (DEBUG) console.log('[REMINDER] Check completed');
+
   } catch (error) {
-    console.error('[REMINDER] ❌ Error in reminder system:', error);
+    console.error('[REMINDER] Error in reminder system:', error);
   }
 }
 
 // Create game data function
 function createGameData(formData) {
-  console.log('[DEBUG] Creating game data, received:', formData);
+  if (DEBUG) console.log('[DEBUG] Creating game data, received:', formData);
   
   const gameData = {
     location: formData.location,
@@ -297,8 +234,10 @@ function createGameData(formData) {
     created: new Date().toISOString()
   };
 
-  console.log('[DEBUG] Final notification preferences:', gameData.notificationPreferences);
-  console.log('[DEBUG] Host phone:', gameData.hostPhone);
+  if (DEBUG) {
+    console.log('[DEBUG] Final notification preferences:', gameData.notificationPreferences);
+    console.log('[DEBUG] Host phone:', gameData.hostPhone);
+  }
 
   // Set up initial players list
   if (gameData.organizerPlaying) {
@@ -330,15 +269,14 @@ function validatePlayerData(name, phone) {
   }
   
   if (cleanPhone) {
-    // Log for debugging Chrome iOS issues
-    console.log('[VALIDATE PLAYER] Phone input:', cleanPhone);
-    
+    if (DEBUG) console.log('[VALIDATE PLAYER] Phone input:', cleanPhone);
+
     // Try the standard validation first
     if (!isValidPhoneNumber(cleanPhone)) {
       // If that fails, try lenient validation for Chrome iOS
       const cleaned = cleanPhone.replace(/\D/g, '');
       if (cleaned.length >= 10 && cleaned.length <= 15) {
-        console.log('[VALIDATE PLAYER] Passed lenient validation for Chrome iOS');
+        if (DEBUG) console.log('[VALIDATE PLAYER] Passed lenient validation for Chrome iOS');
       } else {
         throw new Error('Please enter a valid US phone number (e.g., (555) 123-4567)');
       }
@@ -412,10 +350,6 @@ function addPlayerToGame(game, playerData, forceWaitlist = false) {
   }
 }
 
-// Remove player from game (handles promotion from waitlist)
-// game-logic.js - REPLACE the removePlayerFromGame function with this fixed version:
-
-// Remove player from game (handles promotion from waitlist)
 function removePlayerFromGame(game, playerId) {
   // Try to find in confirmed players
   const playerIndex = game.players.findIndex(p => p.id === playerId);
@@ -424,8 +358,6 @@ function removePlayerFromGame(game, playerId) {
     const removedPlayer = game.players.splice(playerIndex, 1)[0];
     
     let promotedPlayer = null;
-    
-    // 🔧 FIX: Only auto-promote in FCFS mode, NOT in waitlist mode
     const isWaitlistMode = game.registrationMode === 'waitlist';
     
     if (!isWaitlistMode && game.waitlist && game.waitlist.length > 0) {
@@ -459,7 +391,6 @@ function removePlayerFromGame(game, playerId) {
   return { status: 'not_found' };
 }
 
-// UPDATED: module.exports with new functions added
 module.exports = {
   checkAndSendReminders,
   createGameData,
@@ -468,7 +399,6 @@ module.exports = {
   addPlayerToGame,
   removePlayerFromGame,
   isValidPhoneNumber,
-  formatPhoneNumber,
-  isGameExpired,           // ADDED
-  checkGameNotExpired      // ADDED
+  isGameExpired,
+  checkGameNotExpired
 };

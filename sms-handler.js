@@ -7,32 +7,80 @@ const {
   getLastCommand,
   clearLastCommand
 } = require('./database');
+const { isGameUpcoming } = require('./utils/central-time');
 
-// Add organizer notification function
+const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
+
 async function sendOrganizerNotification(gameId, game, eventType, playerName = null) {
   try {
-    if (!game.hostPhone || !game.notificationPreferences) {
+    if (!game.hostPhone) {
+      if (DEBUG) console.log('[DEBUG] No hostPhone found, skipping notification');
       return;
     }
-    
+    if (!game.notificationPreferences) {
+      if (DEBUG) console.log('[DEBUG] No notification preferences found, skipping notification');
+      return;
+    }
+
     const prefs = game.notificationPreferences;
-    
-    if (eventType === 'playerCancels' && prefs.playerCancels === true && playerName) {
-      const gameDate = formatDateForSMS(game.date);
-      const gameTime = formatTimeForSMS(game.time);
-      let locationText = game.location;
-      if (game.courtNumber && game.courtNumber.trim()) {
-        locationText += ` - ${game.courtNumber}`;
+    let shouldSend = false;
+    let message = '';
+
+    const gameDate = formatDateForSMS(game.date);
+    const gameTime = formatTimeForSMS(game.time);
+    const locationText = formatLocationForSMS(game);
+
+    if (DEBUG) {
+      console.log('[DEBUG] ORGANIZER NOTIFICATION:', { gameId, eventType, playerName, hostPhone: game.hostPhone });
+    }
+
+    switch (eventType) {
+      case 'gameFull':
+        if (prefs.gameFull === true) {
+          shouldSend = true;
+          message = `HOST ALERT: Your pickleball game at ${locationText} on ${gameDate} is now FULL! All ${game.totalPlayers} spots are taken.`;
+        }
+        break;
+      case 'playerJoins':
+        if (prefs.playerJoins === true && playerName) {
+          shouldSend = true;
+          const spotsLeft = parseInt(game.totalPlayers) - game.players.length;
+          message = `HOST ALERT: ${playerName} just joined your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} remaining.`;
+        }
+        break;
+      case 'playerCancels':
+        if (prefs.playerCancels === true && playerName) {
+          shouldSend = true;
+          const spotsLeft = parseInt(game.totalPlayers) - game.players.length;
+          message = `HOST ALERT: ${playerName} cancelled their spot for your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} now available.`;
+        }
+        break;
+      case 'oneSpotLeft':
+        if (prefs.oneSpotLeft === true) {
+          shouldSend = true;
+          message = `HOST ALERT: Only 1 spot left for your pickleball game at ${locationText} on ${gameDate}!`;
+        }
+        break;
+      case 'waitlistStarts':
+        if (prefs.waitlistStarts === true && playerName) {
+          shouldSend = true;
+          message = `HOST ALERT: ${playerName} is the first person on the waitlist for your pickleball game at ${locationText} on ${gameDate}.`;
+        }
+        break;
+      default:
+        if (DEBUG) console.log('[DEBUG] Unknown event type:', eventType);
+    }
+
+    if (shouldSend && message) {
+      const smsResult = await sendSMS(game.hostPhone, message, gameId);
+      if (smsResult.success) {
+        console.log(`[ORGANIZER NOTIFICATION] Sent ${eventType} to host for game ${gameId}`);
+      } else {
+        console.error(`[ORGANIZER NOTIFICATION] Failed to send ${eventType}:`, smsResult.error);
       }
-      
-      const spotsLeft = parseInt(game.totalPlayers) - game.players.length;
-      const message = `🎯 HOST ALERT: ${playerName} cancelled their spot for your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} now available.`;
-      
-      await sendSMS(game.hostPhone, message, gameId);
-      console.log('[SMS ORGANIZER NOTIFICATION] Sent cancellation notification for:', playerName);
     }
   } catch (error) {
-    console.error('Error sending SMS organizer notification:', error);
+    console.error('Error sending organizer notification:', error);
   }
 }
 
@@ -60,27 +108,12 @@ function formatTimeForSMS(timeStr) {
   return `${hour12}:${minutes} ${ampm}`;
 }
 
-// Helper function to check if a game date is today or in the future
-function isGameUpcoming(gameDate, gameTime) {
-  // Get current time in Central Time (same as reminder system)
-  const now = new Date();
-  const centralNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}));
-  
-  // If timezone conversion fails, use manual calculation (same fallback as reminders)
-  if (isNaN(centralNow.getTime())) {
-    console.log('[SMS] Timezone conversion failed, using manual calculation');
-    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const centralOffset = -6; // CST (adjust to -5 for CDT if needed)
-    var finalCentralTime = new Date(utcTime + (centralOffset * 3600000));
-  } else {
-    var finalCentralTime = centralNow;
+function formatLocationForSMS(game) {
+  let locationText = game.location || '';
+  if (game.courtNumber && game.courtNumber.trim()) {
+    locationText += ` - ${game.courtNumber}`;
   }
-  
-  // Create full game datetime by combining date and time (assumes game is in Central Time)
-  const gameDateTime = new Date(`${gameDate}T${gameTime}:00`);
-  
-  // Game is upcoming if it's in the future relative to Central Time
-  return gameDateTime > finalCentralTime;
+  return locationText;
 }
 
 // SMS sending function
@@ -198,12 +231,8 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
       const managementLink = `${baseUrl}/manage.html?id=${id}&token=${hostInfo.hostToken}`;
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      
-      let locationText = game.location;
-      if (game.courtNumber && game.courtNumber.trim()) {
-        locationText += ` - ${game.courtNumber}`;
-      }
-      
+      const locationText = formatLocationForSMS(game);
+
       await sendSMS(fromNumber, `Here's your management link for ${locationText} on ${gameDate} at ${gameTime}: ${managementLink}`);
     } else {
       console.log(`[SMS] User has ${hostGames.length} host games, sending all links`);
@@ -214,12 +243,8 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
         const managementLink = `${baseUrl}/manage.html?id=${id}&token=${hostInfo.hostToken}`;
         const gameDate = formatDateForSMS(game.date);
         const gameTime = formatTimeForSMS(game.time);
-        
-        let locationText = game.location;
-        if (game.courtNumber && game.courtNumber.trim()) {
-          locationText += ` - ${game.courtNumber}`;
-        }
-        
+        const locationText = formatLocationForSMS(game);
+
         responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime}\n${managementLink}\n\n`;
       });
       
@@ -480,12 +505,8 @@ async function getPlayerGames(cleanedFromNumber, allGames) {
 async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
   const gameDate = formatDateForSMS(game.date);
   const gameTime = formatTimeForSMS(game.time);
-  
-  let locationText = game.location;
-  if (game.courtNumber && game.courtNumber.trim()) {
-    locationText += ` - ${game.courtNumber}`;
-  }
-  
+  const locationText = formatLocationForSMS(game);
+
   let responseMessage = `🏓 ${locationText}\n📅 ${gameDate} at ${gameTime}\n⏱️ Duration: ${game.duration} minutes\n\n`;
   
   // Show player details to confirmed players and hosts, even in waitlist mode
@@ -554,10 +575,7 @@ async function buildGameListMessage(userGames) {
       statusIcon = '⏳';
     }
     
-let locationText = game.location;
-if (game.courtNumber && game.courtNumber.trim()) {
-    locationText += ` - ${game.courtNumber}`;
-}
+const locationText = formatLocationForSMS(game);
 responseMessage += `${index + 1}. ${statusIcon} ${locationText}${roleText}\n${gameDate} at ${gameTime}\n\n`;  });
   
   return responseMessage;
@@ -572,10 +590,7 @@ async function buildCancellationListMessage(playerGames) {
     const gameTime = formatTimeForSMS(game.time);
     const statusText = status === 'confirmed' ? 'Confirmed' : 'Waitlist';
     
-let locationText = game.location;
-if (game.courtNumber && game.courtNumber.trim()) {
-    locationText += ` - ${game.courtNumber}`;
-}
+const locationText = formatLocationForSMS(game);
 responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime} (${statusText})\n\n`;  });
   
   return responseMessage;
@@ -595,11 +610,8 @@ async function cancelPlayerFromGame(gameId, game, player, status, fromNumber) {
         
         const gameDate = formatDateForSMS(game.date);
         const gameTime = formatTimeForSMS(game.time);
-        let locationText = game.location;
-        if (game.courtNumber && game.courtNumber.trim()) {
-          locationText += ` - ${game.courtNumber}`;
-        }
-        
+        const locationText = formatLocationForSMS(game);
+
         // Different promotion message based on game mode
         let promotionMessage;
         if (game.registrationMode === 'waitlist') {
@@ -623,11 +635,8 @@ if (!player.isOrganizer) {
     
     const gameDate = formatDateForSMS(game.date);
     const gameTime = formatTimeForSMS(game.time);
-    let locationText = game.location;
-    if (game.courtNumber && game.courtNumber.trim()) {
-      locationText += ` - ${game.courtNumber}`;
-    }
-    
+    const locationText = formatLocationForSMS(game);
+
     // Different message based on status and game mode
     let statusText;
     if (status === 'confirmed') {
@@ -647,7 +656,9 @@ if (!player.isOrganizer) {
 module.exports = {
   sendSMS,
   handleIncomingSMS,
+  sendOrganizerNotification,
   formatPhoneNumber,
   formatDateForSMS,
-  formatTimeForSMS
+  formatTimeForSMS,
+  formatLocationForSMS
 };

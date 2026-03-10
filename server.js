@@ -1,6 +1,5 @@
 // server.js - Main server file (simplified)
 const express = require('express');
-const path = require('path');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
@@ -18,114 +17,13 @@ const {
 const { 
   sendSMS, 
   handleIncomingSMS, 
+  sendOrganizerNotification,
   formatPhoneNumber,
   formatDateForSMS, 
-  formatTimeForSMS 
+  formatTimeForSMS,
+  formatLocationForSMS
 } = require('./sms-handler');
 
-// Function to send organizer notifications
-// server.js - REPLACE your sendOrganizerNotification function with this:
-async function sendOrganizerNotification(gameId, game, eventType, playerName = null) {
-  try {
-    console.log('[DEBUG] ==================== ORGANIZER NOTIFICATION ====================');
-    console.log('[DEBUG] gameId:', gameId);
-    console.log('[DEBUG] eventType:', eventType);
-    console.log('[DEBUG] playerName:', playerName);
-    console.log('[DEBUG] hostPhone:', game.hostPhone);
-    console.log('[DEBUG] notificationPreferences:', JSON.stringify(game.notificationPreferences, null, 2));
-
-    // Check if we have the required data
-    if (!game.hostPhone) {
-      console.log('[DEBUG] ❌ No hostPhone found, skipping notification');
-      return;
-    }
-    
-    if (!game.notificationPreferences) {
-      console.log('[DEBUG] ❌ No notification preferences found, skipping notification');
-      return;
-    }
-    
-    const prefs = game.notificationPreferences;
-    let shouldSend = false;
-    let message = '';
-    
-    const gameDate = formatDateForSMS(game.date);
-    const gameTime = formatTimeForSMS(game.time);
-    let locationText = game.location;
-    if (game.courtNumber && game.courtNumber.trim()) {
-      locationText += ` - ${game.courtNumber}`;
-    }
-    
-    console.log('[DEBUG] Checking preferences for event:', eventType);
-    
-    switch (eventType) {
-      case 'gameFull':
-        console.log('[DEBUG] gameFull preference:', prefs.gameFull);
-        if (prefs.gameFull === true) {
-          shouldSend = true;
-          message = `🎯 HOST ALERT: Your pickleball game at ${locationText} on ${gameDate} is now FULL! All ${game.totalPlayers} spots are taken.`;
-        }
-        break;
-        
-      case 'playerJoins':
-        console.log('[DEBUG] playerJoins preference:', prefs.playerJoins);
-        if (prefs.playerJoins === true && playerName) {
-          shouldSend = true;
-          const spotsLeft = parseInt(game.totalPlayers) - game.players.length;
-message = `🎯 HOST ALERT: ${playerName} just joined your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} remaining.`;        }
-        break;
-        
-      case 'playerCancels':
-        console.log('[DEBUG] playerCancels preference:', prefs.playerCancels);
-        if (prefs.playerCancels === true && playerName) {
-          shouldSend = true;
-          const spotsLeft = parseInt(game.totalPlayers) - game.players.length;
-message = `🎯 HOST ALERT: ${playerName} cancelled their spot for your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} now available.`;        }
-        break;
-        
-      case 'oneSpotLeft':
-        console.log('[DEBUG] oneSpotLeft preference:', prefs.oneSpotLeft);
-        if (prefs.oneSpotLeft === true) {
-          shouldSend = true;
-          message = `🎯 HOST ALERT: Only 1 spot left for your pickleball game at ${locationText} on ${gameDate}!`;
-        }
-        break;
-        
-      case 'waitlistStarts':
-        console.log('[DEBUG] waitlistStarts preference:', prefs.waitlistStarts);
-        if (prefs.waitlistStarts === true && playerName) {
-          shouldSend = true;
-          message = `🎯 HOST ALERT: ${playerName} is the first person on the waitlist for your pickleball game at ${locationText} on ${gameDate}.`;
-        }
-        break;
-        
-      default:
-        console.log('[DEBUG] ❌ Unknown event type:', eventType);
-    }
-    
-    console.log('[DEBUG] shouldSend:', shouldSend);
-    console.log('[DEBUG] message length:', message ? message.length : 0);
-
-    if (shouldSend && message) {
-      console.log('[DEBUG] ✅ Sending organizer SMS to:', game.hostPhone);
-      const smsResult = await sendSMS(game.hostPhone, message, gameId);
-      console.log('[DEBUG] SMS result:', smsResult);
-      
-      if (smsResult.success) {
-        console.log(`[ORGANIZER NOTIFICATION] ✅ Successfully sent ${eventType} notification to host for game ${gameId}`);
-      } else {
-        console.log(`[ORGANIZER NOTIFICATION] ❌ Failed to send ${eventType} notification:`, smsResult.error);
-      }
-    } else {
-      console.log('[DEBUG] ❌ Not sending notification');
-      console.log('[DEBUG] Reasons - shouldSend:', shouldSend, 'hasMessage:', !!message);
-    }
-    
-    console.log('[DEBUG] ============================================================');
-  } catch (error) {
-    console.error('❌ Error sending organizer notification:', error);
-  }
-}
 const { 
   checkAndSendReminders,
   createGameData,
@@ -191,9 +89,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running', database: isProduction ? 'PostgreSQL' : 'SQLite' });
 });
 
-// Manual reminder test endpoint
-app.post('/api/test-reminders', async (req, res) => {
-  try {    
+// Manual reminder test endpoint - restricted to localhost in production
+app.post('/api/test-reminders', (req, res, next) => {
+  if (isProduction) {
+    const clientIp = req.ip || req.connection?.remoteAddress || '';
+    const isLocalhost = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === '::ffff:127.0.0.1';
+    if (!isLocalhost) {
+      return res.status(403).json({ error: 'Forbidden: test endpoint only available from localhost' });
+    }
+  }
+  next();
+}, async (req, res) => {
+  try {
     await checkAndSendReminders();
     res.json({ success: true, message: 'Reminder check completed' });
   } catch (error) {
@@ -202,8 +109,6 @@ app.post('/api/test-reminders', async (req, res) => {
   }
 });
 
-// Create game
-// server.js - REPLACE your create game endpoint with this:
 app.post('/api/games', async (req, res) => {
   try {
     console.log('[SERVER] Received create game request:', req.body);
@@ -245,10 +150,7 @@ app.post('/api/games', async (req, res) => {
     if (hostPhone) {
       const gameDate = formatDateForSMS(gameData.date);
       const gameTime = formatTimeForSMS(gameData.time);
-      let locationText = gameData.location;
-      if (gameData.courtNumber && gameData.courtNumber.trim()) {
-          locationText += ` - ${gameData.courtNumber}`;
-      }
+      const locationText = formatLocationForSMS(gameData);
       const hostMessage = `Your pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been created! Reply "1" for management link or "2" for game details.`;
       smsResult = await sendSMS(formattedHostPhone, hostMessage, gameId);
     }
@@ -284,9 +186,6 @@ app.get('/api/games/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch game' });
   }
 });
-
-// Update game
-// UPDATE your game update endpoint in server.js - REMOVE the automatic notifications:
 
 app.put('/api/games/:id', async (req, res) => {
   try {
@@ -487,18 +386,14 @@ app.post('/api/games/lookup-and-notify', async (req, res) => {
     
     let smsResult = null;
     if (sendSms && recentGames.length > 0) {
-      trackSMSAttempt('management_link_lookup', `Games: ${recentGames.length}`);
       
       let message;
       if (recentGames.length === 1) {
         const game = recentGames[0];
         const gameDate = formatDateForSMS(game.date);
         const gameTime = formatTimeForSMS(game.time);
-        let locationText = game.location;
-        if (game.courtNumber && game.courtNumber.trim()) {
-          locationText += ` - ${game.courtNumber}`;
-        }
-        message = `🎾 Your pickleball game management link:\n\n${locationText}\n${gameDate} at ${gameTime}\n\n${game.managementLink}`;
+        const locationText = formatLocationForSMS(game);
+        message = `Your pickleball game management link:\n\n${locationText}\n${gameDate} at ${gameTime}\n\n${game.managementLink}`;
       } else {
         // Sort by date and get the most recent upcoming game
         recentGames.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -507,21 +402,12 @@ app.post('/api/games/lookup-and-notify', async (req, res) => {
         
         const gameDate = formatDateForSMS(gameToShow.date);
         const gameTime = formatTimeForSMS(gameToShow.time);
-        let locationText = gameToShow.location;
-        if (gameToShow.courtNumber && gameToShow.courtNumber.trim()) {
-          locationText += ` - ${gameToShow.courtNumber}`;
-        }
-        
-        message = `🎾 You have ${recentGames.length} recent games. Here's your ${upcomingGames.length > 0 ? 'next' : 'most recent'} game:\n\n${locationText}\n${gameDate} at ${gameTime}\n\n${gameToShow.managementLink}`;
+        const locationText = formatLocationForSMS(gameToShow);
+
+        message = `You have ${recentGames.length} recent games. Here's your ${upcomingGames.length > 0 ? 'next' : 'most recent'} game:\n\n${locationText}\n${gameDate} at ${gameTime}\n\n${gameToShow.managementLink}`;
       }
       
       smsResult = await sendSMS(phoneNumber, message);
-      
-      if (smsResult.success) {
-        updateSMSStats('success');
-      } else {
-        updateSMSStats(smsResult.blocked ? 'blocked' : 'error');
-      }
     }
     
     res.json({
@@ -574,11 +460,8 @@ app.post('/api/games/:id/players', async (req, res) => {
         const gameDate = formatDateForSMS(game.date);
         const gameTime = formatTimeForSMS(game.time);
         
-        let locationText = game.location;
-        if (game.courtNumber && game.courtNumber.trim()) {
-          locationText += ` - ${game.courtNumber}`;
-        }
-        
+        const locationText = formatLocationForSMS(game);
+
         const message = `Thanks for letting us know you can't make the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. We appreciate the heads up!`;
         smsResult = await sendSMS(playerData.phone, message, gameId);
       }
@@ -641,12 +524,8 @@ app.post('/api/games/:id/players', async (req, res) => {
     if (playerData.phone) {
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      
-      let locationText = game.location;
-      if (game.courtNumber && game.courtNumber.trim()) {
-        locationText += ` - ${game.courtNumber}`;
-      }
-      
+      const locationText = formatLocationForSMS(game);
+
       let message;
       if (result.status === 'confirmed') {
         message = `You're confirmed for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for game details or 9 to cancel.`;
@@ -736,12 +615,8 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
     if (playerData.phone) {
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      
-      let locationText = game.location;
-      if (game.courtNumber && game.courtNumber.trim()) {
-        locationText += ` - ${game.courtNumber}`;
-      }
-      
+      const locationText = formatLocationForSMS(game);
+
       let message;
       if (result.status === 'confirmed') {
         message = `You've been added to the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
@@ -801,12 +676,8 @@ app.post('/api/games/:id/move-to-waitlist/:playerId', async (req, res) => {
     if (player.phone) {
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      
-      let locationText = game.location;
-      if (game.courtNumber && game.courtNumber.trim()) {
-        locationText += ` - ${game.courtNumber}`;
-      }
-      
+      const locationText = formatLocationForSMS(game);
+
       const message = `You've been moved to the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. You are #${game.waitlist.length} on the waitlist. Reply 2 for details or 9 to cancel.`;
       smsResult = await sendSMS(player.phone, message, gameId);
     }
@@ -862,12 +733,8 @@ app.post('/api/games/:id/promote-from-waitlist/:playerId', async (req, res) => {
     if (player.phone) {
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      
-      let locationText = game.location;
-      if (game.courtNumber && game.courtNumber.trim()) {
-        locationText += ` - ${game.courtNumber}`;
-      }
-      
+      const locationText = formatLocationForSMS(game);
+
       const message = `Great news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for who is playing and details or 9 to cancel.`;
       smsResult = await sendSMS(player.phone, message, gameId);
     }
@@ -930,12 +797,8 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
     if (removedPlayer.phone && !removedPlayer.isOrganizer && token) { // Only send if removed by host
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      
-      let locationText = game.location;
-      if (game.courtNumber && game.courtNumber.trim()) {
-        locationText += ` - ${game.courtNumber}`;
-      }
-      
+      const locationText = formatLocationForSMS(game);
+
       const statusText = removalType === 'confirmed' ? 'registration' : 'waitlist spot';
       const message = `Your ${statusText} for the pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been cancelled by the organizer.`;
       removalSmsResult = await sendSMS(removedPlayer.phone, message);
@@ -946,12 +809,8 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
     if (result.promotedPlayer && result.promotedPlayer.phone) {
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      
-      let locationText = game.location;
-      if (game.courtNumber && game.courtNumber.trim()) {
-        locationText += ` - ${game.courtNumber}`;
-      }
-      
+      const locationText = formatLocationForSMS(game);
+
       const message = `Good news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
       promotionSmsResult = await sendSMS(result.promotedPlayer.phone, message, gameId);
     }

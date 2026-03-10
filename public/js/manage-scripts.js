@@ -41,8 +41,6 @@ function formatDateForDisplay(dateStr) {
     });
 }
 
-// ADD this JavaScript function to your manage-scripts.js file:
-
 function toggleManageNotification(element, checkboxId) {
     const checkbox = document.getElementById(checkboxId);
     const isCurrentlyChecked = checkbox.checked;
@@ -63,10 +61,7 @@ function toggleManageNotification(element, checkboxId) {
     }
 }
 
-// UPDATE your loadGameDetails function to set the toggle states:
 function loadGameDetails(game) {
-    // ... your existing code ...
-    
     // Set notification preferences and toggle states
     if (game.notificationPreferences) {
         const prefs = game.notificationPreferences;
@@ -79,9 +74,6 @@ function loadGameDetails(game) {
         setNotificationToggle('notifyWaitlistStarts', prefs.waitlistStarts);
     }
 }
-
-// Helper function to set both checkbox and visual state
-// REPLACE your setNotificationToggle function with this improved version:
 
 function setNotificationToggle(checkboxId, isChecked) {
     console.log(`[CLIENT] Setting notification toggle ${checkboxId} to ${isChecked}`);
@@ -114,10 +106,7 @@ function setNotificationToggle(checkboxId, isChecked) {
     return true;
 }
 
-// UPDATE your updateGame function to include notification preferences:
 async function updateGame() {
-    // ... your existing form data collection ...
-    
     const updateData = {
         // ... your existing fields ...
         notificationPreferences: {
@@ -411,7 +400,6 @@ if (copyPlayerLinkBtn) {
     }
 }
 
-// REPLACE your populateGameDetails function with this updated version:
 
 function populateGameDetails() {
     console.log('[CLIENT] Populating game details with:', gameData);
@@ -598,7 +586,6 @@ function updatePlayerLists() {
 }
 
 
-// UPDATE your updateGameDetails function in manage-scripts.js:
 
 async function updateGameDetails() {
     if (!GameUtils.getGameStatus(gameData).canEdit) {
@@ -1088,7 +1075,6 @@ function sendQuickMessage(type) {
     openTabFromSelect('Communication');
 }
 
-// REPLACE your entire cancelGame function with this:
 
 async function cancelGame() {
     if (!GameUtils.getGameStatus(gameData).canEdit) {
