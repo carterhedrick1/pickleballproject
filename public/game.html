@@ -954,7 +954,7 @@
                 <h4>What's Next?</h4>
                 <ul>
                     <li>📲 You'll receive a confirmation text message shortly</li>
-                    <li id="seeWhosPlayingInstruction">👥 Want to see whose playing? Just reply "2" to any text message before the game</li>
+                    <li id="seeWhosPlayingInstruction">👥 Want to see who's playing? Just reply "2" to any text message before the game</li>
                     <li>❌ Need to cancel? Just reply "9" to any text message</li>
                     <li>📧 Game updates will be sent via text</li>
                 </ul>
@@ -1046,9 +1046,12 @@
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('details').style.display = 'block';
                     
-                    // Show status warning if game is expired or cancelled
+                    // Show status warning only if game is expired or cancelled; hide it when active
+                    const warningSection = document.getElementById('gameStatusWarning');
                     if (!gameStatus.canJoin) {
                         showGameStatusWarning(gameStatus);
+                    } else if (warningSection) {
+                        warningSection.style.display = 'none';
                     }
                     
                     // Check if we should show players section based on registration mode AND game status

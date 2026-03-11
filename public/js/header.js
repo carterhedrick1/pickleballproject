@@ -17,6 +17,8 @@ if (currentPath.includes('create.html')) {
     currentPage = 'privacy';
 } else if (currentPath.includes('terms.html')) {
     currentPage = 'terms';
+} else if (currentPath.includes('lookup.html')) {
+    currentPage = 'lookup';
 } else if (currentPath === '/') {
     currentPage = 'home';
 }
@@ -48,6 +50,7 @@ const headerHTML = `
  <nav class="header-nav">
  <a href="/create.html" class="${currentPage === 'create' ? 'active' : ''}">Create Game</a>
 <a href="/my-games.html" class="${currentPage === 'my-games' ? 'active' : ''}">My Games</a>
+<a href="/lookup.html" class="${currentPage === 'lookup' ? 'active' : ''}">Find My Games</a>
  </nav>
  </div>
  </header>
