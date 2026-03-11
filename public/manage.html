@@ -14,7 +14,7 @@
     <div class="container">
         <div class="page-header">
             <div class="header-content">
-                <h1>⚙️ Game Management</h1>
+                <h1>Game Management</h1>
                 <div class="subtitle">Manage your pickleball game with ease</div>
             </div>
         </div>
@@ -22,14 +22,14 @@
         <div id="status" class="status" style="display: none;"></div>
         
         <div id="loading" class="loading-section">
-            <div class="loading-icon">⏳</div>
+            <div class="loading-icon"></div>
             <div class="loading-text">Loading game details...</div>
         </div>
 
         <!-- Game Status Warning for Expired Games -->
         <div id="expiredGameWarning" class="expired-game-warning" style="display: none;">
             <div class="warning-content">
-                <div class="warning-icon">⏰</div>
+                <div class="warning-icon"></div>
                 <div class="warning-text">
                     <h3>Game Has Ended</h3>
                     <p>This game has finished. You can still view player information but cannot make changes or send new invitations.</p>
@@ -41,78 +41,78 @@
             <!-- Mobile Tab Selection -->
             <div class="mobile-tab-container">
                 <select id="tabSelector" class="mobile-tab-selector" onchange="openTabFromSelect(this.value)">
-                    <option value="Details">📋 Game Details</option>
-                    <option value="Players">👥 Players</option>
-                    <option value="Communication">📢 Communication</option>
-                    <option value="Actions">⚠️ Game Actions</option>
+                    <option value="Details">Game Details</option>
+                    <option value="Players">Players</option>
+                    <option value="Communication">Communication</option>
+                    <option value="Actions">Game Actions</option>
                 </select>
             </div>
 
             <!-- Desktop Tab Navigation -->
             <div class="tabs-container">
                 <div class="tabs">
-                    <button class="tab active" onclick="openTab(event, 'Details')">📋 Game Details</button>
-                    <button class="tab" onclick="openTab(event, 'Players')">👥 Players</button>
-                    <button class="tab" onclick="openTab(event, 'Communication')">📢 Communication</button>
-                    <button class="tab" onclick="openTab(event, 'Actions')">⚠️ Game Actions</button>
+                    <button class="tab active" onclick="openTab(event, 'Details')">Game Details</button>
+                    <button class="tab" onclick="openTab(event, 'Players')">Players</button>
+                    <button class="tab" onclick="openTab(event, 'Communication')">Communication</button>
+                    <button class="tab" onclick="openTab(event, 'Actions')">Game Actions</button>
                 </div>
             </div>
 
             <!-- Persistent Copy Invitation Bar (visible across all tabs) -->
             <div class="persistent-copy-bar">
-                <button id="copyPlayerLinkPersistent" class="copy-btn persistent-copy-btn">📋 Copy Invitation Message</button>
+                <button id="copyPlayerLinkPersistent" class="copy-btn persistent-copy-btn">Copy Invitation Message</button>
             </div>
             
             <!-- Game Details Tab -->
             <div id="Details" class="tabcontent active">
                 <div class="form-section">
-                    <h2 class="section-title">📋 Edit Game Details</h2>
+                    <h2 class="section-title">Edit Game Details</h2>
                     
                     <form id="editForm">
                         <div class="form-group">
-                            <label for="location">📍 Location:</label>
+                            <label for="location">Location:</label>
                             <input type="text" id="location" name="location" required>
                         </div>
                         
                         <div class="form-group">
-                            <label for="courtNumber">🏟️ Court Number (optional):</label>
+                            <label for="courtNumber">Court Number (optional):</label>
                             <input type="text" id="courtNumber" name="courtNumber" placeholder="e.g., Court 3, Courts 1-2, Center Court">
                             <div class="form-help-text">Specify which court(s) you'll be using at this location</div>
                         </div>
                         
                         <div class="form-group">
-                            <label for="date">📅 Date:</label>
+                            <label for="date">Date:</label>
                             <input type="date" id="date" name="date" required>
                         </div>
                         
                         <div class="form-group">
-                            <label for="time">⏰ Start Time:</label>
+                            <label for="time">Start Time:</label>
                             <input type="time" id="time" name="time" required>
                         </div>
                         
                         <div class="form-group">
-                            <label for="duration">⏱️ Duration (minutes):</label>
+                            <label for="duration">Duration (minutes):</label>
                             <input type="number" id="duration" name="duration" min="30" step="15" required>
                         </div>
                         
                         <div class="form-group">
-                            <label for="players">👥 Number of Players:</label>
+                            <label for="players">Number of Players:</label>
                             <input type="number" id="players" name="players" min="1" max="50" required>
                             <div class="form-help-text">Enter any number from 1 to 50 players</div>
                         </div>
                         
                         <div class="form-group">
-                            <label for="message">💬 Optional Message:</label>
+                            <label for="message">Optional Message:</label>
                             <textarea id="message" name="message" rows="3" placeholder="Any additional info for players..."></textarea>
                         </div>
 
                         <div class="form-group notifications-section">
-                            <label>📱 Organizer Notifications:</label>
+                            <label>Organizer Notifications:</label>
                             <div class="form-help-text">Get SMS alerts when these events happen (optional)</div>
                             
                             <div class="notification-option" onclick="toggleManageNotification(this, 'notifyGameFull')">
                                 <div class="notification-content">
-                                    <div class="notification-icon">🎯</div>
+                                    <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">Game becomes full</div>
                                         <div class="notification-description">Get notified when all spots are taken</div>
@@ -124,7 +124,7 @@
 
                             <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerCancels')">
                                 <div class="notification-content">
-                                    <div class="notification-icon">❌</div>
+                                    <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">Someone cancels their spot</div>
                                         <div class="notification-description">Get notified when players cancel</div>
@@ -136,7 +136,7 @@
                             
                             <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerJoins')">
                                 <div class="notification-content">
-                                    <div class="notification-icon">👋</div>
+                                    <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">Someone joins the game</div>
                                         <div class="notification-description">Get notified each time a player signs up</div>
@@ -150,7 +150,7 @@
                             
                             <div class="notification-option" onclick="toggleManageNotification(this, 'notifyOneSpotLeft')">
                                 <div class="notification-content">
-                                    <div class="notification-icon">⚠️</div>
+                                    <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">Only one spot remaining</div>
                                         <div class="notification-description">Get notified when almost full</div>
@@ -162,7 +162,7 @@
                             
                             <div class="notification-option" onclick="toggleManageNotification(this, 'notifyWaitlistStarts')">
                                 <div class="notification-content">
-                                    <div class="notification-icon">⏳</div>
+                                    <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">Waitlist starts</div>
                                         <div class="notification-description">Get notified when first person is waitlisted</div>
@@ -173,12 +173,12 @@
                             </div>
                         </div>
                         
-                        <button type="submit">💾 Update Game Details</button>
+                        <button type="submit">Update Game Details</button>
                     </form>
                 </div>
                         
                 <div class="share-section">
-                    <h3 class="share-title">🎉 Share Your Game</h3>
+                    <h3 class="share-title">Share Your Game</h3>
                     <div class="center-copy-section">
                         <p>Click the button below to copy a complete invitation message with all game details and registration link:</p>
                         <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
@@ -190,11 +190,11 @@
             <!-- Players Tab -->
             <div id="Players" class="tabcontent">
                 <div class="form-section">
-                    <h2 class="section-title">👥 Player Management</h2>
+                    <h2 class="section-title">Player Management</h2>
                     
                     <div class="players-container">
                         <div class="player-section confirmed">
-                            <h3 class="subsection-title">✅ Confirmed Players</h3>
+                            <h3 class="subsection-title">Confirmed Players</h3>
                             <div class="player-count">
                                 <span id="playerCount">0</span>/<span id="totalPlayers">0</span> spots filled
                             </div>
@@ -204,7 +204,7 @@
                         </div>
                         
                         <div class="player-section waitlist">
-                            <h3 class="subsection-title">⏳ Waitlist</h3>
+                            <h3 class="subsection-title">Waitlist</h3>
                             <div class="player-count waitlist-count">
                                 <span id="waitlistCount">0</span> players waiting
                             </div>
@@ -214,7 +214,7 @@
                         </div>
 
                         <div class="player-section out-players">
-    <h3 class="subsection-title">❌ Players Who Are Out</h3>
+    <h3 class="subsection-title">Players Who Are Out</h3>
     <div class="player-count out-count">
         <span id="outCount">0</span> players can't make it
     </div>
@@ -228,7 +228,7 @@
                     <div class="collapsible-section">
                         <div class="collapsible-header" onclick="toggleCollapsible('addPlayerSection')">
                             <h3>
-                                ➕ Add Player Manually
+                                Add Player Manually
                                 <span class="collapse-icon">▼</span>
                             </h3>
                         </div>
@@ -236,12 +236,12 @@
                             <div class="collapsible-inner">
                                 <form id="addPlayerForm">
                                     <div class="form-group">
-                                        <label for="playerName">👤 Player Name:</label>
+                                        <label for="playerName">Player Name:</label>
                                         <input type="text" id="playerName" name="playerName" placeholder="Enter player's full name" required>
                                     </div>
                                     
                                     <div class="form-group">
-                                        <label for="playerPhone">📱 Phone Number (optional):</label>
+                                        <label for="playerPhone">Phone Number (optional):</label>
                                         <input type="tel" id="playerPhone" name="playerPhone" placeholder="(555) 123-4567">
                                         <div class="form-help-text">If provided, player will receive SMS notifications</div>
                                     </div>
@@ -251,16 +251,16 @@
                                         <div class="radio-group">
                                             <div class="radio-option">
                                                 <input type="radio" id="addToConfirmed" name="addTo" value="add" checked>
-                                                <label for="addToConfirmed">✅ Confirmed Players</label>
+                                                <label for="addToConfirmed">Confirmed Players</label>
                                             </div>
                                             <div class="radio-option">
                                                 <input type="radio" id="addToWaitlist" name="addTo" value="waitlist">
-                                                <label for="addToWaitlist">⏳ Waitlist</label>
+                                                <label for="addToWaitlist">Waitlist</label>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <button type="submit">➕ Add Player</button>
+                                    <button type="submit">Add Player</button>
                                 </form>
                             </div>
                         </div>
@@ -271,9 +271,9 @@
             <!-- Communication Tab -->
             <div id="Communication" class="tabcontent">
                 <div class="form-section">
-                    <h2 class="section-title">📢 Send Announcements</h2>
+                    <h2 class="section-title">Send Announcements</h2>
                     
-                    <h3 class="subsection-title">✏️ Send Custom Message</h3>
+                    <h3 class="subsection-title">Send Custom Message</h3>
                     <form id="announcementForm">
                         <div class="form-group">
                             <label for="announcementText">Message:</label>
@@ -287,15 +287,15 @@
                             <div class="recipient-groups">
                                 <div class="checkbox-option">
                                     <input type="checkbox" id="sendToAll" name="sendToAll" onchange="toggleAllPlayers(this.checked)">
-                                    <label for="sendToAll">👥 All Players</label>
+                                    <label for="sendToAll">All Players</label>
                                 </div>
                                 <div class="checkbox-option">
                                     <input type="checkbox" id="sendToPlayers" name="sendToPlayers" checked onchange="updateGroupSelections()">
-                                    <label for="sendToPlayers">✅ Confirmed Players</label>
+                                    <label for="sendToPlayers">Confirmed Players</label>
                                 </div>
                                 <div class="checkbox-option">
                                     <input type="checkbox" id="sendToWaitlist" name="sendToWaitlist" onchange="updateGroupSelections()">
-                                    <label for="sendToWaitlist">⏳ Waitlisted Players</label>
+                                    <label for="sendToWaitlist">Waitlisted Players</label>
                                 </div>
                             </div>
                             
@@ -308,16 +308,16 @@
                             </div>
                         </div>
                                 
-                        <button type="submit">📤 Send Announcement</button>
+                        <button type="submit">Send Announcement</button>
                     </form>
                     
-                    <h3 class="subsection-title">⚡ Quick Messages</h3>
+                    <h3 class="subsection-title">Quick Messages</h3>
                     <div class="quick-actions">
                         <button id="sendReminder" class="quick-action-btn btn-secondary">
-                            ⏰ Send Game Reminder
+                            Send Game Reminder
                         </button>
                         <button id="sendLocationUpdate" class="quick-action-btn btn-secondary">
-                            📍 Send Location Details
+                            Send Location Details
                         </button>
                     </div>
                 </div>
@@ -326,15 +326,15 @@
             <!-- Game Actions Tab -->
             <div id="Actions" class="tabcontent">
                 <div class="form-section">
-                    <h2 class="section-title">⚠️ Game Actions</h2>
+                    <h2 class="section-title">Game Actions</h2>
                     
-                    <h3 class="subsection-title">🚫 Cancel Game</h3>
+                    <h3 class="subsection-title">Cancel Game</h3>
                     <p class="danger-warning">This will notify all players that the game has been cancelled.</p>
                     <div class="form-group">
-                        <label for="cancellationReason">📝 Reason for Cancellation:</label>
+                        <label for="cancellationReason">Reason for Cancellation:</label>
                         <textarea id="cancellationReason" rows="3" placeholder="e.g., Weather conditions, court unavailable..."></textarea>
                     </div>
-                    <button id="cancelGameBtn" class="btn-danger">🚫 Cancel This Game</button>
+                    <button id="cancelGameBtn" class="btn-danger">Cancel This Game</button>
                 </div>
             </div>
         </div>
@@ -353,9 +353,9 @@
         </div>
         
         <div id="unauthorizedMessage" class="unauthorized" style="display: none;">
-            <h3>🔒 Unauthorized Access</h3>
+            <h3>Unauthorized Access</h3>
             <p>You do not have permission to manage this game. Please check your URL or contact the organizer.</p>
-            <a href="/" class="create-game-btn">🏠 Back to Home</a>
+            <a href="/" class="create-game-btn">Back to Home</a>
         </div>
     </div>
 

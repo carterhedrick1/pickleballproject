@@ -144,7 +144,7 @@
 <body>
     <div class="container">
         <div class="page-header">
-            <h1>🎾 Find Your Pickleball Games</h1>
+            <h1>Find Your Pickleball Games</h1>
             <p>Enter your phone number to find all your hosted pickleball games and get management links.</p>
         </div>
         
@@ -294,7 +294,7 @@
                     resultsDiv.innerHTML = `
                         <div class="results">
                             <div class="success">
-                                ✅ Text message sent to ${formatPhoneForDisplay(data.phoneNumber)} with your management link${data.gamesFound > 1 ? 's' : ''}!
+                                Text message sent to ${formatPhoneForDisplay(data.phoneNumber)} with your management link${data.gamesFound > 1 ? 's' : ''}!
                                 <br><br>
                                 Found ${data.gamesFound} game${data.gamesFound > 1 ? 's' : ''}.
                             </div>

@@ -126,7 +126,7 @@ function copyInvitationToClipboard(gameData, gameId, buttonId, baseUrl = null) {
         // Try modern clipboard API first
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(message).then(() => {
-                showCopyFeedback(buttonId, '✅ Message Copied!');
+                showCopyFeedback(buttonId, 'Message Copied!');
             }).catch(() => {
                 // Fallback for clipboard API failure
                 fallbackCopy(message, buttonId);
@@ -158,10 +158,10 @@ function fallbackCopy(text, buttonId) {
     
     try {
         document.execCommand('copy');
-        showCopyFeedback(buttonId, '✅ Message Copied!');
+        showCopyFeedback(buttonId, 'Message Copied!');
     } catch (err) {
         console.error('Failed to copy text: ', err);
-        showCopyFeedback(buttonId, '❌ Copy Failed', true);
+        showCopyFeedback(buttonId, 'Copy Failed', true);
     }
     
     document.body.removeChild(textArea);

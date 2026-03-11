@@ -838,7 +838,7 @@
     <div class="container">
         <div class="section-header">
             <div class="header-content">
-                <h1>🏓 Pickleball Game</h1>
+                <h1>Pickleball Game</h1>
                 <div class="subtitle">Join the fun on the court</div>
             </div>
         </div>
@@ -847,32 +847,32 @@
         
         <!-- Game Details Section -->
         <div id="gameDetails" class="section">
-            <h2 class="section-title">📋 Game Details</h2>
+            <h2 class="section-title">Game Details</h2>
             <div id="loading">Loading game details...</div>
             <div id="details" style="display: none;">
                 <div class="game-info">
                     <div class="game-detail">
-                        <span class="game-detail-label">📍 Location:</span>
+                        <span class="game-detail-label">Location:</span>
                         <span class="game-detail-value" id="location"></span>
                     </div>
                     <div class="game-detail" id="courtDetail" style="display: none;">
-                        <span class="game-detail-label">🏟️ Court:</span>
+                        <span class="game-detail-label">Court:</span>
                         <span class="game-detail-value" id="courtNumber"></span>
                     </div>
                     <div class="game-detail">
-                        <span class="game-detail-label">📅 Date:</span>
+                        <span class="game-detail-label">Date:</span>
                         <span class="game-detail-value" id="date"></span>
                     </div>
                     <div class="game-detail">
-                        <span class="game-detail-label">⏰ Time:</span>
+                        <span class="game-detail-label">Time:</span>
                         <span class="game-detail-value" id="time"></span>
                     </div>
                     <div class="game-detail">
-                        <span class="game-detail-label">⏱️ Duration:</span>
+                        <span class="game-detail-label">Duration:</span>
                         <span class="game-detail-value"><span id="duration"></span> minutes</span>
                     </div>
                     <div class="game-detail" id="messageDetail" style="display: none;">
-                        <span class="game-detail-label">💬 Message:</span>
+                        <span class="game-detail-label">Message:</span>
                         <span class="game-detail-value" id="message"></span>
                     </div>
                 </div>
@@ -882,7 +882,7 @@
         <!-- Game Status Warning (for expired/cancelled games) -->
         <div id="gameStatusWarning" class="game-status-warning" style="display: none;">
             <div class="warning-content">
-                <div class="warning-icon">⚠️</div>
+                <div class="warning-icon"></div>
                 <div class="warning-text">
                     <h3 id="warningTitle">Game No Longer Available</h3>
                     <p id="warningMessage">This game has ended and is no longer accepting registrations.</p>
@@ -892,7 +892,7 @@
         
         <!-- Players Section -->
         <div id="playerList" class="section players-section" style="display: none;">
-            <h2 class="section-title">👥 Players</h2>
+            <h2 class="section-title">Players</h2>
             
             <div id="spotsAvailableContainer">
                 <div id="spotsAvailableBar" class="spots-available">
@@ -905,7 +905,7 @@
                     </div>
                     
                     <div class="waitlist-info">
-                        <h4>🕐 Join the Waitlist!</h4>
+                        <h4>Join the Waitlist!</h4>
                         <p>Don't worry - you can still sign up to be on the waitlist.</p>
                         <p>If someone cancels, you'll automatically get their spot and receive a text message.</p>
                         <p><strong>Currently <span id="waitlistCount">0</span> people waiting</strong></p>
@@ -920,7 +920,7 @@
         
         <!-- Sign Up Section -->
         <div id="signupForm" class="section signup-section" style="display: none;">
-            <h2 class="section-title" id="joinSectionTitle">🏓 Join This Game</h2>
+            <h2 class="section-title" id="joinSectionTitle">Join This Game</h2>
             <form id="joinForm">
                 <div class="form-group">
                     <label for="playerName">Your Name:</label>
@@ -940,15 +940,15 @@
             </form>
             
             <div class="form-help-text">
-                <span id="waitlistModeInfo" style="display: none;">📝 <strong>How it works:</strong> The organizer will review all applications and select players. You'll be notified if you're chosen!<br><br></span>
-                💡 <strong>Need to cancel later?</strong> Just reply "9" to any text message you receive about this game.<br><br>
-                🤝 <strong>Can't make it?</strong> Please still select the "OUT" option so we don't send reminder texts if we're short on players as game time approaches.
+                <span id="waitlistModeInfo" style="display: none;"><strong>How it works:</strong> The organizer will review all applications and select players. You'll be notified if you're chosen!<br><br></span>
+                <strong>Need to cancel later?</strong> Just reply "9" to any text message you receive about this game.<br><br>
+                <strong>Can't make it?</strong> Please still select the "OUT" option so we don't send reminder texts if we're short on players as game time approaches.
             </div>
         </div>
 
         <!-- Confirmation Section (Initially Hidden) -->
         <div id="confirmationSection" class="confirmation-section" style="display: none;">
-            <div class="confirmation-icon">🎉</div>
+            <div class="confirmation-icon"></div>
             <h2 id="confirmationTitle">You're In!</h2>
             <div class="confirmation-message" id="confirmationMessage">
                 Great! You've successfully joined the game.
@@ -956,15 +956,15 @@
             
             <div class="confirmation-details">
                 <div class="confirmation-detail">
-                    <span class="confirmation-detail-label">📍 Location:</span>
+                    <span class="confirmation-detail-label">Location:</span>
                     <span class="confirmation-detail-value" id="confirmLocation"></span>
                 </div>
                 <div class="confirmation-detail">
-                    <span class="confirmation-detail-label">📅 Date & Time:</span>
+                    <span class="confirmation-detail-label">Date & Time:</span>
                     <span class="confirmation-detail-value" id="confirmDateTime"></span>
                 </div>
                 <div class="confirmation-detail">
-                    <span class="confirmation-detail-label">👤 Your Status:</span>
+                    <span class="confirmation-detail-label">Your Status:</span>
                     <span class="confirmation-detail-value" id="confirmStatus"></span>
                 </div>
             </div>
@@ -973,10 +973,10 @@
             <div class="next-steps" id="nextStepsSection">
                 <h4>What's Next?</h4>
                 <ul>
-                    <li>📲 You'll receive a confirmation text message shortly</li>
-                    <li id="seeWhosPlayingInstruction">👥 Want to see who's playing? Just reply "2" to any text message before the game</li>
-                    <li>❌ Need to cancel? Just reply "9" to any text message</li>
-                    <li>📧 Game updates will be sent via text</li>
+                    <li>You'll receive a confirmation text message shortly</li>
+                    <li id="seeWhosPlayingInstruction">Want to see who's playing? Just reply "2" to any text message before the game</li>
+                    <li>Need to cancel? Just reply "9" to any text message</li>
+                    <li>Game updates will be sent via text</li>
                 </ul>
             </div>
 
@@ -1245,7 +1245,7 @@
                     opacity: 0;
                     transition: opacity 0.3s ease;
                 `;
-                notification.textContent = '✨ Game details updated!';
+                notification.textContent = 'Game details updated!';
                 
                 document.body.appendChild(notification);
                 
@@ -1291,7 +1291,7 @@
                     
                     // Update join section for waitlist mode - CHANGED: Now just shows "Join This Game" and "IN"
                     if (joinSectionTitle && joinButton) {
-                        joinSectionTitle.textContent = '🏓 Join This Game';
+                        joinSectionTitle.textContent = 'Join This Game';
                         joinButton.textContent = 'IN';
                     }
                     
@@ -1351,7 +1351,7 @@
                     spotsAvailable.textContent = availableSpots;
                     spotsAvailableBar.style.display = 'block';
                     spotsFullContainer.style.display = 'none';
-                    joinSectionTitle.textContent = '🏓 Join This Game';
+                    joinSectionTitle.textContent = 'Join This Game';
                     joinButton.textContent = 'IN';
                     
                     // FIXED: Update spots text to be singular/plural
@@ -1365,7 +1365,7 @@
                     spotsAvailableBar.style.display = 'none';
                     spotsFullContainer.style.display = 'block';
                     waitlistCount.textContent = waitlistLength;
-                    joinSectionTitle.textContent = '🕐 Join the Waitlist';
+                    joinSectionTitle.textContent = 'Join the Waitlist';
                     joinButton.textContent = 'Join Waitlist';
                 }
                 
@@ -1413,11 +1413,11 @@
                     confirmationSection.classList.remove('out');
                     
                     if (data.hidePosition || gameData.registrationMode === 'waitlist') {
-                        confirmTitle.textContent = "⏳ Application Submitted!";
+                        confirmTitle.textContent = "Application Submitted!";
                         confirmMessage.textContent = `Thanks for signing up! The organizer will review all applications and select players. You'll be notified if you're selected.`;
                         confirmStatus.textContent = `Application Under Review`;
                     } else {
-                        confirmTitle.textContent = "⏳ You're on the Waitlist!";
+                        confirmTitle.textContent = "You're on the Waitlist!";
                         confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
                         confirmStatus.textContent = `Waitlist Position #${data.position}`;
                     }

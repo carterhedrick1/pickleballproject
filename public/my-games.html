@@ -704,7 +704,7 @@ body {
     <div class="container">
         <div class="page-header">
             <div class="header-content">
-                <h1>🏓 My Games</h1>
+                <h1>My Games</h1>
                 <div class="subtitle">Manage all your created games</div>
             </div>
         </div>
@@ -712,11 +712,11 @@ body {
         <div id="status" class="status" style="display: none;"></div>
         
         <div class="content-section">
-            <h2 class="section-title">📋 Your Created Games</h2>
+            <h2 class="section-title">Your Created Games</h2>
             
             <div id="gamesList">
                 <div class="no-games">
-                    <div class="no-games-icon">🏓</div>
+                    <div class="no-games-icon"></div>
                     <h3>No Games Yet</h3>
                     <p>Games you create will appear here for easy management.</p>
                     <a href="/" class="create-game-btn">Create Your First Game</a>
@@ -725,7 +725,7 @@ body {
         </div>
         
         <div class="footer-note">
-            💡 This shows games you've created on this device and browser. Games created on other devices won't appear here.
+            This shows games you've created on this device and browser. Games created on other devices won't appear here.
         </div>
     </div>
 
@@ -778,7 +778,7 @@ function loadMyGames() {
     if (games.length === 0) {
         gamesList.innerHTML = `
             <div class="no-games">
-                <div class="no-games-icon">🏓</div>
+                <div class="no-games-icon"></div>
                 <h3>No Games Yet</h3>
                 <p>Games you create will appear here for easy management.</p>
                 <a href="/" class="create-game-btn">Create Your First Game</a>
@@ -797,7 +797,7 @@ function loadMyGames() {
         
         let status = 'active';
         let statusText = 'Active';
-        let statusIcon = '🟢';
+        let statusIcon = '';
         let gameClasses = 'game-item'; // Start with base class
         let canCopy = true; // Track if copy should be enabled
         
@@ -805,14 +805,14 @@ function loadMyGames() {
         if (game.cancelled === true || game.cancelled === 'true') {
             status = 'cancelled';
             statusText = 'Cancelled';
-            statusIcon = '🔴';
+            statusIcon = '';
             gameClasses += ' cancelled';
             canCopy = false; // Disable copy for cancelled games
             console.log('Game marked as cancelled:', game.location);
         } else if (isGameCompleted(game.date, game.time)) {
             status = 'completed';
             statusText = 'Completed';
-            statusIcon = '✅';
+            statusIcon = '';
             gameClasses += ' completed';
             canCopy = false; // Disable copy for completed games
             console.log('Game marked as completed:', game.location);
@@ -825,42 +825,42 @@ function loadMyGames() {
         
         // Generate copy button with conditional functionality
         const copyButton = canCopy 
-            ? `<button onclick="copyInvitationMessage('${game.id}')" class="btn-copy">📋 Copy Link</button>`
-            : `<button class="btn-copy disabled" disabled title="Cannot share invitations for ${status} games">📋 Copy Link</button>`;
+            ? `<button onclick="copyInvitationMessage('${game.id}')" class="btn-copy">Copy Link</button>`
+            : `<button class="btn-copy disabled" disabled title="Cannot share invitations for ${status} games">Copy Link</button>`;
         
         gamesHTML += `
             <div class="${gameClasses}">
                 <div class="game-header">
                     <h3 class="game-title">
-                        📍 ${game.location}${game.courtNumber ? ` - ${game.courtNumber}` : ''}
+                        ${game.location}${game.courtNumber ? ` - ${game.courtNumber}` : ''}
                     </h3>
                     <span class="game-status status-${status}">
-                        ${statusIcon} ${statusText}
+                        ${statusIcon ? statusIcon + ' ' : ''}${statusText}
                     </span>
                 </div>
                 
                 <div class="game-details">
                     <div class="game-detail-row">
-                        <span class="game-detail-label">📅 Date & Time:</span>
+                        <span class="game-detail-label">Date & Time:</span>
                         <span class="game-detail-value">${formattedDate} at ${formattedTime}</span>
                     </div>
                     <div class="game-detail-row">
-                        <span class="game-detail-label">👥 Players:</span>
+                        <span class="game-detail-label">Players:</span>
                         <span class="game-detail-value">${game.totalPlayers} players</span>
                     </div>
                     <div class="game-detail-row">
-                        <span class="game-detail-label">⏱️ Duration:</span>
+                        <span class="game-detail-label">Duration:</span>
                         <span class="game-detail-value">${game.duration} minutes</span>
                     </div>
                     ${game.message ? `
                         <div class="game-detail-row">
-                            <span class="game-detail-label">💬 Message:</span>
+                            <span class="game-detail-label">Message:</span>
                             <span class="game-detail-value">${game.message}</span>
                         </div>
                     ` : ''}
                     ${game.cancelled && game.cancellationReason ? `
                         <div class="game-detail-row">
-                            <span class="game-detail-label">❌ Cancellation Reason:</span>
+                            <span class="game-detail-label">Cancellation Reason:</span>
                             <span class="game-detail-value">${game.cancellationReason}</span>
                         </div>
                     ` : ''}
@@ -868,10 +868,10 @@ function loadMyGames() {
                 
                 <div class="game-actions">
                     <a href="/manage.html?id=${game.id}&token=${game.hostToken}" class="btn-manage">
-                        ⚙️ Manage
+                        Manage
                     </a>
                     <a href="/game.html?id=${game.id}" class="btn-view">
-                        👀 View
+                        View
                     </a>
                     ${copyButton}
                 </div>

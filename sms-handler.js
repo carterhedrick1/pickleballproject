@@ -337,10 +337,10 @@ async function getUserHostGames(cleanedFromNumber, allGames) {
     
     const hostInfo = hostInfoMap.get(id);
     if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-      console.log(`[SMS DEBUG] ✅ User is host of game ${id}: ${game.location}`);
+      console.log(`[SMS DEBUG] User is host of game ${id}: ${game.location}`);
       hostGames.push({ id, game, hostInfo });
     } else {
-      console.log(`[SMS DEBUG] ❌ User is NOT host of game ${id}: ${game.location}`);
+      console.log(`[SMS DEBUG] User is NOT host of game ${id}: ${game.location}`);
     }
   }
   
@@ -507,11 +507,11 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
   const gameTime = formatTimeForSMS(game.time);
   const locationText = formatLocationForSMS(game);
 
-  let responseMessage = `🏓 ${locationText}\n📅 ${gameDate} at ${gameTime}\n⏱️ Duration: ${game.duration} minutes\n\n`;
+  let responseMessage = `${locationText}\n${gameDate} at ${gameTime}\nDuration: ${game.duration} minutes\n\n`;
   
   // Show player details to confirmed players and hosts, even in waitlist mode
   if (game.registrationMode !== 'waitlist' || role === 'host' || role === 'confirmed') {
-    responseMessage += `👥 Confirmed Players (${game.players.length}/${game.totalPlayers}):\n`;
+    responseMessage += `Confirmed Players (${game.players.length}/${game.totalPlayers}):\n`;
     if (game.players.length === 0) {
       responseMessage += `• None yet\n`;
     } else {
@@ -522,7 +522,7 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
     
     // Only show waitlist info to hosts, not to confirmed players in waitlist mode
     if (game.waitlist && game.waitlist.length > 0 && (game.registrationMode !== 'waitlist' || role === 'host')) {
-      responseMessage += `\n⏳ Waitlist (${game.waitlist.length}):\n`;
+      responseMessage += `\nWaitlist (${game.waitlist.length}):\n`;
       
       // Check if game is in waitlist mode
       if (game.registrationMode === 'waitlist') {
@@ -535,20 +535,20 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
     }
   } else {
     // Waitlist mode - hide player info from waitlist users only
-    responseMessage += `👥 Player selection in progress\n`;
+    responseMessage += `Player selection in progress\n`;
     responseMessage += `The organizer will review all applications and select players.\n`;
   }
   
   if (role === 'host') {
-    responseMessage += `\nYou are: 🎯 Host/Organizer\nReply "1" for management link`;
+    responseMessage += `\nYou are: Host/Organizer\nReply "1" for management link`;
   } else if (role === 'confirmed') {
-    responseMessage += `\nYou are: ✅ Confirmed Player\nReply "9" to cancel`;
+    responseMessage += `\nYou are: Confirmed Player\nReply "9" to cancel`;
   } else if (role === 'waitlist') {
     if (game.registrationMode === 'waitlist') {
-      responseMessage += `\nYou are: ⏳ Application Submitted\nReply "9" to cancel application`;
+      responseMessage += `\nYou are: Application Submitted\nReply "9" to cancel application`;
     } else {
       const waitlistPosition = game.waitlist.findIndex(p => p.phone === cleanedFromNumber) + 1;
-      responseMessage += `\nYou are: ⏳ Waitlist #${waitlistPosition}\nReply "9" to cancel`;
+      responseMessage += `\nYou are: Waitlist #${waitlistPosition}\nReply "9" to cancel`;
     }
   }
   
@@ -567,16 +567,16 @@ async function buildGameListMessage(userGames) {
     let roleText = '';
     
     if (role === 'host') {
-      statusIcon = '🎯';
+      statusIcon = '';
       roleText = ' (Host)';
     } else if (role === 'confirmed') {
-      statusIcon = '✅';
+      statusIcon = '';
     } else {
-      statusIcon = '⏳';
+      statusIcon = '';
     }
     
 const locationText = formatLocationForSMS(game);
-responseMessage += `${index + 1}. ${statusIcon} ${locationText}${roleText}\n${gameDate} at ${gameTime}\n\n`;  });
+responseMessage += `${index + 1}. ${statusIcon ? statusIcon + ' ' : ''}${locationText}${roleText}\n${gameDate} at ${gameTime}\n\n`;  });
   
   return responseMessage;
 }

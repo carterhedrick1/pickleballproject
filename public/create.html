@@ -792,23 +792,23 @@
             
             <form id="gameForm">
                 <div class="form-group">
-                    <label for="location">📍 Location:</label>
+                    <label for="location">Location:</label>
                     <input type="text" id="location" name="location" placeholder="e.g., Oak Park Courts" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="courtNumber">🏟️ Court Number (optional):</label>
+                    <label for="courtNumber">Court Number (optional):</label>
                     <input type="text" id="courtNumber" name="courtNumber" placeholder="e.g., Court 3, Courts 1-2, Center Court">
                     <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Specify which court(s) you'll be using at this location</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="organizerName">👤 Your Name (Organizer):</label>
+                    <label for="organizerName">Your Name (Organizer):</label>
                     <input type="text" id="organizerName" name="organizerName" placeholder="Enter your full name" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="organizerPhone">📱 Your Phone Number:</label>
+                    <label for="organizerPhone">Your Phone Number:</label>
                     <input type="tel" id="organizerPhone" name="organizerPhone" placeholder="(555) 123-4567" required>
                     <div class="sms-info">
                         By entering your number, you agree to receive a confirmation text where you can manage your game. Msg & data rates may apply. See Terms & Privacy.
@@ -823,39 +823,39 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="date">📅 Date:</label>
+                    <label for="date">Date:</label>
                     <input type="date" id="date" name="date" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="time">⏰ Start Time:</label>
+                    <label for="time">Start Time:</label>
                     <input type="time" id="time" name="time" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="duration">⏱️ Duration (minutes):</label>
+                    <label for="duration">Duration (minutes):</label>
                     <input type="number" id="duration" name="duration" value="90" min="30" step="15" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="players">👥 Number of Players Needed:</label>
+                    <label for="players">Number of Players Needed:</label>
                     <input type="number" id="players" name="players" value="4" min="1" max="50" required>
                     <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Enter any number from 1 to 50 players. Include yourself if you are playing</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="message">💬 Optional Message:</label>
+                    <label for="message">Optional Message:</label>
                     <textarea id="message" name="message" placeholder="Any additional info for players (e.g., 'Bring water and sunscreen!')"></textarea>
                 </div>
 
                 <!-- Add this after the "Number of Players" field in public/index.html -->
                 <!-- Replace the Registration Mode section in public/index.html -->
                 <div class="form-group">
-                    <label>🎯 Registration Mode:</label>
+                    <label>Registration Mode:</label>
                     <div class="mode-selector">
                         <div class="mode-option checked" onclick="toggleRegistrationMode(this, 'fcfsMode')">
                             <div class="notification-content">
-                                <div class="notification-icon">⚡</div>
+                                <div class="notification-icon"></div>
                                 <div class="notification-text">
                                     <div class="notification-title">First-Come First-Served</div>
                                     <div class="notification-description">Players are automatically confirmed as they sign up</div>
@@ -867,7 +867,7 @@
                         
                         <div class="mode-option" onclick="toggleRegistrationMode(this, 'waitlistMode')">
                             <div class="notification-content">
-                                <div class="notification-icon">⏳</div>
+                                <div class="notification-icon"></div>
                                 <div class="notification-text">
                                     <div class="notification-title">Waitlist Mode</div>
                                     <div class="notification-description">You manually select players from all signups</div>
@@ -882,12 +882,12 @@
                 <!-- REPLACE your organizer notifications section with this: -->
                 <!-- REPLACE your notifications section HTML with this: -->
                 <div class="form-group notifications-section">
-    <label for="notifications">📱 Organizer Notifications:</label>
+    <label for="notifications">Organizer Notifications:</label>
     <small>Get SMS alerts when these events happen (optional)</small>
     
     <div class="notification-option checked" onclick="toggleNotification(this, 'notifyGameFull')">
         <div class="notification-content">
-            <div class="notification-icon">🎯</div>
+            <div class="notification-icon"></div>
             <div class="notification-text">
                 <div class="notification-title">Game becomes full</div>
                 <div class="notification-description">Get notified when all spots are taken</div>
@@ -899,7 +899,7 @@
     
     <div class="notification-option checked" onclick="toggleNotification(this, 'notifyPlayerCancels')">
         <div class="notification-content">
-            <div class="notification-icon">❌</div>
+            <div class="notification-icon"></div>
             <div class="notification-text">
                 <div class="notification-title">Someone cancels their spot</div>
                 <div class="notification-description">Get notified when players cancel</div>
@@ -911,7 +911,7 @@
     
     <div class="notification-option" onclick="toggleNotification(this, 'notifyPlayerJoins')">
         <div class="notification-content">
-            <div class="notification-icon">👋</div>
+            <div class="notification-icon"></div>
             <div class="notification-text">
                 <div class="notification-title">Someone joins the game</div>
                 <div class="notification-description">Get notified each time a player signs up</div>
@@ -923,7 +923,7 @@
     
     <div class="notification-option" onclick="toggleNotification(this, 'notifyOneSpotLeft')">
         <div class="notification-content">
-            <div class="notification-icon">⚠️</div>
+            <div class="notification-icon"></div>
             <div class="notification-text">
                 <div class="notification-title">Only one spot remaining</div>
                 <div class="notification-description">Get notified when almost full</div>
@@ -935,7 +935,7 @@
     
     <div class="notification-option" onclick="toggleNotification(this, 'notifyWaitlistStarts')">
         <div class="notification-content">
-            <div class="notification-icon">⏳</div>
+            <div class="notification-icon"></div>
             <div class="notification-text">
                 <div class="notification-title">Waitlist starts</div>
                 <div class="notification-description">Get notified when first person is waitlisted</div>
@@ -952,7 +952,7 @@
 
         <!-- MOVE the shareLink section INSIDE the container but OUTSIDE the form-section: -->
         <div id="shareLink" class="share-section" style="display: none;">
-            <h3 class="share-title">🎉 Your Game has been Created!</h3>
+            <h3 class="share-title">Your Game has been Created!</h3>
             
             <div class="center-copy-section">
                 <p>Click the button below to copy a complete invitation message with all game details and registration link:</p>
@@ -961,7 +961,7 @@
             </div>
             
             <div class="management-reminder">
-                <h4>📱 To Manage Your Game</h4>
+                <h4>To Manage Your Game</h4>
                 <p>Reply <strong>"1"</strong> to the confirmation text you received to get your management link.</p>
                 <p><small>You can edit players, send announcements, and cancel the game with that link.</small></p>
             </div>
@@ -1127,8 +1127,8 @@ async function createGame(e) {
             time: gameData.time,
             duration: gameData.duration,
             totalPlayers: gameData.totalPlayers,
-            organizerPlaying: gameData.organizerPlaying, // ✅ ADD THIS LINE
-            registrationMode: gameData.registrationMode, // ✅ KEEP THIS LINE
+            organizerPlaying: gameData.organizerPlaying,
+            registrationMode: gameData.registrationMode,
             message: gameData.message,
             created: new Date().toISOString(),
             cancelled: false

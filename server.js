@@ -295,7 +295,7 @@ app.delete('/api/games/:id', async (req, res) => {
 
 // Get management links for a specific phone number
 app.get('/api/games/by-phone/:phone', async (req, res) => {
-  console.log(`[PHONE LOOKUP] 🔍 Looking up games for phone: ${req.params.phone}`);
+  console.log(`[PHONE LOOKUP] Looking up games for phone: ${req.params.phone}`);
   
   try {
     const phoneNumber = formatPhoneNumber(req.params.phone);
@@ -345,14 +345,14 @@ app.get('/api/games/by-phone/:phone', async (req, res) => {
     });
     
   } catch (error) {
-    console.error(`[PHONE LOOKUP] ❌ Error looking up games:`, error);
+    console.error(`[PHONE LOOKUP] Error looking up games:`, error);
     res.status(500).json({ error: 'Failed to lookup games' });
   }
 });
 
 // Send management links via SMS
 app.post('/api/games/lookup-and-notify', async (req, res) => {
-  console.log(`[PHONE LOOKUP SMS] 📱 Looking up and notifying phone: ${req.body.phone}`);
+  console.log(`[PHONE LOOKUP SMS] Looking up and notifying phone: ${req.body.phone}`);
   
   try {
     const { phone, sendSms = false } = req.body;
@@ -418,7 +418,7 @@ app.post('/api/games/lookup-and-notify', async (req, res) => {
     });
     
   } catch (error) {
-    console.error(`[PHONE LOOKUP SMS] ❌ Error:`, error);
+    console.error(`[PHONE LOOKUP SMS] Error:`, error);
     res.status(500).json({ error: 'Failed to lookup and notify' });
   }
 });

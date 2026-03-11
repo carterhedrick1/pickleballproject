@@ -81,14 +81,14 @@ function setNotificationToggle(checkboxId, isChecked) {
     const checkbox = document.getElementById(checkboxId);
     
     if (!checkbox) {
-        console.error(`[CLIENT] ❌ Checkbox ${checkboxId} not found in DOM`);
+        console.error(`[CLIENT] Checkbox ${checkboxId} not found in DOM`);
         return false;
     }
     
     const toggleElement = checkbox.closest('.notification-option');
     
     if (!toggleElement) {
-        console.error(`[CLIENT] ❌ Toggle element for ${checkboxId} not found`);
+        console.error(`[CLIENT] Toggle element for ${checkboxId} not found`);
         return false;
     }
     
@@ -102,7 +102,7 @@ function setNotificationToggle(checkboxId, isChecked) {
         toggleElement.classList.remove('checked');
     }
     
-    console.log(`[CLIENT] ✅ Successfully set ${checkboxId}: checkbox.checked=${checkbox.checked}, visual class=${toggleElement.classList.contains('checked')}`);
+    console.log(`[CLIENT] Successfully set ${checkboxId}: checkbox.checked=${checkbox.checked}, visual class=${toggleElement.classList.contains('checked')}`);
     return true;
 }
 
@@ -523,15 +523,15 @@ function updatePlayerLists() {
             // Show actions for all players, including organizer
             playerActions = `
                 <div class="player-actions">
-                    <button class="btn-secondary" onclick="moveToWaitlist('${player.id}')">⏳ To Waitlist</button>
-                    <button class="btn-danger" onclick="removePlayer('${player.id}')">❌ Remove</button>
+                    <button class="btn-secondary" onclick="moveToWaitlist('${player.id}')">To Waitlist</button>
+                    <button class="btn-danger" onclick="removePlayer('${player.id}')">Remove</button>
                 </div>
             `;
             
             playerItem.innerHTML = `
                 <div class="player-info">
                     <div class="player-name">${player.name}${player.isOrganizer ? ' (Organizer)' : ''}</div>
-                    ${player.phone ? '<div class="player-phone">📱 ' + player.phone + '</div>' : ''}
+                    ${player.phone ? '<div class="player-phone">' + player.phone + '</div>' : ''}
                 </div>
                 ${playerActions}
             `;
@@ -551,12 +551,12 @@ function updatePlayerLists() {
             playerItem.innerHTML = `
                 <div class="player-info">
                     <div class="player-name">${player.name}</div>
-                    ${player.phone ? '<div class="player-phone">📱 ' + player.phone + '</div>' : ''}
+                    ${player.phone ? '<div class="player-phone">' + player.phone + '</div>' : ''}
                     <div class="player-phone">Position: #${index + 1}</div>
                 </div>
                 <div class="player-actions">
-                    <button class="btn-secondary" onclick="promoteToGame('${player.id}')">✅ Promote</button>
-                    <button class="btn-danger" onclick="removeWaitlisted('${player.id}')">❌ Remove</button>
+                    <button class="btn-secondary" onclick="promoteToGame('${player.id}')">Promote</button>
+                    <button class="btn-danger" onclick="removeWaitlisted('${player.id}')">Remove</button>
                 </div>
             `;
             
@@ -575,7 +575,7 @@ function updatePlayerLists() {
             playerItem.innerHTML = `
                 <div class="player-info">
                     <div class="player-name">${player.name}</div>
-                    ${player.phone ? '<div class="player-phone">📱 ' + player.phone + '</div>' : ''}
+                    ${player.phone ? '<div class="player-phone">' + player.phone + '</div>' : ''}
                 </div>
             `;
             
@@ -608,7 +608,7 @@ async function updateGameDetails() {
                 notificationPreferences[id.replace('notify', '').toLowerCase()] = checkbox.checked;
                 console.log(`[CLIENT] Collected ${id}: ${checkbox.checked}`);
             } else {
-                console.error(`[CLIENT] ❌ Could not find checkbox ${id} when collecting preferences`);
+                console.error(`[CLIENT] Could not find checkbox ${id} when collecting preferences`);
             }
         });
         
@@ -1131,14 +1131,14 @@ async function cancelGame() {
                 
                 // Save back to localStorage
                 localStorage.setItem('myGames', JSON.stringify(myGames));
-                console.log('[CANCEL] ✅ Updated localStorage - game marked as cancelled:', gameId);
+                console.log('[CANCEL] Updated localStorage - game marked as cancelled:', gameId);
                 console.log('[CANCEL] Game data now:', myGames[gameIndex]);
             } else {
-                console.log('[CANCEL] ❌ Game not found in localStorage');
+                console.log('[CANCEL] Game not found in localStorage');
                 console.log('[CANCEL] Available games:', myGames.map(g => ({id: g.id, location: g.location})));
             }
         } catch (error) {
-            console.error('[CANCEL] ❌ Error updating localStorage for cancellation:', error);
+            console.error('[CANCEL] Error updating localStorage for cancellation:', error);
         }
         
         showStatus('Game cancelled successfully! All players have been notified.', 'success');
@@ -1209,7 +1209,7 @@ function populateShareLinks() {
             btn.title = disabledTitle;
         } else {
             btn.classList.remove('disabled');
-            btn.textContent = btn === persistentCopyButton ? '📋 Copy Invitation Message' : 'Copy Invitation Message';
+            btn.textContent = btn === persistentCopyButton ? 'Copy Invitation Message' : 'Copy Invitation Message';
             btn.title = '';
         }
     }
@@ -1281,7 +1281,7 @@ function fallbackCopyMessage(text) {
         
         const button = document.getElementById('copyPlayerLink');
         const originalText = button.textContent;
-        button.textContent = '✅ Copied!';
+        button.textContent = 'Copied!';
         
         setTimeout(() => {
             button.textContent = originalText;
@@ -1306,7 +1306,7 @@ function copyToClipboard(elementId) {
     
     // Change text temporarily
     const originalText = button.textContent;
-    button.textContent = '✅ Copied!';
+    button.textContent = 'Copied!';
     
     setTimeout(() => {
         button.textContent = originalText;

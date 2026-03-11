@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
     prevBtn.setAttribute('data-section', sectionOrder[prevIdx].id);
     const closeBtn = document.createElement('button');
     closeBtn.className = 'section-nav-btn close';
-    closeBtn.innerHTML = '✖ Close';
+    closeBtn.innerHTML = 'Close';
     closeBtn.setAttribute('type', 'button');
     const nextIdx = (idx === sectionOrder.length - 1) ? 0 : idx + 1;
     const nextBtn = document.createElement('button');
