@@ -990,6 +990,8 @@
             const tomorrowStr = `${year}-${month}-${day}`;
             
             document.getElementById('date').value = tomorrowStr;
+            // Set default start time to 6:00 PM
+            document.getElementById('time').value = '18:00';
             console.log('Default date set to:', tomorrowStr); // Debug log
         });
 
@@ -1142,7 +1144,7 @@ async function createGame(e) {
         // Clear form
         document.getElementById('gameForm').reset();
         
-        // Set tomorrow's date again
+        // Set tomorrow's date and default time again
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         const year = tomorrow.getFullYear();
@@ -1150,6 +1152,7 @@ async function createGame(e) {
         const day = String(tomorrow.getDate()).padStart(2, '0');
         const tomorrowStr = `${year}-${month}-${day}`;
         document.getElementById('date').value = tomorrowStr;
+        document.getElementById('time').value = '18:00';
         
         // Check SMS status and show appropriate message
         if (data.hostSms && data.hostSms.success) {
