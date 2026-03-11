@@ -365,7 +365,7 @@
             box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
         }
 
-        /* Button group styling with "or" divider */
+        /* Button group styling with "or" divider - IN button more prominent */
         .button-group {
             display: flex;
             align-items: center;
@@ -374,8 +374,28 @@
         }
 
         .button-group button {
-            flex: 1;
             margin-top: 0;
+        }
+
+        /* IN / Join button - larger and more prominent */
+        .button-group #joinButton {
+            flex: 2;
+            min-width: 140px;
+            font-size: 18px;
+            padding: 18px 32px;
+            box-shadow: 0 6px 20px rgba(66, 144, 70, 0.4);
+        }
+
+        .button-group #joinButton:hover {
+            box-shadow: 0 10px 30px rgba(66, 144, 70, 0.5);
+        }
+
+        /* OUT button - secondary, smaller */
+        .button-group .btn-out {
+            flex: 1;
+            min-width: 100px;
+            font-size: 14px;
+            padding: 14px 20px;
         }
 
         .button-or {
@@ -1346,7 +1366,7 @@
                     spotsFullContainer.style.display = 'block';
                     waitlistCount.textContent = waitlistLength;
                     joinSectionTitle.textContent = '🕐 Join the Waitlist';
-                    joinButton.textContent = 'IN'; // CHANGED: Now uses "IN" instead of "JOIN WAITLIST"
+                    joinButton.textContent = 'Join Waitlist';
                 }
                 
                 // Always show signup form since they can join waitlist when full
