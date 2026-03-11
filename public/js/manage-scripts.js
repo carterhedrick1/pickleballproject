@@ -377,13 +377,15 @@ function setupEventListeners() {
         });
     }
     
-    // Copy link buttons
-const copyPlayerLinkBtn = document.getElementById('copyPlayerLink');
-if (copyPlayerLinkBtn) {
-    copyPlayerLinkBtn.addEventListener('click', () => {
-        copyPlayerInvitation();
-    });
-}
+    // Copy link buttons (Details tab + persistent bar)
+    const copyPlayerLinkBtn = document.getElementById('copyPlayerLink');
+    if (copyPlayerLinkBtn) {
+        copyPlayerLinkBtn.addEventListener('click', () => copyPlayerInvitation('copyPlayerLink'));
+    }
+    const copyPlayerLinkPersistentBtn = document.getElementById('copyPlayerLinkPersistent');
+    if (copyPlayerLinkPersistentBtn) {
+        copyPlayerLinkPersistentBtn.addEventListener('click', () => copyPlayerInvitation('copyPlayerLinkPersistent'));
+    }
 
 
 
@@ -1187,6 +1189,7 @@ function closeModal() {
 function populateShareLinks() {
     const shareSection = document.querySelector('.share-section');
     const copyButton = document.getElementById('copyPlayerLink');
+    const persistentCopyButton = document.getElementById('copyPlayerLinkPersistent');
     
     if (!shareSection || !copyButton) return;
     
@@ -1194,59 +1197,48 @@ function populateShareLinks() {
     const gameStatus = GameUtils.getGameStatus(gameData);
     const shouldDisable = !gameStatus.canJoin || gameData.cancelled;
     
-    if (shouldDisable) {
-        // Disable the copy button and update its appearance
-        copyButton.disabled = true;
-        copyButton.classList.add('disabled');
-        
-        // Update button text based on status
-        if (gameData.cancelled) {
-            copyButton.textContent = 'Game Cancelled - Cannot Share';
-            copyButton.title = 'Cannot share invitations for cancelled games';
-        } else if (!gameStatus.canJoin) {
-            copyButton.textContent = 'Game Ended - Cannot Share';
-            copyButton.title = 'Cannot share invitations for expired games';
+    const disabledText = gameData.cancelled ? 'Game Cancelled - Cannot Share' : 'Game Ended - Cannot Share';
+    const disabledTitle = gameData.cancelled ? 'Cannot share invitations for cancelled games' : 'Cannot share invitations for expired games';
+    
+    function setButtonState(btn, disabled) {
+        if (!btn) return;
+        btn.disabled = disabled;
+        if (disabled) {
+            btn.classList.add('disabled');
+            btn.textContent = disabledText;
+            btn.title = disabledTitle;
+        } else {
+            btn.classList.remove('disabled');
+            btn.textContent = btn === persistentCopyButton ? '📋 Copy Invitation Message' : 'Copy Invitation Message';
+            btn.title = '';
         }
-        
-        // Update the description text
+    }
+    
+    setButtonState(copyButton, shouldDisable);
+    setButtonState(persistentCopyButton, shouldDisable);
+    
+    if (shouldDisable) {
+        // Update the description text in share section
         const descriptionP = shareSection.querySelector('p');
         if (descriptionP) {
-            if (gameData.cancelled) {
-                descriptionP.textContent = 'This game has been cancelled. Invitations can no longer be shared.';
-            } else {
-                descriptionP.textContent = 'This game has ended. Invitations can no longer be shared.';
-            }
+            descriptionP.textContent = gameData.cancelled
+                ? 'This game has been cancelled. Invitations can no longer be shared.'
+                : 'This game has ended. Invitations can no longer be shared.';
         }
-        
-        // Hide the save suggestion for disabled games
         const saveSuggestion = shareSection.querySelector('.save-suggestion');
-        if (saveSuggestion) {
-            saveSuggestion.style.display = 'none';
-        }
-        
+        if (saveSuggestion) saveSuggestion.style.display = 'none';
     } else {
-        // Ensure button is enabled for active games
-        copyButton.disabled = false;
-        copyButton.classList.remove('disabled');
-        copyButton.textContent = 'Copy Invitation Message';
-        copyButton.title = '';
-        
-        // Restore original description
         const descriptionP = shareSection.querySelector('p');
         if (descriptionP) {
             descriptionP.textContent = 'Click the button below to copy a complete invitation message with all game details and registration link:';
         }
-        
-        // Show the save suggestion for active games
         const saveSuggestion = shareSection.querySelector('.save-suggestion');
-        if (saveSuggestion) {
-            saveSuggestion.style.display = 'block';
-        }
+        if (saveSuggestion) saveSuggestion.style.display = 'block';
     }
 }
 
 
-function copyPlayerInvitation() {
+function copyPlayerInvitation(buttonId) {
     // Check if game is expired or cancelled
     if (!GameUtils.getGameStatus(gameData).canEdit) {
         showStatus('Cannot share invitations for expired games', 'error');
@@ -1273,7 +1265,7 @@ function copyPlayerInvitation() {
     InvitationGenerator.copyInvitationToClipboard(
         gameDataForInvitation,
         gameId,
-        'copyPlayerLink'
+        buttonId || 'copyPlayerLink'
     );
 }
 

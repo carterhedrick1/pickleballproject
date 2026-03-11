@@ -480,6 +480,18 @@ button:active {
     box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
 }
 
+/* Persistent Copy Invitation bar - visible across all tabs */
+.persistent-copy-bar {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid #e5e7eb;
+    padding: 16px 24px;
+    text-align: center;
+}
+.persistent-copy-bar .persistent-copy-btn {
+    max-width: 320px;
+    margin: 0 auto;
+}
+
 /* Player management */
 .players-container {
     display: grid;
@@ -968,37 +980,37 @@ button:active {
 }
 
 /* Disabled tabs and sections for expired games */
-.gameManagement.expired .tab[onclick*="Details"],
-.gameManagement.expired .tab[onclick*="Communication"],
-.gameManagement.expired .tab[onclick*="Actions"] {
+#gameManagement.expired .tab[onclick*="Details"],
+#gameManagement.expired .tab[onclick*="Communication"],
+#gameManagement.expired .tab[onclick*="Actions"] {
     opacity: 0.5;
     pointer-events: none;
     background: #f1f5f9 !important;
     color: #64748b !important;
 }
 
-.gameManagement.expired #Details,
-.gameManagement.expired #Communication,
-.gameManagement.expired #Actions {
+#gameManagement.expired #Details,
+#gameManagement.expired #Communication,
+#gameManagement.expired #Actions {
     opacity: 0.6;
     pointer-events: none;
 }
 
-.gameManagement.expired #Details .form-section,
-.gameManagement.expired #Communication .form-section,
-.gameManagement.expired #Actions .form-section {
+#gameManagement.expired #Details .form-section,
+#gameManagement.expired #Communication .form-section,
+#gameManagement.expired #Actions .form-section {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
 }
 
-.gameManagement.expired #Details input,
-.gameManagement.expired #Details textarea,
-.gameManagement.expired #Details button,
-.gameManagement.expired #Communication input,
-.gameManagement.expired #Communication textarea,
-.gameManagement.expired #Communication button,
-.gameManagement.expired #Actions input,
-.gameManagement.expired #Actions textarea,
-.gameManagement.expired #Actions button {
+#gameManagement.expired #Details input,
+#gameManagement.expired #Details textarea,
+#gameManagement.expired #Details button,
+#gameManagement.expired #Communication input,
+#gameManagement.expired #Communication textarea,
+#gameManagement.expired #Communication button,
+#gameManagement.expired #Actions input,
+#gameManagement.expired #Actions textarea,
+#gameManagement.expired #Actions button {
     background-color: #f8f9fa !important;
     color: #6c757d !important;
     cursor: not-allowed !important;
@@ -1006,25 +1018,27 @@ button:active {
 }
 
 /* Keep Players tab functional but show read-only notice */
-.gameManagement.expired #Players .player-actions {
+#gameManagement.expired #Players .player-actions {
     opacity: 0.5;
     pointer-events: none;
 }
 
-.gameManagement.expired #Players .collapsible-section {
+#gameManagement.expired #Players .collapsible-section {
     opacity: 0.5;
     pointer-events: none;
 }
 
 /* Disable share section for expired games */
-.gameManagement.expired .share-section {
+#gameManagement.expired .share-section {
     opacity: 0.6;
     pointer-events: none;
 }
 
-.gameManagement.expired .share-section .copy-btn {
+#gameManagement.expired .share-section .copy-btn,
+#gameManagement.expired .persistent-copy-bar .copy-btn {
     background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
     cursor: not-allowed !important;
+    pointer-events: none !important;
 }
 
 .copy-btn.disabled,
@@ -1065,13 +1079,14 @@ button:active {
 }
 
 /* Expired games - disable entire share section */
-.gameManagement.expired .share-section {
+#gameManagement.expired .share-section {
     opacity: 0.6 !important;
     pointer-events: none !important;
     background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%) !important;
 }
 
-.gameManagement.expired .share-section .copy-btn {
+#gameManagement.expired .share-section .copy-btn,
+#gameManagement.expired .persistent-copy-bar .copy-btn {
     background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
     cursor: not-allowed !important;
     pointer-events: none !important;
