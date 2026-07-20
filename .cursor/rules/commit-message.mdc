@@ -1,0 +1,25 @@
+---
+description: Always provide a copy-paste commit message after changes
+alwaysApply: true
+---
+
+# Commit Message for the User
+
+Whenever we make changes that the user should commit, **always end with a ready-to-paste commit message**.
+
+## How to Provide It
+
+- Put the full commit message in its own fenced code block so it is easy to copy
+- Write 1–2 sentences focused on **why** the change was made
+- Match the project's casual style when possible (short, clear)
+- Do **not** create the git commit unless the user explicitly asks you to commit
+- Reminder is optional and brief: they can paste it into the Source Control message box and click Commit
+
+## Example
+
+After finishing work, include something like:
+
+```
+Make reminder texts funnier for confirmed players.
+
+```
