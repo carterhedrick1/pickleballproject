@@ -197,8 +197,9 @@ app.get('/api/games/:id', async (req, res) => {
 });
 
 app.put('/api/games/:id', async (req, res) => {
+  const gameId = req.params.id;
+  const releaseLock = await acquireGameLock(gameId);
   try {
-    const gameId = req.params.id;
     const { token, ...updateData } = req.body;
     
     console.log('[SERVER] Updating game with data:', updateData);
@@ -234,7 +235,8 @@ app.put('/api/games/:id', async (req, res) => {
     // Verify the save worked by reading it back
     const savedGame = await getGame(gameId);
     console.log('[SERVER] Verified saved notification preferences:', savedGame.notificationPreferences);
-    
+    releaseLock();
+
     res.json({ 
       success: true, 
       message: 'Game updated successfully. Use the Communication tab to notify players of changes if needed.',
@@ -243,13 +245,16 @@ app.put('/api/games/:id', async (req, res) => {
   } catch (error) {
     console.error('Error updating game:', error);
     res.status(500).json({ error: 'Failed to update game' });
+  } finally {
+    releaseLock();
   }
 });
 
 // Cancel game
 app.delete('/api/games/:id', async (req, res) => {
+  const gameId = req.params.id;
+  const releaseLock = await acquireGameLock(gameId);
   try {
-    const gameId = req.params.id;
     const { token, reason } = req.body;
     
     const game = await getGame(gameId);
@@ -264,7 +269,8 @@ app.delete('/api/games/:id', async (req, res) => {
     game.cancelled = true;
     game.cancellationReason = reason;
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
-    
+    releaseLock();
+
     // Notify all players
     const gameDate = formatDateForSMS(game.date);
     const gameTime = formatTimeForSMS(game.time);
@@ -297,6 +303,8 @@ app.delete('/api/games/:id', async (req, res) => {
   } catch (error) {
     console.error('Error cancelling game:', error);
     res.status(500).json({ error: 'Failed to cancel game' });
+  } finally {
+    releaseLock();
   }
 });
 
@@ -598,8 +606,9 @@ app.post('/api/games/:id/players', async (req, res) => {
 
 // Add player manually (host function)
 app.post('/api/games/:id/manual-player', async (req, res) => {
+  const gameId = req.params.id;
+  const releaseLock = await acquireGameLock(gameId);
   try {
-    const gameId = req.params.id;
     const { name, phone, addTo, token } = req.body;
     
     const game = await getGame(gameId);
@@ -626,7 +635,8 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
     const forceWaitlist = addTo === 'waitlist';
     const result = addPlayerToGame(game, playerData, forceWaitlist);
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
-    
+    releaseLock();
+
     // Send SMS confirmation to the added player
     let smsResult = null;
     if (playerData.phone) {
@@ -654,13 +664,16 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
   } catch (error) {
     console.error('Error manually adding player:', error);
     res.status(500).json({ error: error.message || 'Failed to add player' });
+  } finally {
+    releaseLock();
   }
 });
 
 // NEW ENDPOINT: Move player to waitlist with SMS notification
 app.post('/api/games/:id/move-to-waitlist/:playerId', async (req, res) => {
+  const gameId = req.params.id;
+  const releaseLock = await acquireGameLock(gameId);
   try {
-    const gameId = req.params.id;
     const playerId = req.params.playerId;
     const { token } = req.body;
     
@@ -685,9 +698,10 @@ app.post('/api/games/:id/move-to-waitlist/:playerId', async (req, res) => {
     game.players.splice(playerIndex, 1);
     if (!game.waitlist) game.waitlist = [];
     game.waitlist.push(player);
-    
+
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
-    
+    releaseLock();
+
     // Send SMS notification to the moved player
     let smsResult = null;
     if (player.phone) {
@@ -707,13 +721,16 @@ app.post('/api/games/:id/move-to-waitlist/:playerId', async (req, res) => {
   } catch (error) {
     console.error('Error moving player to waitlist:', error);
     res.status(500).json({ error: 'Failed to move player to waitlist' });
+  } finally {
+    releaseLock();
   }
 });
 
 // NEW ENDPOINT: Promote player from waitlist with SMS notification
 app.post('/api/games/:id/promote-from-waitlist/:playerId', async (req, res) => {
+  const gameId = req.params.id;
+  const releaseLock = await acquireGameLock(gameId);
   try {
-    const gameId = req.params.id;
     const playerId = req.params.playerId;
     const { token } = req.body;
     
@@ -742,9 +759,10 @@ app.post('/api/games/:id/promote-from-waitlist/:playerId', async (req, res) => {
     // Remove from waitlist and add to confirmed players
     game.waitlist.splice(waitlistIndex, 1);
     game.players.push(player);
-    
+
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
-    
+    releaseLock();
+
     // Send SMS notification to the promoted player
     let smsResult = null;
     if (player.phone) {
@@ -764,13 +782,16 @@ app.post('/api/games/:id/promote-from-waitlist/:playerId', async (req, res) => {
   } catch (error) {
     console.error('Error promoting player from waitlist:', error);
     res.status(500).json({ error: 'Failed to promote player from waitlist' });
+  } finally {
+    releaseLock();
   }
 });
 
 // ENHANCED: Remove player from game with SMS notification
 app.delete('/api/games/:id/players/:playerId', async (req, res) => {
+  const gameId = req.params.id;
+  const releaseLock = await acquireGameLock(gameId);
   try {
-    const gameId = req.params.id;
     const playerId = req.params.playerId;
     const token = req.query.token;
     
@@ -808,7 +829,8 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
     // Remove player using existing game logic
     const result = removePlayerFromGame(game, playerId);
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
-    
+    releaseLock();
+
     // Send removal notification to the removed player (if they have a phone and aren't organizer)
     let removalSmsResult = null;
     if (removedPlayer.phone && !removedPlayer.isOrganizer && token) { // Only send if removed by host
@@ -845,6 +867,8 @@ res.json({
   } catch (error) {
     console.error('Error removing player:', error);
     res.status(500).json({ error: 'Failed to remove player' });
+  } finally {
+    releaseLock();
   }
 });
 
@@ -955,20 +979,21 @@ app.post('/api/games/:id/announcement-individual', async (req, res) => {
 
 // Remove "out" player
 app.delete('/api/games/:id/out-players/:playerId', async (req, res) => {
+  const gameId = req.params.id;
+  const releaseLock = await acquireGameLock(gameId);
   try {
-    const gameId = req.params.id;
     const playerId = req.params.playerId;
     const token = req.query.token;
-    
+
     const game = await getGame(gameId);
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
-    
+
     if (game.hostToken !== token) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
-    
+
     // Find and remove the out player
     if (!game.outPlayers) {
       return res.status(404).json({ error: 'Player not found' });
@@ -981,14 +1006,17 @@ app.delete('/api/games/:id/out-players/:playerId', async (req, res) => {
     
     const removedPlayer = game.outPlayers.splice(playerIndex, 1)[0];
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
-    
-    res.json({ 
+    releaseLock();
+
+    res.json({
       success: true,
       message: `${removedPlayer.name} removed from "out" list`
     });
   } catch (error) {
     console.error('Error removing out player:', error);
     res.status(500).json({ error: 'Failed to remove player' });
+  } finally {
+    releaseLock();
   }
 });
 

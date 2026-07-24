@@ -1,13 +1,15 @@
 // sms-handler.js - All SMS-related functions - FINAL PRODUCTION VERSION
-const { 
-  getAllGames, 
-  getGameHostInfo, 
+const {
+  getAllGames,
+  getGame,
+  getGameHostInfo,
   saveGame,
   saveLastCommand,
   getLastCommand,
   clearLastCommand
 } = require('./database');
 const { isGameUpcoming } = require('./utils/central-time');
+const { acquireGameLock } = require('./utils/game-lock');
 
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 
@@ -598,41 +600,70 @@ responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime} ($
 
 // Helper function to cancel player from game
 // Update cancelPlayerFromGame function in sms-handler.js
-async function cancelPlayerFromGame(gameId, game, player, status, fromNumber) {
+async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumber) {
   try {
-    if (status === 'confirmed') {
-      const playerIndex = game.players.findIndex(p => p.id === player.id);
-      game.players.splice(playerIndex, 1);
-      
-      if (game.waitlist && game.waitlist.length > 0) {
-        const promotedPlayer = game.waitlist.shift();
-        game.players.push(promotedPlayer);
-        
-        const gameDate = formatDateForSMS(game.date);
-        const gameTime = formatTimeForSMS(game.time);
-        const locationText = formatLocationForSMS(game);
+    let game;
+    let promotedPlayer = null;
 
-        // Different promotion message based on game mode
-        let promotionMessage;
-        if (game.registrationMode === 'waitlist') {
-          promotionMessage = `Good news! You've been selected for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 9 to cancel if needed.`;
-        } else {
-          promotionMessage = `Good news! You've been selected for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! Reply 2 for who is playing and details or 9 to cancel.`;
-        }
-        await sendSMS(promotedPlayer.phone, promotionMessage, gameId);
+    // The caller handed us a game read from a snapshot taken before this text was processed, so
+    // re-read it under the lock and work from what is actually stored right now.
+    const releaseLock = await acquireGameLock(gameId);
+    try {
+      game = await getGame(gameId);
+      if (!game) {
+        await sendSMS(fromNumber, `Sorry, we couldn't find that game anymore.`);
+        return;
       }
-    } else {
-      const waitlistIndex = game.waitlist.findIndex(p => p.id === player.id);
-      game.waitlist.splice(waitlistIndex, 1);
+
+      if (status === 'confirmed') {
+        const playerIndex = game.players.findIndex(p => p.id === player.id);
+        // Without this guard a not-found player (-1) would splice off the last person on the
+        // roster instead, cancelling someone who never asked.
+        if (playerIndex === -1) {
+          await sendSMS(fromNumber, `You're no longer registered for that game, so there was nothing to cancel.`);
+          return;
+        }
+        game.players.splice(playerIndex, 1);
+
+        if (game.waitlist && game.waitlist.length > 0) {
+          promotedPlayer = game.waitlist.shift();
+          game.players.push(promotedPlayer);
+        }
+      } else {
+        const waitlistIndex = (game.waitlist || []).findIndex(p => p.id === player.id);
+        if (waitlistIndex === -1) {
+          await sendSMS(fromNumber, `You're no longer on that waitlist, so there was nothing to cancel.`);
+          return;
+        }
+        game.waitlist.splice(waitlistIndex, 1);
+      }
+
+      await saveGame(gameId, game, game.hostToken, game.hostPhone);
+    } finally {
+      releaseLock();
     }
-    
-    await saveGame(gameId, game, game.hostToken, game.hostPhone);
+
+    // Texts go out after the lock is released so nobody else waits on a Textbelt round trip.
+    if (promotedPlayer && promotedPlayer.phone) {
+      const promoDate = formatDateForSMS(game.date);
+      const promoTime = formatTimeForSMS(game.time);
+      const promoLocation = formatLocationForSMS(game);
+
+      // Different promotion message based on game mode
+      let promotionMessage;
+      if (game.registrationMode === 'waitlist') {
+        promotionMessage = `Good news! You've been selected for Pickleball at ${promoLocation} on ${promoDate} at ${promoTime}! Reply 9 to cancel if needed.`;
+      } else {
+        promotionMessage = `Good news! You've been selected for Pickleball at ${promoLocation} on ${promoDate} at ${promoTime}! Reply 2 for who is playing and details or 9 to cancel.`;
+      }
+      await sendSMS(promotedPlayer.phone, promotionMessage, gameId);
+    }
 
     // Send organizer notification for cancellation
 if (!player.isOrganizer) {
   await sendOrganizerNotification(gameId, game, 'playerCancels', player.name);
 }
-    
+
     const gameDate = formatDateForSMS(game.date);
     const gameTime = formatTimeForSMS(game.time);
     const locationText = formatLocationForSMS(game);
