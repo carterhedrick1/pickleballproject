@@ -6,8 +6,24 @@ const {
   markReminderSent 
 } = require('./database');
 const { sendSMS, formatDateForSMS, formatTimeForSMS, formatPhoneNumber, formatLocationForSMS } = require('./sms-handler');
-const { getCentralTimeNow } = require('./utils/central-time');
-const sentRemindersCache = new Map(); // In-memory cache to prevent duplicate sends
+const { getCentralTimeNow, isGameUpcoming } = require('./utils/central-time');
+const sentRemindersCache = new Map(); // Games where every eligible player is confirmed reminded
+// `${gameId}|${phone}` already texted by this process. reminder_log is the durable record, but if
+// writing to it fails after the SMS goes out this stops us texting the same person again on the
+// next check.
+const remindedPlayersCache = new Map();
+// Circuit breaker: most texts one check may send. Anything skipped is simply retried 2 minutes
+// later, so this rate-limits a surprise backlog instead of dropping it.
+const MAX_REMINDERS_PER_RUN = 50;
+// `${gameId}|${phone}` -> { count, at }. sendSMS reports failure for any network error, including
+// one where Textbelt already delivered the text, so an attempt that "fails" may still have sent.
+// Retrying such a player every 2 minutes until game time could mean hundreds of texts; cap it.
+const reminderAttempts = new Map();
+const MAX_SEND_ATTEMPTS = 3;
+// checkAndSendReminders runs on a 2-minute interval and is also reachable via /api/test-reminders.
+// A slow Textbelt call can outlast the interval, and two runs interleaving would both see an
+// unsent player and both text them. Only one check runs at a time.
+let reminderCheckInProgress = false;
 
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 
@@ -82,13 +98,39 @@ function checkGameNotExpired(game) {
   return { error: false };
 }
 
+/**
+ * Describes when a game falls relative to now. A reminder caught up late must not tell someone
+ * their game is "tomorrow" when it is actually later today.
+ * @param {Object} game - Game object with a YYYY-MM-DD date
+ * @param {Date} centralNow - Current Central time
+ * @returns {string} "today", "tomorrow", or "on <date>"
+ */
+function describeGameDay(game, centralNow) {
+  const dateKey = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  if (game.date === dateKey(centralNow)) return 'today';
+
+  const tomorrow = new Date(centralNow.getFullYear(), centralNow.getMonth(), centralNow.getDate() + 1);
+  if (game.date === dateKey(tomorrow)) return 'tomorrow';
+
+  return `on ${formatDateForSMS(game.date)}`;
+}
+
 // Game reminder system
 async function checkAndSendReminders() {
+  if (reminderCheckInProgress) {
+    console.warn('[REMINDER] Previous check still running, skipping this one');
+    return;
+  }
+  reminderCheckInProgress = true;
+
   try {
     console.log('[REMINDER] Checking for games that need reminders...');
     
     const allGames = await getAllGames();
     const finalCentralTime = getCentralTimeNow();
+    let remindersSentThisRun = 0;
 
     if (DEBUG) {
       console.log(`[REMINDER] Current Central time: ${finalCentralTime.toLocaleString()}`);
@@ -121,66 +163,108 @@ async function checkAndSendReminders() {
         }
       }
 
-      // Only send if we're within 5 minutes of the reminder time and it's not in the past
-      if (timeDifference <= fiveMinutes && finalCentralTime >= reminderTime) {
-        // **NEW SAFETY CHECK**: Check in-memory cache first
+      // Send any time between 24 hours before the game and its start, rather than only inside a
+      // narrow window around the 24-hour mark. reminder_log decides who still needs a text, so a
+      // reminder missed while the server was asleep or restarting still goes out on a later check.
+      if (finalCentralTime >= reminderTime && isGameUpcoming(game.date, game.time)) {
         const cacheKey = `${gameId}_${game.date}_${game.time}`;
         if (sentRemindersCache.has(cacheKey)) {
           if (DEBUG) console.log(`[REMINDER] Already sent reminders for game ${gameId} (cached), skipping`);
           continue;
         }
 
-        if (DEBUG) console.log(`[REMINDER] Sending 24-hour reminders for game ${gameId}`);
-        
-        // **NEW SAFETY CHECK**: Mark in cache BEFORE sending any SMS
-        sentRemindersCache.set(cacheKey, Date.now());
-        
-        // Send reminders to all confirmed players
+        if (DEBUG) console.log(`[REMINDER] Checking 24-hour reminders for game ${gameId}`);
+
         const confirmedPlayers = game.players || [];
         let remindersSent = 0;
-        let maxRemindersPerGame = 20; // **NEW SAFETY LIMIT**
-        
+        let outstanding = 0; // players still owed a text after this pass
+        const maxRemindersPerGame = 20;
+
         for (const player of confirmedPlayers) {
-          // **NEW SAFETY CHECK**: Hard limit on reminders per game
           if (remindersSent >= maxRemindersPerGame) {
-            if (DEBUG) console.log(`[REMINDER] Hit safety limit of ${maxRemindersPerGame} reminders for game ${gameId}`);
+            console.warn(`[REMINDER] Hit per-game limit of ${maxRemindersPerGame} for game ${gameId}`);
+            outstanding++;
             break;
           }
-          
+
+          if (remindersSentThisRun >= MAX_REMINDERS_PER_RUN) {
+            console.warn(`[REMINDER] Hit per-run limit of ${MAX_REMINDERS_PER_RUN}; remaining reminders retry on the next check`);
+            outstanding++;
+            break;
+          }
+
           if (!player.phone) {
             if (DEBUG) console.log(`[REMINDER] Skipping ${player.name} - no phone number`);
             continue;
           }
-          
-          // Check if we already sent this player a 24-hour reminder
-          const alreadySent = await hasReminderBeenSent(gameId, player.phone, 'twenty_four_hours');
-          
+
+          const playerKey = `${gameId}|${player.phone}`;
+          if (remindedPlayersCache.has(playerKey)) {
+            continue;
+          }
+
+          // Already tried and failed the maximum number of times. Not counted as outstanding, so
+          // this game stops being revisited rather than retrying forever.
+          const priorAttempts = reminderAttempts.get(playerKey)?.count || 0;
+          if (priorAttempts >= MAX_SEND_ATTEMPTS) {
+            continue;
+          }
+
+          // If we cannot confirm whether this player was already reminded, skip them. Missing a
+          // reminder is recoverable on the next check; sending a duplicate text is not.
+          let alreadySent;
+          try {
+            alreadySent = await hasReminderBeenSent(gameId, player.phone, 'twenty_four_hours');
+          } catch (err) {
+            console.error(`[REMINDER] Could not check reminder status for ${player.phone}, skipping:`, err.message);
+            outstanding++;
+            continue;
+          }
+
           if (alreadySent) {
             if (DEBUG) console.log(`[REMINDER] Already sent 24-hour reminder to ${player.phone} for game ${gameId}`);
             continue;
           }
-          
-          // Format the game time and date for the message
-          const gameTimeFormatted = formatTimeForSMS(game.time);
-          const gameDateFormatted = formatDateForSMS(game.date);
-          const locationText = formatLocationForSMS(game);
 
-          const reminderMessage = `Reminder: Your pickleball game is tomorrow at ${gameTimeFormatted} at ${locationText}. Looking forward to seeing you! Reply 2 for details or 9 to cancel.`;          
-          
-          // Send the SMS
+          const gameTimeFormatted = formatTimeForSMS(game.time);
+          const locationText = formatLocationForSMS(game);
+          const whenText = describeGameDay(game, finalCentralTime);
+
+          const reminderMessage = `Reminder: Your pickleball game is ${whenText} at ${gameTimeFormatted} at ${locationText}. Looking forward to seeing you! Reply 2 for details or 9 to cancel.`;
+
+          // Count the attempt before sending: if the response is lost we must assume the text may
+          // have gone out, so the attempt still has to count against the cap.
+          reminderAttempts.set(playerKey, { count: priorAttempts + 1, at: Date.now() });
+
           const smsResult = await sendSMS(player.phone, reminderMessage, gameId);
-          
+
           if (smsResult.success) {
-            await markReminderSent(gameId, player.phone, 'twenty_four_hours');
+            // Record in memory before the database write so that a logging failure can never
+            // turn into the same player being texted again on the next check.
+            remindedPlayersCache.set(playerKey, Date.now());
             remindersSent++;
+            remindersSentThisRun++;
+            try {
+              await markReminderSent(gameId, player.phone, 'twenty_four_hours');
+            } catch (err) {
+              console.error(`[REMINDER] Sent reminder to ${player.phone} but failed to log it:`, err.message);
+            }
             if (DEBUG) console.log(`[REMINDER] Sent 24-hour reminder to ${player.name} for game ${gameId}`);
+          } else if (priorAttempts + 1 >= MAX_SEND_ATTEMPTS) {
+            console.error(`[REMINDER] Giving up on ${player.phone} for game ${gameId} after ${MAX_SEND_ATTEMPTS} attempts:`, smsResult.error);
           } else {
-            console.error(`[REMINDER] Failed to send reminder to ${player.phone}:`, smsResult.error);
+            console.error(`[REMINDER] Failed to send reminder to ${player.phone}, will retry:`, smsResult.error);
+            outstanding++;
           }
         }
-        
-        if (DEBUG && remindersSent > 0) {
-          console.log(`[REMINDER] Sent ${remindersSent} reminders for game ${gameId}`);
+
+        // Only stop revisiting this game once nobody is still owed a text, so failures retry.
+        if (outstanding === 0) {
+          sentRemindersCache.set(cacheKey, Date.now());
+        }
+
+        if (remindersSent > 0) {
+          console.log(`[REMINDER] Sent ${remindersSent} reminder(s) for game ${gameId}`);
         }
       } else if (DEBUG) {
         const hoursUntilReminder = Math.round((reminderTime.getTime() - finalCentralTime.getTime()) / (1000 * 60 * 60));
@@ -197,11 +281,25 @@ async function checkAndSendReminders() {
         sentRemindersCache.delete(key);
       }
     }
+    // Safe to forget: any game these entries guard has already started by now, and a started game
+    // no longer qualifies for reminders at all.
+    for (const [key, timestamp] of remindedPlayersCache.entries()) {
+      if (timestamp < twoDaysAgo) {
+        remindedPlayersCache.delete(key);
+      }
+    }
+    for (const [key, attempt] of reminderAttempts.entries()) {
+      if (attempt.at < twoDaysAgo) {
+        reminderAttempts.delete(key);
+      }
+    }
     
     if (DEBUG) console.log('[REMINDER] Check completed');
 
   } catch (error) {
     console.error('[REMINDER] Error in reminder system:', error);
+  } finally {
+    reminderCheckInProgress = false;
   }
 }
 
