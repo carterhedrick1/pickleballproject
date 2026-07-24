@@ -464,6 +464,21 @@
             font-size: 14px;
         }
 
+        /* Shown on the confirmation screen when the spot was saved but the text could not
+           be delivered. Amber, not red: the signup itself did succeed. */
+        .sms-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #d97706;
+            color: #92400e;
+            padding: 14px 18px;
+            margin: 0 0 24px 0;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 14px;
+            text-align: left;
+            line-height: 1.5;
+        }
+
         .info {
             background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
             border: 1px solid #3b82f6;
@@ -953,7 +968,11 @@
             <div class="confirmation-message" id="confirmationMessage">
                 Great! You've successfully joined the game.
             </div>
-            
+
+            <div class="sms-warning" id="smsWarning" style="display: none;">
+                <span id="smsWarningText"></span>
+            </div>
+
             <div class="confirmation-details">
                 <div class="confirmation-detail">
                     <span class="confirmation-detail-label">Location:</span>
@@ -1423,6 +1442,24 @@
                     }
                 }
                 
+                // The action itself is saved either way, but the page used to promise a text
+                // unconditionally. If the text did not go out, say so here instead of leaving
+                // the player waiting for a message that is never coming.
+                const smsWarning = document.getElementById('smsWarning');
+                const smsWarningText = document.getElementById('smsWarningText');
+                const smsFailed = data.sms && data.sms.success === false;
+
+                if (smsWarning && smsWarningText) {
+                    if (smsFailed) {
+                        smsWarningText.textContent = data.action === 'out'
+                            ? "Heads up: we couldn't send your confirmation text, so you won't get one. Your response was still recorded - the organizer can see you're out."
+                            : "Heads up: we couldn't send your confirmation text, so you won't get one. Your spot is still saved - but you won't get text reminders or be able to reply 2 or 9. Let the organizer know so they can check your number.";
+                        smsWarning.style.display = 'block';
+                    } else {
+                        smsWarning.style.display = 'none';
+                    }
+                }
+
                 // Include court number in confirmation location
                 let locationText = gameData.location;
                 if (gameData.courtNumber && gameData.courtNumber.trim()) {
@@ -1437,7 +1474,10 @@
                 const seeWhosPlayingInstruction = document.getElementById('seeWhosPlayingInstruction');
 
                 if (nextStepsSection) {
-                    if (data.action === 'out') {
+                    // Every bullet in "What's Next?" describes something that happens by text.
+                    // With no text going out, the whole list is untrue, so hide it rather than
+                    // tell the player to reply to a message they will never receive.
+                    if (data.action === 'out' || smsFailed || !data.sms) {
                         nextStepsSection.style.display = 'none';
                     } else {
                         nextStepsSection.style.display = 'block';

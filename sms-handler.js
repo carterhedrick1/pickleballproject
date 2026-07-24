@@ -121,6 +121,14 @@ function formatLocationForSMS(game) {
 // SMS sending function
 async function sendSMS(to, message, gameId = null) {
   try {
+    // Test seam: makes every send fail without contacting Textbelt, so failure handling can be
+    // exercised for real. Checked before the dev-mode branch so it wins either way. Never set
+    // this in production.
+    if (process.env.SMS_SIMULATE_FAILURE === '1') {
+      console.log(`[DEV MODE] Simulating SMS failure to ${to}`);
+      return { success: false, error: 'simulated failure', simulated: true };
+    }
+
     if (!process.env.TEXTBELT_API_KEY) {
       console.log(`[DEV MODE] SMS would be sent to ${to}: ${message}`);
       return { success: true, dev: true };
@@ -158,6 +166,65 @@ async function sendSMS(to, message, gameId = null) {
     console.error('SMS sending failed:', error);
     return { success: false, error: error.message };
   }
+}
+
+// Textbelt failures that will fail again no matter how often we ask. Retrying an out-of-quota
+// or malformed-number send just costs a round trip and delays telling the user the truth.
+const PERMANENT_SMS_ERRORS = [
+  'out of quota',
+  'invalid phone number',
+  'invalid api key',
+  'message too long',
+];
+
+function isPermanentSmsError(error) {
+  if (!error) return false;
+  const text = String(error).toLowerCase();
+  return PERMANENT_SMS_ERRORS.some((e) => text.includes(e));
+}
+
+/**
+ * sendSMS with one retry for failures that look transient.
+ *
+ * The user-facing join / "I'm out" actions had no retry at all, so a single blip meant the
+ * database write succeeded and the confirmation text simply never arrived. The reminder system
+ * already retries on a timer; these actions happen once and are never revisited, so the retry
+ * has to happen here.
+ *
+ * As in the reminder path, a "failed" send may in fact have been delivered (the error can come
+ * from losing the response, not the send), so retries are capped at one: a rare duplicate
+ * confirmation is a far better outcome than a silent no-show.
+ *
+ * @param {string} to Phone number
+ * @param {string} message Message body
+ * @param {string|null} gameId Attached for reply webhooks
+ * @returns {Promise<Object>} { success, error?, attempts, permanent? }
+ */
+async function sendSMSWithRetry(to, message, gameId = null, { retries = 1, delayMs = 600 } = {}) {
+  let attempts = 0;
+  let result;
+
+  do {
+    attempts++;
+    result = await sendSMS(to, message, gameId);
+
+    if (result.success) {
+      return { ...result, attempts };
+    }
+
+    if (isPermanentSmsError(result.error)) {
+      console.error(`[SMS] Permanent failure to ${to}, not retrying: ${result.error}`);
+      return { ...result, attempts, permanent: true };
+    }
+
+    if (attempts <= retries) {
+      console.warn(`[SMS] Send to ${to} failed (${result.error}); retrying once`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  } while (attempts <= retries);
+
+  console.error(`[SMS] Giving up on ${to} after ${attempts} attempt(s): ${result.error}`);
+  return { ...result, attempts };
 }
 
 // Main SMS webhook handler
@@ -656,7 +723,12 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
       } else {
         promotionMessage = `Good news! You've been selected for Pickleball at ${promoLocation} on ${promoDate} at ${promoTime}! Reply 2 for who is playing and details or 9 to cancel.`;
       }
-      await sendSMS(promotedPlayer.phone, promotionMessage, gameId);
+      // Retried: there is no screen behind this one. The promotion happened because someone
+      // else texted 9, so if this text is lost the promoted player is never told at all.
+      const promoResult = await sendSMSWithRetry(promotedPlayer.phone, promotionMessage, gameId);
+      if (!promoResult.success) {
+        console.error(`[SMS] ${promotedPlayer.name} was promoted on game ${gameId} but could not be told:`, promoResult.error);
+      }
     }
 
     // Send organizer notification for cancellation
@@ -686,6 +758,7 @@ if (!player.isOrganizer) {
 
 module.exports = {
   sendSMS,
+  sendSMSWithRetry,
   handleIncomingSMS,
   sendOrganizerNotification,
   formatPhoneNumber,

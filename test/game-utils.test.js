@@ -1,25 +1,35 @@
 /**
  * Unit tests for game-utils.js expiration logic
- * Run with: node --test test/game-utils.test.js
+ * Run with: npm test  (or: node --test test/game-utils.test.js)
  */
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const { isGameExpired, getGameStatus } = require('../public/js/game-utils.js');
 
+// These fixtures used to hardcode calendar dates, which quietly rotted into the
+// past and failed the "future game" tests. Derive them from today instead.
+function daysFromToday(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+const NEXT_MONTH = daysFromToday(30);
+const NEXT_YEAR = daysFromToday(365);
+
 describe('isGameExpired', () => {
   it('returns false for future games', () => {
-    // Game March 20, 2026 at 2pm Central - should be in future
     assert.strictEqual(
-      isGameExpired('2026-03-20', '14:00', 90),
+      isGameExpired(NEXT_MONTH, '14:00', 90),
       false,
       'Future game should not be expired'
     );
   });
 
-  it('returns false for games today that have not ended yet', () => {
-    // Use a date far in future to ensure it's not expired
+  it('returns false for games far in the future', () => {
     assert.strictEqual(
-      isGameExpired('2030-06-15', '18:00', 90),
+      isGameExpired(NEXT_YEAR, '18:00', 90),
       false,
       'Far future game should not be expired'
     );
@@ -39,14 +49,14 @@ describe('isGameExpired', () => {
   });
 
   it('returns false when time is missing', () => {
-    assert.strictEqual(isGameExpired('2026-03-20', '', 90), false);
+    assert.strictEqual(isGameExpired(NEXT_MONTH, '', 90), false);
   });
 });
 
 describe('getGameStatus', () => {
   it('returns active for future games', () => {
     const game = {
-      date: '2026-03-20',
+      date: NEXT_MONTH,
       time: '14:00',
       duration: 90,
       cancelled: false,
@@ -72,7 +82,7 @@ describe('getGameStatus', () => {
 
   it('returns cancelled when game is cancelled', () => {
     const game = {
-      date: '2026-03-20',
+      date: NEXT_MONTH,
       time: '14:00',
       duration: 90,
       cancelled: true,

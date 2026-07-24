@@ -14,9 +14,10 @@ const {
   isProduction
 } = require('./database');
 
-const { 
-  sendSMS, 
-  handleIncomingSMS, 
+const {
+  sendSMS,
+  sendSMSWithRetry,
+  handleIncomingSMS,
   sendOrganizerNotification,
   formatPhoneNumber,
   formatDateForSMS, 
@@ -484,7 +485,12 @@ app.post('/api/games/:id/players', async (req, res) => {
         const locationText = formatLocationForSMS(game);
 
         const message = `Thanks for letting us know you can't make the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. We appreciate the heads up!`;
-        smsResult = await sendSMS(playerData.phone, message, gameId);
+        // Retries once, and the result is reported to the client so the page can say the text
+        // did not go out rather than silently promising one.
+        smsResult = await sendSMSWithRetry(playerData.phone, message, gameId);
+        if (!smsResult.success) {
+          console.error(`[SERVER] "I'm out" recorded for ${playerData.phone} on game ${gameId} but the confirmation text failed:`, smsResult.error);
+        }
       }
       
       return res.status(201).json({ 
@@ -562,7 +568,13 @@ app.post('/api/games/:id/players', async (req, res) => {
         }
       }
       
-      smsResult = await sendSMS(playerData.phone, message, gameId);
+      // Retries once, and the result is reported to the client so the page can say the text
+      // did not go out rather than silently promising one. The signup itself is already saved
+      // and stays valid either way.
+      smsResult = await sendSMSWithRetry(playerData.phone, message, gameId);
+      if (!smsResult.success) {
+        console.error(`[SERVER] ${playerData.name} joined game ${gameId} but the confirmation text to ${playerData.phone} failed:`, smsResult.error);
+      }
     }
 
     // Send organizer notifications (now after saving)
@@ -771,7 +783,12 @@ app.post('/api/games/:id/promote-from-waitlist/:playerId', async (req, res) => {
       const locationText = formatLocationForSMS(game);
 
       const message = `Great news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for who is playing and details or 9 to cancel.`;
-      smsResult = await sendSMS(player.phone, message, gameId);
+      // Retried for the same reason as the promotion above: a promotion the player never hears
+      // about looks identical to still being on the waitlist.
+      smsResult = await sendSMSWithRetry(player.phone, message, gameId);
+      if (!smsResult.success) {
+        console.error(`[SERVER] ${player.name} was promoted on game ${gameId} but could not be told:`, smsResult.error);
+      }
     }
     
     res.json({
@@ -851,9 +868,15 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
       const locationText = formatLocationForSMS(game);
 
       const message = `Good news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
-      promotionSmsResult = await sendSMS(result.promotedPlayer.phone, message, gameId);
+      // Retried: this is the one text nobody can recover from missing. The player has been
+      // moved onto the roster in the database either way, so if it never arrives they believe
+      // they are still on the waitlist and simply do not turn up.
+      promotionSmsResult = await sendSMSWithRetry(result.promotedPlayer.phone, message, gameId);
+      if (!promotionSmsResult.success) {
+        console.error(`[SERVER] ${result.promotedPlayer.name} was promoted on game ${gameId} but could not be told:`, promotionSmsResult.error);
+      }
     }
-    
+
 // Send organizer notification for cancellation
 if (removedPlayer && !removedPlayer.isOrganizer) {
   await sendOrganizerNotification(gameId, game, 'playerCancels', removedPlayer.name);

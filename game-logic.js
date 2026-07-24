@@ -167,7 +167,20 @@ async function checkAndSendReminders() {
       // narrow window around the 24-hour mark. reminder_log decides who still needs a text, so a
       // reminder missed while the server was asleep or restarting still goes out on a later check.
       if (finalCentralTime >= reminderTime && isGameUpcoming(game.date, game.time)) {
-        const cacheKey = `${gameId}_${game.date}_${game.time}`;
+        const confirmedPlayers = game.players || [];
+
+        // The key includes who is actually on the roster. Keyed on the game alone, a game was
+        // cached as finished the moment everyone then-signed-up had been reminded, and skipped
+        // on every later check - so anyone who joined after that point silently never got a
+        // 24-hour reminder. Any change to the roster produces a new key and the game is looked
+        // at again; reminder_log still decides who individually needs a text, so revisiting it
+        // cannot text the same person twice.
+        const rosterSignature = confirmedPlayers
+          .map((p) => p.phone)
+          .filter(Boolean)
+          .sort()
+          .join(',');
+        const cacheKey = `${gameId}_${game.date}_${game.time}_${rosterSignature}`;
         if (sentRemindersCache.has(cacheKey)) {
           if (DEBUG) console.log(`[REMINDER] Already sent reminders for game ${gameId} (cached), skipping`);
           continue;
@@ -175,7 +188,6 @@ async function checkAndSendReminders() {
 
         if (DEBUG) console.log(`[REMINDER] Checking 24-hour reminders for game ${gameId}`);
 
-        const confirmedPlayers = game.players || [];
         let remindersSent = 0;
         let outstanding = 0; // players still owed a text after this pass
         const maxRemindersPerGame = 20;
