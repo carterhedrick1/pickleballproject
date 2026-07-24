@@ -34,6 +34,8 @@ const {
   isValidPhoneNumber
 } = require('./game-logic');
 
+const { withGameLock, acquireGameLock } = require('./utils/game-lock');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -433,14 +435,17 @@ app.post('/api/games/lookup-and-notify', async (req, res) => {
 // Add player to game (regular signup)
 // Add player to game (regular signup)
 app.post('/api/games/:id/players', async (req, res) => {
+  const gameId = req.params.id;
+  // Held from loading the game until the save completes, so simultaneous signups cannot
+  // overwrite one another. Released before any SMS so nobody queues behind a Textbelt call.
+  const releaseLock = await acquireGameLock(gameId);
   try {
-    const gameId = req.params.id;
     const game = await getGame(gameId);
-    
+
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
-    
+
     const { name, phone, action } = req.body;
     
     // Handle "I'm Out" responses
@@ -460,7 +465,8 @@ app.post('/api/games/:id/players', async (req, res) => {
       
       game.outPlayers.push(outPlayer);
       await saveGame(gameId, game, game.hostToken, game.hostPhone);
-      
+      releaseLock();
+
       // Send SMS confirmation if phone provided
       let smsResult = null;
       if (playerData.phone) {
@@ -525,7 +531,8 @@ app.post('/api/games/:id/players', async (req, res) => {
     
     // MOVED: Save game BEFORE sending notifications
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
-    
+    releaseLock();
+
     // Send confirmation SMS to the player
     let smsResult = null;
     if (playerData.phone) {
@@ -581,6 +588,9 @@ app.post('/api/games/:id/players', async (req, res) => {
   } catch (error) {
     console.error('Error adding player:', error);
     res.status(500).json({ error: error.message || 'Failed to add player' });
+  } finally {
+    // No-op if already released after the save; this covers the early returns and error paths.
+    releaseLock();
   }
 });
 
