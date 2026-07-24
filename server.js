@@ -179,8 +179,15 @@ app.get('/api/games/:id', async (req, res) => {
     if (token && game.hostToken !== token) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
-    
-    res.json(game);
+
+    // Only a caller holding the matching token gets host-only fields. Everyone
+    // else (anyone with the shareable game link) gets the game without them.
+    if (token && token === game.hostToken) {
+      return res.json(game);
+    }
+
+    const { hostToken, ...publicGame } = game;
+    res.json(publicGame);
   } catch (error) {
     console.error('Error fetching game:', error);
     res.status(500).json({ error: 'Failed to fetch game' });
