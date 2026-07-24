@@ -65,6 +65,13 @@ node verify/signup-race.js https://inorout.club 8
 Running against production creates a real game and cancels it when finished. That is
 safe (no phone numbers means no texts) but it does leave a cancelled game behind.
 
+**Run them one at a time against production, with a pause between.** Rate limiting is on in
+production only (30 requests/minute on `/api/games`, 15 new games per 15 minutes) and off
+locally, so a burst that is fine locally gets 429s live. A 429 does not mean the app is broken -
+but it used to *look* like it did: `mixed-race.js` turned a rate-limited read into "every player
+was lost", and crashed before its cleanup step, leaving live test games behind. Both are fixed,
+and every script now reports a 429 as a 429.
+
 ## What each one covers
 
 | Script | What it proves |

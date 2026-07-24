@@ -24,13 +24,34 @@ const check = (cond, msg) => { console.log(`  ${cond ? 'PASS' : 'FAIL'}  ${msg}`
     date: '2026-09-22', time: '18:00', duration: 90, totalPlayers: CAP,
     message: '', registrationMode: 'fcfs',
   });
+  if (create.status !== 201) {
+    console.error(`\n  Could not create the test game: HTTP ${create.status} ${create.text.slice(0, 140)}`);
+    if (create.status === 429) console.error('  Production allows 30 requests/minute - wait a minute and retry.');
+    process.exit(1);
+  }
   const { gameId, hostToken } = create.json;
+
+  // Any non-200 here (a 429 in particular) used to crash on g.players.length, which skipped the
+  // cleanup at the bottom and left a live test game behind in production. Bail out loudly and
+  // still cancel the game.
+  const abort = async (msg) => {
+    console.error(`\n  ${msg}`);
+    await req('DELETE', `/api/games/${gameId}`, { token: hostToken, reason: 'aborted verification' });
+    process.exit(1);
+  };
 
   // Seed sequentially so the starting state is known: 4 confirmed, 3 waitlisted.
   for (let i = 1; i <= CAP + 3; i++) {
-    await req('POST', `/api/games/${gameId}/players`, { name: `Seed${i}` });
+    const r = await req('POST', `/api/games/${gameId}/players`, { name: `Seed${i}` });
+    if (r.status !== 201) {
+      await abort(`Seeding Seed${i} failed: HTTP ${r.status} ${r.text.slice(0, 120)}`);
+    }
   }
-  let g = (await req('GET', `/api/games/${gameId}?token=${hostToken}`)).json;
+  const seedGet = await req('GET', `/api/games/${gameId}?token=${hostToken}`);
+  if (seedGet.status !== 200 || !seedGet.json?.players) {
+    await abort(`Reading the seeded game failed: HTTP ${seedGet.status} ${seedGet.text.slice(0, 120)}`);
+  }
+  let g = seedGet.json;
   console.log(`seeded: ${g.players.length} confirmed, ${g.waitlist.length} waitlisted`);
 
   const victim = g.players[1];
@@ -47,7 +68,13 @@ const check = (cond, msg) => { console.log(`  ${cond ? 'PASS' : 'FAIL'}  ${msg}`
     req('POST', `/api/games/${gameId}/players`, { name: 'LateB' }),
   ]);
 
-  g = (await req('GET', `/api/games/${gameId}?token=${hostToken}`)).json;
+  const finalGet = await req('GET', `/api/games/${gameId}?token=${hostToken}`);
+  if (finalGet.status !== 200 || !finalGet.json?.players) {
+    // Falling back to [] here made a rate-limited response look exactly like "every player was
+    // lost", which is a far more alarming result than the truth.
+    await abort(`Reading the final state failed: HTTP ${finalGet.status} ${finalGet.text.slice(0, 120)}`);
+  }
+  g = finalGet.json;
   const players = g.players || [];
   const waitlist = g.waitlist || [];
   const ids = [...players, ...waitlist].map((p) => p.id);
