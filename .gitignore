@@ -7,3 +7,5 @@ PROJECT_NOTES.local.md
 deleted-test-games-*.json
 # Scratch file used to hand a rotated DB password over without pasting it into chat
 .new-db-password.local
+# Running record of Textbelt quota readings, written by npm run quota
+.textbelt-quota-log

@@ -14,7 +14,8 @@
     "verify:reminder-safety": "node verify/reminder-safety.js",
     "verify:late-joiner": "node verify/reminder-late-joiner.js",
     "verify:sms-failure": "node verify/sms-failure.js",
-    "verify:sms-failure-ui": "node verify/sms-failure-ui.js"
+    "verify:sms-failure-ui": "node verify/sms-failure-ui.js",
+    "quota": "node scripts/textbelt-quota.js"
   },
   "dependencies": {
     "dotenv": "^16.5.0",
