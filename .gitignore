@@ -10,3 +10,10 @@ deleted-test-games-*.json
 .new-db-password.local
 # Running record of Textbelt quota readings, written by npm run quota
 .textbelt-quota-log
+
+# Generated documentation - rebuild any time with `npm run docs`.
+# The scripts are tracked; the output is not, because the screenshots are several MB per run and
+# would bloat the history every time the UI changes. docs/README.md IS tracked.
+docs/*.html
+docs/screens/
+docs/screens-phone/
