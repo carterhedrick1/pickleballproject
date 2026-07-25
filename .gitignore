@@ -3,3 +3,7 @@ node_modules/
 .DS_Store
 pickleball.db
 PROJECT_NOTES.local.md
+# Backups written by scripts/cleanup-test-games.js before it deletes anything
+deleted-test-games-*.json
+# Scratch file used to hand a rotated DB password over without pasting it into chat
+.new-db-password.local
