@@ -164,9 +164,17 @@ function cleanup() {
 
       // Runs after the games are gone: the invented courts, the roster rows a fixture signup
       // creates, and the SMS contexts. Each one only ever matches fixture data.
-      const sweepSideTables = (done) => {
+      const sweepSideTables = (done, gameIds = []) => {
         const phoneMarks = FIXTURE_PHONES.map(() => '?').join(',');
-        db.run(
+        // Photos are keyed by game id, so they have to go before/with the games themselves.
+        const dropPhotos = (next) => {
+          if (!gameIds.length) return next();
+          db.run(
+            `DELETE FROM game_photos WHERE game_id IN (${gameIds.map(() => '?').join(',')})`,
+            gameIds, next
+          );
+        };
+        dropPhotos(() => db.run(
           `DELETE FROM host_roster WHERE host_phone IN (${phoneMarks}) OR player_phone IN (${phoneMarks})`,
           [...FIXTURE_PHONES, ...FIXTURE_PHONES],
           () => {
@@ -178,7 +186,7 @@ function cleanup() {
               }
             );
           }
-        );
+        ));
       };
 
       db.all(`SELECT id FROM games ${where}`, params, (selErr, rows) => {
@@ -187,10 +195,11 @@ function cleanup() {
           sweepSideTables(() => db.close(() => resolve(0)));
           return;
         }
+        const gameIds = rows.map((row) => row.id);
         db.run(`DELETE FROM games ${where}`, params, function (delErr) {
           if (delErr) { db.close(); return reject(delErr); }
           const removed = this.changes;
-          sweepSideTables(() => db.close(() => resolve(removed)));
+          sweepSideTables(() => db.close(() => resolve(removed)), gameIds);
         });
       });
     });

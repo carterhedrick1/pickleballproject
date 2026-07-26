@@ -61,7 +61,10 @@ const check = (cond, msg) => { console.log(`  ${cond ? 'PASS' : 'FAIL'}  ${msg}`
   // waitlist, host moves someone down, and two new people tap IN.
   console.log('\nfiring 5 simultaneous operations on the same game...');
   await Promise.all([
-    req('DELETE', `/api/games/${gameId}/players/${victim.id}`, { token: hostToken }),
+    // The token goes in the query string, which is where this route reads it from and what
+    // manage.html sends. Passing it in the body used to "work" only because a request with no
+    // token at all was let through.
+    req('DELETE', `/api/games/${gameId}/players/${victim.id}?token=${hostToken}`),
     req('POST', `/api/games/${gameId}/promote-from-waitlist/${promotee.id}`, { token: hostToken }),
     req('POST', `/api/games/${gameId}/move-to-waitlist/${g.players[3].id}`, { token: hostToken }),
     req('POST', `/api/games/${gameId}/players`, { name: 'LateA' }),

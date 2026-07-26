@@ -37,7 +37,8 @@ async function req(method, path, body, extraHeaders) {
     : bad(`health returned ${health.status}: ${health.text.slice(0, 120)}`);
 
   console.log('\n2. Pages a user actually visits load');
-  for (const page of ['/', '/create.html', '/game.html', '/manage.html', '/lookup.html', '/my-games.html']) {
+  for (const page of ['/', '/create.html', '/game.html', '/manage.html', '/lookup.html',
+                      '/my-games.html', '/roster.html', '/stats.html']) {
     const r = await req('GET', page);
     r.status === 200 ? ok(`${page} (${r.text.length} bytes)`) : bad(`${page} -> HTTP ${r.status}`);
   }

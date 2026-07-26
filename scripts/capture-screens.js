@@ -57,6 +57,11 @@ const fillAndSubmitCreateForm = (fx) => async (p) => {
   await p.evaluate(`(() => {
     const set = (id, v) => { const e = document.getElementById(id); e.value = v;
       e.dispatchEvent(new Event('input', { bubbles: true })); };
+    // The court is a dropdown now. "Somewhere new..." is what reveals the free-text box,
+    // and picking it is what a host does for a court nobody has played at yet.
+    const select = document.getElementById('locationSelect');
+    select.value = '__new__';
+    select.dispatchEvent(new Event('change'));
     set('location', 'Sunset Park Courts'); set('courtNumber', 'Court 2');
     set('organizerName', 'Scott H.'); set('organizerPhone', '${fx.FORM_PHONE}');
     set('date', '${fixtures.inDays(4)}'); set('time', '17:30'); set('players', '4');
@@ -84,16 +89,18 @@ const clickTab = (i) => async (p) => {
   await cdp.sleep(1000);
 };
 
-const seedMyGamesStorage = (fx) => async (p) => {
-  // my-games.html reads localStorage only, so the populated state has to be primed the same way
-  // create.html writes it.
-  const games = [
-    { id: fx.open.gameId, hostToken: fx.open.hostToken, location: 'Oak Park Courts', courtNumber: 'Courts 1-2', date: fx.date, time: '18:00', duration: 90, totalPlayers: 6 },
-    { id: fx.approval.gameId, hostToken: fx.approval.hostToken, location: 'Riverside Athletic Club', courtNumber: 'Center Court', date: fx.date, time: '09:30', duration: 120, totalPlayers: 4 },
-  ];
+// My Games, Roster and Stats all load from the server for whichever number is remembered on
+// the device, so priming them means storing the fixture host's phone - exactly what the phone
+// gate writes when a real host types it in. The fixtures then load through the real API.
+const seedHostPhone = (fx) => async (p) => {
   await p.evaluate(
-    `localStorage.setItem('myGames', ${JSON.stringify(JSON.stringify(games))}); location.reload()`);
-  await cdp.sleep(2400);
+    `localStorage.setItem('hostPhone', ${JSON.stringify(fx.HOST_PHONE)}); location.reload()`);
+  await cdp.sleep(2600);
+};
+
+const clearHostPhone = async (p) => {
+  await p.evaluate(`localStorage.removeItem('hostPhone'); location.reload()`);
+  await cdp.sleep(2000);
 };
 
 const GUIDE_SECTIONS = [
@@ -162,24 +169,28 @@ function buildScreens(fx) {
       url: `/manage.html?id=${fx.open.gameId}&token=wrong-token-value`,
       title: 'Wrong or missing token', note: 'What anyone without the host link sees.' },
 
-    { file: 'my-games-empty', of: '/my-games.html', size: 'narrow', url: '/my-games.html',
-      title: 'Nothing stored on this device',
-      note: 'What a host sees on a new phone. Nothing here points to Find My Games.' },
+    { file: 'my-games-gate', of: '/my-games.html', size: 'narrow', url: '/my-games.html',
+      title: 'Asking which number you host with',
+      note: 'What a host sees on a device that has not been used before. One number, once, and the games follow them anywhere.',
+      act: clearHostPhone },
     { file: 'my-games-list', of: '/my-games.html', size: 'narrow', url: '/my-games.html',
-      title: 'With saved games',
-      note: 'The populated list, using the same browser records create.html writes.',
-      act: seedMyGamesStorage(fx) },
+      title: 'The host history',
+      note: 'Loaded from the server by phone number, split into upcoming and past. Each card has Manage, Copy Invitation and a private note.',
+      act: seedHostPhone(fx) },
 
-    { file: 'lookup-prompt', of: '/lookup.html', size: 'narrow', url: '/lookup.html',
-      title: 'The search prompt', note: 'The recovery path that works from any device.' },
-    { file: 'lookup-results', of: '/lookup.html', size: 'narrow', url: '/lookup.html',
-      title: 'Results', note: 'Looking up the organizer number behind the demo games.',
-      act: async (p) => {
-        await p.evaluate(`(() => { const e = document.getElementById('phone');
-          e.value = '${fx.HOST_PHONE}'; e.dispatchEvent(new Event('input', { bubbles: true }));
-          lookupGames(); })()`);
-        await cdp.sleep(2600);
-      } },
+    { file: 'roster-list', of: '/roster.html', size: 'narrow', url: '/roster.html',
+      title: 'Everyone you play with',
+      note: 'Built automatically from who has signed up for the host\'s games. Names and DUPR details are the host\'s own and players never see them.',
+      act: seedHostPhone(fx) },
+
+    { file: 'stats-dashboard', of: '/stats.html', size: 'narrow', url: '/stats.html',
+      title: 'Host stats',
+      note: 'Worked out from the games actually hosted. The yellow notes are deliberate: where a number cannot yet be trusted, the page says so.',
+      act: seedHostPhone(fx) },
+
+    { file: 'lookup-redirect', of: '/lookup.html', size: 'narrow', url: '/lookup.html',
+      title: 'The retired lookup page',
+      note: 'Find My Games was folded into My Games. Old texts and bookmarks still land here and are sent straight on, so nothing 404s.' },
 
     { file: 'demo', of: '/demo.html', size: 'narrow', url: '/demo.html',
       title: 'SMS consent walkthrough',
@@ -202,9 +213,13 @@ const GROUPS = [
   { of: '/manage.html?id=…&token=…', who: 'The host', lane: 'Link only',
     blurb: 'The host console, behind a secret token. Four tabs plus the notices you hit when something is off.' },
   { of: '/my-games.html', who: 'Organizers', lane: 'In the nav',
-    blurb: 'Reads this browser only. Both states matter, because the empty one is what a host on a new phone sees.' },
-  { of: '/lookup.html', who: 'Organizers', lane: 'In the nav',
-    blurb: 'Asks the server by phone number. The recovery path that works from any device.' },
+    blurb: 'Asks for a phone number once, then loads that host’s whole history from the server — so it works on any device, not just the one the game was created on.' },
+  { of: '/roster.html', who: 'Organizers', lane: 'In the nav',
+    blurb: 'Everyone who has ever signed up for one of this host’s games, built without anybody typing a list. The host can add names and DUPR details on top.' },
+  { of: '/stats.html', who: 'Organizers', lane: 'Linked from My Games',
+    blurb: 'The patterns behind the games: who turns up, who waits, who drops out, and where and when this group actually plays.' },
+  { of: '/lookup.html', who: 'Organizers', lane: 'Old links only',
+    blurb: 'Retired. My Games does the phone lookup itself now, so this page just forwards — the file only exists so older texts and bookmarks keep working.' },
   { of: '/demo.html', who: 'Carrier reviewers', lane: 'Unlinked',
     blurb: 'Nothing links here. It shows a consent checkbox and a “Count Me In!” button the real signup page does not have.' },
   { of: '/privacy.html', who: 'Anyone', lane: 'In the footer', blurb: 'Linked from the footer.' },
@@ -300,7 +315,7 @@ ${body}
 <section class="notes">
   <div class="eyebrow">How these were made</div>
   <div class="note"><h3>Captured from the app running locally</h3>
-    <p>A throwaway server on SQLite, driven by headless Chrome at ${PHONE ? 'phone' : 'roughly desktop'} width. Three demo games were seeded to fill the screens: a first-come game with 2 of 6 spots left, a full 2-player game, and an approval game with three applicants. The signup, the form submit, the tab clicks and the lookup are real interactions.</p></div>
+    <p>A throwaway server on SQLite, driven by headless Chrome at ${PHONE ? 'phone' : 'roughly desktop'} width. Three demo games were seeded to fill the screens: a first-come game with 2 of 6 spots left, a full 2-player game, and an approval game with three applicants. The signup, the form submit, the tab clicks and the phone-number gate are real interactions.</p></div>
   <div class="note"><h3>No text messages were sent</h3>
     <p>The server ran with the Textbelt key blanked, so all ${devSends} sends took the dev-mode branch and none reached Textbelt. The demo phone numbers are fake 555 numbers, and the demo games were deleted from the local database afterwards.</p></div>
   <div class="note"><h3>Freshness</h3><p>${generatedNote(PHONE

@@ -81,8 +81,21 @@ function sweepLocalTestRows(baseUrl) {
   return cleanupTestRosterAndLocations();
 }
 
+// Photos are keyed by game id, not by anything the game-row sweeps match, so they need
+// removing explicitly - otherwise the image rows outlive the games they belong to.
+function deletePhotosForGames(ids) {
+  if (!ids || !ids.length) return Promise.resolve(0);
+  return new Promise((resolve) => {
+    const db = openDb();
+    db.run(`DELETE FROM game_photos WHERE game_id IN (${ids.map(() => '?').join(',')})`, ids, function () {
+      db.close(() => resolve(this ? this.changes : 0));
+    });
+  });
+}
+
 module.exports = {
   cleanupTestGames,
+  deletePhotosForGames,
   cleanupTestRosterAndLocations,
   sweepLocalTestRows,
   deleteGamesById,
