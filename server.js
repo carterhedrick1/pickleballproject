@@ -9,6 +9,7 @@ const {
   initializeDatabase, 
   saveGame, 
   getGame,
+  getGameHostInfo,
   getAllGames,
   getGamesByHostPhone,
   addLocation,
@@ -16,6 +17,12 @@ const {
   upsertRosterEntry,
   recordRosterSighting,
   getRosterForHost,
+  savePhoto,
+  getPhotosForGame,
+  getPhoto,
+  deletePhoto,
+  countPhotosForGame,
+  getAllPhotoCounts,
   closeDatabaseConnection,
   isProduction
 } = require('./database');
@@ -42,6 +49,14 @@ const {
 } = require('./game-logic');
 
 const { withGameLock, acquireGameLock } = require('./utils/game-lock');
+
+const {
+  promoteNextFromWaitlist,
+  recordOutPlayer,
+  departureAlertType
+} = require('./utils/promotion');
+
+const { computeHostStats } = require('./stats');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -332,6 +347,7 @@ app.delete('/api/games/:id', async (req, res) => {
     
     game.cancelled = true;
     game.cancellationReason = reason;
+    game.cancelledAt = new Date().toISOString();
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
     releaseLock();
 
@@ -387,6 +403,8 @@ app.get('/api/games/by-phone/:phone', async (req, res) => {
     const includeAll = req.query.all === '1';
 
     const games = await getGamesByHostPhone(phoneNumber);
+    // One grouped query for every card's photo badge, rather than one per game.
+    const photoCounts = await getAllPhotoCounts();
     const hostGames = [];
 
     for (const fullGame of games) {
@@ -413,6 +431,7 @@ app.get('/api/games/by-phone/:phone', async (req, res) => {
         playerCount: fullGame.players ? fullGame.players.length : 0,
         totalPlayers: fullGame.totalPlayers,
         waitlistCount: fullGame.waitlist ? fullGame.waitlist.length : 0,
+        photoCount: photoCounts[gameId] || 0,
         managementLink: `/manage.html?id=${gameId}&token=${fullGame.hostToken}`,
         playerLink: `/game.html?id=${gameId}`,
         created: fullGame.created
@@ -565,6 +584,23 @@ app.put('/api/roster/:phone/:playerPhone', async (req, res) => {
   }
 });
 
+// A host's numbers. Same phone-only access as the roster and by-phone routes above.
+app.get('/api/stats/:phone', async (req, res) => {
+  try {
+    const hostPhone = formatPhoneNumber(req.params.phone);
+
+    const [games, roster] = await Promise.all([
+      getGamesByHostPhone(hostPhone),
+      getRosterForHost(hostPhone)
+    ]);
+
+    res.json(computeHostStats(hostPhone, games, roster));
+  } catch (error) {
+    console.error('[STATS] Error computing stats:', error);
+    res.status(500).json({ error: 'Failed to load stats' });
+  }
+});
+
 // Send management links via SMS
 app.post('/api/games/lookup-and-notify', async (req, res) => {
   console.log(`[PHONE LOOKUP SMS] Looking up and notifying phone: ${req.body.phone}`);
@@ -673,36 +709,121 @@ app.post('/api/games/:id/players', async (req, res) => {
     // behaves differently because of it yet.
     const isAndroid = /Android/i.test(req.headers['user-agent'] || '');
 
-    // Handle "I'm Out" responses
+    // Handle "I'm Out" responses.
+    //
+    // This used to only ever append to outPlayers, which meant a confirmed player who tapped
+    // OUT on the web stayed on the roster and their spot was never released - the exact
+    // last-minute-cancellation problem this app exists to fix. Now the same three cases the
+    // SMS "9" flow handles are handled here too.
     if (action === 'out') {
       const playerData = validatePlayerData(name, phone);
       playerData.isAndroid = isAndroid;
 
-      // Add to "out" list
-      if (!game.outPlayers) {
-        game.outPlayers = [];
+      // validatePlayerData has already normalized the phone, so these compare directly.
+      const confirmedIndex = playerData.phone
+        ? game.players.findIndex((p) => p.phone === playerData.phone)
+        : -1;
+      const waitlistIndex = playerData.phone && confirmedIndex === -1
+        ? (game.waitlist || []).findIndex((p) => p.phone === playerData.phone)
+        : -1;
+
+      const gameDate = formatDateForSMS(game.date);
+      const gameTime = formatTimeForSMS(game.time);
+      const locationText = formatLocationForSMS(game);
+
+      // --- 1. They are on the roster: give up the spot and fill it. -----------------------
+      if (confirmedIndex >= 0) {
+        const departing = game.players[confirmedIndex];
+
+        if (departing.isOrganizer) {
+          return res.status(400).json({
+            error: "You're the organizer of this game. Use your management link to cancel it or to remove yourself."
+          });
+        }
+
+        game.players.splice(confirmedIndex, 1);
+        const outEntry = recordOutPlayer(game, { ...departing, isAndroid }, { wasConfirmed: true });
+        const promoted = promoteNextFromWaitlist(game);
+
+        await saveGame(gameId, game, game.hostToken, game.hostPhone);
+        releaseLock();
+
+        await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
+
+        let smsResult = null;
+        if (departing.phone) {
+          const message = `Your pickleball reservation at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`;
+          smsResult = await sendSMSWithRetry(departing.phone, message, gameId);
+          if (!smsResult.success) {
+            console.error(`[SERVER] ${departing.name} cancelled on game ${gameId} but the confirmation text failed:`, smsResult.error);
+          }
+        }
+
+        // The promotion already happened in the database. If this text fails the player is
+        // still promoted - same already-committed precedent as every other promotion here.
+        if (promoted && promoted.phone) {
+          const promoMessage = `Good news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
+          const promoResult = await sendSMSWithRetry(promoted.phone, promoMessage, gameId);
+          if (!promoResult.success) {
+            console.error(`[SERVER] ${promoted.name} was promoted on game ${gameId} but could not be told:`, promoResult.error);
+          }
+        }
+
+        await sendOrganizerNotification(
+          gameId, game, departureAlertType(game, true), departing.name
+        );
+
+        return res.status(201).json({
+          action: 'out',
+          cancelled: true,
+          wasConfirmed: true,
+          playerId: outEntry.id,
+          promoted: promoted ? promoted.name : null,
+          sms: smsResult
+        });
       }
 
-      const outPlayer = {
-        id: Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
-        ...playerData,
-        joinedAt: new Date().toISOString()
-      };
+      // --- 2. They are on the waitlist: take them off it. --------------------------------
+      if (waitlistIndex >= 0) {
+        const departing = game.waitlist[waitlistIndex];
+        game.waitlist.splice(waitlistIndex, 1);
+        const outEntry = recordOutPlayer(game, { ...departing, isAndroid }, { wasWaitlisted: true });
 
-      game.outPlayers.push(outPlayer);
+        await saveGame(gameId, game, game.hostToken, game.hostPhone);
+        releaseLock();
+
+        await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
+
+        let smsResult = null;
+        if (departing.phone) {
+          const statusText = game.registrationMode === 'waitlist' ? 'application' : 'waitlist spot';
+          const message = `Your pickleball ${statusText} at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`;
+          smsResult = await sendSMSWithRetry(departing.phone, message, gameId);
+          if (!smsResult.success) {
+            console.error(`[SERVER] ${departing.name} left the waitlist on game ${gameId} but the confirmation text failed:`, smsResult.error);
+          }
+        }
+
+        await sendOrganizerNotification(gameId, game, 'playerCancels', departing.name);
+
+        return res.status(201).json({
+          action: 'out',
+          cancelled: true,
+          wasConfirmed: false,
+          playerId: outEntry.id,
+          sms: smsResult
+        });
+      }
+
+      // --- 3. Nobody we know: an RSVP of "no", as before. --------------------------------
+      const outEntry = recordOutPlayer(game, playerData, {});
       await saveGame(gameId, game, game.hostToken, game.hostPhone);
       releaseLock();
 
       await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
 
-      // Send SMS confirmation if phone provided
       let smsResult = null;
       if (playerData.phone) {
-        const gameDate = formatDateForSMS(game.date);
-        const gameTime = formatTimeForSMS(game.time);
-        
-        const locationText = formatLocationForSMS(game);
-
         const message = `Thanks for letting us know you can't make the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. We appreciate the heads up!`;
         // Retries once, and the result is reported to the client so the page can say the text
         // did not go out rather than silently promising one.
@@ -711,10 +832,12 @@ app.post('/api/games/:id/players', async (req, res) => {
           console.error(`[SERVER] "I'm out" recorded for ${playerData.phone} on game ${gameId} but the confirmation text failed:`, smsResult.error);
         }
       }
-      
-      return res.status(201).json({ 
+
+      return res.status(201).json({
         action: 'out',
-        playerId: outPlayer.id,
+        cancelled: false,
+        wasConfirmed: false,
+        playerId: outEntry.id,
         sms: smsResult
       });
     }
@@ -1038,16 +1161,18 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
   try {
     const playerId = req.params.playerId;
     const token = req.query.token;
-    
+
     const game = await getGame(gameId);
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
-    
-    if (token && game.hostToken !== token) {
+
+    // Removing a player is a host action, so it needs the host token. This used to let a
+    // request with NO token through entirely - only a wrong one was rejected.
+    if (!token || game.hostToken !== token) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
-    
+
     // Find player to get their info before removal
     let removedPlayer = null;
     let removalType = null;
@@ -1077,7 +1202,7 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
 
     // Send removal notification to the removed player (if they have a phone and aren't organizer)
     let removalSmsResult = null;
-    if (removedPlayer.phone && !removedPlayer.isOrganizer && token) { // Only send if removed by host
+    if (removedPlayer.phone && !removedPlayer.isOrganizer) { // the token check above guarantees the host
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
       const locationText = formatLocationForSMS(game);
@@ -1104,9 +1229,12 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
       }
     }
 
-// Send organizer notification for cancellation
+// Send organizer notification for cancellation. In approval mode, removing a confirmed player
+// leaves a spot only the host can fill, so they are told that rather than "someone cancelled".
 if (removedPlayer && !removedPlayer.isOrganizer) {
-  await sendOrganizerNotification(gameId, game, 'playerCancels', removedPlayer.name);
+  await sendOrganizerNotification(
+    gameId, game, departureAlertType(game, removalType === 'confirmed'), removedPlayer.name
+  );
 }
 
 res.json({ 
@@ -1119,6 +1247,143 @@ res.json({
     res.status(500).json({ error: 'Failed to remove player' });
   } finally {
     releaseLock();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Game photos
+//
+// Uploads arrive as a raw image body rather than multipart, which keeps this dependency-free:
+// express.raw is applied to the upload route only, and the global express.json above ignores
+// image/* bodies, so the two coexist. Photos never touch the game blob, so no game lock either.
+// ---------------------------------------------------------------------------
+
+const MAX_PHOTOS_PER_GAME = 12;
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+/**
+ * Works out what the file actually is from its first bytes. The Content-Type header is
+ * whatever the client felt like sending, so it is never trusted or stored.
+ * @returns the real mime type, or null if these bytes are not an image we accept.
+ */
+function sniffImageType(buffer) {
+  if (!buffer || buffer.length < 12) return null;
+
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
+
+  const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (PNG_SIGNATURE.every((byte, i) => buffer[i] === byte)) return 'image/png';
+
+  if (buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') {
+    return 'image/webp';
+  }
+
+  return null;
+}
+
+app.post(
+  '/api/games/:id/photos',
+  express.raw({ type: PHOTO_TYPES, limit: '5mb' }),
+  async (req, res) => {
+    try {
+      const gameId = req.params.id;
+      const token = req.query.token;
+
+      const game = await getGame(gameId);
+      if (!game) {
+        return res.status(404).json({ error: 'Game not found' });
+      }
+      if (!token || game.hostToken !== token) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      const mimeType = sniffImageType(req.body);
+      if (!mimeType) {
+        return res.status(400).json({
+          error: 'That does not look like a JPEG, PNG or WebP image. Please pick a photo.'
+        });
+      }
+
+      // A 13th photo slipping through two simultaneous uploads is not worth a lock for.
+      const existing = await countPhotosForGame(gameId);
+      if (existing >= MAX_PHOTOS_PER_GAME) {
+        return res.status(400).json({
+          error: `This game already has ${MAX_PHOTOS_PER_GAME} photos. Remove one to add another.`
+        });
+      }
+
+      const photoId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+      const caption = (req.query.caption || '').toString().slice(0, 200);
+
+      await savePhoto(photoId, gameId, mimeType, req.body, caption);
+
+      res.status(201).json({
+        id: photoId,
+        caption,
+        url: `/api/games/${gameId}/photos/${photoId}`
+      });
+    } catch (error) {
+      console.error('Error saving photo:', error);
+      res.status(500).json({ error: 'Failed to save photo' });
+    }
+  }
+);
+
+// Public, like the game page itself - anyone with the link can look at the photos.
+app.get('/api/games/:id/photos', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const photos = (await getPhotosForGame(gameId)).map((photo) => ({
+      ...photo,
+      url: `/api/games/${gameId}/photos/${photo.id}`
+    }));
+    res.json({ photos });
+  } catch (error) {
+    console.error('Error listing photos:', error);
+    res.status(500).json({ error: 'Failed to load photos' });
+  }
+});
+
+app.get('/api/games/:id/photos/:photoId', async (req, res) => {
+  try {
+    const photo = await getPhoto(req.params.id, req.params.photoId);
+    if (!photo) {
+      return res.status(404).json({ error: 'Photo not found' });
+    }
+    // Ids are unique and the bytes behind one never change, so this can be cached hard -
+    // which also keeps the 30-requests-per-minute production limiter comfortable.
+    res.set('Content-Type', photo.mimeType);
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(photo.data);
+  } catch (error) {
+    console.error('Error fetching photo:', error);
+    res.status(500).json({ error: 'Failed to load photo' });
+  }
+});
+
+app.delete('/api/games/:id/photos/:photoId', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const token = req.query.token;
+
+    // getGameHostInfo rather than getGame: this only needs the token, not the whole blob.
+    const hostInfo = await getGameHostInfo(gameId);
+    if (!hostInfo) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    if (!token || hostInfo.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const removed = await deletePhoto(gameId, req.params.photoId);
+    if (!removed) {
+      return res.status(404).json({ error: 'Photo not found' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting photo:', error);
+    res.status(500).json({ error: 'Failed to delete photo' });
   }
 });
 
