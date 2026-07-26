@@ -39,6 +39,7 @@ const {
 } = require('./database');
 
 const mountDevRoutes = require('./routes/dev');
+const { requireDevAuth } = mountDevRoutes;
 
 const {
   sendSMS,
@@ -64,6 +65,8 @@ const {
 const { withGameLock, acquireGameLock } = require('./utils/game-lock');
 
 const { routeFailed } = require('./utils/route-error');
+
+const { isHost } = require('./utils/host-auth');
 
 const { isGameUpcoming } = require('./utils/central-time');
 
@@ -267,7 +270,7 @@ app.put('/api/games/:id', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    if (game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
@@ -327,7 +330,7 @@ app.put('/api/games/:id/notes', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
 
-    if (!token || game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -355,7 +358,7 @@ app.delete('/api/games/:id', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    if (game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
@@ -419,7 +422,7 @@ app.delete('/api/games/:id/permanent', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
 
-    if (!token || game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -1024,7 +1027,7 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    if (game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
@@ -1093,7 +1096,7 @@ app.post('/api/games/:id/move-to-waitlist/:playerId', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    if (game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
@@ -1149,7 +1152,7 @@ app.post('/api/games/:id/promote-from-waitlist/:playerId', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    if (game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
@@ -1216,7 +1219,7 @@ app.delete('/api/games/:id/players/:playerId', async (req, res) => {
 
     // Removing a player is a host action, so it needs the host token. This used to let a
     // request with NO token through entirely - only a wrong one was rejected.
-    if (!token || game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -1339,7 +1342,7 @@ app.post(
       if (!game) {
         return res.status(404).json({ error: 'Game not found' });
       }
-      if (!token || game.hostToken !== token) {
+      if (!isHost(game, token)) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
 
@@ -1414,7 +1417,7 @@ app.delete('/api/games/:id/photos/:photoId', async (req, res) => {
     if (!hostInfo) {
       return res.status(404).json({ error: 'Game not found' });
     }
-    if (!token || hostInfo.hostToken !== token) {
+    if (!isHost(hostInfo, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -1429,17 +1432,15 @@ app.delete('/api/games/:id/photos/:photoId', async (req, res) => {
   }
 });
 
-// Court images (dev only, requires dev password)
+// Court images (dev only). Uses the developer area's own sign-in rather than a second copy of
+// the password check: that one compared the password with !== instead of a timing-safe compare,
+// and took it from the query string, where it ends up in server logs and browser history.
 app.post(
   '/api/courts/:courtName/image',
+  requireDevAuth,
   express.raw({ type: PHOTO_TYPES, limit: '5mb' }),
   async (req, res) => {
     try {
-      const devPassword = req.query.password;
-      if (!devPassword || devPassword !== (process.env.DEV_PASSWORD || 'vibe123')) {
-        return res.status(403).json({ error: 'Unauthorized' });
-      }
-
       const courtName = decodeURIComponent(req.params.courtName);
       const mimeType = sniffImageType(req.body);
       if (!mimeType) {
@@ -1523,7 +1524,7 @@ app.post(
       if (!game) {
         return res.status(404).json({ error: 'Game not found' });
       }
-      if (!token || game.hostToken !== token) {
+      if (!isHost(game, token)) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
 
@@ -1591,7 +1592,7 @@ app.put('/api/games/:id/court-image/:imageId', async (req, res) => {
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
-    if (!token || game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -1611,7 +1612,7 @@ app.put('/api/games/:id/court-image-none', async (req, res) => {
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
-    if (!token || game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -1632,7 +1633,7 @@ app.delete('/api/games/:id/court-images/:imageId', async (req, res) => {
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
-    if (!token || game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -1654,7 +1655,7 @@ app.post('/api/games/:id/announcement', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    if (game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
@@ -1706,7 +1707,7 @@ app.post('/api/games/:id/announcement-individual', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     
-    if (game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
@@ -1759,7 +1760,7 @@ app.delete('/api/games/:id/out-players/:playerId', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
 
-    if (game.hostToken !== token) {
+    if (!isHost(game, token)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 

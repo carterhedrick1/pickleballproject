@@ -558,7 +558,10 @@ el('courtImageForm').addEventListener('submit', async (e) => {
 
   try {
     const buffer = await file.arrayBuffer();
-    const res = await fetch(`/api/courts/${encodeURIComponent(court)}/image?password=${encodeURIComponent(devPassword)}`, {
+    // The sign-in cookie authenticates this, same as every other /api/dev call. It used to
+    // put a `devPassword` variable in the query string - a variable that was never defined
+    // anywhere on this page, so this upload threw before it sent anything.
+    const res = await fetch(`/api/courts/${encodeURIComponent(court)}/image`, {
       method: 'POST',
       body: buffer,
       headers: { 'Content-Type': file.type }

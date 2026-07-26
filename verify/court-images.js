@@ -162,10 +162,19 @@ function makeGame(location, courtNumber, time) {
   check(allCourts.status === 200, `the global court list answers (HTTP ${allCourts.status})`);
 
   console.log('\n10. The dev-only single court image refuses anonymous uploads');
+  // 401 rather than 403: this route uses the developer area's own sign-in (requireDevAuth),
+  // which answers "Not signed in" - it no longer keeps a second copy of the password check.
   const devUpload = await fetch(`${BASE}/api/courts/${encodeURIComponent(COURT)}/image`, {
     method: 'POST', headers: { 'Content-Type': 'image/png' }, body: PNG_1PX,
   });
-  check(devUpload.status === 403, `no dev password -> HTTP ${devUpload.status} (expected 403)`);
+  check(devUpload.status === 401, `not signed in -> HTTP ${devUpload.status} (expected 401)`);
+
+  const devUploadAuthed = await fetch(`${BASE}/api/courts/${encodeURIComponent(COURT)}/image`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'image/png', 'x-dev-password': process.env.DEV_PASSWORD || 'vibe123' },
+    body: PNG_1PX,
+  });
+  check(devUploadAuthed.status === 201, `signed in -> HTTP ${devUploadAuthed.status} (expected 201)`);
 
   console.log('\n11. Clearing the selection');
   const clearNoToken = await req('PUT', `/api/games/${gameId}/court-image-none`);
