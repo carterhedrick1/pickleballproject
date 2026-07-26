@@ -25,6 +25,19 @@ const FORM_PHONE = '5555550199';   // used when the script submits the create fo
 const JOIN_PHONE = '5555550777';   // used when the script signs up as a player
 const FIXTURE_PHONES = [HOST_PHONE, FORM_PHONE, JOIN_PHONE];
 
+// Courts the fixtures invent. Creating a game now remembers its location for the next host, so
+// these would otherwise pile up in the create form's picker. Keys are normalized the same way
+// database.js normalizes them (trimmed, whitespace-collapsed, lowercased).
+const FIXTURE_LOCATIONS = [
+  'Oak Park Courts',
+  'Riverside Athletic Club',
+  'Lakeside Park',
+  'Sunset Park Courts',   // typed by the create-form screenshot
+];
+const FIXTURE_LOCATION_KEYS = FIXTURE_LOCATIONS.map(
+  (name) => name.trim().replace(/\s+/g, ' ').toLowerCase()
+);
+
 const inDays = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 
 async function post(baseUrl, pathname, body) {
@@ -136,7 +149,8 @@ async function verify(baseUrl, fixtures) {
 /**
  * Deletes fixture rows from the local SQLite database.
  * Only rows that carry MARKER and a fixture 555 phone are eligible, so this cannot remove a
- * real game even if the marker string were somehow reused.
+ * real game even if the marker string were somehow reused. The side tables a fixture run also
+ * writes - saved courts and roster entries - are swept by their own narrow criteria.
  */
 function cleanup() {
   const sqlite3 = require('sqlite3');
@@ -147,22 +161,42 @@ function cleanup() {
         `WHERE host_phone IN (${FIXTURE_PHONES.map(() => '?').join(',')})
            AND COALESCE(json_extract(data, '$.message'), '') LIKE ?`;
       const params = [...FIXTURE_PHONES, `%${MARKER}%`];
+
+      // Runs after the games are gone: the invented courts, the roster rows a fixture signup
+      // creates, and the SMS contexts. Each one only ever matches fixture data.
+      const sweepSideTables = (done) => {
+        const phoneMarks = FIXTURE_PHONES.map(() => '?').join(',');
+        db.run(
+          `DELETE FROM host_roster WHERE host_phone IN (${phoneMarks}) OR player_phone IN (${phoneMarks})`,
+          [...FIXTURE_PHONES, ...FIXTURE_PHONES],
+          () => {
+            db.run(
+              `DELETE FROM locations WHERE name_key IN (${FIXTURE_LOCATION_KEYS.map(() => '?').join(',')})`,
+              FIXTURE_LOCATION_KEYS,
+              () => {
+                db.run('DELETE FROM sms_contexts WHERE phone_number IN (?,?,?)', FIXTURE_PHONES, done);
+              }
+            );
+          }
+        );
+      };
+
       db.all(`SELECT id FROM games ${where}`, params, (selErr, rows) => {
         if (selErr) { db.close(); return reject(selErr); }
         if (!rows.length) {
-          db.run('DELETE FROM sms_contexts WHERE phone_number IN (?,?,?)', FIXTURE_PHONES,
-            () => db.close(() => resolve(0)));
+          sweepSideTables(() => db.close(() => resolve(0)));
           return;
         }
         db.run(`DELETE FROM games ${where}`, params, function (delErr) {
           if (delErr) { db.close(); return reject(delErr); }
           const removed = this.changes;
-          db.run('DELETE FROM sms_contexts WHERE phone_number IN (?,?,?)', FIXTURE_PHONES,
-            () => db.close(() => resolve(removed)));
+          sweepSideTables(() => db.close(() => resolve(removed)));
         });
       });
     });
   });
 }
 
-module.exports = { seed, verify, cleanup, MARKER, HOST_PHONE, FORM_PHONE, JOIN_PHONE, inDays };
+module.exports = {
+  seed, verify, cleanup, MARKER, HOST_PHONE, FORM_PHONE, JOIN_PHONE, inDays, FIXTURE_LOCATIONS
+};

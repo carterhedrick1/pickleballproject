@@ -60,6 +60,7 @@ async function req(method, path, body) {
   check(mismatched === 0, `everyone's confirmation matched reality (${mismatched} mismatched)`);
 
   await req('DELETE', `/api/games/${gameId}`, { token: hostToken, reason: 'capacity race cleanup' });
+  await require('./_cleanup').sweepLocalTestRows(BASE);
   console.log(`\n=== ${failures} failure(s) ===\n`);
   process.exit(failures ? 1 : 0);
 })();

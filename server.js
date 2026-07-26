@@ -8,8 +8,14 @@ require('dotenv').config();
 const { 
   initializeDatabase, 
   saveGame, 
-  getGame, 
+  getGame,
   getAllGames,
+  getGamesByHostPhone,
+  addLocation,
+  getLocations,
+  upsertRosterEntry,
+  recordRosterSighting,
+  getRosterForHost,
   closeDatabaseConnection,
   isProduction
 } = require('./database');
@@ -112,6 +118,17 @@ app.post('/api/test-reminders', (req, res, next) => {
   }
 });
 
+// Courts anyone in the group has played at, for the create-game picker.
+app.get('/api/locations', async (req, res) => {
+  try {
+    const locations = await getLocations();
+    res.json({ locations });
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    res.status(500).json({ error: 'Failed to fetch locations' });
+  }
+});
+
 app.post('/api/games', async (req, res) => {
   try {
     console.log('[SERVER] Received create game request:', req.body);
@@ -140,8 +157,15 @@ app.post('/api/games', async (req, res) => {
     console.log('  - notificationPreferences:', gameData.notificationPreferences);
     
     await saveGame(gameId, gameData, hostToken, formattedHostPhone);
-    
-    const response = { 
+
+    // Remember the court for the next host's picker. Never fail a game save over it.
+    try {
+      await addLocation(gameData.location);
+    } catch (locationError) {
+      console.error('[SERVER] Could not save location for reuse:', locationError);
+    }
+
+    const response = {
       gameId,
       hostToken,
       playerLink: `/game.html?id=${gameId}`,
@@ -189,7 +213,8 @@ app.get('/api/games/:id', async (req, res) => {
       return res.json(game);
     }
 
-    const { hostToken, ...publicGame } = game;
+    // hostNotes are the host's private reminders ("gate code 4417") - never public.
+    const { hostToken, hostNotes, ...publicGame } = game;
     res.json(publicGame);
   } catch (error) {
     console.error('Error fetching game:', error);
@@ -232,7 +257,14 @@ app.put('/api/games/:id', async (req, res) => {
     console.log('[SERVER] Saving game with notification preferences:', game.notificationPreferences);
     
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
-    
+
+    // A host can move the game to a new court; remember that one too. Never fail the update over it.
+    try {
+      await addLocation(game.location);
+    } catch (locationError) {
+      console.error('[SERVER] Could not save location for reuse:', locationError);
+    }
+
     // Verify the save worked by reading it back
     const savedGame = await getGame(gameId);
     console.log('[SERVER] Verified saved notification preferences:', savedGame.notificationPreferences);
@@ -246,6 +278,37 @@ app.put('/api/games/:id', async (req, res) => {
   } catch (error) {
     console.error('Error updating game:', error);
     res.status(500).json({ error: 'Failed to update game' });
+  } finally {
+    releaseLock();
+  }
+});
+
+// Save the host's private notes for a game. Deliberately its own route rather than the
+// blanket Object.assign PUT above, and deliberately with no expiry or cancelled check -
+// a note about a game that already happened is still worth keeping.
+app.put('/api/games/:id/notes', async (req, res) => {
+  const gameId = req.params.id;
+  const releaseLock = await acquireGameLock(gameId);
+  try {
+    const { token, hostNotes } = req.body;
+
+    const game = await getGame(gameId);
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+
+    if (!token || game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    game.hostNotes = String(hostNotes == null ? '' : hostNotes).slice(0, 5000);
+    await saveGame(gameId, game, game.hostToken, game.hostPhone);
+    releaseLock();
+
+    res.json({ success: true, hostNotes: game.hostNotes });
+  } catch (error) {
+    console.error('Error saving host notes:', error);
+    res.status(500).json({ error: 'Failed to save notes' });
   } finally {
     releaseLock();
   }
@@ -318,39 +381,44 @@ app.get('/api/games/by-phone/:phone', async (req, res) => {
   try {
     const phoneNumber = formatPhoneNumber(req.params.phone);
     console.log(`[PHONE LOOKUP] Formatted phone: ${phoneNumber}`);
-    
-    const allGames = await getAllGames();
+
+    // ?all=1 is the full host history (My Games). Without it the response keeps its old
+    // shape: cancelled games drop off after a week.
+    const includeAll = req.query.all === '1';
+
+    const games = await getGamesByHostPhone(phoneNumber);
     const hostGames = [];
-    
-    // Find all games where this phone number is the host
-    for (const [gameId, gameData] of Object.entries(allGames)) {
-      // Get the full game data including hostPhone and hostToken
-      const fullGame = await getGame(gameId);
-      
-      if (fullGame && fullGame.hostPhone === phoneNumber) {
+
+    for (const fullGame of games) {
+      const gameId = fullGame.gameId;
+
+      if (!includeAll) {
         // Don't include cancelled games older than 7 days
         const gameDate = new Date(fullGame.date);
         const daysSinceGame = (new Date() - gameDate) / (1000 * 60 * 60 * 24);
-        
-        if (!fullGame.cancelled || daysSinceGame <= 7) {
-          hostGames.push({
-            gameId,
-            location: fullGame.location,
-            courtNumber: fullGame.courtNumber,
-            date: fullGame.date,
-            time: fullGame.time,
-            cancelled: fullGame.cancelled || false,
-            playerCount: fullGame.players ? fullGame.players.length : 0,
-            totalPlayers: fullGame.totalPlayers,
-            waitlistCount: fullGame.waitlist ? fullGame.waitlist.length : 0,
-            managementLink: `/manage.html?id=${gameId}&token=${fullGame.hostToken}`,
-            playerLink: `/game.html?id=${gameId}`,
-            created: fullGame.created
-          });
-        }
+        if (fullGame.cancelled && daysSinceGame > 7) continue;
       }
+
+      hostGames.push({
+        gameId,
+        location: fullGame.location,
+        courtNumber: fullGame.courtNumber,
+        date: fullGame.date,
+        time: fullGame.time,
+        duration: fullGame.duration,
+        cancelled: fullGame.cancelled || false,
+        cancellationReason: fullGame.cancellationReason || null,
+        registrationMode: fullGame.registrationMode || 'fcfs',
+        hostNotes: fullGame.hostNotes || '',
+        playerCount: fullGame.players ? fullGame.players.length : 0,
+        totalPlayers: fullGame.totalPlayers,
+        waitlistCount: fullGame.waitlist ? fullGame.waitlist.length : 0,
+        managementLink: `/manage.html?id=${gameId}&token=${fullGame.hostToken}`,
+        playerLink: `/game.html?id=${gameId}`,
+        created: fullGame.created
+      });
     }
-    
+
     // Sort by date (newest first)
     hostGames.sort((a, b) => new Date(b.date) - new Date(a.date));
     
@@ -365,6 +433,135 @@ app.get('/api/games/by-phone/:phone', async (req, res) => {
   } catch (error) {
     console.error(`[PHONE LOOKUP] Error looking up games:`, error);
     res.status(500).json({ error: 'Failed to lookup games' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Host roster
+//
+// Auth is the host's phone number and nothing more. That matches the existing
+// /api/games/by-phone route, which already hands out management links (and therefore full
+// control of a game) to anyone who knows the number. This is a private app for one friend
+// group, so the accepted risk is the same one already taken there; if that ever changes,
+// both routes need a real token together.
+// ---------------------------------------------------------------------------
+
+// Everyone this host has ever played with: their saved roster rows, plus anyone who has
+// appeared in one of their games. Roster values win over whatever a player typed at signup.
+app.get('/api/roster/:phone', async (req, res) => {
+  try {
+    const hostPhone = formatPhoneNumber(req.params.phone);
+
+    const [rosterRows, games] = await Promise.all([
+      getRosterForHost(hostPhone),
+      getGamesByHostPhone(hostPhone)
+    ]);
+
+    const byPhone = new Map();
+
+    for (const game of games) {
+      const countedThisGame = new Set();
+      const entries = [
+        ...(game.players || []),
+        ...(game.waitlist || []),
+        ...(game.outPlayers || [])
+      ];
+
+      for (const entry of entries) {
+        if (!entry || !entry.phone) continue;                 // phoneless entries can't be matched
+        const phone = formatPhoneNumber(entry.phone);
+        if (!phone || phone === hostPhone) continue;          // the host is not on their own roster
+
+        let record = byPhone.get(phone);
+        if (!record) {
+          record = {
+            phone,
+            name: '',
+            duprId: '',
+            duprRating: null,
+            isAndroid: null,
+            lastSeen: null,
+            gamesCount: 0
+          };
+          byPhone.set(phone, record);
+        }
+
+        // A player on both the waitlist and the out list is still one game.
+        if (!countedThisGame.has(phone)) {
+          countedThisGame.add(phone);
+          record.gamesCount += 1;
+        }
+
+        const when = entry.joinedAt || entry.outAt || game.created || game.date || null;
+        if (when && (!record.lastSeen || when > record.lastSeen)) {
+          record.lastSeen = when;
+          if (entry.name) record.name = entry.name;           // most recent name they signed up with
+        } else if (entry.name && !record.name) {
+          record.name = entry.name;
+        }
+      }
+    }
+
+    for (const row of rosterRows) {
+      const record = byPhone.get(row.playerPhone) || {
+        phone: row.playerPhone,
+        name: '',
+        duprId: '',
+        duprRating: null,
+        isAndroid: null,
+        lastSeen: null,
+        gamesCount: 0
+      };
+      if (row.name) record.name = row.name;
+      record.duprId = row.duprId;
+      record.duprRating = row.duprRating;
+      record.isAndroid = row.isAndroid;
+      byPhone.set(row.playerPhone, record);
+    }
+
+    const roster = [...byPhone.values()].sort((a, b) =>
+      (a.name || a.phone).localeCompare(b.name || b.phone, undefined, { sensitivity: 'base' })
+    );
+
+    res.json({ phoneNumber: hostPhone, count: roster.length, roster });
+  } catch (error) {
+    console.error('[ROSTER] Error building roster:', error);
+    res.status(500).json({ error: 'Failed to load roster' });
+  }
+});
+
+// Host edits one player's details.
+app.put('/api/roster/:phone/:playerPhone', async (req, res) => {
+  try {
+    const hostPhone = formatPhoneNumber(req.params.phone);
+    const playerPhone = formatPhoneNumber(req.params.playerPhone);
+
+    if (!hostPhone || !playerPhone) {
+      return res.status(400).json({ error: 'A host phone number and a player phone number are required' });
+    }
+
+    const { name, duprId, duprRating } = req.body || {};
+    const cleanName = name == null ? '' : String(name).trim().slice(0, 100);
+    const cleanDuprId = duprId == null ? '' : String(duprId).trim().slice(0, 50);
+
+    let cleanRating = null;
+    if (duprRating !== undefined && duprRating !== null && String(duprRating).trim() !== '') {
+      const parsed = Number(duprRating);
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 10) {
+        return res.status(400).json({ error: 'DUPR rating should be a number between 0 and 10 (for example 3.75)' });
+      }
+      cleanRating = parsed;
+    }
+
+    await upsertRosterEntry(hostPhone, playerPhone, cleanName, cleanDuprId, cleanRating);
+
+    res.json({
+      success: true,
+      player: { phone: playerPhone, name: cleanName, duprId: cleanDuprId, duprRating: cleanRating }
+    });
+  } catch (error) {
+    console.error('[ROSTER] Error saving roster entry:', error);
+    res.status(500).json({ error: 'Failed to save roster entry' });
   }
 });
 
@@ -441,7 +638,22 @@ app.post('/api/games/lookup-and-notify', async (req, res) => {
   }
 });
 
-// Add player to game (regular signup)
+// Quietly builds the host's roster as people sign up. A roster row is a nicety - a failure
+// here must never turn a successful signup into an error, so it only logs.
+async function noteRosterSighting(hostPhone, playerData, isAndroid) {
+  if (!hostPhone || !playerData || !playerData.phone) return;
+  try {
+    await recordRosterSighting(
+      formatPhoneNumber(hostPhone),
+      formatPhoneNumber(playerData.phone),
+      playerData.name,
+      isAndroid
+    );
+  } catch (error) {
+    console.error('[ROSTER] Could not record sighting:', error);
+  }
+}
+
 // Add player to game (regular signup)
 app.post('/api/games/:id/players', async (req, res) => {
   const gameId = req.params.id;
@@ -456,25 +668,32 @@ app.post('/api/games/:id/players', async (req, res) => {
     }
 
     const { name, phone, action } = req.body;
-    
+
+    // Which phone somebody signed up on. Captured silently for now - nothing in the app
+    // behaves differently because of it yet.
+    const isAndroid = /Android/i.test(req.headers['user-agent'] || '');
+
     // Handle "I'm Out" responses
     if (action === 'out') {
       const playerData = validatePlayerData(name, phone);
-      
+      playerData.isAndroid = isAndroid;
+
       // Add to "out" list
       if (!game.outPlayers) {
         game.outPlayers = [];
       }
-      
+
       const outPlayer = {
         id: Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
         ...playerData,
         joinedAt: new Date().toISOString()
       };
-      
+
       game.outPlayers.push(outPlayer);
       await saveGame(gameId, game, game.hostToken, game.hostPhone);
       releaseLock();
+
+      await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
 
       // Send SMS confirmation if phone provided
       let smsResult = null;
@@ -533,7 +752,9 @@ app.post('/api/games/:id/players', async (req, res) => {
         return res.status(400).json({ error: validationError.message });
       }
     }
-    
+
+    playerData.isAndroid = isAndroid;
+
     // Check if player already exists
     const existingCheck = checkExistingPlayer(game, playerData.phone);
     if (existingCheck.exists) {
@@ -546,6 +767,8 @@ app.post('/api/games/:id/players', async (req, res) => {
     // MOVED: Save game BEFORE sending notifications
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
     releaseLock();
+
+    await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
 
     // Send confirmation SMS to the player
     let smsResult = null;
@@ -648,6 +871,10 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
     const result = addPlayerToGame(game, playerData, forceWaitlist);
     await saveGame(gameId, game, game.hostToken, game.hostPhone);
     releaseLock();
+
+    // The host typed this in on their own browser, so the user agent says nothing about the
+    // player's phone. Record the sighting, but leave the Android flag unknown.
+    await noteRosterSighting(game.hostPhone, playerData, null);
 
     // Send SMS confirmation to the added player
     let smsResult = null;

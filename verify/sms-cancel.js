@@ -70,6 +70,7 @@ const check = (cond, msg) => { console.log(`  ${cond ? 'PASS' : 'FAIL'}  ${msg}`
   check(before === after, `roster unchanged by a repeat cancel (${after || 'empty'})`);
 
   await req('DELETE', `/api/games/${gameId}`, { token: hostToken, reason: 'sms cancel test cleanup' });
+  await require('./_cleanup').sweepLocalTestRows(BASE);
   console.log(`\n=== ${failures} failure(s) ===\n`);
   process.exit(failures ? 1 : 0);
 })();

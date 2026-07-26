@@ -5,14 +5,20 @@
 const BASE = process.argv[2] || 'http://localhost:3002';
 const DO_WRITE = process.argv.includes('--create');
 
+// A few checks need a host with a phone number, and players who have one too - that is the
+// only way to see the roster fill up or to compare the two host-history views. Those are only
+// safe against a local dev-mode server, so they are skipped anywhere else.
+const IS_LOCAL = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(BASE);
+const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36';
+
 const ok = (m) => console.log(`  PASS  ${m}`);
 const bad = (m) => { console.log(`  FAIL  ${m}`); failures++; };
 let failures = 0;
 
-async function req(method, path, body) {
+async function req(method, path, body, extraHeaders) {
   const res = await fetch(BASE + path, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(extraHeaders || {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
@@ -43,6 +49,18 @@ async function req(method, path, body) {
     const r = await req('GET', asset);
     r.status === 200 ? ok(`${asset} (${r.text.length} bytes)`) : bad(`${asset} -> HTTP ${r.status}`);
   }
+
+  console.log('\n2c. Saved courts (the create form\'s location picker reads these)');
+  const locs = await req('GET', '/api/locations');
+  const locations = locs.json?.locations || [];
+  locs.status === 200 && Array.isArray(locations)
+    ? ok(`/api/locations returned ${locations.length} court(s)`)
+    : bad(`/api/locations -> HTTP ${locs.status}: ${locs.text.slice(0, 120)}`);
+  const SEEDS = ['Homoly Home Court', 'Chicken and Pickle', 'JustPaddles', 'Char Bar', 'Argosy', 'Wimbledom'];
+  const missingSeeds = SEEDS.filter((s) => !locations.includes(s));
+  missingSeeds.length === 0
+    ? ok('all six seeded courts are present')
+    : bad(`seeded courts missing: ${missingSeeds.join(', ')}`);
 
   if (!DO_WRITE) {
     console.log('\n(read-only mode: skipping game creation)');
@@ -99,6 +117,105 @@ async function req(method, path, body) {
   (g.players || []).length === 4 ? ok('roster capped at 4') : bad(`roster has ${(g.players || []).length}, expected 4`);
   (g.waitlist || []).length === 1 ? ok('1 player on waitlist') : bad(`waitlist has ${(g.waitlist || []).length}, expected 1`);
 
+  console.log('\n8b. Which phone somebody signed up on is recorded');
+  await req('POST', `/api/games/${gameId}/players`, { name: 'Pixel Pat' }, { 'User-Agent': ANDROID_UA });
+  const withPat = (await req('GET', `/api/games/${gameId}`)).json || {};
+  const everyone = [...(withPat.players || []), ...(withPat.waitlist || []), ...(withPat.outPlayers || [])];
+  const pat = everyone.find((p) => p.name === 'Pixel Pat');
+  const alice = everyone.find((p) => p.name === 'Alice');
+  pat?.isAndroid === true ? ok('an Android signup is flagged') : bad(`Pixel Pat isAndroid = ${pat?.isAndroid}`);
+  alice?.isAndroid === false ? ok('a non-Android signup is flagged false') : bad(`Alice isAndroid = ${alice?.isAndroid}`);
+
+  console.log('\n9a. The host can save private notes on a game');
+  const noNote = await req('PUT', `/api/games/${gameId}/notes`, { hostNotes: 'sneaky' });
+  noNote.status === 403 ? ok('no token -> 403') : bad(`notes without a token -> HTTP ${noNote.status}, expected 403`);
+
+  const NOTE = 'Gate code 4417. Bring the spare net.';
+  const saveNote = await req('PUT', `/api/games/${gameId}/notes`, { token: hostToken, hostNotes: NOTE });
+  saveNote.status === 200 ? ok('note saved with the host token') : bad(`notes -> HTTP ${saveNote.status}: ${saveNote.text.slice(0, 150)}`);
+
+  const asHostAgain = await req('GET', `/api/games/${gameId}?token=${hostToken}`);
+  asHostAgain.json?.hostNotes === NOTE ? ok('the host reads their note back') : bad(`host GET hostNotes = ${JSON.stringify(asHostAgain.json?.hostNotes)}`);
+
+  const asPlayer = await req('GET', `/api/games/${gameId}`);
+  'hostNotes' in (asPlayer.json || {}) ? bad('PRIVACY: hostNotes visible on the public game page') : ok('players never see the note');
+
+  console.log('\n9b. The roster endpoint answers');
+  const emptyRoster = await req('GET', '/api/roster/5555559009');
+  emptyRoster.status === 200 && Array.isArray(emptyRoster.json?.roster)
+    ? ok(`a host with no games gets an empty roster (${emptyRoster.json.roster.length})`)
+    : bad(`/api/roster -> HTTP ${emptyRoster.status}: ${emptyRoster.text.slice(0, 150)}`);
+
+  const localGameIds = [];
+  if (!IS_LOCAL) {
+    console.log('\n9c. Host history and roster checks (skipped - only safe against a local server)');
+  } else {
+    console.log('\n9c. Host history and roster, as a host with a phone number');
+    const HOST_PHONE = '5555559001';
+    const PLAYER_PHONE = '5555559002';
+    const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+
+    // An old game that was cancelled: the default view drops it after a week, ?all=1 keeps it.
+    const old = await req('POST', '/api/games', {
+      location: 'Homoly Home Court', organizerName: 'Scott', organizerPhone: HOST_PHONE,
+      organizerPlaying: false, date: daysAgo(30), time: '18:00', duration: 90,
+      totalPlayers: 4, message: 'Verification - old cancelled game', registrationMode: 'fcfs',
+    });
+    localGameIds.push(old.json?.gameId);
+    await req('DELETE', `/api/games/${old.json?.gameId}`, { token: old.json?.hostToken, reason: 'Rained out' });
+
+    // A current game, joined by somebody on an Android phone.
+    const live = await req('POST', '/api/games', {
+      location: 'Homoly Home Court', organizerName: 'Scott', organizerPhone: HOST_PHONE,
+      organizerPlaying: false, date: '2026-08-20', time: '18:00', duration: 90,
+      totalPlayers: 4, message: 'Verification - host history game', registrationMode: 'fcfs',
+    });
+    localGameIds.push(live.json?.gameId);
+    await req('POST', `/api/games/${live.json?.gameId}/players`,
+      { name: 'Signup Typed Name', phone: PLAYER_PHONE }, { 'User-Agent': ANDROID_UA });
+
+    const dflt = await req('GET', `/api/games/by-phone/${HOST_PHONE}`);
+    const all = await req('GET', `/api/games/by-phone/${HOST_PHONE}?all=1`);
+    const dfltIds = (dflt.json?.games || []).map((g) => g.gameId);
+    const allIds = (all.json?.games || []).map((g) => g.gameId);
+    dfltIds.every((id) => allIds.includes(id))
+      ? ok(`?all=1 is a superset of the default view (${dfltIds.length} of ${allIds.length})`)
+      : bad(`default view has games ?all=1 does not: ${dfltIds.filter((id) => !allIds.includes(id))}`);
+    allIds.includes(old.json?.gameId) ? ok('?all=1 keeps the old cancelled game') : bad('?all=1 dropped the old cancelled game');
+    !dfltIds.includes(old.json?.gameId) ? ok('the default view drops it, as before') : bad('the default view still shows a cancelled game from 30 days ago');
+
+    const oldCard = (all.json?.games || []).find((g) => g.gameId === old.json?.gameId);
+    oldCard?.cancellationReason === 'Rained out' ? ok('the cancellation reason comes through') : bad(`cancellationReason = ${JSON.stringify(oldCard?.cancellationReason)}`);
+    oldCard?.registrationMode === 'fcfs' && oldCard?.duration === 90
+      ? ok('registrationMode and duration come through')
+      : bad(`registrationMode=${oldCard?.registrationMode} duration=${oldCard?.duration}`);
+
+    await req('PUT', `/api/games/${live.json?.gameId}/notes`, { token: live.json?.hostToken, hostNotes: 'Bring cones' });
+    const allAgain = await req('GET', `/api/games/by-phone/${HOST_PHONE}?all=1`);
+    const liveCard = (allAgain.json?.games || []).find((g) => g.gameId === live.json?.gameId);
+    liveCard?.hostNotes === 'Bring cones' ? ok('notes show up in the host history') : bad(`hostNotes in history = ${JSON.stringify(liveCard?.hostNotes)}`);
+
+    const r1 = await req('GET', `/api/roster/${HOST_PHONE}`);
+    const player = (r1.json?.roster || []).find((p) => p.phone === PLAYER_PHONE);
+    player ? ok('somebody who joined a game is on the roster') : bad(`roster: ${JSON.stringify(r1.json?.roster)}`);
+    player?.isAndroid === 1 ? ok('their Android signup was captured') : bad(`roster isAndroid = ${player?.isAndroid}`);
+    player?.gamesCount === 1 ? ok('games played counted') : bad(`gamesCount = ${player?.gamesCount}`);
+    !(r1.json?.roster || []).some((p) => p.phone === HOST_PHONE) ? ok('the host is not on their own roster') : bad('the host appears on their own roster');
+
+    const put = await req('PUT', `/api/roster/${HOST_PHONE}/${PLAYER_PHONE}`,
+      { name: 'Host Typed Name', duprId: 'DUPR-4417', duprRating: '3.75' });
+    put.status === 200 ? ok('the host can edit a roster entry') : bad(`roster PUT -> HTTP ${put.status}: ${put.text.slice(0, 150)}`);
+
+    const r2 = await req('GET', `/api/roster/${HOST_PHONE}`);
+    const edited = (r2.json?.roster || []).find((p) => p.phone === PLAYER_PHONE);
+    edited?.name === 'Host Typed Name' ? ok('the host-typed name wins over the signup name') : bad(`name = ${JSON.stringify(edited?.name)}`);
+    edited?.duprId === 'DUPR-4417' && edited?.duprRating === 3.75 ? ok('DUPR id and rating persist') : bad(`duprId=${edited?.duprId} duprRating=${edited?.duprRating}`);
+    edited?.isAndroid === 1 ? ok('the edit did not wipe the Android flag') : bad(`isAndroid after edit = ${edited?.isAndroid}`);
+
+    const badRating = await req('PUT', `/api/roster/${HOST_PHONE}/${PLAYER_PHONE}`, { name: 'x', duprRating: 'abc' });
+    badRating.status === 400 ? ok('a nonsense DUPR rating is rejected') : bad(`bad rating -> HTTP ${badRating.status}, expected 400`);
+  }
+
   console.log('\n9. Host dashboard access with token');
   const mg = await req('GET', `/manage.html?id=${gameId}&token=${hostToken}`);
   mg.status === 200 ? ok('manage page loads') : bad(`manage page -> HTTP ${mg.status}`);
@@ -113,6 +230,15 @@ async function req(method, path, body) {
     ok(`test game cancelled (notifications sent: ${del.json?.notificationCount ?? 0})`);
   } else {
     bad(`cleanup failed HTTP ${del.status} - game ${gameId} left behind, token ${hostToken}`);
+  }
+
+  // The host-history section above writes roster rows and games that a cancel would only mark
+  // cancelled, so locally they are removed from the database outright.
+  if (IS_LOCAL) {
+    const { cleanupTestRosterAndLocations, deleteGamesById } = require('./_cleanup');
+    const removed = await deleteGamesById(localGameIds.filter(Boolean));
+    await cleanupTestRosterAndLocations();
+    ok(`host-history fixtures removed (${removed} game(s), roster rows cleared)`);
   }
 
   console.log(`\n=== ${failures} failure(s) ===`);

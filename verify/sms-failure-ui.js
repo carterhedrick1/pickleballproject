@@ -166,6 +166,8 @@ function cdp(ws, method, params = {}) {
     }).catch(() => {});
   }
 
+  await require('./_cleanup').sweepLocalTestRows(BASE);
+
   console.log(`\n=== ${failures} failure(s) ===\n`);
   process.exit(failures ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR:', e.message); process.exit(1); });

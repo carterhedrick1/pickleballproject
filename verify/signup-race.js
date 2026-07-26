@@ -56,6 +56,7 @@ async function req(method, path, body) {
 
   // Clean up so repeated runs do not pile up games.
   await req('DELETE', `/api/games/${gameId}`, { token: hostToken, reason: 'race test cleanup' });
+  await require('./_cleanup').sweepLocalTestRows(BASE);
 
   process.exit(missing.length ? 1 : 0);
 })();

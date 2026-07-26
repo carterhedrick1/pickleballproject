@@ -80,12 +80,30 @@ function makeGame(hours, extra = {}) {
   for (const s of r1) console.log(`       ${s.phone}: ${s.message.slice(0, 92)}`);
 
   console.log('\n=== Wording is accurate (no "tomorrow" for a game today) ===');
-  const todayMsg = r1.find((s) => /today/.test(s.message));
-  const tomorrowMsg = r1.find((s) => /tomorrow/.test(s.message));
-  todayMsg ? ok('game 2h away says "today"') : bad('game 2h away did not say "today"');
-  tomorrowMsg || r1.some((s) => / on /.test(s.message))
-    ? ok('game 12h away uses "tomorrow" or an explicit date')
-    : bad('game 12h away had no sensible day wording');
+  // Which day each game really falls on depends on the time of day this runs: 12 hours from
+  // 8am is still today, 12 hours from 8pm is tomorrow. Work out the right word per game rather
+  // than assuming, or this passes and fails depending on when you happen to run it.
+  const centralToday = offsetGame(0).date;
+  const expectedWord = (hours) => (offsetGame(hours).date === centralToday ? 'today' : 'tomorrow');
+  // Both games are at Test Court, so they are told apart by the start time in the message.
+  const messageFor = (hours) => {
+    const label = smsHandler.formatTimeForSMS(offsetGame(hours).time);
+    return r1.find((s) => s.message.includes(`at ${label} at`));
+  };
+
+  for (const hours of [2, 12]) {
+    const word = expectedWord(hours);
+    const msg = messageFor(hours);
+    // A reminder only goes out inside 24 hours, so the answer is always today or tomorrow -
+    // there is no explicit-date wording to allow for, and so nothing to hide a wrong word behind.
+    if (!msg) {
+      bad(`game ${hours}h away: no reminder found for its start time`);
+    } else if (new RegExp(`\\b${word}\\b`).test(msg.message)) {
+      ok(`game ${hours}h away says "${word}", which is correct`);
+    } else {
+      bad(`game ${hours}h away should say "${word}": ${msg.message.slice(0, 80)}`);
+    }
+  }
   r1.every((s) => !(/tomorrow/.test(s.message) && /today/.test(s.message)))
     ? ok('no message contains contradictory wording')
     : bad('a message said both today and tomorrow');

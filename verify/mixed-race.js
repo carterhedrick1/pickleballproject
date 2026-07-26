@@ -99,6 +99,7 @@ const check = (cond, msg) => { console.log(`  ${cond ? 'PASS' : 'FAIL'}  ${msg}`
   check(lost.length === 0, `nobody lost${lost.length ? ': ' + lost.join(', ') : ''}`);
 
   await req('DELETE', `/api/games/${gameId}`, { token: hostToken, reason: 'mixed race cleanup' });
+  await require('./_cleanup').sweepLocalTestRows(BASE);
   console.log(`\n=== ${failures} failure(s) ===\n`);
   process.exit(failures ? 1 : 0);
 })();

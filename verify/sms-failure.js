@@ -185,6 +185,8 @@ async function retryPolicyChecks() {
   });
   del.status === 200 ? ok('test game cancelled') : bad(`cleanup failed HTTP ${del.status}, game ${gameId} left behind`);
 
+  await require('./_cleanup').sweepLocalTestRows(BASE);
+
   console.log(`\n=== ${failures} failure(s) ===\n`);
   process.exit(failures ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR:', e); process.exit(1); });
