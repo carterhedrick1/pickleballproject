@@ -63,6 +63,8 @@ const {
 
 const { withGameLock, acquireGameLock } = require('./utils/game-lock');
 
+const { routeFailed } = require('./utils/route-error');
+
 const { isGameUpcoming } = require('./utils/central-time');
 
 const {
@@ -146,8 +148,7 @@ app.post('/api/test-reminders', (req, res, next) => {
     await checkAndSendReminders();
     res.json({ success: true, message: 'Reminder check completed' });
   } catch (error) {
-    console.error('Manual reminder test failed:', error);
-    res.status(500).json({ error: 'Failed to run reminder check' });
+    routeFailed(req, res, error, 'Failed to run reminder check');
   }
 });
 
@@ -157,8 +158,7 @@ app.get('/api/locations', async (req, res) => {
     const locations = await getLocations();
     res.json({ locations });
   } catch (error) {
-    console.error('Error fetching locations:', error);
-    res.status(500).json({ error: 'Failed to fetch locations' });
+    routeFailed(req, res, error, 'Failed to fetch locations');
   }
 });
 
@@ -219,8 +219,7 @@ app.post('/api/games', async (req, res) => {
     console.log('[SERVER] Game created successfully:', gameId);
     res.status(201).json(response);
   } catch (error) {
-    console.error('[SERVER] Error creating game:', error);
-    res.status(500).json({ error: 'Failed to create game' });
+    routeFailed(req, res, error, 'Failed to create game');
   }
 });
 
@@ -250,8 +249,7 @@ app.get('/api/games/:id', async (req, res) => {
     const { hostToken, hostNotes, ...publicGame } = game;
     res.json(publicGame);
   } catch (error) {
-    console.error('Error fetching game:', error);
-    res.status(500).json({ error: 'Failed to fetch game' });
+    routeFailed(req, res, error, 'Failed to fetch game');
   }
 });
 
@@ -309,8 +307,7 @@ app.put('/api/games/:id', async (req, res) => {
       notificationPreferences: savedGame.notificationPreferences
     });
   } catch (error) {
-    console.error('Error updating game:', error);
-    res.status(500).json({ error: 'Failed to update game' });
+    routeFailed(req, res, error, 'Failed to update game');
   } finally {
     releaseLock();
   }
@@ -340,8 +337,7 @@ app.put('/api/games/:id/notes', async (req, res) => {
 
     res.json({ success: true, hostNotes: game.hostNotes });
   } catch (error) {
-    console.error('Error saving host notes:', error);
-    res.status(500).json({ error: 'Failed to save notes' });
+    routeFailed(req, res, error, 'Failed to save notes');
   } finally {
     releaseLock();
   }
@@ -399,8 +395,7 @@ app.delete('/api/games/:id', async (req, res) => {
       results 
     });
   } catch (error) {
-    console.error('Error cancelling game:', error);
-    res.status(500).json({ error: 'Failed to cancel game' });
+    routeFailed(req, res, error, 'Failed to cancel game');
   } finally {
     releaseLock();
   }
@@ -440,8 +435,7 @@ app.delete('/api/games/:id/permanent', async (req, res) => {
     console.log(`[DELETE] Host erased game ${gameId} (${game.location} ${game.date})`);
     res.json({ success: true, deleted });
   } catch (error) {
-    console.error('Error deleting game:', error);
-    res.status(500).json({ error: 'Failed to delete game' });
+    routeFailed(req, res, error, 'Failed to delete game');
   } finally {
     releaseLock();
   }
@@ -512,8 +506,7 @@ app.get('/api/games/by-phone/:phone', async (req, res) => {
     });
     
   } catch (error) {
-    console.error(`[PHONE LOOKUP] Error looking up games:`, error);
-    res.status(500).json({ error: 'Failed to lookup games' });
+    routeFailed(req, res, error, 'Failed to lookup games');
   }
 });
 
@@ -606,8 +599,7 @@ app.get('/api/roster/:phone', async (req, res) => {
 
     res.json({ phoneNumber: hostPhone, count: roster.length, roster });
   } catch (error) {
-    console.error('[ROSTER] Error building roster:', error);
-    res.status(500).json({ error: 'Failed to load roster' });
+    routeFailed(req, res, error, 'Failed to load roster');
   }
 });
 
@@ -641,8 +633,7 @@ app.put('/api/roster/:phone/:playerPhone', async (req, res) => {
       player: { phone: playerPhone, name: cleanName, duprId: cleanDuprId, duprRating: cleanRating }
     });
   } catch (error) {
-    console.error('[ROSTER] Error saving roster entry:', error);
-    res.status(500).json({ error: 'Failed to save roster entry' });
+    routeFailed(req, res, error, 'Failed to save roster entry');
   }
 });
 
@@ -658,8 +649,7 @@ app.get('/api/stats/:phone', async (req, res) => {
 
     res.json(computeHostStats(hostPhone, games, roster));
   } catch (error) {
-    console.error('[STATS] Error computing stats:', error);
-    res.status(500).json({ error: 'Failed to load stats' });
+    routeFailed(req, res, error, 'Failed to load stats');
   }
 });
 
@@ -731,8 +721,7 @@ app.post('/api/games/lookup-and-notify', async (req, res) => {
     });
     
   } catch (error) {
-    console.error(`[PHONE LOOKUP SMS] Error:`, error);
-    res.status(500).json({ error: 'Failed to lookup and notify' });
+    routeFailed(req, res, error, 'Failed to lookup and notify');
   }
 });
 
@@ -1014,8 +1003,7 @@ app.post('/api/games/:id/players', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error adding player:', error);
-    res.status(500).json({ error: error.message || 'Failed to add player' });
+    routeFailed(req, res, error, error.message || 'Failed to add player');
   } finally {
     // No-op if already released after the save; this covers the early returns and error paths.
     releaseLock();
@@ -1086,8 +1074,7 @@ app.post('/api/games/:id/manual-player', async (req, res) => {
       ...result
     });
   } catch (error) {
-    console.error('Error manually adding player:', error);
-    res.status(500).json({ error: error.message || 'Failed to add player' });
+    routeFailed(req, res, error, error.message || 'Failed to add player');
   } finally {
     releaseLock();
   }
@@ -1143,8 +1130,7 @@ app.post('/api/games/:id/move-to-waitlist/:playerId', async (req, res) => {
       sms: smsResult
     });
   } catch (error) {
-    console.error('Error moving player to waitlist:', error);
-    res.status(500).json({ error: 'Failed to move player to waitlist' });
+    routeFailed(req, res, error, 'Failed to move player to waitlist');
   } finally {
     releaseLock();
   }
@@ -1209,8 +1195,7 @@ app.post('/api/games/:id/promote-from-waitlist/:playerId', async (req, res) => {
       sms: smsResult
     });
   } catch (error) {
-    console.error('Error promoting player from waitlist:', error);
-    res.status(500).json({ error: 'Failed to promote player from waitlist' });
+    routeFailed(req, res, error, 'Failed to promote player from waitlist');
   } finally {
     releaseLock();
   }
@@ -1305,8 +1290,7 @@ res.json({
   promotionSms: promotionSmsResult
 });
   } catch (error) {
-    console.error('Error removing player:', error);
-    res.status(500).json({ error: 'Failed to remove player' });
+    routeFailed(req, res, error, 'Failed to remove player');
   } finally {
     releaseLock();
   }
@@ -1385,8 +1369,7 @@ app.post(
         url: `/api/games/${gameId}/photos/${photoId}`
       });
     } catch (error) {
-      console.error('Error saving photo:', error);
-      res.status(500).json({ error: 'Failed to save photo' });
+      routeFailed(req, res, error, 'Failed to save photo');
     }
   }
 );
@@ -1401,8 +1384,7 @@ app.get('/api/games/:id/photos', async (req, res) => {
     }));
     res.json({ photos });
   } catch (error) {
-    console.error('Error listing photos:', error);
-    res.status(500).json({ error: 'Failed to load photos' });
+    routeFailed(req, res, error, 'Failed to load photos');
   }
 });
 
@@ -1418,8 +1400,7 @@ app.get('/api/games/:id/photos/:photoId', async (req, res) => {
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
     res.send(photo.data);
   } catch (error) {
-    console.error('Error fetching photo:', error);
-    res.status(500).json({ error: 'Failed to load photo' });
+    routeFailed(req, res, error, 'Failed to load photo');
   }
 });
 
@@ -1444,8 +1425,7 @@ app.delete('/api/games/:id/photos/:photoId', async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error deleting photo:', error);
-    res.status(500).json({ error: 'Failed to delete photo' });
+    routeFailed(req, res, error, 'Failed to delete photo');
   }
 });
 
@@ -1471,8 +1451,7 @@ app.post(
       await saveCourtImage(courtName, mimeType, req.body);
       res.status(201).json({ success: true, courtName });
     } catch (error) {
-      console.error('Error saving court image:', error);
-      res.status(500).json({ error: 'Failed to save court image' });
+      routeFailed(req, res, error, 'Failed to save court image');
     }
   }
 );
@@ -1488,8 +1467,7 @@ app.get('/api/courts/:courtName/image', async (req, res) => {
     res.set('Cache-Control', 'public, max-age=86400');
     res.send(photo.image_data);
   } catch (error) {
-    console.error('Error fetching court image:', error);
-    res.status(500).json({ error: 'Failed to load court image' });
+    routeFailed(req, res, error, 'Failed to load court image');
   }
 });
 
@@ -1498,8 +1476,7 @@ app.get('/api/courts/images/list', async (req, res) => {
     const images = await getAllCourtImages();
     res.json({ courts: images });
   } catch (error) {
-    console.error('Error fetching court images list:', error);
-    res.status(500).json({ error: 'Failed to load court images' });
+    routeFailed(req, res, error, 'Failed to load court images');
   }
 });
 
@@ -1515,8 +1492,7 @@ app.get('/api/courts/:courtName/library', async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Error fetching court image library:', error);
-    res.status(500).json({ error: 'Failed to load court images' });
+    routeFailed(req, res, error, 'Failed to load court images');
   }
 });
 
@@ -1530,8 +1506,7 @@ app.get('/api/court-images/:imageId', async (req, res) => {
     res.set('Cache-Control', 'public, max-age=86400');
     res.send(image.image_data);
   } catch (error) {
-    console.error('Error fetching court image:', error);
-    res.status(500).json({ error: 'Failed to load court image' });
+    routeFailed(req, res, error, 'Failed to load court image');
   }
 });
 
@@ -1562,8 +1537,7 @@ app.post(
       const imageId = await saveCourtImageToLibrary(game.location, mimeType, req.body);
       res.status(201).json({ success: true, imageId });
     } catch (error) {
-      console.error('Error uploading court image:', error);
-      res.status(500).json({ error: 'Failed to upload court image' });
+      routeFailed(req, res, error, 'Failed to upload court image');
     }
   }
 );
@@ -1589,8 +1563,7 @@ app.get('/api/games/:id/court-images', async (req, res) => {
       selectedImageId
     });
   } catch (error) {
-    console.error('Error fetching court images:', error);
-    res.status(500).json({ error: 'Failed to load court images' });
+    routeFailed(req, res, error, 'Failed to load court images');
   }
 });
 
@@ -1604,8 +1577,7 @@ app.get('/api/games/:id/court-images/:imageId', async (req, res) => {
     res.set('Cache-Control', 'public, max-age=86400');
     res.send(image.image_data);
   } catch (error) {
-    console.error('Error fetching court image:', error);
-    res.status(500).json({ error: 'Failed to load court image' });
+    routeFailed(req, res, error, 'Failed to load court image');
   }
 });
 
@@ -1626,8 +1598,7 @@ app.put('/api/games/:id/court-image/:imageId', async (req, res) => {
     await setGameCourtImage(gameId, imageId);
     res.json({ success: true });
   } catch (error) {
-    console.error('Error selecting court image:', error);
-    res.status(500).json({ error: 'Failed to select court image' });
+    routeFailed(req, res, error, 'Failed to select court image');
   }
 });
 
@@ -1647,8 +1618,7 @@ app.put('/api/games/:id/court-image-none', async (req, res) => {
     await setGameCourtImage(gameId, null);
     res.json({ success: true });
   } catch (error) {
-    console.error('Error clearing court image:', error);
-    res.status(500).json({ error: 'Failed to clear court image' });
+    routeFailed(req, res, error, 'Failed to clear court image');
   }
 });
 
@@ -1669,8 +1639,7 @@ app.delete('/api/games/:id/court-images/:imageId', async (req, res) => {
     await deleteCourtImageFromLibrary(imageId);
     res.json({ success: true });
   } catch (error) {
-    console.error('Error deleting court image:', error);
-    res.status(500).json({ error: 'Failed to delete court image' });
+    routeFailed(req, res, error, 'Failed to delete court image');
   }
 });
 
@@ -1722,8 +1691,7 @@ app.post('/api/games/:id/announcement', async (req, res) => {
       results 
     });
   } catch (error) {
-    console.error('Error sending announcement:', error);
-    res.status(500).json({ error: 'Failed to send announcement' });
+    routeFailed(req, res, error, 'Failed to send announcement');
   }
 });
 
@@ -1774,8 +1742,7 @@ app.post('/api/games/:id/announcement-individual', async (req, res) => {
       results 
     });
   } catch (error) {
-    console.error('Error sending individual announcement:', error);
-    res.status(500).json({ error: 'Failed to send announcement' });
+    routeFailed(req, res, error, 'Failed to send announcement');
   }
 });
 
@@ -1815,8 +1782,7 @@ app.delete('/api/games/:id/out-players/:playerId', async (req, res) => {
       message: `${removedPlayer.name} removed from "out" list`
     });
   } catch (error) {
-    console.error('Error removing out player:', error);
-    res.status(500).json({ error: 'Failed to remove player' });
+    routeFailed(req, res, error, 'Failed to remove player');
   } finally {
     releaseLock();
   }
