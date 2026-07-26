@@ -157,6 +157,18 @@ async function initializeDatabase() {
             PRIMARY KEY (host_phone, player_phone)
           )
         `);
+        // Render gives the app no persistent disk, so photos live in the database.
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS game_photos (
+            id TEXT PRIMARY KEY,
+            game_id TEXT NOT NULL,
+            mime_type TEXT NOT NULL,
+            data BYTEA NOT NULL,
+            caption TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query('CREATE INDEX IF NOT EXISTS idx_game_photos_game ON game_photos (game_id)');
         console.log('PostgreSQL tables initialized');
       } finally {
         client.release();
@@ -212,6 +224,18 @@ async function initializeDatabase() {
         PRIMARY KEY (host_phone, player_phone)
       )`);
       console.log('SQLite host_roster table initialized');
+
+      // Render gives the app no persistent disk, so photos live in the database.
+      await sqliteRun(`CREATE TABLE IF NOT EXISTS game_photos (
+        id TEXT PRIMARY KEY,
+        game_id TEXT NOT NULL,
+        mime_type TEXT NOT NULL,
+        data BLOB NOT NULL,
+        caption TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      await sqliteRun('CREATE INDEX IF NOT EXISTS idx_game_photos_game ON game_photos (game_id)');
+      console.log('SQLite game_photos table initialized');
     }
   } catch (err) {
     console.error('Database initialization error:', err);
@@ -548,6 +572,157 @@ async function deleteRosterEntry(hostPhone, playerPhone) {
 }
 
 // ---------------------------------------------------------------------------
+// Game photo functions
+//
+// The image bytes are only ever read by getPhoto(). Every other query deliberately leaves
+// the data column out, so listing a game's photos does not drag megabytes through memory.
+// ---------------------------------------------------------------------------
+
+async function savePhoto(photoId, gameId, mimeType, dataBuffer, caption) {
+  try {
+    if (isProduction) {
+      await withPgClient(async (client) => {
+        await client.query(
+          'INSERT INTO game_photos (id, game_id, mime_type, data, caption) VALUES ($1, $2, $3, $4, $5)',
+          [photoId, gameId, mimeType, dataBuffer, caption || null]
+        );
+      });
+    } else {
+      await sqlitePrepareRun(
+        'INSERT INTO game_photos (id, game_id, mime_type, data, caption) VALUES (?, ?, ?, ?, ?)',
+        [photoId, gameId, mimeType, dataBuffer, caption || null]
+      );
+    }
+  } catch (err) {
+    console.error('Error saving photo:', err);
+    throw err;
+  }
+}
+
+/** Metadata only - never the image bytes. */
+async function getPhotosForGame(gameId) {
+  const toPhoto = (row) => ({
+    id: row.id,
+    mimeType: row.mime_type,
+    caption: row.caption || '',
+    bytes: Number(row.bytes),
+    createdAt: row.created_at
+  });
+  try {
+    if (isProduction) {
+      const rows = await withPgClient(async (client) => {
+        const result = await client.query(
+          `SELECT id, mime_type, caption, created_at, LENGTH(data) AS bytes
+             FROM game_photos WHERE game_id = $1 ORDER BY created_at, id`,
+          [gameId]
+        );
+        return result.rows;
+      });
+      return rows.map(toPhoto);
+    } else {
+      const rows = await sqliteAll(
+        `SELECT id, mime_type, caption, created_at, LENGTH(data) AS bytes
+           FROM game_photos WHERE game_id = ? ORDER BY created_at, id`,
+        [gameId]
+      );
+      return rows.map(toPhoto);
+    }
+  } catch (err) {
+    console.error('Error listing photos:', err);
+    throw err;
+  }
+}
+
+/** game_id is in the WHERE clause on purpose: a photo id from one game cannot be fetched
+ *  by guessing it against another. */
+async function getPhoto(gameId, photoId) {
+  try {
+    if (isProduction) {
+      const rows = await withPgClient(async (client) => {
+        const result = await client.query(
+          'SELECT mime_type, data FROM game_photos WHERE game_id = $1 AND id = $2',
+          [gameId, photoId]
+        );
+        return result.rows;
+      });
+      return rows.length ? { mimeType: rows[0].mime_type, data: rows[0].data } : null;
+    } else {
+      const row = await sqliteGet(
+        'SELECT mime_type, data FROM game_photos WHERE game_id = ? AND id = ?',
+        [gameId, photoId]
+      );
+      return row ? { mimeType: row.mime_type, data: row.data } : null;
+    }
+  } catch (err) {
+    console.error('Error getting photo:', err);
+    throw err;
+  }
+}
+
+/** Returns how many rows were removed, so the caller can 404 on a photo that was not there. */
+async function deletePhoto(gameId, photoId) {
+  try {
+    if (isProduction) {
+      return await withPgClient(async (client) => {
+        const result = await client.query(
+          'DELETE FROM game_photos WHERE game_id = $1 AND id = $2',
+          [gameId, photoId]
+        );
+        return result.rowCount;
+      });
+    } else {
+      const result = await sqliteRun(
+        'DELETE FROM game_photos WHERE game_id = ? AND id = ?',
+        [gameId, photoId]
+      );
+      return result.changes;
+    }
+  } catch (err) {
+    console.error('Error deleting photo:', err);
+    throw err;
+  }
+}
+
+async function countPhotosForGame(gameId) {
+  try {
+    if (isProduction) {
+      const rows = await withPgClient(async (client) => {
+        const result = await client.query(
+          'SELECT COUNT(*) AS count FROM game_photos WHERE game_id = $1', [gameId]
+        );
+        return result.rows;
+      });
+      return Number(rows[0].count);
+    } else {
+      const row = await sqliteGet('SELECT COUNT(*) AS count FROM game_photos WHERE game_id = ?', [gameId]);
+      return Number(row.count);
+    }
+  } catch (err) {
+    console.error('Error counting photos:', err);
+    throw err;
+  }
+}
+
+/** One query for the whole My Games page, rather than one per card. */
+async function getAllPhotoCounts() {
+  try {
+    const rows = isProduction
+      ? await withPgClient(async (client) => {
+          const result = await client.query('SELECT game_id, COUNT(*) AS count FROM game_photos GROUP BY game_id');
+          return result.rows;
+        })
+      : await sqliteAll('SELECT game_id, COUNT(*) AS count FROM game_photos GROUP BY game_id');
+
+    const counts = {};
+    rows.forEach((row) => { counts[row.game_id] = Number(row.count); });
+    return counts;
+  } catch (err) {
+    console.error('Error counting photos:', err);
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // SMS context functions
 // ---------------------------------------------------------------------------
 
@@ -697,6 +872,12 @@ module.exports = {
   recordRosterSighting,
   getRosterForHost,
   deleteRosterEntry,
+  savePhoto,
+  getPhotosForGame,
+  getPhoto,
+  deletePhoto,
+  countPhotosForGame,
+  getAllPhotoCounts,
   saveLastCommand,
   getLastCommand,
   clearLastCommand,
