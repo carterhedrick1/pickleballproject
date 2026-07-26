@@ -10,6 +10,7 @@ const {
 } = require('./database');
 const { isGameUpcoming } = require('./utils/central-time');
 const { acquireGameLock } = require('./utils/game-lock');
+const { promoteNextFromWaitlist, recordOutPlayer, departureAlertType } = require('./utils/promotion');
 
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 
@@ -57,6 +58,15 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
           message = `HOST ALERT: ${playerName} cancelled their spot for your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} now available.`;
         }
         break;
+      case 'spotOpenedWaitlistMode': {
+        // Deliberately NOT gated on the playerCancels preference. In approval mode nobody is
+        // promoted automatically, so if the host is not told, the spot silently stays empty -
+        // which is the exact problem this app exists to fix.
+        shouldSend = true;
+        const waiting = (game.waitlist || []).length;
+        message = `HOST ALERT: ${playerName || 'A player'} gave up their confirmed spot for your pickleball game at ${locationText} on ${gameDate}. You have ${waiting} ${waiting === 1 ? 'person' : 'people'} on your waitlist - open your management link to pick a replacement.`;
+        break;
+      }
       case 'oneSpotLeft':
         if (prefs.oneSpotLeft === true) {
           shouldSend = true;
@@ -690,19 +700,20 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
           await sendSMS(fromNumber, `You're no longer registered for that game, so there was nothing to cancel.`);
           return;
         }
-        game.players.splice(playerIndex, 1);
+        const departing = game.players.splice(playerIndex, 1)[0];
+        recordOutPlayer(game, departing, { wasConfirmed: true });
 
-        if (game.waitlist && game.waitlist.length > 0) {
-          promotedPlayer = game.waitlist.shift();
-          game.players.push(promotedPlayer);
-        }
+        // Used to promote in both modes, which quietly overrode approval-mode hosts. Now the
+        // shared rule applies: first-come games promote, approval games alert the host instead.
+        promotedPlayer = promoteNextFromWaitlist(game);
       } else {
         const waitlistIndex = (game.waitlist || []).findIndex(p => p.id === player.id);
         if (waitlistIndex === -1) {
           await sendSMS(fromNumber, `You're no longer on that waitlist, so there was nothing to cancel.`);
           return;
         }
-        game.waitlist.splice(waitlistIndex, 1);
+        const departing = game.waitlist.splice(waitlistIndex, 1)[0];
+        recordOutPlayer(game, departing, { wasWaitlisted: true });
       }
 
       await saveGame(gameId, game, game.hostToken, game.hostPhone);
@@ -716,13 +727,9 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
       const promoTime = formatTimeForSMS(game.time);
       const promoLocation = formatLocationForSMS(game);
 
-      // Different promotion message based on game mode
-      let promotionMessage;
-      if (game.registrationMode === 'waitlist') {
-        promotionMessage = `Good news! You've been selected for Pickleball at ${promoLocation} on ${promoDate} at ${promoTime}! Reply 9 to cancel if needed.`;
-      } else {
-        promotionMessage = `Good news! You've been selected for Pickleball at ${promoLocation} on ${promoDate} at ${promoTime}! Reply 2 for who is playing and details or 9 to cancel.`;
-      }
+      // Only first-come games reach this point, so there is no approval-mode wording to pick
+      // between any more - promoteNextFromWaitlist never promotes in approval mode.
+      const promotionMessage = `Good news! You've been selected for Pickleball at ${promoLocation} on ${promoDate} at ${promoTime}! Reply 2 for who is playing and details or 9 to cancel.`;
       // Retried: there is no screen behind this one. The promotion happened because someone
       // else texted 9, so if this text is lost the promoted player is never told at all.
       const promoResult = await sendSMSWithRetry(promotedPlayer.phone, promotionMessage, gameId);
@@ -731,10 +738,13 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
       }
     }
 
-    // Send organizer notification for cancellation
-if (!player.isOrganizer) {
-  await sendOrganizerNotification(gameId, game, 'playerCancels', player.name);
-}
+    // Send organizer notification for cancellation. In approval mode, losing a confirmed player
+    // means the host has to pick a replacement themselves, so they get told that instead.
+    if (!player.isOrganizer) {
+      await sendOrganizerNotification(
+        gameId, game, departureAlertType(game, status === 'confirmed'), player.name
+      );
+    }
 
     const gameDate = formatDateForSMS(game.date);
     const gameTime = formatTimeForSMS(game.time);

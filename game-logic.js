@@ -7,6 +7,7 @@ const {
 } = require('./database');
 const { sendSMS, formatDateForSMS, formatTimeForSMS, formatPhoneNumber, formatLocationForSMS } = require('./sms-handler');
 const { getCentralTimeNow, isGameUpcoming } = require('./utils/central-time');
+const { promoteNextFromWaitlist } = require('./utils/promotion');
 const sentRemindersCache = new Map(); // Games where every eligible player is confirmed reminded
 // `${gameId}|${phone}` already texted by this process. reminder_log is the durable record, but if
 // writing to it fails after the SMS goes out this stops us texting the same person again on the
@@ -466,17 +467,12 @@ function removePlayerFromGame(game, playerId) {
   
   if (playerIndex >= 0) {
     const removedPlayer = game.players.splice(playerIndex, 1)[0];
-    
-    let promotedPlayer = null;
-    const isWaitlistMode = game.registrationMode === 'waitlist';
-    
-    if (!isWaitlistMode && game.waitlist && game.waitlist.length > 0) {
-      // Only promote from waitlist in first-come-first-served mode
-      promotedPlayer = game.waitlist.shift();
-      game.players.push(promotedPlayer);
-    }
-    
-    return { 
+
+    // Same rule as before - first-come games promote, approval games wait for the host -
+    // but now shared with the other places a spot can open, and stamped with promotedAt.
+    const promotedPlayer = promoteNextFromWaitlist(game);
+
+    return {
       status: 'removed',
       from: 'confirmed',
       removedPlayer,
