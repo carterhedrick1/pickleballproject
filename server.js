@@ -41,6 +41,10 @@ const {
 const mountDevRoutes = require('./routes/dev');
 const { requireDevAuth } = mountDevRoutes;
 
+const mountLocationRoutes = require('./routes/locations');
+const mountCourtImageRoutes = require('./routes/court-images');
+const mountPhotoRoutes = require('./routes/photos');
+
 const {
   sendSMS,
   sendSMSWithRetry,
@@ -131,6 +135,11 @@ mountDevRoutes(app);
 
 // ============================================================================
 // API ROUTES
+//
+// Route groups live in ./routes and register absolute paths on the app, following the same
+// shape as routes/dev.js. Mount order is kept the same as the order these routes were
+// declared in when they all lived here, and every mount sits after the rate limiters above
+// and before the error middleware at the bottom of this file.
 // ============================================================================
 
 // Health check
@@ -157,15 +166,9 @@ app.post('/api/test-reminders', (req, res, next) => {
   }
 });
 
-// Courts anyone in the group has played at, for the create-game picker.
-app.get('/api/locations', async (req, res) => {
-  try {
-    const locations = await getLocations();
-    res.json({ locations });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to fetch locations');
-  }
-});
+mountLocationRoutes(app);
+mountCourtImageRoutes(app);
+mountPhotoRoutes(app);
 
 app.post('/api/games', async (req, res) => {
   try {
@@ -1301,327 +1304,6 @@ res.json({
   }
 });
 
-// ---------------------------------------------------------------------------
-// Game photos
-//
-// Uploads arrive as a raw image body rather than multipart, which keeps this dependency-free:
-// express.raw is applied to the upload route only, and the global express.json above ignores
-// image/* bodies, so the two coexist. Photos never touch the game blob, so no game lock either.
-// ---------------------------------------------------------------------------
-
-app.post(
-  '/api/games/:id/photos',
-  express.raw({ type: PHOTO_TYPES, limit: '5mb' }),
-  async (req, res) => {
-    try {
-      const gameId = req.params.id;
-      const token = req.query.token;
-
-      const game = await getGame(gameId);
-      if (!game) {
-        return res.status(404).json({ error: 'Game not found' });
-      }
-      if (!isHost(game, token)) {
-        return res.status(403).json({ error: 'Unauthorized' });
-      }
-
-      const mimeType = sniffImageType(req.body);
-      if (!mimeType) {
-        return res.status(400).json({
-          error: 'That does not look like a JPEG, PNG or WebP image. Please pick a photo.'
-        });
-      }
-
-      // A 13th photo slipping through two simultaneous uploads is not worth a lock for.
-      const existing = await countPhotosForGame(gameId);
-      if (existing >= MAX_PHOTOS_PER_GAME) {
-        return res.status(400).json({
-          error: `This game already has ${MAX_PHOTOS_PER_GAME} photos. Remove one to add another.`
-        });
-      }
-
-      const photoId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
-      const caption = (req.query.caption || '').toString().slice(0, 200);
-
-      await savePhoto(photoId, gameId, mimeType, req.body, caption);
-
-      res.status(201).json({
-        id: photoId,
-        caption,
-        url: `/api/games/${gameId}/photos/${photoId}`
-      });
-    } catch (error) {
-      routeFailed(req, res, error, 'Failed to save photo');
-    }
-  }
-);
-
-// Public, like the game page itself - anyone with the link can look at the photos.
-app.get('/api/games/:id/photos', async (req, res) => {
-  try {
-    const gameId = req.params.id;
-    const photos = (await getPhotosForGame(gameId)).map((photo) => ({
-      ...photo,
-      url: `/api/games/${gameId}/photos/${photo.id}`
-    }));
-    res.json({ photos });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to load photos');
-  }
-});
-
-app.get('/api/games/:id/photos/:photoId', async (req, res) => {
-  try {
-    const photo = await getPhoto(req.params.id, req.params.photoId);
-    if (!photo) {
-      return res.status(404).json({ error: 'Photo not found' });
-    }
-    // Ids are unique and the bytes behind one never change, so this can be cached hard -
-    // which also keeps the 30-requests-per-minute production limiter comfortable.
-    res.set('Content-Type', photo.mimeType);
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
-    res.send(photo.data);
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to load photo');
-  }
-});
-
-app.delete('/api/games/:id/photos/:photoId', async (req, res) => {
-  try {
-    const gameId = req.params.id;
-    const token = req.query.token;
-
-    // getGameHostInfo rather than getGame: this only needs the token, not the whole blob.
-    const hostInfo = await getGameHostInfo(gameId);
-    if (!hostInfo) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-    if (!isHost(hostInfo, token)) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-
-    const removed = await deletePhoto(gameId, req.params.photoId);
-    if (!removed) {
-      return res.status(404).json({ error: 'Photo not found' });
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to delete photo');
-  }
-});
-
-// Court images (dev only). Uses the developer area's own sign-in rather than a second copy of
-// the password check: that one compared the password with !== instead of a timing-safe compare,
-// and took it from the query string, where it ends up in server logs and browser history.
-app.post(
-  '/api/courts/:courtName/image',
-  requireDevAuth,
-  express.raw({ type: PHOTO_TYPES, limit: '5mb' }),
-  async (req, res) => {
-    try {
-      const courtName = decodeURIComponent(req.params.courtName);
-      const mimeType = sniffImageType(req.body);
-      if (!mimeType) {
-        return res.status(400).json({
-          error: 'That does not look like a JPEG, PNG or WebP image. Please pick a photo.'
-        });
-      }
-
-      await saveCourtImage(courtName, mimeType, req.body);
-      res.status(201).json({ success: true, courtName });
-    } catch (error) {
-      routeFailed(req, res, error, 'Failed to save court image');
-    }
-  }
-);
-
-app.get('/api/courts/:courtName/image', async (req, res) => {
-  try {
-    const courtName = decodeURIComponent(req.params.courtName);
-    const photo = await getCourtImage(courtName);
-    if (!photo || !photo.image_data) {
-      return res.status(404).json({ error: 'No image for this court' });
-    }
-    res.set('Content-Type', photo.image_mime_type);
-    res.set('Cache-Control', 'public, max-age=86400');
-    res.send(photo.image_data);
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to load court image');
-  }
-});
-
-app.get('/api/courts/images/list', async (req, res) => {
-  try {
-    const images = await getAllCourtImages();
-    res.json({ courts: images });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to load court images');
-  }
-});
-
-app.get('/api/courts/:courtName/library', async (req, res) => {
-  try {
-    const courtName = decodeURIComponent(req.params.courtName);
-    const images = await getCourtImagesLibrary(courtName);
-    res.json({
-      images: images.map((img) => ({
-        id: img.id,
-        mimeType: img.mime_type,
-        createdAt: img.created_at
-      }))
-    });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to load court images');
-  }
-});
-
-app.get('/api/court-images/:imageId', async (req, res) => {
-  try {
-    const image = await getCourtImageFromLibrary(req.params.imageId);
-    if (!image || !image.image_data) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-    res.set('Content-Type', image.mime_type);
-    res.set('Cache-Control', 'public, max-age=86400');
-    res.send(image.image_data);
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to load court image');
-  }
-});
-
-// Court image library (host-managed images for a specific court)
-app.post(
-  '/api/games/:id/court-images',
-  express.raw({ type: PHOTO_TYPES, limit: '5mb' }),
-  async (req, res) => {
-    try {
-      const gameId = req.params.id;
-      const token = req.query.token;
-
-      const game = await getGame(gameId);
-      if (!game) {
-        return res.status(404).json({ error: 'Game not found' });
-      }
-      if (!isHost(game, token)) {
-        return res.status(403).json({ error: 'Unauthorized' });
-      }
-
-      const mimeType = sniffImageType(req.body);
-      if (!mimeType) {
-        return res.status(400).json({
-          error: 'That does not look like a JPEG, PNG or WebP image. Please pick a photo.'
-        });
-      }
-
-      const imageId = await saveCourtImageToLibrary(game.location, mimeType, req.body);
-      res.status(201).json({ success: true, imageId });
-    } catch (error) {
-      routeFailed(req, res, error, 'Failed to upload court image');
-    }
-  }
-);
-
-app.get('/api/games/:id/court-images', async (req, res) => {
-  try {
-    const gameId = req.params.id;
-    const game = await getGame(gameId);
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-
-    const images = await getCourtImagesLibrary(game.location);
-    const selectedImageId = await getGameCourtImageId(gameId);
-
-    res.json({
-      images: images.map((img) => ({
-        id: img.id,
-        mimeType: img.mime_type,
-        isSelected: img.id === selectedImageId,
-        createdAt: img.created_at
-      })),
-      selectedImageId
-    });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to load court images');
-  }
-});
-
-app.get('/api/games/:id/court-images/:imageId', async (req, res) => {
-  try {
-    const image = await getCourtImageFromLibrary(req.params.imageId);
-    if (!image || !image.image_data) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-    res.set('Content-Type', image.mime_type);
-    res.set('Cache-Control', 'public, max-age=86400');
-    res.send(image.image_data);
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to load court image');
-  }
-});
-
-app.put('/api/games/:id/court-image/:imageId', async (req, res) => {
-  try {
-    const gameId = req.params.id;
-    const imageId = req.params.imageId;
-    const token = req.query.token;
-
-    const game = await getGame(gameId);
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-    if (!isHost(game, token)) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-
-    await setGameCourtImage(gameId, imageId);
-    res.json({ success: true });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to select court image');
-  }
-});
-
-app.put('/api/games/:id/court-image-none', async (req, res) => {
-  try {
-    const gameId = req.params.id;
-    const token = req.query.token;
-
-    const game = await getGame(gameId);
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-    if (!isHost(game, token)) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-
-    await setGameCourtImage(gameId, null);
-    res.json({ success: true });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to clear court image');
-  }
-});
-
-app.delete('/api/games/:id/court-images/:imageId', async (req, res) => {
-  try {
-    const gameId = req.params.id;
-    const imageId = req.params.imageId;
-    const token = req.query.token;
-
-    const game = await getGame(gameId);
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-    if (!isHost(game, token)) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-
-    await deleteCourtImageFromLibrary(imageId);
-    res.json({ success: true });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to delete court image');
-  }
-});
 
 // Send announcement
 app.post('/api/games/:id/announcement', async (req, res) => {
