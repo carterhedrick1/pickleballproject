@@ -44,6 +44,8 @@ const { requireDevAuth } = mountDevRoutes;
 const mountLocationRoutes = require('./routes/locations');
 const mountCourtImageRoutes = require('./routes/court-images');
 const mountPhotoRoutes = require('./routes/photos');
+const mountRosterRoutes = require('./routes/roster');
+const mountAnnouncementRoutes = require('./routes/announcements');
 
 const {
   sendSMS,
@@ -169,6 +171,8 @@ app.post('/api/test-reminders', (req, res, next) => {
 mountLocationRoutes(app);
 mountCourtImageRoutes(app);
 mountPhotoRoutes(app);
+mountRosterRoutes(app);
+mountAnnouncementRoutes(app);
 
 app.post('/api/games', async (req, res) => {
   try {
@@ -528,138 +532,6 @@ app.get('/api/games/by-phone/:phone', async (req, res) => {
 // both routes need a real token together.
 // ---------------------------------------------------------------------------
 
-// Everyone this host has ever played with: their saved roster rows, plus anyone who has
-// appeared in one of their games. Roster values win over whatever a player typed at signup.
-app.get('/api/roster/:phone', async (req, res) => {
-  try {
-    const hostPhone = formatPhoneNumber(req.params.phone);
-
-    const [rosterRows, games] = await Promise.all([
-      getRosterForHost(hostPhone),
-      getGamesByHostPhone(hostPhone)
-    ]);
-
-    const byPhone = new Map();
-
-    for (const game of games) {
-      const countedThisGame = new Set();
-      const entries = [
-        ...(game.players || []),
-        ...(game.waitlist || []),
-        ...(game.outPlayers || [])
-      ];
-
-      for (const entry of entries) {
-        if (!entry || !entry.phone) continue;                 // phoneless entries can't be matched
-        const phone = formatPhoneNumber(entry.phone);
-        if (!phone || phone === hostPhone) continue;          // the host is not on their own roster
-
-        let record = byPhone.get(phone);
-        if (!record) {
-          record = {
-            phone,
-            name: '',
-            duprId: '',
-            duprRating: null,
-            isAndroid: null,
-            lastSeen: null,
-            gamesCount: 0
-          };
-          byPhone.set(phone, record);
-        }
-
-        // A player on both the waitlist and the out list is still one game.
-        if (!countedThisGame.has(phone)) {
-          countedThisGame.add(phone);
-          record.gamesCount += 1;
-        }
-
-        const when = entry.joinedAt || entry.outAt || game.created || game.date || null;
-        if (when && (!record.lastSeen || when > record.lastSeen)) {
-          record.lastSeen = when;
-          if (entry.name) record.name = entry.name;           // most recent name they signed up with
-        } else if (entry.name && !record.name) {
-          record.name = entry.name;
-        }
-      }
-    }
-
-    for (const row of rosterRows) {
-      const record = byPhone.get(row.playerPhone) || {
-        phone: row.playerPhone,
-        name: '',
-        duprId: '',
-        duprRating: null,
-        isAndroid: null,
-        lastSeen: null,
-        gamesCount: 0
-      };
-      if (row.name) record.name = row.name;
-      record.duprId = row.duprId;
-      record.duprRating = row.duprRating;
-      record.isAndroid = row.isAndroid;
-      byPhone.set(row.playerPhone, record);
-    }
-
-    const roster = [...byPhone.values()].sort((a, b) =>
-      (a.name || a.phone).localeCompare(b.name || b.phone, undefined, { sensitivity: 'base' })
-    );
-
-    res.json({ phoneNumber: hostPhone, count: roster.length, roster });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to load roster');
-  }
-});
-
-// Host edits one player's details.
-app.put('/api/roster/:phone/:playerPhone', async (req, res) => {
-  try {
-    const hostPhone = formatPhoneNumber(req.params.phone);
-    const playerPhone = formatPhoneNumber(req.params.playerPhone);
-
-    if (!hostPhone || !playerPhone) {
-      return res.status(400).json({ error: 'A host phone number and a player phone number are required' });
-    }
-
-    const { name, duprId, duprRating } = req.body || {};
-    const cleanName = name == null ? '' : String(name).trim().slice(0, 100);
-    const cleanDuprId = duprId == null ? '' : String(duprId).trim().slice(0, 50);
-
-    let cleanRating = null;
-    if (duprRating !== undefined && duprRating !== null && String(duprRating).trim() !== '') {
-      const parsed = Number(duprRating);
-      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 10) {
-        return res.status(400).json({ error: 'DUPR rating should be a number between 0 and 10 (for example 3.75)' });
-      }
-      cleanRating = parsed;
-    }
-
-    await upsertRosterEntry(hostPhone, playerPhone, cleanName, cleanDuprId, cleanRating);
-
-    res.json({
-      success: true,
-      player: { phone: playerPhone, name: cleanName, duprId: cleanDuprId, duprRating: cleanRating }
-    });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to save roster entry');
-  }
-});
-
-// A host's numbers. Same phone-only access as the roster and by-phone routes above.
-app.get('/api/stats/:phone', async (req, res) => {
-  try {
-    const hostPhone = formatPhoneNumber(req.params.phone);
-
-    const [games, roster] = await Promise.all([
-      getGamesByHostPhone(hostPhone),
-      getRosterForHost(hostPhone)
-    ]);
-
-    res.json(computeHostStats(hostPhone, games, roster));
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to load stats');
-  }
-});
 
 // Send management links via SMS
 app.post('/api/games/lookup-and-notify', async (req, res) => {
@@ -1305,150 +1177,6 @@ res.json({
 });
 
 
-// Send announcement
-app.post('/api/games/:id/announcement', async (req, res) => {
-  try {
-    const gameId = req.params.id;
-    const { token, message, includeConfirmed, includeWaitlist } = req.body;
-    
-    const game = await getGame(gameId);
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-    
-    if (!isHost(game, token)) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-    
-    if (!message || !message.trim()) {
-      return res.status(400).json({ error: 'Message is required' });
-    }
-    
-    let recipientCount = 0;
-    const results = [];
-    
-    if (includeConfirmed) {
-      for (const player of game.players) {
-        if (player.phone && !player.isOrganizer) {
-          const result = await sendSMS(player.phone, message, gameId);
-          results.push({ player: player.name, type: 'confirmed', result });
-          if (result.success) recipientCount++;
-        }
-      }
-    }
-    
-    if (includeWaitlist) {
-      for (const player of game.waitlist || []) {
-        if (player.phone) {
-          const result = await sendSMS(player.phone, message);
-          results.push({ player: player.name, type: 'waitlist', result });
-          if (result.success) recipientCount++;
-        }
-      }
-    }
-    
-    res.json({ 
-      success: true, 
-      recipientCount,
-      results 
-    });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to send announcement');
-  }
-});
-
-// Send announcement to individual players
-app.post('/api/games/:id/announcement-individual', async (req, res) => {
-  try {
-    const gameId = req.params.id;
-    const { token, message, recipients } = req.body;
-    
-    const game = await getGame(gameId);
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-    
-    if (!isHost(game, token)) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-    
-    if (!message || !message.trim()) {
-      return res.status(400).json({ error: 'Message is required' });
-    }
-    
-    if (!recipients || recipients.length === 0) {
-      return res.status(400).json({ error: 'At least one recipient is required' });
-    }
-    
-    let recipientCount = 0;
-    const results = [];
-    
-    // Send to each selected recipient
-    for (const recipient of recipients) {
-      if (recipient.phone) {
-        const result = await sendSMS(recipient.phone, message, gameId);
-        results.push({ 
-          player: recipient.name, 
-          type: recipient.type, 
-          phone: recipient.phone,
-          result 
-        });
-        if (result.success) recipientCount++;
-      }
-    }
-    
-    res.json({ 
-      success: true, 
-      recipientCount,
-      totalRecipients: recipients.length,
-      results 
-    });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to send announcement');
-  }
-});
-
-// Remove "out" player
-app.delete('/api/games/:id/out-players/:playerId', async (req, res) => {
-  const gameId = req.params.id;
-  const releaseLock = await acquireGameLock(gameId);
-  try {
-    const playerId = req.params.playerId;
-    const token = req.query.token;
-
-    const game = await getGame(gameId);
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-
-    if (!isHost(game, token)) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-
-    // Find and remove the out player
-    if (!game.outPlayers) {
-      return res.status(404).json({ error: 'Player not found' });
-    }
-    
-    const playerIndex = game.outPlayers.findIndex(p => p.id === playerId);
-    if (playerIndex === -1) {
-      return res.status(404).json({ error: 'Player not found' });
-    }
-    
-    const removedPlayer = game.outPlayers.splice(playerIndex, 1)[0];
-    await saveGame(gameId, game, game.hostToken, game.hostPhone);
-    releaseLock();
-
-    res.json({
-      success: true,
-      message: `${removedPlayer.name} removed from "out" list`
-    });
-  } catch (error) {
-    routeFailed(req, res, error, 'Failed to remove player');
-  } finally {
-    releaseLock();
-  }
-});
 
 // SMS webhook (uses our SMS handler)
 app.post('/api/sms/webhook', express.json(), handleIncomingSMS);
