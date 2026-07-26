@@ -12,6 +12,7 @@
     "verify:roster": "node verify/roster-locations.js",
     "verify:promotion": "node verify/promotion-modes.js",
     "verify:photos": "node verify/photos.js",
+    "verify:court-images": "node verify/court-images.js",
     "verify:stats": "node verify/stats.js",
     "verify:sms": "node verify/sms-cancel.js",
     "verify:reminders": "node verify/reminder-catchup.js",

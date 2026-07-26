@@ -21,6 +21,8 @@ const TEST_LOCATION_NAMES = [
   'SMS Cancel Court',
   'Safety Court',
   'Browser Test Court',
+  'Court Image Court',
+  'Court Image Court Two',
 ];
 // Normalized the same way database.js normalizes them.
 const TEST_LOCATION_KEYS = TEST_LOCATION_NAMES.map(
@@ -93,9 +95,25 @@ function deletePhotosForGames(ids) {
   });
 }
 
+// Court images are keyed by court name rather than by game, so a whole library outlives every
+// game that used it - the same way photos outlive their game row, but shared more widely.
+function deleteTestCourtImages() {
+  return new Promise((resolve) => {
+    const db = openDb();
+    db.run(
+      `DELETE FROM court_images WHERE court_name_key IN (${TEST_LOCATION_KEYS.map(() => '?').join(',')})`,
+      TEST_LOCATION_KEYS,
+      function () {
+        db.close(() => resolve(this ? this.changes : 0));
+      }
+    );
+  });
+}
+
 module.exports = {
   cleanupTestGames,
   deletePhotosForGames,
+  deleteTestCourtImages,
   cleanupTestRosterAndLocations,
   sweepLocalTestRows,
   deleteGamesById,
