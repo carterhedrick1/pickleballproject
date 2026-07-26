@@ -141,6 +141,21 @@ async function initializeDatabase() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
+        // The image columns above only get created on a database that has never had a
+        // locations table. Production has had one since long before court images existed, and
+        // CREATE TABLE IF NOT EXISTS does nothing to a table that is already there - so on
+        // Postgres those two columns were never actually added, and every query naming them
+        // failed with 'column "image_mime_type" does not exist'. Add them the same idempotent
+        // way games.court_image_id is added below.
+        for (const [column, type] of [['image_mime_type', 'TEXT'], ['image_data', 'BYTEA']]) {
+          try {
+            await client.query(`ALTER TABLE locations ADD COLUMN ${column} ${type}`);
+          } catch (err) {
+            if (!err.message.includes('already exists')) {
+              throw err;
+            }
+          }
+        }
         for (const displayName of SEED_LOCATIONS) {
           await client.query(
             'INSERT INTO locations (name_key, display_name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
@@ -261,6 +276,18 @@ async function initializeDatabase() {
         image_data BLOB,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
+      // Same idempotent add as the Postgres branch: a pickleball.db created before court
+      // images existed has a locations table without these two columns, and the CREATE above
+      // will not add them to a table that is already there.
+      for (const [column, type] of [['image_mime_type', 'TEXT'], ['image_data', 'BLOB']]) {
+        try {
+          await sqliteRun(`ALTER TABLE locations ADD COLUMN ${column} ${type}`);
+        } catch (err) {
+          if (!err.message.includes('duplicate column')) {
+            throw err;
+          }
+        }
+      }
       for (const displayName of SEED_LOCATIONS) {
         await sqlitePrepareRun(
           'INSERT OR IGNORE INTO locations (name_key, display_name) VALUES (?, ?)',
