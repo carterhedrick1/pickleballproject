@@ -97,11 +97,40 @@ body {
     text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
-/* Table of Contents */
+/* How It Works (collapsed table of contents) */
 .toc-section {
     background: white;
     border-bottom: 1px solid #e5e7eb;
-    padding: 32px 40px;
+}
+
+.toc-summary {
+    padding: 20px 40px;
+    cursor: pointer;
+    list-style: none;
+    color: #166534;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    user-select: none;
+}
+
+.toc-summary::-webkit-details-marker {
+    display: none;
+}
+
+.toc-summary::after {
+    content: '▾';
+    display: inline-block;
+    margin-left: 6px;
+    transition: transform 0.2s ease;
+}
+
+.toc-section[open] .toc-summary::after {
+    transform: rotate(-180deg);
+}
+
+.toc-summary:hover {
+    background: #f6fef9;
 }
 
 .toc-title {
@@ -116,6 +145,7 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 16px;
+    padding: 8px 40px 32px;
 }
 
 .toc-item {
