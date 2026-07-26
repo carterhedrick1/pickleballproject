@@ -1,0 +1,355 @@
+// routes/dev.js - The password-protected developer area behind /dev.html
+//
+// One place to see what the app is doing: Textbelt credit, hosting health, the idea
+// board, errors real users hit, and the generated documentation pages.
+//
+// Auth is a single shared password (DEV_PASSWORD). Logging in sets a cookie whose value
+// is an HMAC of the password, so no session store is needed - which matters because Render
+// restarts the process on every deploy and would wipe anything held in memory. Changing
+// DEV_PASSWORD invalidates every cookie that was ever handed out.
+
+const express = require('express');
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
+
+const {
+  isProduction,
+  pingDatabase,
+  countRows,
+  listDevNotes,
+  saveDevNote,
+  updateDevNote,
+  deleteDevNote,
+  countDevNotesByStatus,
+  logAppError,
+  listAppErrors,
+  countAppErrors,
+  pruneAppErrors,
+  saveDevAsset,
+  getDevAsset,
+  getDevAssetMeta
+} = require('../database');
+
+const DEV_PASSWORD = process.env.DEV_PASSWORD || 'vibe123';
+const COOKIE_NAME = 'dev_auth';
+const THIRTY_DAYS = 30 * 24 * 60 * 60;
+
+// The four columns of the idea board. Anything else is rejected.
+const NOTE_STATUSES = ['idea', 'building', 'done-not-deployed', 'live'];
+
+// Which generated doc pages may be published. Without this an authenticated
+// caller could write any key they liked into dev_assets.
+const PUBLISHABLE = ['screens', 'containers', 'copy-deck'];
+
+const SERVER_STARTED_AT = new Date();
+
+function expectedToken() {
+  return crypto.createHmac('sha256', DEV_PASSWORD).update('inorout-dev-area').digest('hex');
+}
+
+// timingSafeEqual throws if the buffers differ in length, so check that first.
+function safeEqual(a, b) {
+  const bufA = Buffer.from(String(a || ''));
+  const bufB = Buffer.from(String(b || ''));
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+// A five-line cookie reader rather than pulling in cookie-parser for one cookie.
+function readCookie(req, name) {
+  const header = req.headers.cookie;
+  if (!header) return null;
+  const match = header.split(';').map((part) => part.trim()).find((part) => part.startsWith(name + '='));
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+}
+
+function isAuthed(req) {
+  // The cookie is how the browser gets in; the header is how publish-docs.js gets in.
+  if (safeEqual(readCookie(req, COOKIE_NAME), expectedToken())) return true;
+  if (req.headers['x-dev-password'] && safeEqual(req.headers['x-dev-password'], DEV_PASSWORD)) return true;
+  return false;
+}
+
+function requireDevAuth(req, res, next) {
+  if (isAuthed(req)) return next();
+  // A page request gets a page; an API request gets JSON.
+  if (req.accepts('html') && !req.path.startsWith('/api/')) {
+    return res.status(401).send(`<!DOCTYPE html>
+      <html><head><title>Locked</title><meta name="viewport" content="width=device-width, initial-scale=1">
+      <style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f5f7fa;
+      display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;color:#2c3e50}
+      a{color:#4CAF50}</style></head>
+      <body><div><h1>Locked</h1><p>This page is part of the developer area.</p>
+      <p><a href="/dev.html">Sign in first</a>, then come back.</p></div></body></html>`);
+  }
+  return res.status(401).json({ error: 'Not signed in' });
+}
+
+// Textbelt charges per request, so a dashboard refresh should not mean a fresh lookup.
+let quotaCache = { value: null, checkedAt: 0 };
+const QUOTA_TTL_MS = 5 * 60 * 1000;
+
+async function getTextbeltQuota() {
+  const key = process.env.TEXTBELT_API_KEY;
+  if (!key) return { error: 'TEXTBELT_API_KEY is not set (texts are only logged, not sent)' };
+
+  const age = Date.now() - quotaCache.checkedAt;
+  if (quotaCache.value !== null && age < QUOTA_TTL_MS) {
+    return { quotaRemaining: quotaCache.value, checkedAt: new Date(quotaCache.checkedAt).toISOString(), cached: true };
+  }
+
+  try {
+    const response = await fetch(`https://textbelt.com/quota/${key}`);
+    const body = await response.json();
+    if (!body.success) return { error: 'Textbelt rejected the quota check' };
+    quotaCache = { value: body.quotaRemaining, checkedAt: Date.now() };
+    return { quotaRemaining: body.quotaRemaining, checkedAt: new Date(quotaCache.checkedAt).toISOString(), cached: false };
+  } catch (err) {
+    return { error: `Could not reach Textbelt: ${err.message}` };
+  }
+}
+
+module.exports = function mountDevRoutes(app) {
+  // Brute force is the only real attack on a single shared password.
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { error: 'Too many sign-in attempts. Wait 15 minutes.' }
+  });
+
+  // Players' browsers post here when a page throws, so it cannot require auth.
+  const clientErrorLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 5,
+    message: { error: 'Too many error reports.' }
+  });
+
+  // -------------------------------------------------------------------------
+  // Sign in / sign out
+  // -------------------------------------------------------------------------
+
+  app.post('/api/dev/login', loginLimiter, (req, res) => {
+    const password = (req.body && req.body.password) || '';
+    if (!safeEqual(password, DEV_PASSWORD)) {
+      return res.status(401).json({ error: 'Wrong password' });
+    }
+    const flags = [
+      `${COOKIE_NAME}=${expectedToken()}`,
+      'HttpOnly',
+      'Path=/',
+      'SameSite=Lax',
+      `Max-Age=${THIRTY_DAYS}`
+    ];
+    // Secure would make the cookie unusable over plain http on localhost.
+    if (isProduction) flags.push('Secure');
+    res.setHeader('Set-Cookie', flags.join('; '));
+    res.json({ success: true });
+  });
+
+  app.post('/api/dev/logout', (req, res) => {
+    res.setHeader('Set-Cookie', `${COOKIE_NAME}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
+    res.json({ success: true });
+  });
+
+  // -------------------------------------------------------------------------
+  // Status dashboard
+  // -------------------------------------------------------------------------
+
+  app.get('/api/dev/status', requireDevAuth, async (req, res) => {
+    const status = {
+      server: {
+        startedAt: SERVER_STARTED_AT.toISOString(),
+        uptimeSeconds: Math.round(process.uptime()),
+        nodeVersion: process.version,
+        environment: isProduction ? 'production' : 'local'
+      }
+    };
+
+    try {
+      await pingDatabase();
+      status.database = { type: isProduction ? 'PostgreSQL' : 'SQLite', ok: true };
+    } catch (err) {
+      status.database = { type: isProduction ? 'PostgreSQL' : 'SQLite', ok: false, error: err.message };
+    }
+
+    try {
+      const [games, photos, errorsLast7Days, noteCounts] = await Promise.all([
+        countRows('games'),
+        countRows('game_photos'),
+        countAppErrors(7),
+        countDevNotesByStatus()
+      ]);
+      status.counts = {
+        games,
+        photos,
+        errorsLast7Days,
+        ideas: noteCounts.idea || 0,
+        building: noteCounts.building || 0,
+        doneNotDeployed: noteCounts['done-not-deployed'] || 0,
+        live: noteCounts.live || 0
+      };
+    } catch (err) {
+      status.counts = { error: err.message };
+    }
+
+    status.textbelt = await getTextbeltQuota();
+
+    try {
+      const meta = await getDevAssetMeta('screens');
+      status.screens = meta ? { publishedAt: meta.updatedAt, sizeBytes: meta.size } : null;
+    } catch (err) {
+      status.screens = null;
+    }
+
+    res.json(status);
+  });
+
+  // -------------------------------------------------------------------------
+  // Idea board
+  // -------------------------------------------------------------------------
+
+  app.get('/api/dev/notes', requireDevAuth, async (req, res) => {
+    try {
+      res.json({ notes: await listDevNotes(), statuses: NOTE_STATUSES });
+    } catch (err) {
+      console.error('Error listing dev notes:', err);
+      res.status(500).json({ error: 'Could not load ideas' });
+    }
+  });
+
+  app.post('/api/dev/notes', requireDevAuth, async (req, res) => {
+    try {
+      const title = String((req.body && req.body.title) || '').trim();
+      if (!title) return res.status(400).json({ error: 'Give the idea a title' });
+
+      const status = (req.body && req.body.status) || 'idea';
+      if (!NOTE_STATUSES.includes(status)) return res.status(400).json({ error: 'Unknown status' });
+
+      const id = await saveDevNote(title.slice(0, 200), String((req.body && req.body.body) || '').slice(0, 5000), status);
+      res.json({ success: true, id });
+    } catch (err) {
+      console.error('Error saving dev note:', err);
+      res.status(500).json({ error: 'Could not save the idea' });
+    }
+  });
+
+  app.put('/api/dev/notes/:id', requireDevAuth, async (req, res) => {
+    try {
+      const fields = {};
+      if (req.body && req.body.title !== undefined) {
+        const title = String(req.body.title).trim();
+        if (!title) return res.status(400).json({ error: 'Give the idea a title' });
+        fields.title = title.slice(0, 200);
+      }
+      if (req.body && req.body.body !== undefined) fields.body = String(req.body.body).slice(0, 5000);
+      if (req.body && req.body.status !== undefined) {
+        if (!NOTE_STATUSES.includes(req.body.status)) return res.status(400).json({ error: 'Unknown status' });
+        fields.status = req.body.status;
+      }
+
+      const updated = await updateDevNote(req.params.id, fields);
+      if (!updated) return res.status(404).json({ error: 'That idea is gone' });
+      res.json({ success: true, note: updated });
+    } catch (err) {
+      console.error('Error updating dev note:', err);
+      res.status(500).json({ error: 'Could not update the idea' });
+    }
+  });
+
+  app.delete('/api/dev/notes/:id', requireDevAuth, async (req, res) => {
+    try {
+      const removed = await deleteDevNote(req.params.id);
+      if (!removed) return res.status(404).json({ error: 'That idea is gone' });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Error deleting dev note:', err);
+      res.status(500).json({ error: 'Could not delete the idea' });
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Errors
+  // -------------------------------------------------------------------------
+
+  app.get('/api/dev/errors', requireDevAuth, async (req, res) => {
+    try {
+      res.json({ errors: await listAppErrors(req.query.limit || 200) });
+    } catch (err) {
+      console.error('Error listing app errors:', err);
+      res.status(500).json({ error: 'Could not load errors' });
+    }
+  });
+
+  // Called by the reporter in header.js when a player's browser throws.
+  // Unauthenticated by necessity, so everything here is capped and rate limited.
+  app.post('/api/client-error', clientErrorLimiter, async (req, res) => {
+    try {
+      await logAppError('client', {
+        message: (req.body && req.body.message) || 'Unknown client error',
+        stack: req.body && req.body.stack,
+        page: req.body && req.body.page,
+        userAgent: req.headers['user-agent']
+      });
+      await pruneAppErrors();
+    } catch (err) {
+      console.error('Error recording client error:', err.message);
+    }
+    // Always 204: a browser reporting a crash should never get a second error back.
+    res.status(204).end();
+  });
+
+  // -------------------------------------------------------------------------
+  // Published documentation pages
+  // -------------------------------------------------------------------------
+
+  // The screens page is a few megabytes of inlined screenshots, so this route needs
+  // its own body parser - the global express.json() limit would reject it outright.
+  app.post(
+    '/api/dev/assets/:name',
+    requireDevAuth,
+    express.text({ limit: '20mb', type: '*/*' }),
+    async (req, res) => {
+      const name = req.params.name;
+      if (!PUBLISHABLE.includes(name)) {
+        return res.status(400).json({ error: `Unknown page. Expected one of: ${PUBLISHABLE.join(', ')}` });
+      }
+      if (!req.body || typeof req.body !== 'string' || !req.body.trim()) {
+        return res.status(400).json({ error: 'No content received' });
+      }
+      try {
+        await saveDevAsset(name, req.body);
+        console.log(`[DEV] Published ${name} (${(req.body.length / 1024 / 1024).toFixed(1)} MB)`);
+        res.json({ success: true, name, sizeBytes: req.body.length });
+      } catch (err) {
+        console.error('Error saving dev asset:', err);
+        res.status(500).json({ error: 'Could not save the page' });
+      }
+    }
+  );
+
+  PUBLISHABLE.forEach((name) => {
+    app.get(`/dev/${name}`, requireDevAuth, async (req, res) => {
+      try {
+        const asset = await getDevAsset(name);
+        if (!asset) {
+          return res.status(404).send(`<!DOCTYPE html>
+            <html><head><title>Not published yet</title><meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f5f7fa;
+            display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;color:#2c3e50}
+            code{background:#e8f5e9;padding:2px 6px;border-radius:4px}a{color:#4CAF50}</style></head>
+            <body><div><h1>Not published yet</h1>
+            <p>Run <code>npm run docs</code> then <code>npm run docs:publish</code> to build this page.</p>
+            <p><a href="/dev.html">Back to the developer area</a></p></div></body></html>`);
+        }
+        res.type('html').send(asset.content);
+      } catch (err) {
+        console.error(`Error serving dev asset ${name}:`, err);
+        res.status(500).send('Could not load that page.');
+      }
+    });
+  });
+
+  console.log('[DEV] Developer area mounted at /dev.html');
+};
+
+module.exports.requireDevAuth = requireDevAuth;

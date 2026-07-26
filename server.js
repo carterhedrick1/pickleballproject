@@ -24,9 +24,12 @@ const {
   deletePhoto,
   countPhotosForGame,
   getAllPhotoCounts,
+  logAppError,
   closeDatabaseConnection,
   isProduction
 } = require('./database');
+
+const mountDevRoutes = require('./routes/dev');
 
 const {
   sendSMS,
@@ -106,6 +109,9 @@ console.log('[REMINDER] Reminder system started - checking every 2 minutes');
 
 // Also run once on startup after a delay
 setTimeout(checkAndSendReminders, 10000); // Wait 10 seconds after startup
+
+// Password-protected developer area (/dev.html and /api/dev/*)
+mountDevRoutes(app);
 
 // ============================================================================
 // API ROUTES
@@ -1584,6 +1590,47 @@ app.delete('/api/games/:id/out-players/:playerId', async (req, res) => {
 
 // SMS webhook (uses our SMS handler)
 app.post('/api/sms/webhook', express.json(), handleIncomingSMS);
+
+// ============================================================================
+// ERROR CAPTURE
+// ============================================================================
+
+// Anything a route throws without catching lands here and shows up in the
+// developer area's Errors tab. Individual routes still handle their own errors.
+app.use((err, req, res, next) => {
+  // A bad request body is the caller's fault, not a fault in the app - answer with the
+  // status the error carries and keep it out of the error log, or malformed JSON from
+  // one confused browser would bury the failures actually worth looking at.
+  const status = err.status || err.statusCode || 500;
+  console.error(`Unhandled error on ${req.method} ${req.url}:`, err);
+  if (status >= 500) {
+    logAppError('server', {
+      message: err.message,
+      stack: err.stack,
+      page: `${req.method} ${req.url}`,
+      userAgent: req.headers['user-agent']
+    });
+  }
+  if (res.headersSent) return next(err);
+  res.status(status).json({ error: status >= 500 ? 'Something went wrong' : err.message });
+});
+
+process.on('unhandledRejection', (reason) => {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  console.error('Unhandled promise rejection:', err);
+  logAppError('server', { message: `Unhandled rejection: ${err.message}`, stack: err.stack });
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  // The process is in an unknown state, so record what happened and let Render restart
+  // us rather than limping along. The timeout guarantees we exit even if the database
+  // write hangs - which it can, since the database may be the thing that just broke.
+  const exit = () => process.exit(1);
+  setTimeout(exit, 1000);
+  logAppError('server', { message: `Uncaught exception: ${err.message}`, stack: err.stack })
+    .then(exit, exit);
+});
 
 // ============================================================================
 // SERVER STARTUP & SHUTDOWN

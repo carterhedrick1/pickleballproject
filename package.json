@@ -22,7 +22,8 @@
     "quota": "node scripts/textbelt-quota.js",
     "docs": "npm run docs:copy && npm run docs:screens",
     "docs:copy": "node scripts/extract-copy.js",
-    "docs:screens": "node scripts/capture-screens.js"
+    "docs:screens": "node scripts/capture-screens.js",
+    "docs:publish": "node scripts/publish-docs.js"
   },
   "dependencies": {
     "dotenv": "^16.5.0",

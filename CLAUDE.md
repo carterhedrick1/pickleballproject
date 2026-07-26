@@ -25,6 +25,21 @@ flow), run `npm run docs` and republish all three files to their existing URLs, 
 `docs/ARTIFACTS.md`. Pass each URL explicitly, or the link Scott has goes stale while a new
 page quietly takes its place. Server-only changes with no visible surface don't need this.
 
+Then run `npm run docs:publish` so the same three pages update inside the app, at
+`/dev.html` → Screens. That copy is the one Scott actually uses as a reference, and
+it goes stale the same way the artifacts do.
+
+## The developer area
+
+`/dev.html` (password `DEV_PASSWORD`, default `vibe123`) is Scott's own dashboard:
+Textbelt credit, hosting health, the idea board, errors real users hit, and live copies
+of the `docs/` pages. It is deliberately unlisted — no link in the nav.
+
+Two things to keep working: the idea board is the record of what is half-built or
+finished-but-not-deployed, so when a `done-not-deployed` item ships, move it to `live`.
+And errors only reach it because `public/js/header.js` reports them — that reporter must
+stay fail-silent, since it runs on every player-facing page.
+
 ## Deploys
 
 Production auto-deploys from `upstream` (`carterhedrick1/pickleballproject`) `main`.

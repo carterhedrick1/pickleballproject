@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Developer Area — IN or OUT</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: #f5f7fa; color: #2c3e50; margin: 0; line-height: 1.5;
+  }
+  a { color: #4CAF50; }
+  button { font-family: inherit; font-size: 15px; cursor: pointer; border-radius: 8px; border: none; }
+  input, textarea, select {
+    font-family: inherit; font-size: 15px; padding: 10px 12px;
+    border: 1px solid #dfe4ea; border-radius: 8px; width: 100%; background: #fff; color: #2c3e50;
+  }
+  input:focus, textarea:focus, select:focus { outline: 2px solid #4CAF50; outline-offset: -1px; border-color: #4CAF50; }
+  .primary { background: #4CAF50; color: #fff; padding: 11px 20px; font-weight: 600; }
+  .primary:hover { background: #45a049; }
+  .ghost { background: #fff; border: 1px solid #dfe4ea; color: #6c757d; padding: 7px 14px; font-size: 14px; }
+  .ghost:hover { border-color: #4CAF50; color: #4CAF50; }
+  .hidden { display: none !important; }
+
+  /* Sign in */
+  #loginView { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+  .login-card {
+    background: #fff; border-radius: 14px; padding: 36px; width: 100%; max-width: 380px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center;
+  }
+  .login-card h1 { margin: 0 0 6px; font-size: 24px; }
+  .login-card p.sub { margin: 0 0 24px; color: #6c757d; font-size: 14px; }
+  .login-card input { margin-bottom: 12px; text-align: center; }
+  .login-card button { width: 100%; }
+  .error-text { color: #e74c3c; font-size: 14px; min-height: 20px; margin-top: 10px; }
+
+  /* Shell */
+  .topbar {
+    background: #fff; border-bottom: 1px solid #e8ecf1; padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  .topbar h1 { margin: 0; font-size: 20px; }
+  .topbar .env {
+    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    background: #e8f5e9; color: #2e7d32; padding: 3px 9px; border-radius: 20px; margin-left: 10px;
+  }
+  .topbar .env.production { background: #fff3e0; color: #ef6c00; }
+  .tabs { background: #fff; border-bottom: 1px solid #e8ecf1; padding: 0 24px; display: flex; gap: 4px; overflow-x: auto; }
+  .tabs button {
+    background: none; border: none; border-bottom: 3px solid transparent; border-radius: 0;
+    padding: 13px 16px; font-size: 15px; color: #6c757d; white-space: nowrap;
+  }
+  .tabs button.active { color: #4CAF50; border-bottom-color: #4CAF50; font-weight: 600; }
+  main { max-width: 1000px; margin: 0 auto; padding: 24px; }
+  .panel { background: #fff; border-radius: 12px; padding: 22px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .panel h2 { margin: 0 0 16px; font-size: 17px; }
+  .muted { color: #6c757d; font-size: 14px; }
+
+  /* Status */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+  .stat { background: #fff; border: 1px solid #e8ecf1; border-radius: 12px; padding: 18px; }
+  .stat .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d; margin-bottom: 6px; }
+  .stat .value { font-size: 28px; font-weight: 600; }
+  .stat .value.small { font-size: 17px; }
+  .stat .note { font-size: 13px; color: #6c757d; margin-top: 4px; }
+  .stat.good .value { color: #2e7d32; }
+  .stat.warn .value { color: #ef6c00; }
+  .stat.bad .value { color: #e74c3c; }
+  dl.facts { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 18px; font-size: 14px; }
+  dl.facts dt { color: #6c757d; }
+  dl.facts dd { margin: 0; }
+
+  /* Ideas */
+  .idea-form { display: grid; gap: 10px; }
+  .idea-form .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .idea-form .row select { max-width: 210px; }
+  .idea-form .row button { white-space: nowrap; }
+  .status-group { margin-bottom: 22px; }
+  .status-group h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d; margin: 0 0 10px; }
+  .idea {
+    border: 1px solid #e8ecf1; border-left: 4px solid #b8c6db; border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 10px; background: #fff;
+  }
+  .idea.idea-status-idea { border-left-color: #b8c6db; }
+  .idea.idea-status-building { border-left-color: #f39c12; }
+  .idea.idea-status-done-not-deployed { border-left-color: #9b59b6; }
+  .idea.idea-status-live { border-left-color: #4CAF50; }
+  .idea .idea-title { font-weight: 600; }
+  .idea .idea-body { font-size: 14px; color: #495057; margin-top: 6px; white-space: pre-wrap; }
+  .idea .idea-actions { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .idea .idea-actions select { max-width: 200px; font-size: 14px; padding: 6px 10px; }
+  .idea .stamp { font-size: 12px; color: #95a5a6; margin-left: auto; }
+
+  /* Errors */
+  .err { border: 1px solid #e8ecf1; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+  .err .err-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 8px; border-radius: 20px; }
+  .badge.client { background: #e3f2fd; color: #1565c0; }
+  .badge.server { background: #fdecea; color: #c62828; }
+  .err .err-msg { font-weight: 600; word-break: break-word; }
+  .err .err-meta { font-size: 13px; color: #6c757d; margin-top: 6px; }
+  .err pre {
+    background: #f8f9fa; border-radius: 8px; padding: 12px; overflow-x: auto;
+    font-size: 12px; margin: 10px 0 0; white-space: pre-wrap; word-break: break-word; color: #495057;
+  }
+  .err summary { cursor: pointer; font-size: 13px; color: #4CAF50; margin-top: 8px; }
+
+  /* Screens */
+  .doc-link { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid #f1f3f5; flex-wrap: wrap; }
+  .doc-link:last-child { border-bottom: none; }
+  .doc-link .doc-name { font-weight: 600; }
+  .doc-link .doc-desc { font-size: 14px; color: #6c757d; }
+  .doc-link .doc-open { margin-left: auto; }
+  code { background: #e8f5e9; padding: 2px 7px; border-radius: 5px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- Sign in -->
+<div id="loginView">
+  <form class="login-card" id="loginForm">
+    <h1>Developer Area</h1>
+    <p class="sub">Everything going on with IN or OUT, in one place.</p>
+    <input type="password" id="password" placeholder="Password" autocomplete="current-password" autofocus>
+    <button type="submit" class="primary">Sign in</button>
+    <div class="error-text" id="loginError"></div>
+  </form>
+</div>
+
+<!-- Dashboard -->
+<div id="appView" class="hidden">
+  <div class="topbar">
+    <h1>Developer Area<span class="env" id="envBadge">local</span></h1>
+    <button class="ghost" id="signOut">Sign out</button>
+  </div>
+
+  <div class="tabs">
+    <button data-tab="status" class="active">Status</button>
+    <button data-tab="ideas">Ideas</button>
+    <button data-tab="errors">Errors</button>
+    <button data-tab="screens">Screens</button>
+  </div>
+
+  <main>
+    <!-- Status -->
+    <section id="tab-status">
+      <div class="panel">
+        <h2>Right now</h2>
+        <div class="stat-grid" id="statGrid"><p class="muted">Loading…</p></div>
+      </div>
+      <div class="panel">
+        <h2>Server</h2>
+        <dl class="facts" id="serverFacts"></dl>
+      </div>
+    </section>
+
+    <!-- Ideas -->
+    <section id="tab-ideas" class="hidden">
+      <div class="panel">
+        <h2>Add an idea</h2>
+        <form class="idea-form" id="ideaForm">
+          <input type="text" id="ideaTitle" placeholder="What's the idea?" maxlength="200">
+          <textarea id="ideaBody" rows="3" placeholder="Any detail worth remembering (optional)" maxlength="5000"></textarea>
+          <div class="row">
+            <select id="ideaStatus"></select>
+            <button type="submit" class="primary">Add</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>The board</h2>
+        <div id="ideaList"><p class="muted">Loading…</p></div>
+      </div>
+    </section>
+
+    <!-- Errors -->
+    <section id="tab-errors" class="hidden">
+      <div class="panel">
+        <h2>Errors users hit</h2>
+        <p class="muted">Newest first. The app keeps the last 500, and anything older than 30 days is dropped.</p>
+        <div id="errorList" style="margin-top:16px"><p class="muted">Loading…</p></div>
+      </div>
+    </section>
+
+    <!-- Screens -->
+    <section id="tab-screens" class="hidden">
+      <div class="panel">
+        <h2>The app as a user meets it</h2>
+        <p class="muted">
+          Live copies of the generated documentation, served by the app itself. Rebuild them with
+          <code>npm run docs</code> and push them here with <code>npm run docs:publish</code>.
+        </p>
+        <div style="margin-top:10px">
+          <div class="doc-link">
+            <div>
+              <div class="doc-name">Actual Screens</div>
+              <div class="doc-desc">Screenshots of every page, grouped by the file that produced them.</div>
+              <div class="doc-desc" id="screensStamp"></div>
+            </div>
+            <a class="doc-open" href="/dev/screens" target="_blank"><button class="primary">Open</button></a>
+          </div>
+          <div class="doc-link">
+            <div>
+              <div class="doc-name">Panel View</div>
+              <div class="doc-desc">Every panel on every page, shown whole with its copy.</div>
+            </div>
+            <a class="doc-open" href="/dev/containers" target="_blank"><button class="ghost">Open</button></a>
+          </div>
+          <div class="doc-link">
+            <div>
+              <div class="doc-name">Copy Deck</div>
+              <div class="doc-desc">Every line of fixed text in the app, individually addressed.</div>
+            </div>
+            <a class="doc-open" href="/dev/copy-deck" target="_blank"><button class="ghost">Open</button></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const STATUS_LABELS = {
+  'idea': 'Ideas',
+  'building': 'Building now',
+  'done-not-deployed': 'Done, not deployed',
+  'live': 'Live'
+};
+let noteStatuses = ['idea', 'building', 'done-not-deployed', 'live'];
+
+function el(id) { return document.getElementById(id); }
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function timeAgo(iso) {
+  if (!iso) return '';
+  const seconds = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return Math.round(seconds / 60) + 'm ago';
+  if (seconds < 86400) return Math.round(seconds / 3600) + 'h ago';
+  return Math.round(seconds / 86400) + 'd ago';
+}
+function formatUptime(seconds) {
+  if (seconds == null) return '—';
+  const d = Math.floor(seconds / 86400), h = Math.floor((seconds % 86400) / 3600), m = Math.floor((seconds % 3600) / 60);
+  if (d) return d + 'd ' + h + 'h';
+  if (h) return h + 'h ' + m + 'm';
+  return m + 'm';
+}
+
+// ---------------------------------------------------------------------------
+// Sign in
+// ---------------------------------------------------------------------------
+
+el('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  el('loginError').textContent = '';
+  try {
+    const res = await fetch('/api/dev/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: el('password').value })
+    });
+    if (res.ok) { el('password').value = ''; showApp(); return; }
+    const body = await res.json().catch(() => ({}));
+    el('loginError').textContent = body.error || 'That did not work.';
+  } catch (err) {
+    el('loginError').textContent = 'Could not reach the server.';
+  }
+});
+
+el('signOut').addEventListener('click', async () => {
+  await fetch('/api/dev/logout', { method: 'POST' }).catch(() => {});
+  el('appView').classList.add('hidden');
+  el('loginView').classList.remove('hidden');
+});
+
+function showApp() {
+  el('loginView').classList.add('hidden');
+  el('appView').classList.remove('hidden');
+  loadStatus();
+  loadNotes();
+}
+
+// ---------------------------------------------------------------------------
+// Tabs
+// ---------------------------------------------------------------------------
+
+document.querySelectorAll('.tabs button').forEach((button) => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('.tabs button').forEach((b) => b.classList.remove('active'));
+    button.classList.add('active');
+    const tab = button.dataset.tab;
+    ['status', 'ideas', 'errors', 'screens'].forEach((name) => {
+      el('tab-' + name).classList.toggle('hidden', name !== tab);
+    });
+    if (tab === 'status') loadStatus();
+    if (tab === 'ideas') loadNotes();
+    if (tab === 'errors') loadErrors();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Status
+// ---------------------------------------------------------------------------
+
+async function loadStatus() {
+  let status;
+  try {
+    const res = await fetch('/api/dev/status');
+    if (res.status === 401) { el('appView').classList.add('hidden'); el('loginView').classList.remove('hidden'); return; }
+    status = await res.json();
+  } catch (err) {
+    el('statGrid').innerHTML = '<p class="muted">Could not reach the server.</p>';
+    return;
+  }
+
+  const badge = el('envBadge');
+  badge.textContent = status.server.environment;
+  badge.classList.toggle('production', status.server.environment === 'production');
+
+  const counts = status.counts || {};
+  const texts = status.textbelt || {};
+  const cards = [];
+
+  if (texts.error) {
+    cards.push(`<div class="stat"><div class="label">Texts left</div><div class="value small">—</div>
+      <div class="note">${escapeHtml(texts.error)}</div></div>`);
+  } else {
+    const remaining = texts.quotaRemaining;
+    const tone = remaining < 100 ? 'bad' : remaining < 500 ? 'warn' : 'good';
+    cards.push(`<div class="stat ${tone}"><div class="label">Texts left</div>
+      <div class="value">${remaining}</div>
+      <div class="note">checked ${timeAgo(texts.checkedAt)}${texts.cached ? ' (cached)' : ''}</div></div>`);
+  }
+
+  const dbOk = status.database && status.database.ok;
+  cards.push(`<div class="stat ${dbOk ? 'good' : 'bad'}"><div class="label">Hosting</div>
+    <div class="value small">${dbOk ? 'All good' : 'Database down'}</div>
+    <div class="note">${escapeHtml(status.database ? status.database.type : 'unknown')} · up ${formatUptime(status.server.uptimeSeconds)}</div></div>`);
+
+  cards.push(`<div class="stat"><div class="label">Games</div><div class="value">${counts.games != null ? counts.games : '—'}</div>
+    <div class="note">${counts.photos != null ? counts.photos + ' photos' : ''}</div></div>`);
+
+  const errorCount = counts.errorsLast7Days;
+  cards.push(`<div class="stat ${errorCount ? 'warn' : 'good'}"><div class="label">Errors (7 days)</div>
+    <div class="value">${errorCount != null ? errorCount : '—'}</div>
+    <div class="note">${errorCount ? 'see the Errors tab' : 'nothing reported'}</div></div>`);
+
+  cards.push(`<div class="stat"><div class="label">Waiting to deploy</div>
+    <div class="value">${counts.doneNotDeployed != null ? counts.doneNotDeployed : '—'}</div>
+    <div class="note">${counts.building != null ? counts.building + ' in progress' : ''}</div></div>`);
+
+  el('statGrid').innerHTML = cards.join('');
+
+  const started = status.server.startedAt ? new Date(status.server.startedAt) : null;
+  el('serverFacts').innerHTML = `
+    <dt>Last started</dt><dd>${started ? started.toLocaleString() + ' (' + timeAgo(status.server.startedAt) + ')' : '—'}</dd>
+    <dt>Database</dt><dd>${escapeHtml(status.database ? status.database.type : '—')}${dbOk ? ' — answering' : ' — <strong>not answering</strong>'}</dd>
+    <dt>Node</dt><dd>${escapeHtml(status.server.nodeVersion)}</dd>
+    <dt>Screens page</dt><dd>${status.screens
+      ? 'published ' + timeAgo(status.screens.publishedAt) + ' (' + (status.screens.sizeBytes / 1024 / 1024).toFixed(1) + ' MB)'
+      : 'not published yet'}</dd>`;
+
+  el('screensStamp').textContent = status.screens
+    ? 'Published ' + new Date(status.screens.publishedAt).toLocaleString()
+    : 'Not published yet — run npm run docs:publish';
+}
+
+// ---------------------------------------------------------------------------
+// Ideas
+// ---------------------------------------------------------------------------
+
+function statusOptions(selected) {
+  return noteStatuses.map((s) =>
+    `<option value="${s}"${s === selected ? ' selected' : ''}>${STATUS_LABELS[s] || s}</option>`).join('');
+}
+
+async function loadNotes() {
+  let data;
+  try {
+    const res = await fetch('/api/dev/notes');
+    if (res.status === 401) { el('appView').classList.add('hidden'); el('loginView').classList.remove('hidden'); return; }
+    data = await res.json();
+  } catch (err) {
+    el('ideaList').innerHTML = '<p class="muted">Could not load ideas.</p>';
+    return;
+  }
+
+  if (data.statuses) noteStatuses = data.statuses;
+  if (!el('ideaStatus').options.length) el('ideaStatus').innerHTML = statusOptions('idea');
+
+  const notes = data.notes || [];
+  if (!notes.length) {
+    el('ideaList').innerHTML = '<p class="muted">Nothing here yet. Add the first idea above.</p>';
+    return;
+  }
+
+  el('ideaList').innerHTML = noteStatuses.map((status) => {
+    const group = notes.filter((n) => n.status === status);
+    if (!group.length) return '';
+    return `<div class="status-group">
+      <h3>${STATUS_LABELS[status] || status} (${group.length})</h3>
+      ${group.map((note) => `
+        <div class="idea idea-status-${status}" data-id="${note.id}">
+          <div class="idea-title">${escapeHtml(note.title)}</div>
+          ${note.body ? `<div class="idea-body">${escapeHtml(note.body)}</div>` : ''}
+          <div class="idea-actions">
+            <select data-action="status">${statusOptions(note.status)}</select>
+            <button class="ghost" data-action="delete">Delete</button>
+            <span class="stamp">updated ${timeAgo(note.updatedAt)}</span>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+el('ideaForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const title = el('ideaTitle').value.trim();
+  if (!title) return;
+  await fetch('/api/dev/notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, body: el('ideaBody').value, status: el('ideaStatus').value })
+  });
+  el('ideaTitle').value = '';
+  el('ideaBody').value = '';
+  loadNotes();
+});
+
+el('ideaList').addEventListener('change', async (e) => {
+  if (e.target.dataset.action !== 'status') return;
+  const id = e.target.closest('.idea').dataset.id;
+  await fetch('/api/dev/notes/' + id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: e.target.value })
+  });
+  loadNotes();
+});
+
+el('ideaList').addEventListener('click', async (e) => {
+  if (e.target.dataset.action !== 'delete') return;
+  const card = e.target.closest('.idea');
+  if (!confirm('Delete this idea?')) return;
+  await fetch('/api/dev/notes/' + card.dataset.id, { method: 'DELETE' });
+  loadNotes();
+});
+
+// ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+
+async function loadErrors() {
+  let data;
+  try {
+    const res = await fetch('/api/dev/errors');
+    if (res.status === 401) { el('appView').classList.add('hidden'); el('loginView').classList.remove('hidden'); return; }
+    data = await res.json();
+  } catch (err) {
+    el('errorList').innerHTML = '<p class="muted">Could not load errors.</p>';
+    return;
+  }
+
+  const errors = data.errors || [];
+  if (!errors.length) {
+    el('errorList').innerHTML = '<p class="muted">No errors reported. That is the good outcome.</p>';
+    return;
+  }
+
+  el('errorList').innerHTML = errors.map((error) => `
+    <div class="err">
+      <div class="err-head">
+        <span class="badge ${error.source === 'client' ? 'client' : 'server'}">${escapeHtml(error.source)}</span>
+        <span class="err-msg">${escapeHtml(error.message)}</span>
+      </div>
+      <div class="err-meta">
+        ${error.page ? escapeHtml(error.page) + ' · ' : ''}${new Date(error.createdAt).toLocaleString()} (${timeAgo(error.createdAt)})
+      </div>
+      ${error.stack ? `<details><summary>Show details</summary><pre>${escapeHtml(error.stack)}</pre></details>` : ''}
+    </div>`).join('');
+}
+
+// A valid cookie means we can go straight in without asking for the password again.
+(async function boot() {
+  try {
+    const res = await fetch('/api/dev/status');
+    if (res.ok) showApp();
+  } catch (err) { /* stay on the sign-in screen */ }
+})();
+</script>
+</body>
+</html>
