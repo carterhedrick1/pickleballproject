@@ -15,22 +15,27 @@ There is a fourth, older page — *IN or OUT — Screen Map*
 (`a9a93896-9f2c-490d-a405-25b885289b84`) — with no source file in this repo. Nothing regenerates
 it, so treat it as retired rather than trying to keep it current.
 
-## Refreshing them
+## These are no longer refreshed automatically
+
+On 2026-07-26 Scott asked to **stop republishing these artifacts on every visible change**. The
+pages he actually reads are the in-app copies at `/dev.html` → Screens, which `npm run docs`
+followed by `npm run docs:publish` keeps current. So expect the three artifact URLs above to
+drift behind the app, and don't treat that drift as a bug to fix.
+
+Only republish when Scott asks for it directly. If he does:
 
 ```
 npm run docs
 ```
 
-Then republish each of the three files to **its existing URL from the table above**. Passing the
-URL is what keeps the link stable; publishing the same file without it mints a brand new page and
-the link Scott already has goes stale. Because the published copy is always older generated
-output rather than someone's hand edits, overwriting it is the intended outcome — the update is
-safe to force if the tool reports a conflict.
+Then publish each file to **its existing URL from the table above**. Passing the URL is what
+keeps the link stable; publishing the same file without it mints a brand new page and the link
+Scott already has goes stale. Because the published copy is always older generated output rather
+than someone's hand edits, overwriting it is the intended outcome — safe to force on a conflict.
+
+Two things worth asking him about first, because the repo has never recorded them: which favicon
+each page should carry (the tool requires one, and changing it makes a tab look like a different
+page), and whether the page should be republished at all versus just handed to him from `docs/`.
 
 The titles inside the HTML (`<title>IN or OUT — …`) match the artifact names exactly, which is
 how a file gets matched back to its page if this table is ever lost.
-
-## When to bother
-
-After any change that alters what a user sees: page copy, layout, a new screen, a changed flow.
-Server-only changes with no visible surface do not move these pages.

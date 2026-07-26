@@ -4,7 +4,8 @@
 
 Never deploy a change without first seeing it work the way a real user would:
 
-1. **Run the app locally** (`npm start`, then http://localhost:3001) and exercise the
+1. **Run the app locally** (`PORT=3002 npm start`, then http://localhost:3002 — 3002 is the
+   port Scott's workflow and every `verify/` script expect) and exercise the
    change directly — load the affected page, click the buttons, walk the flow a
    player or organizer would actually take. A passing unit test alone is not enough.
 2. **Use the `verify/` scripts** when the change touches what they cover
@@ -16,18 +17,19 @@ Never deploy a change without first seeing it work the way a real user would:
 If a change can't be tested locally (e.g. real SMS delivery), say so explicitly
 before deploying and state what was verified instead.
 
-## Refresh the artifact pages after any visible change
+## Refresh the docs pages after any visible change
 
-The three pages in `docs/` are also published as Claude artifacts that Scott opens in a
-browser, and a stale one is worse than none — it shows the app as it used to be. So after
-deploying a change that alters anything a user sees (copy, layout, a new screen, a changed
-flow), run `npm run docs` and republish all three files to their existing URLs, listed in
-`docs/ARTIFACTS.md`. Pass each URL explicitly, or the link Scott has goes stale while a new
-page quietly takes its place. Server-only changes with no visible surface don't need this.
+After deploying a change that alters anything a user sees (copy, layout, a new screen, a
+changed flow), run `npm run docs` to regenerate the three pages in `docs/`, then
+`npm run docs:publish` so they update inside the app at `/dev.html` → Screens. That in-app
+copy is the one Scott actually uses as a reference, and a stale one is worse than none —
+it shows the app as it used to be. Server-only changes with no visible surface don't need
+this.
 
-Then run `npm run docs:publish` so the same three pages update inside the app, at
-`/dev.html` → Screens. That copy is the one Scott actually uses as a reference, and
-it goes stale the same way the artifacts do.
+**Don't republish the Claude artifact copies.** The same three pages also exist as
+artifacts (URLs in `docs/ARTIFACTS.md`), but on 2026-07-26 Scott asked to stop refreshing
+them on every visible change — `/dev.html` is where he reads them. Leave those URLs alone
+unless he asks for them specifically.
 
 ## The developer area
 
