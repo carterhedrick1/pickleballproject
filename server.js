@@ -1,46 +1,26 @@
-// server.js - Main server file (simplified)
+// server.js - wiring only.
+//
+// The API itself lives in ./routes, one file per group, each exporting a mountXRoutes(app)
+// that registers absolute paths. What stays here is the order-sensitive part: middleware
+// before routes, rate limiters before the route groups they cover, and the error middleware
+// after everything. /api/health stays here too - it is how a deploy is confirmed, so it
+// should not sit inside any group being changed.
 const express = require('express');
-const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-// Import our separated modules
 const {
   initializeDatabase,
-  saveGame,
-  getGame,
-  getGameHostInfo,
-  getAllGames,
-  getGamesByHostPhone,
-  deleteGamePermanently,
-  addLocation,
-  getLocations,
-  saveCourtImage,
-  getCourtImage,
-  getAllCourtImages,
-  saveCourtImageToLibrary,
-  getCourtImagesLibrary,
-  getCourtImageFromLibrary,
-  deleteCourtImageFromLibrary,
-  setGameCourtImage,
-  getGameCourtImageId,
-  upsertRosterEntry,
-  recordRosterSighting,
-  getRosterForHost,
-  savePhoto,
-  getPhotosForGame,
-  getPhoto,
-  deletePhoto,
-  countPhotosForGame,
-  getAllPhotoCounts,
   logAppError,
   closeDatabaseConnection,
   isProduction
 } = require('./database');
 
-const mountDevRoutes = require('./routes/dev');
-const { requireDevAuth } = mountDevRoutes;
+const { handleIncomingSMS } = require('./sms-handler');
+const { checkAndSendReminders } = require('./game-logic');
+const { routeFailed } = require('./utils/route-error');
 
+const mountDevRoutes = require('./routes/dev');
 const mountGameRoutes = require('./routes/games');
 const mountLocationRoutes = require('./routes/locations');
 const mountCourtImageRoutes = require('./routes/court-images');
@@ -48,45 +28,6 @@ const mountPhotoRoutes = require('./routes/photos');
 const mountRosterRoutes = require('./routes/roster');
 const mountAnnouncementRoutes = require('./routes/announcements');
 const mountPlayerRoutes = require('./routes/players');
-
-const {
-  sendSMS,
-  sendSMSWithRetry,
-  handleIncomingSMS,
-  sendOrganizerNotification,
-  formatPhoneNumber,
-  formatDateForSMS, 
-  formatTimeForSMS,
-  formatLocationForSMS
-} = require('./sms-handler');
-
-const { 
-  checkAndSendReminders,
-  createGameData,
-  validatePlayerData,
-  checkExistingPlayer,
-  addPlayerToGame,
-  removePlayerFromGame,
-  isValidPhoneNumber
-} = require('./game-logic');
-
-const { withGameLock, acquireGameLock } = require('./utils/game-lock');
-
-const { routeFailed } = require('./utils/route-error');
-
-const { isHost } = require('./utils/host-auth');
-
-const { PHOTO_TYPES, MAX_PHOTOS_PER_GAME, sniffImageType } = require('./utils/image-type');
-
-const { isGameUpcoming } = require('./utils/central-time');
-
-const {
-  promoteNextFromWaitlist,
-  recordOutPlayer,
-  departureAlertType
-} = require('./utils/promotion');
-
-const { computeHostStats } = require('./stats');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
