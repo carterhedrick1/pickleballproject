@@ -1,0 +1,518 @@
+/* ---------------------------------------------------------------------------
+   Shared shell for the host-facing pages: My Games, Roster, Stats.
+   These three are the same page with different content in the middle, so the
+   frame, the phone gate and the card styling live here once rather than being
+   pasted into each file.
+   --------------------------------------------------------------------------- */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+/* Header ------------------------------------------------------------------ */
+
+.page-header {
+    background: linear-gradient(135deg, #475569 0%, #429046 100%);
+    color: white;
+    padding: 20px 32px 16px;
+    position: relative;
+    overflow: hidden;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px 20px 0 0;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.15), transparent),
+        radial-gradient(2px 2px at 40px 70px, rgba(255, 255, 255, 0.1), transparent),
+        radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.2), transparent),
+        radial-gradient(1px 1px at 130px 80px, rgba(255, 255, 255, 0.1), transparent),
+        radial-gradient(2px 2px at 160px 30px, rgba(255, 255, 255, 0.15), transparent);
+    background-repeat: repeat;
+    background-size: 200px 100px;
+}
+
+.page-header .header-content {
+    text-align: center;
+    z-index: 2;
+    position: relative;
+}
+
+.page-header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    letter-spacing: -0.01em;
+}
+
+.page-header .subtitle {
+    font-size: 14px;
+    opacity: 0.9;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Links across to the other two host pages. */
+.host-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    padding: 14px 32px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.host-nav a {
+    color: #475569;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: white;
+}
+
+.host-nav a:hover {
+    border-color: #429046;
+    color: #16a34a;
+}
+
+.host-nav a[aria-current="page"] {
+    background: #429046;
+    border-color: #429046;
+    color: white;
+}
+
+/* Content ----------------------------------------------------------------- */
+
+.content-section {
+    padding: 32px;
+    background-color: white;
+}
+
+.section-title {
+    color: #4CAF50;
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0 0 20px 0;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #4CAF50;
+    display: inline-block;
+}
+
+.section-subtitle {
+    color: #475569;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 28px 0 14px;
+}
+
+.summary-line {
+    color: #475569;
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.muted {
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* Cards ------------------------------------------------------------------- */
+
+.game-item {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.game-item.cancelled {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+.game-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.game-detail {
+    color: #475569;
+    font-size: 15px;
+}
+
+.game-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.badge {
+    font-size: 13px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.badge.cancelled {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.btn:hover {
+    border-color: #429046;
+    color: #16a34a;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
+    border-color: transparent;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    color: white;
+}
+
+/* Notes ------------------------------------------------------------------- */
+
+.notes-panel {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.notes-panel textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 16px; /* 16px keeps iOS from zooming the page on focus */
+    resize: vertical;
+}
+
+.notes-status {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 6px;
+    min-height: 18px;
+}
+
+/* Phone gate -------------------------------------------------------------- */
+
+.phone-gate {
+    text-align: center;
+    padding: 40px 24px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 16px;
+    border: 2px dashed #cbd5e1;
+}
+
+.phone-gate h3 {
+    color: #475569;
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.phone-gate p {
+    color: #64748b;
+    margin-bottom: 20px;
+}
+
+.phone-gate input {
+    width: 100%;
+    max-width: 280px;
+    padding: 14px;
+    font-size: 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    text-align: center;
+}
+
+.switch-number {
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+}
+
+/* Empty state ------------------------------------------------------------- */
+
+.no-games {
+    text-align: center;
+    padding: 48px 32px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 16px;
+    border: 2px dashed #cbd5e1;
+}
+
+.no-games h3 {
+    color: #475569;
+    margin: 0 0 12px 0;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.no-games p {
+    color: #64748b;
+    margin: 0 0 20px 0;
+}
+
+.create-game-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
+    color: white;
+    padding: 14px 28px;
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.create-game-btn:hover {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
+
+/* Status ------------------------------------------------------------------ */
+
+.status {
+    margin: 20px 32px 0;
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-size: 15px;
+}
+
+.status.error {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.status.success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status.info {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.footer-note {
+    padding: 20px 32px 28px;
+    color: #94a3b8;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* Stat cards (Stats page) -------------------------------------------------- */
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 8px;
+}
+
+.stat-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 30px;
+    font-weight: 700;
+    color: #16a34a;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.top-list {
+    margin: 0 0 8px 20px;
+    color: #334155;
+}
+
+.top-list li {
+    margin-bottom: 6px;
+}
+
+.top-list .count {
+    color: #64748b;
+    font-size: 14px;
+}
+
+.caveat {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: #78350f;
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+/* Roster rows -------------------------------------------------------------- */
+
+.roster-row {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: white;
+}
+
+.roster-row label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin: 8px 0 4px;
+}
+
+.roster-row input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: inherit;
+}
+
+.roster-phone {
+    font-size: 14px;
+    color: #64748b;
+    margin-top: 8px;
+}
+
+.roster-meta {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+.row-status {
+    font-size: 13px;
+    color: #16a34a;
+    margin-top: 6px;
+    min-height: 18px;
+}
+
+/* Collapsible past games --------------------------------------------------- */
+
+details.past-games {
+    margin-top: 24px;
+}
+
+details.past-games > summary {
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 600;
+    color: #475569;
+    padding: 10px 0;
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 0;
+    }
+
+    .container {
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .page-header {
+        border-radius: 0;
+    }
+
+    .content-section {
+        padding: 20px;
+    }
+
+    .host-nav {
+        padding: 12px 16px;
+    }
+
+    .status,
+    .footer-note {
+        margin-left: 16px;
+        margin-right: 16px;
+        padding-left: 0;
+        padding-right: 0;
+    }
+}

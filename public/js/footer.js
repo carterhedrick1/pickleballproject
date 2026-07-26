@@ -15,7 +15,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <li><a href="/">How It Works</a></li>
                             <li><a href="/create.html">Create Game</a></li>
                             <li><a href="/my-games.html">My Games</a></li>
-                            <li><a href="/lookup.html">Find My Games</a></li>
+                            <li><a href="/roster.html">Roster</a></li>
+                            <li><a href="/stats.html">Stats</a></li>
                         </ul>
                     </div>
                     

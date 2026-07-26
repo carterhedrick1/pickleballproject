@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Stats - In or Out</title>
+    <link rel="stylesheet" href="/css/header.css">
+    <link rel="stylesheet" href="/css/footer.css">
+    <link rel="stylesheet" href="/css/host-pages.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <div class="header-content">
+                <h1>My Stats</h1>
+                <div class="subtitle">Your games, your players, your patterns</div>
+            </div>
+        </div>
+
+        <nav class="host-nav">
+            <a href="/my-games.html">My Games</a>
+            <a href="/roster.html">Roster</a>
+            <a href="/stats.html" aria-current="page">Stats</a>
+        </nav>
+
+        <div id="status" class="status" style="display: none;"></div>
+
+        <div class="content-section">
+            <!-- Shown until we know whose stats to load. -->
+            <div id="phoneGate" class="phone-gate" style="display: none;">
+                <h3>Which number do you host with?</h3>
+                <p>Enter the phone number you use when you create games.</p>
+                <input type="tel" id="phoneInput" placeholder="(555) 123-4567" autocomplete="tel">
+                <br>
+                <button type="button" class="btn btn-primary" id="showStatsBtn">Show my stats</button>
+            </div>
+
+            <div id="statsBody" style="display: none;">
+                <p class="summary-line" id="summaryLine"></p>
+
+                <div class="stat-grid" id="summaryCards"></div>
+
+                <h3 class="section-subtitle">Who plays</h3>
+                <div id="playersBlock"></div>
+
+                <h3 class="section-subtitle">Where and when</h3>
+                <div class="stat-grid" id="scheduleCards"></div>
+
+                <h3 class="section-subtitle">DUPR</h3>
+                <div class="stat-grid" id="duprCards"></div>
+                <p class="muted" id="duprNote"></p>
+
+                <div id="notesBlock"></div>
+
+                <p class="muted" style="margin-top: 24px;">
+                    Showing stats for <span id="whichPhone"></span>.
+                    <button type="button" class="switch-number" id="switchNumber">Not you? Switch number</button>
+                </p>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            Stats are worked out from the games you have hosted with this phone number.
+        </div>
+    </div>
+
+    <script>
+        // The host's number is remembered per device, the same way My Games and Roster do it.
+        const STORAGE_KEY = 'hostPhone';
+        let hostPhone = '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('showStatsBtn').addEventListener('click', submitPhone);
+            document.getElementById('phoneInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') submitPhone();
+            });
+            document.getElementById('switchNumber').addEventListener('click', () => {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            });
+
+            hostPhone = localStorage.getItem(STORAGE_KEY) || '';
+            if (hostPhone) {
+                loadStats();
+            } else {
+                document.getElementById('phoneGate').style.display = 'block';
+            }
+        });
+
+        function submitPhone() {
+            const digits = (document.getElementById('phoneInput').value || '').replace(/\D/g, '');
+            const tenDigits = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+
+            if (tenDigits.length !== 10) {
+                showStatus('Please enter a 10-digit phone number.', 'error');
+                return;
+            }
+
+            hostPhone = tenDigits;
+            localStorage.setItem(STORAGE_KEY, tenDigits);
+            document.getElementById('phoneGate').style.display = 'none';
+            loadStats();
+        }
+
+        function showStatus(message, type) {
+            const el = document.getElementById('status');
+            el.textContent = message;
+            el.className = 'status ' + (type || 'info');
+            el.style.display = message ? 'block' : 'none';
+        }
+
+        const prettyPhone = (p) =>
+            p && p.length === 10 ? `(${p.slice(0, 3)}) ${p.slice(3, 6)}-${p.slice(6)}` : p;
+
+        const percent = (value) => value === null ? '--' : Math.round(value * 100) + '%';
+
+        function prettyTime(time) {
+            if (!time) return '--';
+            const [hours, minutes] = time.split(':');
+            const hour = parseInt(hours, 10);
+            const suffix = hour >= 12 ? 'PM' : 'AM';
+            return `${hour % 12 || 12}:${minutes} ${suffix}`;
+        }
+
+        function statCard(value, label) {
+            return `<div class="stat-card">
+                        <div class="stat-value">${value}</div>
+                        <div class="stat-label">${label}</div>
+                    </div>`;
+        }
+
+        /** Escapes anything a player typed into their name before it goes near innerHTML. */
+        function esc(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : text;
+            return div.innerHTML;
+        }
+
+        function list(items, render, emptyMessage) {
+            if (!items || !items.length) return `<p class="muted">${emptyMessage}</p>`;
+            return `<ol class="top-list">${items.map(render).join('')}</ol>`;
+        }
+
+        async function loadStats() {
+            showStatus('Loading your stats...', 'info');
+
+            try {
+                const response = await fetch(`/api/stats/${hostPhone}`);
+                if (!response.ok) throw new Error(`Server returned ${response.status}`);
+                const stats = await response.json();
+
+                showStatus('', '');
+                render(stats);
+                document.getElementById('statsBody').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                showStatus('Could not load your stats. Please try again.', 'error');
+            }
+        }
+
+        function render(stats) {
+            const { summary, fillRate, players, schedule, dupr, signupSpeed, notes } = stats;
+
+            document.getElementById('whichPhone').textContent = prettyPhone(stats.phoneNumber);
+
+            document.getElementById('summaryLine').textContent = summary.gamesHosted
+                ? `You've hosted ${summary.gamesHosted} ${summary.gamesHosted === 1 ? 'game' : 'games'}.`
+                : "You haven't hosted a game with this number yet.";
+
+            document.getElementById('summaryCards').innerHTML = [
+                statCard(summary.gamesHosted, 'Games hosted'),
+                statCard(summary.completed, 'Played'),
+                statCard(summary.upcoming, 'Coming up'),
+                statCard(summary.cancelled, 'Cancelled'),
+                statCard(percent(fillRate.average), `Average fill${fillRate.gamesCounted ? ` (${fillRate.gamesCounted} games)` : ''}`),
+                statCard(players.distinctCount, 'Different players')
+            ].join('');
+
+            document.getElementById('playersBlock').innerHTML = `
+                <h4 class="section-subtitle" style="font-size:16px;">Plays the most</h4>
+                ${list(players.top,
+                    (p) => `<li>${esc(p.name)} <span class="count">- ${p.games} ${p.games === 1 ? 'game' : 'games'}</span></li>`,
+                    'Nobody has played a game yet.')}
+
+                <h4 class="section-subtitle" style="font-size:16px;">Waits the most</h4>
+                ${list(players.waitlistRegulars,
+                    (p) => `<li>${esc(p.name)} <span class="count">- waitlisted ${p.times} ${p.times === 1 ? 'time' : 'times'}</span></li>`,
+                    'Nobody has been on a waitlist yet.')}
+
+                <h4 class="section-subtitle" style="font-size:16px;">Pulls out the most</h4>
+                ${list(players.outs,
+                    (p) => `<li>${esc(p.name)} <span class="count">- out ${p.timesOut} ${p.timesOut === 1 ? 'time' : 'times'}${p.confirmedCancels ? `, ${p.confirmedCancels} after taking a spot` : ''}</span></li>`,
+                    'Nobody has pulled out yet.')}
+
+                <h4 class="section-subtitle" style="font-size:16px;">Signs up fastest</h4>
+                ${list(signupSpeed,
+                    (p) => `<li>${esc(p.name)} <span class="count">- usually within ${p.medianMinutes} min of you posting (${p.samples} games)</span></li>`,
+                    'Not enough first-come signups to tell yet.')}
+            `;
+
+            document.getElementById('scheduleCards').innerHTML = [
+                statCard(esc(schedule.busiestLocation?.name || '--'), 'Usual court'),
+                statCard(esc(schedule.favoriteDay?.name || '--'), 'Usual day'),
+                statCard(prettyTime(schedule.favoriteTime?.name), 'Usual start time')
+            ].join('');
+
+            document.getElementById('duprCards').innerHTML = [
+                statCard(dupr.ratedPlayers, 'Players with a rating'),
+                statCard(dupr.min ?? '--', 'Lowest'),
+                statCard(dupr.average ?? '--', 'Average'),
+                statCard(dupr.max ?? '--', 'Highest')
+            ].join('');
+
+            document.getElementById('duprNote').textContent = dupr.ratedPlayers
+                ? 'Based on the ratings you have entered on your roster.'
+                : 'Add DUPR ratings on your Roster page and they will show up here.';
+
+            // The caveats are shown, not hidden - a stat you cannot trust is worse than no stat.
+            document.getElementById('notesBlock').innerHTML = (notes || [])
+                .map((note) => `<p class="caveat">${esc(note)}</p>`)
+                .join('');
+        }
+    </script>
+
+    <script src="/js/header.js"></script>
+    <script src="/js/footer.js"></script>
+</body>
+</html>

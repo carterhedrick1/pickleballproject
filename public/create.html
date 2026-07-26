@@ -180,6 +180,63 @@
             display: inline-block;
         }
 
+        /* Numbered section cards. The form is still one form and one submit - these just
+           break it into four things a host can think about one at a time, each with a line
+           saying why it matters. */
+        .form-step {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 24px;
+            background: #fcfcfd;
+        }
+
+        .step-heading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-title {
+            font-size: 19px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .step-explainer {
+            color: #6b7280;
+            font-size: 14px;
+            margin: 0 0 18px;
+            line-height: 1.5;
+        }
+
+        #locationSelect {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            background: white;
+            color: #374151;
+        }
+
         .form-group {
             margin-bottom: 24px;
         }
@@ -790,161 +847,203 @@
         
         <div class="form-section">
             
+            <!-- One form in four explained sections. Every field id is unchanged, so
+                 createGame() and the screenshot script keep working as they are. -->
             <form id="gameForm">
-                <div class="form-group">
-                    <label for="location">Location:</label>
-                    <input type="text" id="location" name="location" placeholder="e.g., Oak Park Courts" required>
-                </div>
 
-                <div class="form-group">
-                    <label for="courtNumber">Court Number (optional):</label>
-                    <input type="text" id="courtNumber" name="courtNumber" placeholder="e.g., Court 3, Courts 1-2, Center Court">
-                    <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Specify which court(s) you'll be using at this location</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="organizerName">Your Name (Organizer):</label>
-                    <input type="text" id="organizerName" name="organizerName" placeholder="Enter your full name" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="organizerPhone">Your Phone Number:</label>
-                    <input type="tel" id="organizerPhone" name="organizerPhone" placeholder="(555) 123-4567" required>
-                    <div class="sms-info">
-                        By entering your number, you agree to receive a confirmation text where you can manage your game. Msg & data rates may apply. See Terms & Privacy.
+                <!-- 1. Where ------------------------------------------------------------ -->
+                <section class="form-step">
+                    <div class="step-heading">
+                        <span class="step-badge">1</span>
+                        <h2 class="step-title">Where</h2>
                     </div>
-                </div>
+                    <p class="step-explainer">This goes in every text your players get.</p>
 
-                <div class="form-group">
-                    <div class="checkbox-inline">
-                        <input type="checkbox" id="organizerPlaying" name="organizerPlaying" checked>
-                        <label for="organizerPlaying">I will be playing in this game (uncheck if organizing for others)</label>
+                    <div class="form-group">
+                        <label for="locationSelect">Court:</label>
+                        <select id="locationSelect" name="locationSelect">
+                            <option value="">Loading courts...</option>
+                        </select>
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="date">Date:</label>
-                    <input type="date" id="date" name="date" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="time">Start Time:</label>
-                    <input type="time" id="time" name="time" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="duration">Duration (minutes):</label>
-                    <input type="number" id="duration" name="duration" value="90" min="30" step="15" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="players">Number of Players Needed:</label>
-                    <input type="number" id="players" name="players" value="4" min="1" max="50" required>
-                    <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Enter any number from 1 to 50 players. Include yourself if you are playing</small>
-                </div>
 
-                <div class="form-group">
-                    <label for="message">Optional Message:</label>
-                    <textarea id="message" name="message" placeholder="Any additional info for players (e.g., 'Bring water and sunscreen!')"></textarea>
-                </div>
+                    <div class="form-group" id="locationFreeText">
+                        <label for="location">Location:</label>
+                        <input type="text" id="location" name="location" placeholder="e.g., Oak Park Courts" required>
+                    </div>
 
-                <!-- Add this after the "Number of Players" field in public/index.html -->
-                <!-- Replace the Registration Mode section in public/index.html -->
-                <div class="form-group">
-                    <label>Registration Mode:</label>
-                    <div class="mode-selector">
-                        <div class="mode-option checked" onclick="toggleRegistrationMode(this, 'fcfsMode')">
+                    <div class="form-group">
+                        <label for="courtNumber">Court Number (optional):</label>
+                        <input type="text" id="courtNumber" name="courtNumber" placeholder="e.g., Court 3, Courts 1-2, Center Court">
+                        <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Specify which court(s) you'll be using at this location</small>
+                    </div>
+                </section>
+
+                <!-- 2. When ------------------------------------------------------------- -->
+                <section class="form-step">
+                    <div class="step-heading">
+                        <span class="step-badge">2</span>
+                        <h2 class="step-title">When</h2>
+                    </div>
+                    <p class="step-explainer">Players get this in their confirmation text, plus a reminder the day before.</p>
+
+                    <div class="form-group">
+                        <label for="date">Date:</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="time">Start Time:</label>
+                        <input type="time" id="time" name="time" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="duration">Duration (minutes):</label>
+                        <input type="number" id="duration" name="duration" value="90" min="30" step="15" required>
+                    </div>
+                </section>
+
+                <!-- 3. Who -------------------------------------------------------------- -->
+                <section class="form-step">
+                    <div class="step-heading">
+                        <span class="step-badge">3</span>
+                        <h2 class="step-title">Who</h2>
+                    </div>
+                    <p class="step-explainer">Your phone number is the key to everything &mdash; reply "1" to your confirmation text to get your management link on any device.</p>
+
+                    <div class="form-group">
+                        <label for="organizerName">Your Name (Organizer):</label>
+                        <input type="text" id="organizerName" name="organizerName" placeholder="Enter your full name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="organizerPhone">Your Phone Number:</label>
+                        <input type="tel" id="organizerPhone" name="organizerPhone" placeholder="(555) 123-4567" required>
+                        <div class="sms-info">
+                            By entering your number, you agree to receive a confirmation text where you can manage your game. Msg &amp; data rates may apply. See Terms &amp; Privacy.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-inline">
+                            <input type="checkbox" id="organizerPlaying" name="organizerPlaying" checked>
+                            <label for="organizerPlaying">I will be playing in this game (uncheck if organizing for others)</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="players">Number of Players Needed:</label>
+                        <input type="number" id="players" name="players" value="4" min="1" max="50" required>
+                        <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Include yourself if you're playing. Any number from 1 to 50.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="message">Optional Message:</label>
+                        <textarea id="message" name="message" placeholder="Any additional info for players (e.g., 'Bring water and sunscreen!')"></textarea>
+                    </div>
+                </section>
+
+                <!-- 4. How -------------------------------------------------------------- -->
+                <section class="form-step">
+                    <div class="step-heading">
+                        <span class="step-badge">4</span>
+                        <h2 class="step-title">How</h2>
+                    </div>
+                    <p class="step-explainer">How players get a spot, and what you want to hear about.</p>
+
+                    <div class="form-group">
+                        <label>Registration Mode:</label>
+                        <div class="mode-selector">
+                            <div class="mode-option checked" onclick="toggleRegistrationMode(this, 'fcfsMode')">
+                                <div class="notification-content">
+                                    <div class="notification-icon"></div>
+                                    <div class="notification-text">
+                                        <div class="notification-title">First-Come First-Served</div>
+                                        <div class="notification-description">Spots fill in the order people sign up. Once it's full, everyone else waits, and if someone drops out the next person in line gets their spot automatically.</div>
+                                    </div>
+                                </div>
+                                <div class="toggle-switch"></div>
+                                <input type="radio" id="fcfsMode" name="registrationMode" value="fcfs" checked>
+                            </div>
+
+                            <div class="mode-option" onclick="toggleRegistrationMode(this, 'waitlistMode')">
+                                <div class="notification-content">
+                                    <div class="notification-icon"></div>
+                                    <div class="notification-text">
+                                        <div class="notification-title">Waitlist Mode</div>
+                                        <div class="notification-description">Everyone applies and you choose who's in. Nobody is added automatically, so if someone drops out you pick their replacement.</div>
+                                    </div>
+                                </div>
+                                <div class="toggle-switch"></div>
+                                <input type="radio" id="waitlistMode" name="registrationMode" value="waitlist">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group notifications-section">
+                        <label for="notifications">Organizer Notifications:</label>
+                        <small>Text messages we'll send you (optional)</small>
+
+                        <div class="notification-option checked" onclick="toggleNotification(this, 'notifyGameFull')">
                             <div class="notification-content">
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
-                                    <div class="notification-title">First-Come First-Served</div>
-                                    <div class="notification-description">Players are automatically confirmed as they sign up</div>
+                                    <div class="notification-title">Game becomes full</div>
+                                    <div class="notification-description">Text me once every spot is taken</div>
                                 </div>
                             </div>
                             <div class="toggle-switch"></div>
-                            <input type="radio" id="fcfsMode" name="registrationMode" value="fcfs" checked>
+                            <input type="checkbox" id="notifyGameFull" name="notifyGameFull" checked>
                         </div>
-                        
-                        <div class="mode-option" onclick="toggleRegistrationMode(this, 'waitlistMode')">
+
+                        <div class="notification-option checked" onclick="toggleNotification(this, 'notifyPlayerCancels')">
                             <div class="notification-content">
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
-                                    <div class="notification-title">Waitlist Mode</div>
-                                    <div class="notification-description">You manually select players from all signups</div>
+                                    <div class="notification-title">Someone cancels their spot</div>
+                                    <div class="notification-description">Text me when a player drops out</div>
                                 </div>
                             </div>
                             <div class="toggle-switch"></div>
-                            <input type="radio" id="waitlistMode" name="registrationMode" value="waitlist">
+                            <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels" checked>
+                        </div>
+
+                        <div class="notification-option" onclick="toggleNotification(this, 'notifyPlayerJoins')">
+                            <div class="notification-content">
+                                <div class="notification-icon"></div>
+                                <div class="notification-text">
+                                    <div class="notification-title">Someone joins the game</div>
+                                    <div class="notification-description">Text me every time a player signs up</div>
+                                </div>
+                            </div>
+                            <div class="toggle-switch"></div>
+                            <input type="checkbox" id="notifyPlayerJoins" name="notifyPlayerJoins">
+                        </div>
+
+                        <div class="notification-option" onclick="toggleNotification(this, 'notifyOneSpotLeft')">
+                            <div class="notification-content">
+                                <div class="notification-icon"></div>
+                                <div class="notification-text">
+                                    <div class="notification-title">Only one spot remaining</div>
+                                    <div class="notification-description">Text me when there's one spot left to fill</div>
+                                </div>
+                            </div>
+                            <div class="toggle-switch"></div>
+                            <input type="checkbox" id="notifyOneSpotLeft" name="notifyOneSpotLeft">
+                        </div>
+
+                        <div class="notification-option" onclick="toggleNotification(this, 'notifyWaitlistStarts')">
+                            <div class="notification-content">
+                                <div class="notification-icon"></div>
+                                <div class="notification-text">
+                                    <div class="notification-title">Waitlist starts</div>
+                                    <div class="notification-description">Text me when the first person has to wait</div>
+                                </div>
+                            </div>
+                            <div class="toggle-switch"></div>
+                            <input type="checkbox" id="notifyWaitlistStarts" name="notifyWaitlistStarts">
                         </div>
                     </div>
-                </div>
-
-                <!-- REPLACE your organizer notifications section with this: -->
-                <!-- REPLACE your notifications section HTML with this: -->
-                <div class="form-group notifications-section">
-    <label for="notifications">Organizer Notifications:</label>
-    <small>Get SMS alerts when these events happen (optional)</small>
-    
-    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyGameFull')">
-        <div class="notification-content">
-            <div class="notification-icon"></div>
-            <div class="notification-text">
-                <div class="notification-title">Game becomes full</div>
-                <div class="notification-description">Get notified when all spots are taken</div>
-            </div>
-        </div>
-        <div class="toggle-switch"></div>
-        <input type="checkbox" id="notifyGameFull" name="notifyGameFull" checked>
-    </div>
-    
-    <div class="notification-option checked" onclick="toggleNotification(this, 'notifyPlayerCancels')">
-        <div class="notification-content">
-            <div class="notification-icon"></div>
-            <div class="notification-text">
-                <div class="notification-title">Someone cancels their spot</div>
-                <div class="notification-description">Get notified when players cancel</div>
-            </div>
-        </div>
-        <div class="toggle-switch"></div>
-        <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels" checked>
-    </div>
-    
-    <div class="notification-option" onclick="toggleNotification(this, 'notifyPlayerJoins')">
-        <div class="notification-content">
-            <div class="notification-icon"></div>
-            <div class="notification-text">
-                <div class="notification-title">Someone joins the game</div>
-                <div class="notification-description">Get notified each time a player signs up</div>
-            </div>
-        </div>
-        <div class="toggle-switch"></div>
-        <input type="checkbox" id="notifyPlayerJoins" name="notifyPlayerJoins">
-    </div>
-    
-    <div class="notification-option" onclick="toggleNotification(this, 'notifyOneSpotLeft')">
-        <div class="notification-content">
-            <div class="notification-icon"></div>
-            <div class="notification-text">
-                <div class="notification-title">Only one spot remaining</div>
-                <div class="notification-description">Get notified when almost full</div>
-            </div>
-        </div>
-        <div class="toggle-switch"></div>
-        <input type="checkbox" id="notifyOneSpotLeft" name="notifyOneSpotLeft">
-    </div>
-    
-    <div class="notification-option" onclick="toggleNotification(this, 'notifyWaitlistStarts')">
-        <div class="notification-content">
-            <div class="notification-icon"></div>
-            <div class="notification-text">
-                <div class="notification-title">Waitlist starts</div>
-                <div class="notification-description">Get notified when first person is waitlisted</div>
-            </div>
-        </div>
-        <div class="toggle-switch"></div>
-        <input type="checkbox" id="notifyWaitlistStarts" name="notifyWaitlistStarts">
-    </div>
-</div>
+                </section>
 
                 <button type="submit">Create Game</button>
             </form>
@@ -953,17 +1052,17 @@
         <!-- MOVE the shareLink section INSIDE the container but OUTSIDE the form-section: -->
         <div id="shareLink" class="share-section" style="display: none;">
             <h3 class="share-title">Your Game has been Created!</h3>
-            
+
             <div class="center-copy-section">
-                <p>Click the button below to copy a complete invitation message with all game details and registration link:</p>
+                <p><strong>Send this to your players.</strong> It has the date, time, court and a link they can tap to say IN or OUT.</p>
                 <button id="copyLink" class="copy-btn">Copy Invitation Message</button>
-                <p class="save-suggestion">This copies a complete invitation message that you can send via text, email, or social media. It includes all game details and the registration link.</p>
+                <p class="save-suggestion">Paste it into a group text, an email, or anywhere else you organize. Anyone with the link can sign up - they don't need an account.</p>
             </div>
-            
+
             <div class="management-reminder">
-                <h4>To Manage Your Game</h4>
-                <p>Reply <strong>"1"</strong> to the confirmation text you received to get your management link.</p>
-                <p><small>You can edit players, send announcements, and cancel the game with that link.</small></p>
+                <h4>Keep this one for yourself</h4>
+                <p>Your management link is different from the invitation. Reply <strong>"1"</strong> to the confirmation text you just received and we'll send it to you.</p>
+                <p><small>It opens the page where you add and remove players, add photos, send announcements and cancel the game. Because it comes by text, you can get it on any device - just reply "1" again.</small></p>
             </div>
         </div>
     </div> <!-- Close container -->
@@ -993,7 +1092,73 @@
             // Set default start time to 6:00 PM
             document.getElementById('time').value = '18:00';
             console.log('Default date set to:', tomorrowStr); // Debug log
+
+            setupLocationPicker();
         });
+
+        // ---------------------------------------------------------------------------
+        // Location picker
+        //
+        // The dropdown is a convenience on top of the #location text input, never a
+        // replacement for it: picking a court copies the name into that input, which is
+        // still what gets submitted. If /api/locations is slow or down, the input is simply
+        // left visible as a plain text field and the form works exactly as it did before.
+        // ---------------------------------------------------------------------------
+
+        const NEW_LOCATION_VALUE = '__new__';
+
+        async function setupLocationPicker() {
+            const select = document.getElementById('locationSelect');
+            const freeText = document.getElementById('locationFreeText');
+            const input = document.getElementById('location');
+            if (!select || !input) return;
+
+            select.addEventListener('change', () => {
+                if (select.value === NEW_LOCATION_VALUE) {
+                    freeText.style.display = 'block';
+                    input.value = '';
+                    input.focus();
+                } else {
+                    // Keep the input in the DOM and populated - createGame() reads it.
+                    input.value = select.value;
+                    freeText.style.display = select.value ? 'none' : 'block';
+                }
+            });
+
+            try {
+                const response = await fetch('/api/locations');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const { locations = [] } = await response.json();
+
+                if (!locations.length) throw new Error('no saved courts yet');
+
+                select.innerHTML = '';
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = 'Choose a court...';
+                select.appendChild(placeholder);
+
+                locations.forEach((name) => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+
+                const newOption = document.createElement('option');
+                newOption.value = NEW_LOCATION_VALUE;
+                newOption.textContent = 'Somewhere new...';
+                select.appendChild(newOption);
+
+                // Nothing chosen yet, so the free-text field stays visible and usable.
+                freeText.style.display = 'block';
+            } catch (error) {
+                // Never block creating a game on this. Hide the dropdown, keep the text box.
+                console.warn('Could not load saved courts, falling back to free text:', error);
+                select.closest('.form-group').style.display = 'none';
+                freeText.style.display = 'block';
+            }
+        }
 
         // TIMEZONE FIX FUNCTION - formats dates safely
         function formatDateForDisplay(dateStr) {

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roster - In or Out</title>
+    <link rel="stylesheet" href="/css/header.css">
+    <link rel="stylesheet" href="/css/footer.css">
+    <link rel="stylesheet" href="/css/host-pages.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Roster</h1>
+                <div class="subtitle">Everyone you play with</div>
+            </div>
+        </div>
+
+        <nav class="host-nav">
+            <a href="/my-games.html">My Games</a>
+            <a href="/roster.html" aria-current="page">Roster</a>
+            <a href="/stats.html">Stats</a>
+        </nav>
+
+        <div id="status" class="status" style="display: none;"></div>
+
+        <div class="content-section">
+            <div id="phoneGate" class="phone-gate" style="display: none;">
+                <h3>Which number do you host with?</h3>
+                <p>Enter the phone number you use when you create games.</p>
+                <input type="tel" id="phoneInput" placeholder="(555) 123-4567" autocomplete="tel">
+                <br>
+                <button type="button" class="btn btn-primary" id="showRosterBtn">Show my roster</button>
+            </div>
+
+            <div id="rosterBody" style="display: none;">
+                <p class="summary-line" id="summaryLine"></p>
+
+                <div id="rosterList"></div>
+
+                <div id="emptyState" class="no-games" style="display: none;">
+                    <h3>Nobody yet</h3>
+                    <p>Host a game and your roster builds itself &mdash; everyone who signs up lands here.</p>
+                    <a href="/create.html" class="create-game-btn">Create a game</a>
+                </div>
+
+                <p class="muted" style="margin-top: 28px;">
+                    Roster for <span id="whichPhone"></span>.
+                    <button type="button" class="switch-number" id="switchNumber">Not you? Switch number</button>
+                </p>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            Names and DUPR details you enter here are yours &mdash; players never see or edit them.
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'hostPhone';
+        let hostPhone = '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('showRosterBtn').addEventListener('click', submitPhone);
+            document.getElementById('phoneInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') submitPhone();
+            });
+            document.getElementById('switchNumber').addEventListener('click', () => {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            });
+
+            hostPhone = localStorage.getItem(STORAGE_KEY) || '';
+            if (hostPhone) {
+                loadRoster();
+            } else {
+                document.getElementById('phoneGate').style.display = 'block';
+            }
+        });
+
+        function submitPhone() {
+            const digits = (document.getElementById('phoneInput').value || '').replace(/\D/g, '');
+            const tenDigits = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+
+            if (tenDigits.length !== 10) {
+                showStatus('Please enter a 10-digit phone number.', 'error');
+                return;
+            }
+
+            hostPhone = tenDigits;
+            localStorage.setItem(STORAGE_KEY, tenDigits);
+            document.getElementById('phoneGate').style.display = 'none';
+            loadRoster();
+        }
+
+        function showStatus(message, type) {
+            const el = document.getElementById('status');
+            el.textContent = message;
+            el.className = 'status ' + (type || 'info');
+            el.style.display = message ? 'block' : 'none';
+        }
+
+        const prettyPhone = (p) =>
+            p && p.length === 10 ? `(${p.slice(0, 3)}) ${p.slice(3, 6)}-${p.slice(6)}` : p;
+
+        async function loadRoster() {
+            showStatus('Loading your roster...', 'info');
+
+            try {
+                const response = await fetch(`/api/roster/${hostPhone}`);
+                if (!response.ok) throw new Error(`Server returned ${response.status}`);
+                const data = await response.json();
+
+                showStatus('', '');
+                render(data.roster || []);
+                document.getElementById('rosterBody').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading roster:', error);
+                showStatus('Could not load your roster. Please try again.', 'error');
+            }
+        }
+
+        function render(roster) {
+            document.getElementById('whichPhone').textContent = prettyPhone(hostPhone);
+            document.getElementById('summaryLine').textContent = roster.length
+                ? `${roster.length} ${roster.length === 1 ? 'person' : 'people'} you've played with.`
+                : '';
+            document.getElementById('emptyState').style.display = roster.length ? 'none' : 'block';
+
+            const list = document.getElementById('rosterList');
+            list.innerHTML = '';
+            roster.forEach((player) => list.appendChild(rosterRow(player)));
+        }
+
+        function rosterRow(player) {
+            const row = document.createElement('div');
+            row.className = 'roster-row';
+
+            // Built with the DOM rather than innerHTML so a name with an apostrophe or a
+            // bracket in it cannot break the markup.
+            const nameLabel = document.createElement('label');
+            nameLabel.textContent = 'Name';
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = player.name || '';
+            nameInput.placeholder = 'Their name';
+            nameLabel.appendChild(nameInput);
+
+            const idLabel = document.createElement('label');
+            idLabel.textContent = 'DUPR ID (optional)';
+            const idInput = document.createElement('input');
+            idInput.type = 'text';
+            idInput.value = player.duprId || '';
+            idInput.placeholder = 'e.g. ABC123';
+            idLabel.appendChild(idInput);
+
+            const ratingLabel = document.createElement('label');
+            ratingLabel.textContent = 'DUPR rating (optional)';
+            const ratingInput = document.createElement('input');
+            ratingInput.type = 'number';
+            ratingInput.step = '0.01';
+            ratingInput.min = '0';
+            ratingInput.max = '10';
+            ratingInput.value = player.duprRating == null ? '' : player.duprRating;
+            ratingInput.placeholder = 'e.g. 3.75';
+            ratingLabel.appendChild(ratingInput);
+
+            const phone = document.createElement('div');
+            phone.className = 'roster-phone';
+            phone.textContent = prettyPhone(player.phone);
+
+            const meta = document.createElement('div');
+            meta.className = 'roster-meta';
+            meta.textContent = player.gamesCount
+                ? `${player.gamesCount} ${player.gamesCount === 1 ? 'game' : 'games'} with you`
+                : 'Not in one of your games yet';
+
+            const actions = document.createElement('div');
+            actions.className = 'card-actions';
+            const save = document.createElement('button');
+            save.type = 'button';
+            save.className = 'btn btn-primary';
+            save.textContent = 'Save';
+            actions.appendChild(save);
+
+            const status = document.createElement('div');
+            status.className = 'row-status';
+
+            row.append(nameLabel, idLabel, ratingLabel, phone, meta, actions, status);
+
+            save.addEventListener('click', async () => {
+                status.style.color = '#64748b';
+                status.textContent = 'Saving...';
+                save.disabled = true;
+
+                try {
+                    const response = await fetch(`/api/roster/${hostPhone}/${player.phone}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: nameInput.value,
+                            duprId: idInput.value,
+                            duprRating: ratingInput.value
+                        })
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) throw new Error(data.error || `Server returned ${response.status}`);
+
+                    status.style.color = '#16a34a';
+                    status.textContent = 'Saved.';
+                } catch (error) {
+                    console.error('Error saving roster entry:', error);
+                    status.style.color = '#b91c1c';
+                    status.textContent = error.message || 'Could not save that.';
+                } finally {
+                    save.disabled = false;
+                }
+            });
+
+            return row;
+        }
+    </script>
+
+    <script src="/js/header.js"></script>
+    <script src="/js/footer.js"></script>
+</body>
+</html>

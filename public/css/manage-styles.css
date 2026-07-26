@@ -1226,3 +1226,106 @@ button:active {
     }
 }
 }
+/* ---------------------------------------------------------------------------
+   Photos
+   Sits at the bottom of the Details tab. Deliberately not a fifth tab: the tab
+   row and the mobile tab selector both stay untouched.
+   --------------------------------------------------------------------------- */
+
+.photos-intro {
+    color: #666;
+    font-size: 14px;
+    margin: 0 0 16px;
+}
+
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.photo-grid:empty {
+    display: none;
+}
+
+.photo-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fafafa;
+}
+
+.photo-card img {
+    display: block;
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+}
+
+.photo-card .photo-caption {
+    font-size: 12px;
+    color: #555;
+    padding: 6px 8px 0;
+    word-break: break-word;
+}
+
+.photo-card .photo-remove {
+    display: block;
+    width: calc(100% - 16px);
+    margin: 6px 8px 8px;
+    padding: 6px;
+    font-size: 12px;
+    border: 1px solid #d9534f;
+    background: #fff;
+    color: #d9534f;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.photo-card .photo-remove:hover {
+    background: #d9534f;
+    color: #fff;
+}
+
+.photos-empty {
+    color: #888;
+    font-size: 14px;
+    margin: 0 0 16px;
+}
+
+.photo-upload label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.photo-upload input[type="file"],
+.photo-upload input[type="text"] {
+    width: 100%;
+    margin-bottom: 14px;
+    box-sizing: border-box;
+}
+
+.photo-upload input[type="text"] {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px; /* 16px stops iOS zooming the page when the field is focused */
+}
+
+.photo-status {
+    margin: 10px 0 0;
+    font-size: 14px;
+    color: #666;
+    min-height: 20px;
+}
+
+.photo-status.error {
+    color: #d9534f;
+}
+
+.photo-status.success {
+    color: #2e7d32;
+}

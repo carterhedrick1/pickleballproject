@@ -210,6 +210,40 @@
             border-top: 3px solid #e5e7eb;
         }
 
+        /* Photos - thumbnails only; tapping one opens the full image in a new tab. */
+        .photos-section {
+            background: white;
+            border-top: 3px solid #e5e7eb;
+        }
+
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .photo-gallery figure {
+            margin: 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fafafa;
+        }
+
+        .photo-gallery img {
+            display: block;
+            width: 100%;
+            height: 130px;
+            object-fit: cover;
+        }
+
+        .photo-gallery figcaption {
+            font-size: 13px;
+            color: #4b5563;
+            padding: 8px 10px;
+            word-break: break-word;
+        }
+
         .player-list {
             background: white;
             border-radius: 12px;
@@ -932,7 +966,13 @@
                 <ul id="players"></ul>
             </div>
         </div>
-        
+
+        <!-- Photos: hidden entirely until the host adds one. -->
+        <div id="photosSection" class="section photos-section" style="display: none;">
+            <h2 class="section-title">Photos</h2>
+            <div id="photoGallery" class="photo-gallery"></div>
+        </div>
+
         <!-- Sign Up Section -->
         <div id="signupForm" class="section signup-section" style="display: none;">
             <h2 class="section-title" id="joinSectionTitle">Join This Game</h2>
@@ -1065,7 +1105,11 @@
             
             // Fetch game data
             showStatus("Fetching game data...", 'info');
-            
+
+            // Photos load alongside the game rather than after it - they are independent, and
+            // a failure here must never stop the game itself from rendering.
+            loadGamePhotos(gameId);
+
             fetch(`/api/games/${gameId}`)
                 .then(response => {
                     if (!response.ok) {
@@ -1414,12 +1458,25 @@
                 const confirmDateTime = document.getElementById('confirmDateTime');
                 
                 if (data.action === 'out') {
-                    // "I'm Out" response
                     confirmationSection.classList.remove('waitlist');
                     confirmationSection.classList.add('out');
-                    confirmTitle.textContent = "Thanks for Letting Us Know!";
-                    confirmMessage.textContent = `We've recorded that you can't make this game. Thanks for being courteous to other players!`;
-                    confirmStatus.textContent = `Marked as "Out"`;
+
+                    if (data.cancelled && data.wasConfirmed) {
+                        // They gave up a real spot, so say what actually happened to it.
+                        confirmTitle.textContent = "You're Out";
+                        confirmMessage.textContent = data.promoted
+                            ? `Your spot has been cancelled and given to the next player on the waitlist. Thanks for the heads up.`
+                            : `Your spot has been cancelled and opened up for the next player. Thanks for the heads up.`;
+                        confirmStatus.textContent = `Spot cancelled`;
+                    } else if (data.cancelled) {
+                        confirmTitle.textContent = "You're Out";
+                        confirmMessage.textContent = `We've taken you off the list for this game. Thanks for letting us know.`;
+                        confirmStatus.textContent = `Removed from the waitlist`;
+                    } else {
+                        confirmTitle.textContent = "Thanks for Letting Us Know!";
+                        confirmMessage.textContent = `We've recorded that you can't make this game. Thanks for being courteous to other players!`;
+                        confirmStatus.textContent = `Marked as "Out"`;
+                    }
                 } else if (data.status === 'confirmed') {
                     // Regular confirmed player
                     confirmationSection.classList.remove('waitlist', 'out');
@@ -1612,6 +1669,50 @@
                 return `${hour12}:${minutes} ${ampm}`;
             }
             
+            // Photos the host has added. The whole section stays hidden when there are none,
+            // so a game without photos looks exactly as it did before.
+            async function loadGamePhotos(id) {
+                try {
+                    const response = await fetch(`/api/games/${id}/photos`);
+                    if (!response.ok) return;
+
+                    const { photos = [] } = await response.json();
+                    if (!photos.length) return;
+
+                    const gallery = document.getElementById('photoGallery');
+                    const section = document.getElementById('photosSection');
+                    if (!gallery || !section) return;
+
+                    photos.forEach(photo => {
+                        const figure = document.createElement('figure');
+
+                        const link = document.createElement('a');
+                        link.href = photo.url;
+                        link.target = '_blank';
+                        link.rel = 'noopener';
+
+                        const img = document.createElement('img');
+                        img.src = photo.url;
+                        img.alt = photo.caption || 'Game photo';
+                        img.loading = 'lazy';
+                        link.appendChild(img);
+                        figure.appendChild(link);
+
+                        if (photo.caption) {
+                            const caption = document.createElement('figcaption');
+                            caption.textContent = photo.caption;
+                            figure.appendChild(caption);
+                        }
+
+                        gallery.appendChild(figure);
+                    });
+
+                    section.style.display = 'block';
+                } catch (error) {
+                    console.error('Could not load photos:', error);
+                }
+            }
+
             function showStatus(message, type) {
                 statusDiv.textContent = message;
                 statusDiv.className = type;

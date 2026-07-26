@@ -17,8 +17,13 @@ if (currentPath.includes('create.html')) {
     currentPage = 'privacy';
 } else if (currentPath.includes('terms.html')) {
     currentPage = 'terms';
+} else if (currentPath.includes('roster.html')) {
+    currentPage = 'roster';
+} else if (currentPath.includes('stats.html')) {
+    currentPage = 'stats';
 } else if (currentPath.includes('lookup.html')) {
-    currentPage = 'lookup';
+    // lookup.html now just redirects to My Games; keep it highlighting the same link.
+    currentPage = 'my-games';
 } else if (currentPath === '/') {
     currentPage = 'home';
 }
@@ -50,7 +55,7 @@ const headerHTML = `
  <nav class="header-nav">
  <a href="/create.html" class="${currentPage === 'create' ? 'active' : ''}">Create Game</a>
 <a href="/my-games.html" class="${currentPage === 'my-games' ? 'active' : ''}">My Games</a>
-<a href="/lookup.html" class="${currentPage === 'lookup' ? 'active' : ''}">Find My Games</a>
+<a href="/roster.html" class="${currentPage === 'roster' ? 'active' : ''}">Roster</a>
  </nav>
  </div>
  </header>

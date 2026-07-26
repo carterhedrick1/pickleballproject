@@ -185,6 +185,27 @@
                         <p class="save-suggestion">This copies a complete invitation message that you can send via text, email, or social media. It includes all game details and the registration link.</p>
                     </div>
                 </div>
+
+                <!-- Photos: lives at the bottom of Details rather than as a fifth tab, so the
+                     desktop tab row and the mobile tab selector both stay as they are. -->
+                <div class="form-section photos-section">
+                    <h2 class="section-title">Photos</h2>
+                    <p class="photos-intro">Add photos from the game. Anyone with your game link can see them.</p>
+
+                    <div id="photoGrid" class="photo-grid"></div>
+                    <p id="photoEmpty" class="photos-empty">No photos yet.</p>
+
+                    <div class="photo-upload">
+                        <label for="photoFile">Choose a photo</label>
+                        <input type="file" id="photoFile" accept="image/*">
+
+                        <label for="photoCaption">Caption (optional)</label>
+                        <input type="text" id="photoCaption" maxlength="200" placeholder="e.g. Saturday morning doubles">
+
+                        <button type="button" id="addPhotoBtn" class="copy-btn">Add Photo</button>
+                        <p id="photoStatus" class="photo-status"></p>
+                    </div>
+                </div>
             </div>
             
             <!-- Players Tab -->
