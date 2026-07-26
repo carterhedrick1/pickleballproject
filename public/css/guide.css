@@ -97,30 +97,6 @@ body {
     text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
-/* Create Your First Game CTA - prominent near top of guide */
-.create-first-game-cta {
-    display: inline-block;
-    background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
-    color: white !important;
-    padding: 18px 40px;
-    text-decoration: none;
-    border-radius: 14px;
-    font-weight: 700;
-    font-size: 18px;
-    transition: all 0.3s ease;
-    box-shadow: 0 6px 24px rgba(66, 144, 70, 0.4);
-    text-transform: none;
-    letter-spacing: 0.5px;
-    position: relative;
-    overflow: hidden;
-}
-
-.create-first-game-cta:hover {
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-    transform: translateY(-3px);
-    box-shadow: 0 10px 32px rgba(66, 144, 70, 0.5);
-}
-
 /* Table of Contents */
 .toc-section {
     background: white;
