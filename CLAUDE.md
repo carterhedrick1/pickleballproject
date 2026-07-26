@@ -16,6 +16,15 @@ Never deploy a change without first seeing it work the way a real user would:
 If a change can't be tested locally (e.g. real SMS delivery), say so explicitly
 before deploying and state what was verified instead.
 
+## Refresh the artifact pages after any visible change
+
+The three pages in `docs/` are also published as Claude artifacts that Scott opens in a
+browser, and a stale one is worse than none — it shows the app as it used to be. So after
+deploying a change that alters anything a user sees (copy, layout, a new screen, a changed
+flow), run `npm run docs` and republish all three files to their existing URLs, listed in
+`docs/ARTIFACTS.md`. Pass each URL explicitly, or the link Scott has goes stale while a new
+page quietly takes its place. Server-only changes with no visible surface don't need this.
+
 ## Deploys
 
 Production auto-deploys from `upstream` (`carterhedrick1/pickleballproject`) `main`.
