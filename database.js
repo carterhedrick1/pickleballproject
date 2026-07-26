@@ -136,6 +136,8 @@ async function initializeDatabase() {
           CREATE TABLE IF NOT EXISTS locations (
             name_key TEXT PRIMARY KEY,
             display_name TEXT NOT NULL,
+            image_mime_type TEXT,
+            image_data BYTEA,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
@@ -169,6 +171,26 @@ async function initializeDatabase() {
           )
         `);
         await client.query('CREATE INDEX IF NOT EXISTS idx_game_photos_game ON game_photos (game_id)');
+
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS court_images (
+            id TEXT PRIMARY KEY,
+            court_name_key TEXT NOT NULL,
+            mime_type TEXT NOT NULL,
+            image_data BYTEA NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query('CREATE INDEX IF NOT EXISTS idx_court_images_court ON court_images (court_name_key)');
+
+        // Add column to games table for selected court image (if it doesn't exist)
+        try {
+          await client.query(`ALTER TABLE games ADD COLUMN court_image_id TEXT`);
+        } catch (err) {
+          if (!err.message.includes('already exists')) {
+            throw err;
+          }
+        }
 
         // Developer area: the idea board, the error log and the published doc pages.
         await client.query(`
@@ -235,6 +257,8 @@ async function initializeDatabase() {
       await sqliteRun(`CREATE TABLE IF NOT EXISTS locations (
         name_key TEXT PRIMARY KEY,
         display_name TEXT NOT NULL,
+        image_mime_type TEXT,
+        image_data BLOB,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
       for (const displayName of SEED_LOCATIONS) {
@@ -268,6 +292,27 @@ async function initializeDatabase() {
       )`);
       await sqliteRun('CREATE INDEX IF NOT EXISTS idx_game_photos_game ON game_photos (game_id)');
       console.log('SQLite game_photos table initialized');
+
+      await sqliteRun(`CREATE TABLE IF NOT EXISTS court_images (
+        id TEXT PRIMARY KEY,
+        court_name_key TEXT NOT NULL,
+        mime_type TEXT NOT NULL,
+        image_data BLOB NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      await sqliteRun('CREATE INDEX IF NOT EXISTS idx_court_images_court ON court_images (court_name_key)');
+      console.log('SQLite court_images table initialized');
+
+      // Add column to games table for selected court image
+      try {
+        await sqliteRun(`ALTER TABLE games ADD COLUMN court_image_id TEXT`);
+        console.log('Added court_image_id column to games table');
+      } catch (err) {
+        // Column already exists, that's fine
+        if (!err.message.includes('duplicate column')) {
+          throw err;
+        }
+      }
 
       // Developer area: the idea board, the error log and the published doc pages.
       await sqliteRun(`CREATE TABLE IF NOT EXISTS dev_notes (
@@ -529,6 +574,193 @@ async function getLocations() {
     }
   } catch (err) {
     console.error('Error getting locations:', err);
+    throw err;
+  }
+}
+
+async function saveCourtImage(displayName, mimeType, imageData) {
+  const trimmed = String(displayName == null ? '' : displayName).trim().replace(/\s+/g, ' ');
+  if (!trimmed) return;
+  const key = locationKey(trimmed);
+  try {
+    if (isProduction) {
+      await withPgClient(async (client) => {
+        await client.query(
+          'UPDATE locations SET image_mime_type = $1, image_data = $2 WHERE name_key = $3',
+          [mimeType, imageData, key]
+        );
+      });
+    } else {
+      await sqlitePrepareRun(
+        'UPDATE locations SET image_mime_type = ?, image_data = ? WHERE name_key = ?',
+        [mimeType, imageData, key]
+      );
+    }
+  } catch (err) {
+    console.error('Error saving court image:', err);
+    throw err;
+  }
+}
+
+async function getCourtImage(displayName) {
+  const trimmed = String(displayName == null ? '' : displayName).trim().replace(/\s+/g, ' ');
+  const key = locationKey(trimmed);
+  try {
+    if (isProduction) {
+      return await withPgClient(async (client) => {
+        const result = await client.query(
+          'SELECT image_mime_type, image_data FROM locations WHERE name_key = $1',
+          [key]
+        );
+        return result.rows[0] || null;
+      });
+    } else {
+      return await sqliteGet(
+        'SELECT image_mime_type, image_data FROM locations WHERE name_key = ?',
+        [key]
+      );
+    }
+  } catch (err) {
+    console.error('Error getting court image:', err);
+    throw err;
+  }
+}
+
+async function getAllCourtImages() {
+  try {
+    if (isProduction) {
+      return await withPgClient(async (client) => {
+        const result = await client.query(
+          'SELECT display_name, image_mime_type FROM locations WHERE image_data IS NOT NULL ORDER BY name_key'
+        );
+        return result.rows;
+      });
+    } else {
+      return await sqliteAll(
+        'SELECT display_name, image_mime_type FROM locations WHERE image_data IS NOT NULL ORDER BY name_key'
+      );
+    }
+  } catch (err) {
+    console.error('Error getting all court images:', err);
+    throw err;
+  }
+}
+
+async function saveCourtImageToLibrary(courtName, mimeType, imageData) {
+  const trimmed = String(courtName == null ? '' : courtName).trim().replace(/\s+/g, ' ');
+  if (!trimmed) return null;
+  const key = locationKey(trimmed);
+  const imageId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+  try {
+    if (isProduction) {
+      await withPgClient(async (client) => {
+        await client.query(
+          'INSERT INTO court_images (id, court_name_key, mime_type, image_data) VALUES ($1, $2, $3, $4)',
+          [imageId, key, mimeType, imageData]
+        );
+      });
+    } else {
+      await sqlitePrepareRun(
+        'INSERT INTO court_images (id, court_name_key, mime_type, image_data) VALUES (?, ?, ?, ?)',
+        [imageId, key, mimeType, imageData]
+      );
+    }
+    return imageId;
+  } catch (err) {
+    console.error('Error saving court image to library:', err);
+    throw err;
+  }
+}
+
+async function getCourtImagesLibrary(courtName) {
+  const trimmed = String(courtName == null ? '' : courtName).trim().replace(/\s+/g, ' ');
+  const key = locationKey(trimmed);
+  try {
+    if (isProduction) {
+      return await withPgClient(async (client) => {
+        const result = await client.query(
+          'SELECT id, mime_type, created_at FROM court_images WHERE court_name_key = $1 ORDER BY created_at DESC',
+          [key]
+        );
+        return result.rows;
+      });
+    } else {
+      return await sqliteAll(
+        'SELECT id, mime_type, created_at FROM court_images WHERE court_name_key = ? ORDER BY created_at DESC',
+        [key]
+      );
+    }
+  } catch (err) {
+    console.error('Error getting court images library:', err);
+    throw err;
+  }
+}
+
+async function getCourtImageFromLibrary(imageId) {
+  try {
+    if (isProduction) {
+      return await withPgClient(async (client) => {
+        const result = await client.query(
+          'SELECT mime_type, image_data FROM court_images WHERE id = $1',
+          [imageId]
+        );
+        return result.rows[0] || null;
+      });
+    } else {
+      return await sqliteGet(
+        'SELECT mime_type, image_data FROM court_images WHERE id = ?',
+        [imageId]
+      );
+    }
+  } catch (err) {
+    console.error('Error getting court image from library:', err);
+    throw err;
+  }
+}
+
+async function deleteCourtImageFromLibrary(imageId) {
+  try {
+    if (isProduction) {
+      await withPgClient(async (client) => {
+        await client.query('DELETE FROM court_images WHERE id = $1', [imageId]);
+      });
+    } else {
+      await sqlitePrepareRun('DELETE FROM court_images WHERE id = ?', [imageId]);
+    }
+  } catch (err) {
+    console.error('Error deleting court image from library:', err);
+    throw err;
+  }
+}
+
+async function setGameCourtImage(gameId, imageId) {
+  try {
+    if (isProduction) {
+      await withPgClient(async (client) => {
+        await client.query('UPDATE games SET court_image_id = $1 WHERE id = $2', [imageId, gameId]);
+      });
+    } else {
+      await sqlitePrepareRun('UPDATE games SET court_image_id = ? WHERE id = ?', [imageId, gameId]);
+    }
+  } catch (err) {
+    console.error('Error setting game court image:', err);
+    throw err;
+  }
+}
+
+async function getGameCourtImageId(gameId) {
+  try {
+    if (isProduction) {
+      return await withPgClient(async (client) => {
+        const result = await client.query('SELECT court_image_id FROM games WHERE id = $1', [gameId]);
+        return result.rows[0]?.court_image_id || null;
+      });
+    } else {
+      const row = await sqliteGet('SELECT court_image_id FROM games WHERE id = ?', [gameId]);
+      return row?.court_image_id || null;
+    }
+  } catch (err) {
+    console.error('Error getting game court image:', err);
     throw err;
   }
 }
@@ -1216,6 +1448,15 @@ module.exports = {
   deleteGamePermanently,
   addLocation,
   getLocations,
+  saveCourtImage,
+  getCourtImage,
+  getAllCourtImages,
+  saveCourtImageToLibrary,
+  getCourtImagesLibrary,
+  getCourtImageFromLibrary,
+  deleteCourtImageFromLibrary,
+  setGameCourtImage,
+  getGameCourtImageId,
   upsertRosterEntry,
   recordRosterSighting,
   getRosterForHost,

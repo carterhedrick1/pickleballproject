@@ -171,7 +171,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 
     setupPhotos();
-    
+    setupCourtImages();
+
     // Restore the active tab after everything is loaded
     setTimeout(restoreActiveTab, 100);
 });
@@ -2028,4 +2029,182 @@ function setupPhotos() {
     const button = document.getElementById('addPhotoBtn');
     if (button) button.addEventListener('click', uploadPhoto);
     loadPhotos();
+}
+
+async function loadCourtImages() {
+    const list = document.getElementById('courtImageList');
+    if (!list || !gameId) return;
+
+    try {
+        const response = await fetch(`/api/games/${gameId}/court-images`);
+        const data = await response.json();
+        const images = data.images || [];
+        const selectedId = data.selectedImageId;
+
+        list.innerHTML = '';
+
+        images.forEach((image) => {
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'relative';
+            wrapper.style.cursor = 'pointer';
+
+            const img = document.createElement('img');
+            img.src = `/api/games/${gameId}/court-images/${image.id}`;
+            img.alt = 'Court image';
+            img.style.width = '100%';
+            img.style.height = '100px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '8px';
+            img.style.border = image.isSelected ? '3px solid #4CAF50' : '2px solid #ddd';
+
+            const radioInput = document.createElement('input');
+            radioInput.type = 'radio';
+            radioInput.name = 'courtImageSelect';
+            radioInput.value = image.id;
+            radioInput.checked = image.isSelected;
+            radioInput.style.position = 'absolute';
+            radioInput.style.top = '5px';
+            radioInput.style.left = '5px';
+
+            radioInput.addEventListener('change', () => selectCourtImage(image.id));
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.textContent = '✕';
+            deleteBtn.style.position = 'absolute';
+            deleteBtn.style.top = '5px';
+            deleteBtn.style.right = '5px';
+            deleteBtn.style.background = '#e74c3c';
+            deleteBtn.style.color = 'white';
+            deleteBtn.style.border = 'none';
+            deleteBtn.style.borderRadius = '50%';
+            deleteBtn.style.width = '24px';
+            deleteBtn.style.height = '24px';
+            deleteBtn.style.cursor = 'pointer';
+            deleteBtn.style.fontSize = '16px';
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteCourtImage(image.id);
+            });
+
+            wrapper.appendChild(img);
+            wrapper.appendChild(radioInput);
+            wrapper.appendChild(deleteBtn);
+            list.appendChild(wrapper);
+        });
+
+        const noImageRadio = document.getElementById('noImageRadio');
+        if (noImageRadio) {
+            noImageRadio.checked = !selectedId;
+            noImageRadio.addEventListener('change', selectNoCourtImage);
+        }
+    } catch (error) {
+        console.error('Error loading court images:', error);
+    }
+}
+
+async function uploadCourtImage() {
+    const fileInput = document.getElementById('courtImageFile');
+    const button = document.getElementById('uploadCourtImageBtn');
+    const file = fileInput && fileInput.files && fileInput.files[0];
+
+    if (!file) {
+        setCourtImageStatus('Choose an image first.', 'error');
+        return;
+    }
+
+    button.disabled = true;
+    setCourtImageStatus('Uploading image...');
+
+    try {
+        const response = await fetch(`/api/games/${gameId}/court-images?token=${hostToken}`, {
+            method: 'POST',
+            headers: { 'Content-Type': file.type || 'image/jpeg' },
+            body: file
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.error || `Upload failed (${response.status})`);
+        }
+
+        fileInput.value = '';
+        setCourtImageStatus('Image added to library.', 'success');
+        await loadCourtImages();
+    } catch (error) {
+        console.error('Error uploading court image:', error);
+        setCourtImageStatus(error.message || 'Could not add that image.', 'error');
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function selectCourtImage(imageId) {
+    try {
+        const response = await fetch(
+            `/api/games/${gameId}/court-image/${imageId}?token=${hostToken}`,
+            { method: 'PUT' }
+        );
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || 'Failed to select image');
+        }
+        setCourtImageStatus('Image selected.', 'success');
+        await loadCourtImages();
+    } catch (error) {
+        console.error('Error selecting court image:', error);
+        setCourtImageStatus(error.message || 'Could not select that image.', 'error');
+    }
+}
+
+async function selectNoCourtImage() {
+    try {
+        const response = await fetch(
+            `/api/games/${gameId}/court-image-none?token=${hostToken}`,
+            { method: 'PUT' }
+        );
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || 'Failed to clear image');
+        }
+        setCourtImageStatus('No image selected.', 'success');
+        await loadCourtImages();
+    } catch (error) {
+        console.error('Error clearing court image:', error);
+        setCourtImageStatus(error.message || 'Could not change image selection.', 'error');
+    }
+}
+
+async function deleteCourtImage(imageId) {
+    if (!confirm('Delete this image from the library?')) return;
+
+    try {
+        const response = await fetch(
+            `/api/games/${gameId}/court-images/${imageId}?token=${hostToken}`,
+            { method: 'DELETE' }
+        );
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || 'Delete failed');
+        }
+        setCourtImageStatus('Image deleted.', 'success');
+        await loadCourtImages();
+    } catch (error) {
+        console.error('Error deleting court image:', error);
+        setCourtImageStatus(error.message || 'Could not delete that image.', 'error');
+    }
+}
+
+function setCourtImageStatus(message, type) {
+    const element = document.getElementById('courtImageStatus');
+    if (element) {
+        element.textContent = message;
+        element.style.color = type === 'error' ? '#e74c3c' : type === 'success' ? '#2e7d32' : '#666';
+    }
+}
+
+function setupCourtImages() {
+    const button = document.getElementById('uploadCourtImageBtn');
+    if (button) button.addEventListener('click', uploadCourtImage);
+    loadCourtImages();
 }

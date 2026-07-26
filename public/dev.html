@@ -140,6 +140,7 @@
     <button data-tab="status" class="active">Status</button>
     <button data-tab="ideas">Ideas</button>
     <button data-tab="errors">Errors</button>
+    <button data-tab="courts">Courts</button>
     <button data-tab="screens">Screens</button>
   </div>
 
@@ -181,6 +182,24 @@
         <h2>Errors users hit</h2>
         <p class="muted">Newest first. The app keeps the last 500, and anything older than 30 days is dropped.</p>
         <div id="errorList" style="margin-top:16px"><p class="muted">Loading…</p></div>
+      </div>
+    </section>
+
+    <!-- Courts -->
+    <section id="tab-courts" class="hidden">
+      <div class="panel">
+        <h2>Court images</h2>
+        <p class="muted">Upload images that'll show when hosts pick these courts for games.</p>
+        <div id="courtList" style="margin-top:16px"><p class="muted">Loading…</p></div>
+      </div>
+      <div class="panel">
+        <h2>Upload a court image</h2>
+        <form class="idea-form" id="courtImageForm">
+          <select id="courtSelect"><option>Loading courts…</option></select>
+          <input type="file" id="courtImageFile" accept="image/jpeg,image/png,image/webp" style="margin-top:10px">
+          <button type="submit" class="primary" style="margin-top:10px">Upload</button>
+          <p id="courtStatus" class="muted" style="margin-top:10px; min-height:20px"></p>
+        </form>
       </div>
     </section>
 
@@ -295,12 +314,13 @@ document.querySelectorAll('.tabs button').forEach((button) => {
     document.querySelectorAll('.tabs button').forEach((b) => b.classList.remove('active'));
     button.classList.add('active');
     const tab = button.dataset.tab;
-    ['status', 'ideas', 'errors', 'screens'].forEach((name) => {
+    ['status', 'ideas', 'errors', 'courts', 'screens'].forEach((name) => {
       el('tab-' + name).classList.toggle('hidden', name !== tab);
     });
     if (tab === 'status') loadStatus();
     if (tab === 'ideas') loadNotes();
     if (tab === 'errors') loadErrors();
+    if (tab === 'courts') loadCourts();
   });
 });
 
@@ -485,6 +505,80 @@ async function loadErrors() {
       ${error.stack ? `<details><summary>Show details</summary><pre>${escapeHtml(error.stack)}</pre></details>` : ''}
     </div>`).join('');
 }
+
+async function loadCourts() {
+  let courtsWithImages;
+  try {
+    const res = await fetch('/api/courts/images/list');
+    if (res.status === 401) { el('appView').classList.add('hidden'); el('loginView').classList.remove('hidden'); return; }
+    const data = await res.json();
+    courtsWithImages = data.courts || [];
+  } catch (err) {
+    el('courtList').innerHTML = '<p class="muted">Could not load court images.</p>';
+    return;
+  }
+
+  if (!courtsWithImages.length) {
+    el('courtList').innerHTML = '<p class="muted">No court images uploaded yet.</p>';
+  } else {
+    el('courtList').innerHTML = courtsWithImages.map((court) => `
+      <div style="border: 1px solid #e8ecf1; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <div style="font-weight: 600;">${escapeHtml(court.display_name)}</div>
+          <div style="font-size: 12px; color: #6c757d; margin-top: 4px;">${escapeHtml(court.image_mime_type)}</div>
+        </div>
+        <img src="/api/courts/${encodeURIComponent(court.display_name)}/image" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;">
+      </div>`).join('');
+  }
+
+  try {
+    const res = await fetch('/api/games/locations');
+    const data = await res.json();
+    const courts = data.locations || [];
+    el('courtSelect').innerHTML = courts.map((court) => `<option value="${court}">${escapeHtml(court)}</option>`).join('');
+  } catch (err) {
+    el('courtSelect').innerHTML = '<option>Could not load courts</option>';
+  }
+}
+
+el('courtImageForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const court = el('courtSelect').value;
+  const file = el('courtImageFile').files[0];
+  const status = el('courtStatus');
+
+  if (!court || !file) {
+    status.textContent = 'Please select a court and a file.';
+    status.style.color = '#e74c3c';
+    return;
+  }
+
+  status.textContent = 'Uploading…';
+  status.style.color = '#6c757d';
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const res = await fetch(`/api/courts/${encodeURIComponent(court)}/image?password=${encodeURIComponent(devPassword)}`, {
+      method: 'POST',
+      body: buffer,
+      headers: { 'Content-Type': file.type }
+    });
+
+    if (res.ok) {
+      status.textContent = `✓ Image uploaded for ${escapeHtml(court)}`;
+      status.style.color = '#2e7d32';
+      el('courtImageFile').value = '';
+      await loadCourts();
+    } else {
+      const error = await res.json();
+      status.textContent = error.error || 'Upload failed';
+      status.style.color = '#e74c3c';
+    }
+  } catch (err) {
+    status.textContent = 'Upload failed: ' + err.message;
+    status.style.color = '#e74c3c';
+  }
+});
 
 // A valid cookie means we can go straight in without asking for the password again.
 (async function boot() {

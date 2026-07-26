@@ -866,6 +866,14 @@
                         </select>
                     </div>
 
+                    <div id="courtImageContainer" style="display: none; margin: 16px 0;">
+                        <label style="display: block; margin-bottom: 10px; font-weight: 600; font-size: 14px;">Court images:</label>
+                        <div id="courtImageGallery" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-bottom: 15px;"></div>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
+                            <input type="radio" name="selectedCourtImage" value="none" checked> No image
+                        </label>
+                    </div>
+
                     <div class="form-group" id="locationFreeText">
                         <label for="location">Location:</label>
                         <input type="text" id="location" name="location" placeholder="e.g., Oak Park Courts" required>
@@ -1107,6 +1115,61 @@
 
         const NEW_LOCATION_VALUE = '__new__';
 
+        async function loadCourtImage(courtName) {
+            const container = document.getElementById('courtImageContainer');
+            const gallery = document.getElementById('courtImageGallery');
+            if (!courtName) {
+                container.style.display = 'none';
+                return;
+            }
+            try {
+                const res = await fetch(`/api/courts/${encodeURIComponent(courtName)}/library`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const images = data.images || [];
+                    gallery.innerHTML = '';
+
+                    if (images.length > 0) {
+                        images.forEach((image) => {
+                            const label = document.createElement('label');
+                            label.style.cursor = 'pointer';
+                            label.style.position = 'relative';
+
+                            const input = document.createElement('input');
+                            input.type = 'radio';
+                            input.name = 'selectedCourtImage';
+                            input.value = image.id;
+                            input.style.position = 'absolute';
+                            input.style.top = '5px';
+                            input.style.left = '5px';
+                            input.style.zIndex = '10';
+
+                            const img = document.createElement('img');
+                            img.src = `/api/court-images/${image.id}`;
+                            img.alt = 'Court image';
+                            img.style.width = '100%';
+                            img.style.height = '80px';
+                            img.style.objectFit = 'cover';
+                            img.style.borderRadius = '8px';
+                            img.style.border = '2px solid #ddd';
+                            img.style.display = 'block';
+
+                            label.appendChild(input);
+                            label.appendChild(img);
+                            gallery.appendChild(label);
+                        });
+                        container.style.display = 'block';
+                    } else {
+                        container.style.display = 'none';
+                    }
+                } else {
+                    container.style.display = 'none';
+                }
+            } catch (err) {
+                container.style.display = 'none';
+            }
+        }
+
         async function setupLocationPicker() {
             const select = document.getElementById('locationSelect');
             const freeText = document.getElementById('locationFreeText');
@@ -1118,10 +1181,12 @@
                     freeText.style.display = 'block';
                     input.value = '';
                     input.focus();
+                    loadCourtImage('');
                 } else {
                     // Keep the input in the DOM and populated - createGame() reads it.
                     input.value = select.value;
                     freeText.style.display = select.value ? 'none' : 'block';
+                    loadCourtImage(select.value);
                 }
             });
 
@@ -1278,7 +1343,19 @@ async function createGame(e) {
         
         const data = await response.json();
         console.log('[CLIENT] Game created successfully:', data);
-        
+
+        // Set the selected court image for this game if one was chosen
+        const selectedImage = document.querySelector('input[name="selectedCourtImage"]:checked');
+        if (selectedImage && selectedImage.value !== 'none') {
+            try {
+                await fetch(`/api/games/${data.gameId}/court-image/${selectedImage.value}?token=${data.hostToken}`, {
+                    method: 'PUT'
+                });
+            } catch (err) {
+                console.error('Could not set court image:', err);
+            }
+        }
+
         // REPLACE the localStorage save section in your createGame function in public/index.html:
 
         // Save game to localStorage for My Games page - NOW INCLUDING REGISTRATION MODE

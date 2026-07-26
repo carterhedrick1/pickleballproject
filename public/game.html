@@ -899,6 +899,9 @@
             <h2 class="section-title">Game Details</h2>
             <div id="loading">Loading game details...</div>
             <div id="details" style="display: none;">
+                <div id="courtImageContainer" style="display: none; margin-bottom: 16px;">
+                    <img id="courtImage" style="width: 100%; max-width: 400px; border-radius: 12px; object-fit: cover;">
+                </div>
                 <div class="game-info">
                     <div class="game-detail">
                         <span class="game-detail-label">Location:</span>
@@ -1153,6 +1156,22 @@
                     
                     // Populate game details
                     document.getElementById('location').textContent = gameData.location;
+
+                    // Load selected court image if one is chosen
+                    const courtImageContainer = document.getElementById('courtImageContainer');
+                    const courtImageEl = document.getElementById('courtImage');
+                    if (gameData.court_image_id) {
+                        try {
+                            const res = await fetch(`/api/court-images/${gameData.court_image_id}`);
+                            if (res.ok) {
+                                const blob = await res.blob();
+                                courtImageEl.src = URL.createObjectURL(blob);
+                                courtImageContainer.style.display = 'block';
+                            }
+                        } catch (err) {
+                            // Image not found, that's fine
+                        }
+                    }
 
                     // Show court number if it exists
                     if (gameData.courtNumber && gameData.courtNumber.trim()) {

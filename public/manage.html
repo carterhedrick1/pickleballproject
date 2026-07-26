@@ -186,6 +186,27 @@
                     </div>
                 </div>
 
+                <!-- Court Images: let host manage court image library -->
+                <div class="form-section court-images-section">
+                    <h2 class="section-title">Court Image</h2>
+                    <p class="court-images-intro">Choose which image shows when players see this game, or use no image.</p>
+
+                    <div id="courtImageGallery" style="margin-bottom: 20px;">
+                        <div id="courtImageList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-bottom: 15px;"></div>
+                    </div>
+
+                    <div id="noImageOption" style="margin-bottom: 15px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; text-align: center;">
+                        <input type="radio" id="noImageRadio" name="courtImageSelect" value="none"> <label for="noImageRadio" style="cursor: pointer;">No image</label>
+                    </div>
+
+                    <div id="courtImageUpload" style="border-top: 1px solid #ddd; padding-top: 15px;">
+                        <h3 style="margin-bottom: 10px; font-size: 14px;">Upload new image</h3>
+                        <input type="file" id="courtImageFile" accept="image/jpeg,image/png,image/webp" style="margin-bottom: 10px;">
+                        <button type="button" id="uploadCourtImageBtn" class="copy-btn">Upload</button>
+                        <p id="courtImageStatus" style="margin-top: 10px; font-size: 14px; color: #666; min-height: 20px;"></p>
+                    </div>
+                </div>
+
                 <!-- Photos: lives at the bottom of Details rather than as a fifth tab, so the
                      desktop tab row and the mobile tab selector both stay as they are. -->
                 <div class="form-section photos-section">

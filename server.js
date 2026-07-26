@@ -5,9 +5,9 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 // Import our separated modules
-const { 
-  initializeDatabase, 
-  saveGame, 
+const {
+  initializeDatabase,
+  saveGame,
   getGame,
   getGameHostInfo,
   getAllGames,
@@ -15,6 +15,15 @@ const {
   deleteGamePermanently,
   addLocation,
   getLocations,
+  saveCourtImage,
+  getCourtImage,
+  getAllCourtImages,
+  saveCourtImageToLibrary,
+  getCourtImagesLibrary,
+  getCourtImageFromLibrary,
+  deleteCourtImageFromLibrary,
+  setGameCourtImage,
+  getGameCourtImageId,
   upsertRosterEntry,
   recordRosterSighting,
   getRosterForHost,
@@ -1437,6 +1446,231 @@ app.delete('/api/games/:id/photos/:photoId', async (req, res) => {
   } catch (error) {
     console.error('Error deleting photo:', error);
     res.status(500).json({ error: 'Failed to delete photo' });
+  }
+});
+
+// Court images (dev only, requires dev password)
+app.post(
+  '/api/courts/:courtName/image',
+  express.raw({ type: PHOTO_TYPES, limit: '5mb' }),
+  async (req, res) => {
+    try {
+      const devPassword = req.query.password;
+      if (!devPassword || devPassword !== (process.env.DEV_PASSWORD || 'vibe123')) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      const courtName = decodeURIComponent(req.params.courtName);
+      const mimeType = sniffImageType(req.body);
+      if (!mimeType) {
+        return res.status(400).json({
+          error: 'That does not look like a JPEG, PNG or WebP image. Please pick a photo.'
+        });
+      }
+
+      await saveCourtImage(courtName, mimeType, req.body);
+      res.status(201).json({ success: true, courtName });
+    } catch (error) {
+      console.error('Error saving court image:', error);
+      res.status(500).json({ error: 'Failed to save court image' });
+    }
+  }
+);
+
+app.get('/api/courts/:courtName/image', async (req, res) => {
+  try {
+    const courtName = decodeURIComponent(req.params.courtName);
+    const photo = await getCourtImage(courtName);
+    if (!photo || !photo.image_data) {
+      return res.status(404).json({ error: 'No image for this court' });
+    }
+    res.set('Content-Type', photo.image_mime_type);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(photo.image_data);
+  } catch (error) {
+    console.error('Error fetching court image:', error);
+    res.status(500).json({ error: 'Failed to load court image' });
+  }
+});
+
+app.get('/api/courts/images/list', async (req, res) => {
+  try {
+    const images = await getAllCourtImages();
+    res.json({ courts: images });
+  } catch (error) {
+    console.error('Error fetching court images list:', error);
+    res.status(500).json({ error: 'Failed to load court images' });
+  }
+});
+
+app.get('/api/courts/:courtName/library', async (req, res) => {
+  try {
+    const courtName = decodeURIComponent(req.params.courtName);
+    const images = await getCourtImagesLibrary(courtName);
+    res.json({
+      images: images.map((img) => ({
+        id: img.id,
+        mimeType: img.mime_type,
+        createdAt: img.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching court image library:', error);
+    res.status(500).json({ error: 'Failed to load court images' });
+  }
+});
+
+app.get('/api/court-images/:imageId', async (req, res) => {
+  try {
+    const image = await getCourtImageFromLibrary(req.params.imageId);
+    if (!image || !image.image_data) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    res.set('Content-Type', image.mime_type);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(image.image_data);
+  } catch (error) {
+    console.error('Error fetching court image:', error);
+    res.status(500).json({ error: 'Failed to load court image' });
+  }
+});
+
+// Court image library (host-managed images for a specific court)
+app.post(
+  '/api/games/:id/court-images',
+  express.raw({ type: PHOTO_TYPES, limit: '5mb' }),
+  async (req, res) => {
+    try {
+      const gameId = req.params.id;
+      const token = req.query.token;
+
+      const game = await getGame(gameId);
+      if (!game) {
+        return res.status(404).json({ error: 'Game not found' });
+      }
+      if (!token || game.hostToken !== token) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      const mimeType = sniffImageType(req.body);
+      if (!mimeType) {
+        return res.status(400).json({
+          error: 'That does not look like a JPEG, PNG or WebP image. Please pick a photo.'
+        });
+      }
+
+      const imageId = await saveCourtImageToLibrary(game.location, mimeType, req.body);
+      res.status(201).json({ success: true, imageId });
+    } catch (error) {
+      console.error('Error uploading court image:', error);
+      res.status(500).json({ error: 'Failed to upload court image' });
+    }
+  }
+);
+
+app.get('/api/games/:id/court-images', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const game = await getGame(gameId);
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+
+    const images = await getCourtImagesLibrary(game.location);
+    const selectedImageId = await getGameCourtImageId(gameId);
+
+    res.json({
+      images: images.map((img) => ({
+        id: img.id,
+        mimeType: img.mime_type,
+        isSelected: img.id === selectedImageId,
+        createdAt: img.created_at
+      })),
+      selectedImageId
+    });
+  } catch (error) {
+    console.error('Error fetching court images:', error);
+    res.status(500).json({ error: 'Failed to load court images' });
+  }
+});
+
+app.get('/api/games/:id/court-images/:imageId', async (req, res) => {
+  try {
+    const image = await getCourtImageFromLibrary(req.params.imageId);
+    if (!image || !image.image_data) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    res.set('Content-Type', image.mime_type);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(image.image_data);
+  } catch (error) {
+    console.error('Error fetching court image:', error);
+    res.status(500).json({ error: 'Failed to load court image' });
+  }
+});
+
+app.put('/api/games/:id/court-image/:imageId', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const imageId = req.params.imageId;
+    const token = req.query.token;
+
+    const game = await getGame(gameId);
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    if (!token || game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    await setGameCourtImage(gameId, imageId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error selecting court image:', error);
+    res.status(500).json({ error: 'Failed to select court image' });
+  }
+});
+
+app.put('/api/games/:id/court-image-none', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const token = req.query.token;
+
+    const game = await getGame(gameId);
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    if (!token || game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    await setGameCourtImage(gameId, null);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error clearing court image:', error);
+    res.status(500).json({ error: 'Failed to clear court image' });
+  }
+});
+
+app.delete('/api/games/:id/court-images/:imageId', async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const imageId = req.params.imageId;
+    const token = req.query.token;
+
+    const game = await getGame(gameId);
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    if (!token || game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    await deleteCourtImageFromLibrary(imageId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting court image:', error);
+    res.status(500).json({ error: 'Failed to delete court image' });
   }
 });
 
