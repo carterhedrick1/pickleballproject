@@ -35,6 +35,7 @@ npm run verify:roster
 # Start the app first, in another terminal:
 PORT=3002 npm start
 
+npm run verify:routes         # hits every route once; fails on any 500 (run this first)
 npm run verify:app            # whole user journey + the hostToken check
 npm run verify:races          # all three concurrency checks
 npm run verify:photos         # event photos, byte-for-byte
@@ -92,6 +93,7 @@ and every script now reports a 429 as a 429.
 | `reminder-late-joiner.js` | Someone who joins *after* everyone else has been reminded still gets their own reminder. Before the fix they got nothing: the game was cached as done and skipped forever. Also checks nobody is texted twice and a player who leaves again is not texted. |
 | `sms-failure.js` | A join or "I'm out" whose text fails still saves the signup, reports the failure to the client, and retries once. Also that permanent errors (out of quota, invalid number) are *not* retried, and that a blip followed by success actually delivers. |
 | `sms-failure-ui.js` | Drives the real confirmation screen in headless Chrome: when the text fails the player sees a warning instead of "You'll receive a confirmation text message shortly". Skips if Chrome is not installed. |
+| `all-routes.js` | Every route the app registers answers without a 500. Deliberately shallow - it does not check *what* they return, only that no handler throws. It exists because the API lives in `routes/` now, and the easy mistake when moving a handler is leaving behind something it calls, which nothing else would catch on the eight routes that have no other coverage. |
 | `photos.js` | Event photo bytes survive a full database round trip, the stored type comes from the magic bytes rather than the claimed header, twelve is the cap, and only the host can upload or delete. |
 | `court-images.js` | The court image library is shared by **court name** while the chosen image belongs to a **single game** — two games at one court see the same library but not each other's selection, and a game at another court sees none. Also byte-for-byte round trips by both fetch paths, magic-byte sniffing, and host-only upload/select/clear/delete. |
 

@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const {
   saveGame,
   getGame,
+  getAllGames,
   getGamesByHostPhone,
   deleteGamePermanently,
   addLocation,
