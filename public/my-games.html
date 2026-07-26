@@ -202,6 +202,7 @@
             card.className = 'game-item' + (game.cancelled ? ' cancelled' : '');
 
             const court = [game.location, game.courtNumber].filter(Boolean).join(' - ');
+            const isPast = isGameCompleted(game.date, game.time);
 
             const badges = [];
             if (game.cancelled) {
@@ -226,12 +227,21 @@
                     <a class="btn btn-primary" href="${game.managementLink}">Manage</a>
                     <button type="button" class="btn" id="copyButton-${game.gameId}">Copy Invitation</button>
                     <button type="button" class="btn" data-notes-toggle>Notes</button>
+                    ${isPast ? '<button type="button" class="btn btn-danger" data-delete>Delete</button>' : ''}
                 </div>
                 <div class="notes-panel" style="display: none;">
                     <textarea placeholder="e.g. 'Gate code 4417'">${esc(game.hostNotes || '')}</textarea>
                     <button type="button" class="btn" data-notes-save>Save note</button>
                     <div class="notes-status"></div>
                 </div>
+                ${isPast ? `
+                <div class="delete-panel" style="display: none;">
+                    <p>Delete this game for good? Its photos and its place in your stats go too,
+                       and there is no undo.</p>
+                    <button type="button" class="btn btn-danger" data-delete-confirm>Yes, delete it</button>
+                    <button type="button" class="btn" data-delete-cancel>Keep it</button>
+                    <div class="delete-status"></div>
+                </div>` : ''}
             `;
 
             card.querySelector(`#copyButton-${CSS.escape(game.gameId)}`)
@@ -248,7 +258,50 @@
             // A note already written is worth seeing without a click.
             if (game.hostNotes) panel.style.display = 'block';
 
+            // Delete asks first, in the card rather than a browser confirm() dialog, so the
+            // warning about photos and stats is actually readable before the second click.
+            if (isPast) {
+                const deletePanel = card.querySelector('.delete-panel');
+                const deleteStatus = card.querySelector('.delete-status');
+                card.querySelector('[data-delete]').addEventListener('click', () => {
+                    deletePanel.style.display = 'block';
+                });
+                card.querySelector('[data-delete-cancel]').addEventListener('click', () => {
+                    deletePanel.style.display = 'none';
+                    deleteStatus.textContent = '';
+                });
+                card.querySelector('[data-delete-confirm]').addEventListener('click', (e) => {
+                    deleteGame(game, e.currentTarget, deleteStatus);
+                });
+            }
+
             return card;
+        }
+
+        async function deleteGame(game, button, statusEl) {
+            button.disabled = true;
+            statusEl.style.color = '#64748b';
+            statusEl.textContent = 'Deleting...';
+
+            try {
+                const response = await fetch(`/api/games/${game.gameId}/permanent`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: game.hostToken })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || `Server returned ${response.status}`);
+
+                // Drop it locally rather than refetching, so the Past games section stays open.
+                loadedGames = loadedGames.filter((g) => g.gameId !== game.gameId);
+                render();
+                showStatus('Game deleted.', 'success');
+            } catch (error) {
+                console.error('Error deleting game:', error);
+                button.disabled = false;
+                statusEl.style.color = '#b91c1c';
+                statusEl.textContent = error.message || 'Could not delete that game. Please try again.';
+            }
         }
 
         function copyInvitation(game) {

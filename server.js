@@ -12,6 +12,7 @@ const {
   getGameHostInfo,
   getAllGames,
   getGamesByHostPhone,
+  deleteGamePermanently,
   addLocation,
   getLocations,
   upsertRosterEntry,
@@ -49,6 +50,8 @@ const {
 } = require('./game-logic');
 
 const { withGameLock, acquireGameLock } = require('./utils/game-lock');
+
+const { isGameUpcoming } = require('./utils/central-time');
 
 const {
   promoteNextFromWaitlist,
@@ -388,6 +391,47 @@ app.delete('/api/games/:id', async (req, res) => {
   }
 });
 
+// Erase a past game for good.
+//
+// Deliberately a separate route from the DELETE above, which only cancels: cancelling tells
+// the players something, this tells nobody and cannot be undone. Two guards keep it from
+// becoming a way to make a game people are counting on vanish out from under them:
+// the host token, and the game having already started. No SMS goes out - everyone the game
+// concerned has already played it.
+app.delete('/api/games/:id/permanent', async (req, res) => {
+  const gameId = req.params.id;
+  const releaseLock = await acquireGameLock(gameId);
+  try {
+    const { token } = req.body;
+
+    const game = await getGame(gameId);
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+
+    if (!token || game.hostToken !== token) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Central Time, the same clock the reminders use, so "past" means past to the players.
+    if (isGameUpcoming(game.date, game.time)) {
+      return res.status(400).json({
+        error: 'This game has not happened yet. Cancel it instead so the players are told.'
+      });
+    }
+
+    const deleted = await deleteGamePermanently(gameId);
+
+    console.log(`[DELETE] Host erased game ${gameId} (${game.location} ${game.date})`);
+    res.json({ success: true, deleted });
+  } catch (error) {
+    console.error('Error deleting game:', error);
+    res.status(500).json({ error: 'Failed to delete game' });
+  } finally {
+    releaseLock();
+  }
+});
+
 // Add these endpoints to your server.js file, around line 400-500 where your other API endpoints are
 
 // Get management links for a specific phone number
@@ -432,6 +476,9 @@ app.get('/api/games/by-phone/:phone', async (req, res) => {
         totalPlayers: fullGame.totalPlayers,
         waitlistCount: fullGame.waitlist ? fullGame.waitlist.length : 0,
         photoCount: photoCounts[gameId] || 0,
+        // Already inside managementLink; named separately so callers that need to authorize
+        // a request (deleting a past game) don't have to pick it back out of the URL.
+        hostToken: fullGame.hostToken,
         managementLink: `/manage.html?id=${gameId}&token=${fullGame.hostToken}`,
         playerLink: `/game.html?id=${gameId}`,
         created: fullGame.created

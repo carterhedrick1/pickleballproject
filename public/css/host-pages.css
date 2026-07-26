@@ -232,6 +232,23 @@ body {
     color: white;
 }
 
+/* Outlined rather than filled: deleting is never the action a host came here for. */
+.btn-danger {
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.btn-danger:hover {
+    border-color: #b91c1c;
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 /* Notes ------------------------------------------------------------------- */
 
 .notes-panel {
@@ -255,6 +272,32 @@ body {
     font-size: 13px;
     color: #64748b;
     margin-top: 6px;
+    min-height: 18px;
+}
+
+/* Delete confirmation ----------------------------------------------------- */
+
+.delete-panel {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    background: #fef2f2;
+}
+
+.delete-panel p {
+    margin: 0 0 10px;
+    font-size: 14px;
+    color: #7f1d1d;
+}
+
+.delete-panel .btn {
+    margin-right: 8px;
+}
+
+.delete-status {
+    font-size: 13px;
+    margin-top: 8px;
     min-height: 18px;
 }
 

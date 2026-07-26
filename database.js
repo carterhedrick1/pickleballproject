@@ -389,6 +389,42 @@ async function getGamesByHostPhone(hostPhone) {
   }
 }
 
+// Erase a game for good: the row, its photos, and its reminder log.
+//
+// Cancelling (the DELETE /api/games/:id route) only sets a flag - the game stays visible
+// and still counts in stats. This is the real thing, for a host clearing out old history.
+// There is no ON DELETE CASCADE on either child table, so they are cleared by hand;
+// leaving them would strand photo blobs in the database with no game to reach them.
+async function deleteGamePermanently(gameId) {
+  try {
+    if (isProduction) {
+      return await withPgClient(async (client) => {
+        try {
+          await client.query('BEGIN');
+          await client.query('DELETE FROM game_photos WHERE game_id = $1', [gameId]);
+          await client.query('DELETE FROM reminder_log WHERE game_id = $1', [gameId]);
+          const result = await client.query('DELETE FROM games WHERE id = $1', [gameId]);
+          await client.query('COMMIT');
+          return result.rowCount;
+        } catch (err) {
+          await client.query('ROLLBACK');
+          throw err;
+        }
+      });
+    } else {
+      // SQLite here is single-connection and one request at a time, so the three
+      // statements run back to back without another writer slipping between them.
+      await sqliteRun('DELETE FROM game_photos WHERE game_id = ?', [gameId]);
+      await sqliteRun('DELETE FROM reminder_log WHERE game_id = ?', [gameId]);
+      const result = await sqliteRun('DELETE FROM games WHERE id = ?', [gameId]);
+      return result.changes;
+    }
+  } catch (err) {
+    console.error('Error deleting game:', err);
+    throw err;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Location functions
 // ---------------------------------------------------------------------------
@@ -866,6 +902,7 @@ module.exports = {
   getGameHostInfo,
   getAllGames,
   getGamesByHostPhone,
+  deleteGamePermanently,
   addLocation,
   getLocations,
   upsertRosterEntry,
