@@ -450,9 +450,10 @@ async function createGame(e) {
             courtImageUpload
         );
 
-        // Save enough detail for the post-create invitation and browser history.
-        let myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
-        myGames.push({
+        // Save enough detail for the post-create invitation and browser history. Keep an
+        // in-memory copy too: a storage problem must never make a successfully-created game
+        // look like it failed or prevent the invitation from being copied.
+        const createdGame = {
             id: data.gameId,
             hostToken: data.hostToken,
             location: gameData.location,
@@ -466,11 +467,19 @@ async function createGame(e) {
             message: gameData.message,
             created: new Date().toISOString(),
             cancelled: false
-        });
-        localStorage.setItem('myGames', JSON.stringify(myGames));
+        };
+        window.currentGameData = createdGame;
+        try {
+            const storedGames = JSON.parse(localStorage.getItem('myGames') || '[]');
+            const myGames = Array.isArray(storedGames) ? storedGames : [];
+            myGames.push(createdGame);
+            localStorage.setItem('myGames', JSON.stringify(myGames));
+        } catch (storageError) {
+            console.warn('Could not save the created game in browser history:', storageError);
+        }
 
         
-        // Show game links
+        // Replace the completed form with the invitation step.
         showGameLinks(data.gameId);
         
         // Clear form
@@ -514,15 +523,17 @@ async function createGame(e) {
             // Store the game ID for the copy function
             window.currentGameId = gameId;
             
-            // Show the share link section
+            // A successful submission advances to a distinct result view. Leaving a reset form
+            // above this panel makes the page look as though nothing was created, especially on
+            // a phone when the status message scrolls back to the top.
+            document.querySelector('.form-section').hidden = true;
+            document.querySelector('.page-header h1').textContent = 'Game Created';
             document.getElementById('shareLink').style.display = 'block';
-            
-            // Scroll to the links
-            document.getElementById('shareLink').scrollIntoView({ behavior: 'smooth' });
         }
 
         function copyToClipboard() {
-            const currentGameData = InvitationGenerator.getCurrentGameDataFromStorage();
+            const currentGameData = window.currentGameData ||
+                InvitationGenerator.getCurrentGameDataFromStorage();
             if (!currentGameData.registrationMode) {
                 currentGameData.registrationMode = 'fcfs';
             }

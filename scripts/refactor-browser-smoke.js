@@ -160,6 +160,19 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     );
     assert(noImageResult.waitlistNotificationSaved,
       'the waitlist-start notification default is saved with the game');
+    const createSuccessView = await desktop.evaluate(`(() => ({
+      formHidden: document.querySelector('.form-section').hidden,
+      shareVisible: getComputedStyle(document.getElementById('shareLink')).display !== 'none',
+      heading: document.querySelector('.page-header h1').textContent.trim(),
+      canCreateAnother: Boolean(document.querySelector('a[href="/create.html"].create-another-link'))
+    }))()`);
+    assert(
+      createSuccessView.formHidden && createSuccessView.shareVisible &&
+      createSuccessView.heading === 'Game Created',
+      'successful creation replaces the reset form with the invitation step'
+    );
+    assert(createSuccessView.canCreateAnother,
+      'the success step offers a clear way to create another game');
 
     const uploadedCreate = await desktop.evaluate(`(() => {
       const set = (id, value) => {

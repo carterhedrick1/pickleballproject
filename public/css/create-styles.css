@@ -628,6 +628,17 @@
             padding: 16px 0;
         }
 
+        .create-another-section {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .create-another-link {
+            color: #2563eb;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
         .center-copy-section p {
             color: #6b7280;
             margin: 14px 0;
