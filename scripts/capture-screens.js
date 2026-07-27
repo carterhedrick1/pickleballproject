@@ -62,7 +62,7 @@ const fillAndSubmitCreateForm = (fx) => async (p) => {
     const select = document.getElementById('locationSelect');
     select.value = '__new__';
     select.dispatchEvent(new Event('change'));
-    set('location', 'Sunset Park Courts'); set('courtNumber', 'Court 2');
+    set('location', 'Sunset Park Courts');
     set('organizerName', 'Scott H.'); set('organizerPhone', '${fx.FORM_PHONE}');
     set('date', '${fixtures.inDays(4)}'); set('time', '17:30'); set('players', '4');
     set('message', 'Doubles, casual pace. Bring a spare ball. ${fx.MARKER}');
