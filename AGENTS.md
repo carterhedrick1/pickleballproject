@@ -23,3 +23,13 @@ commit. If the hook reports a failure, say clearly whether the commit stayed loc
 
 After a production deployment, confirm the affected behavior on https://inorout.club, or
 check `/api/health` for server-only changes.
+
+## UI copy uses every-word title capitalization
+
+Capitalize the first letter of every word in titles, headings, short field labels, tabs, and
+card/option titles. This includes short words such as "a", "and", "for", "of", "or", "the",
+and "to". Preserve intentional acronym casing such as SMS, DUPR, and API. Keep explanatory
+sentences, help text, placeholders, and user-provided content in normal sentence case. Preserve
+the product-name styling "IN or OUT" (or "In or Out" where that form is used).
+
+`npm run verify:frontend` enforces this convention for authored titles in the public UI.

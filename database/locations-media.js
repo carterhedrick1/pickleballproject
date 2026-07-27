@@ -1,6 +1,6 @@
 const { isProduction, withPgClient, sqliteAll, sqliteGet, sqliteRun, sqlitePrepareRun } = require('./context');
 
-const { locationKey } = require('./schema');
+const { locationKey, isRetiredLocation } = require('./schema');
 
 // ---------------------------------------------------------------------------
 // Location functions
@@ -10,7 +10,7 @@ const { locationKey } = require('./schema');
 // Blank names are ignored, and an existing court keeps the spelling it was first saved with.
 async function addLocation(displayName) {
   const trimmed = String(displayName == null ? '' : displayName).trim().replace(/\s+/g, ' ');
-  if (!trimmed) return;
+  if (!trimmed || isRetiredLocation(trimmed)) return;
   const key = locationKey(trimmed);
   try {
     if (isProduction) {

@@ -383,7 +383,7 @@
                     spotsAvailableBar.style.display = 'none';
                     spotsFullContainer.style.display = 'block';
                     waitlistCount.textContent = waitlistLength;
-                    joinSectionTitle.textContent = 'Join the Waitlist';
+                    joinSectionTitle.textContent = 'Join The Waitlist';
                     joinButton.textContent = 'Join Waitlist';
                 }
                 
@@ -428,7 +428,7 @@
                         confirmMessage.textContent = `We've taken you off the list for this game. Thanks for letting us know.`;
                         confirmStatus.textContent = `Removed from the waitlist`;
                     } else {
-                        confirmTitle.textContent = "Thanks for Letting Us Know!";
+                        confirmTitle.textContent = "Thanks For Letting Us Know!";
                         confirmMessage.textContent = `We've recorded that you can't make this game. Thanks for being courteous to other players!`;
                         confirmStatus.textContent = `Marked as "Out"`;
                     }
@@ -448,7 +448,7 @@
                         confirmMessage.textContent = `Thanks for signing up! The organizer will review all applications and select players. You'll be notified if you're selected.`;
                         confirmStatus.textContent = `Application Under Review`;
                     } else {
-                        confirmTitle.textContent = "You're on the Waitlist!";
+                        confirmTitle.textContent = "You're On The Waitlist!";
                         confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
                         confirmStatus.textContent = `Waitlist Position #${data.position}`;
                     }

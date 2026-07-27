@@ -20,7 +20,7 @@ function showSection(sectionId, clickedElement) {
 
 const sectionOrder = [
   { id: 'game-modes', label: 'Game Modes Explained' },
-  { id: 'creating-games', label: 'Creating a Game' },
+  { id: 'creating-games', label: 'Creating A Game' },
   { id: 'managing-players', label: 'Managing Your Game' },
   { id: 'sms-examples', label: 'SMS Messages' },
   { id: 'player-experience', label: 'Player Experience' },

@@ -22,7 +22,7 @@
     "verify:late-joiner": "node verify/reminder-late-joiner.js",
     "verify:sms-failure": "node verify/sms-failure.js",
     "verify:sms-failure-ui": "node verify/sms-failure-ui.js",
-    "verify:frontend": "node scripts/refactor-browser-smoke.js",
+    "verify:frontend": "node scripts/verify-title-case.js && node scripts/refactor-browser-smoke.js",
     "quota": "node scripts/textbelt-quota.js",
     "docs": "npm run docs:copy && npm run docs:screens",
     "docs:copy": "node scripts/extract-copy.js",

@@ -57,10 +57,25 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       return {
         form: Boolean(document.getElementById('gameForm')),
         selected: document.getElementById('waitlistMode').checked,
+        waitlistNotificationDefault: document.getElementById('notifyWaitlistStarts').checked &&
+          document.querySelector('[data-checkbox-id="notifyWaitlistStarts"]').classList.contains('checked'),
+        notificationTitles: [...document.querySelectorAll('.notifications-section .notification-title')]
+          .map((element) => element.textContent.trim()),
         scriptExternal: [...document.scripts].some((s) => s.src.endsWith('/js/create.js'))
       };
     })()`);
     assert(createReady.form && createReady.selected, 'create form and extracted handlers work');
+    assert(createReady.waitlistNotificationDefault, 'waitlist-start notification is enabled by default');
+    assert(
+      createReady.notificationTitles.join('|') === [
+        'Game Becomes Full',
+        'Someone Cancels Their Spot',
+        'Someone Joins The Game',
+        'Only One Spot Remaining',
+        'Waitlist Starts'
+      ].join('|'),
+      'organizer notification titles capitalize every word'
+    );
     assert(createReady.scriptExternal, 'create page uses its external script');
 
     await desktop.evaluate(`(() => {
@@ -128,16 +143,21 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       const gameId = window.currentGameId;
       const response = await fetch('/api/games/' + gameId + '/court-images');
       const library = await response.json();
+      const gameResponse = await fetch('/api/games/' + gameId);
+      const game = await gameResponse.json();
       return {
         gameId,
         imageCount: library.images.length,
-        selectedImageId: library.selectedImageId
+        selectedImageId: library.selectedImageId,
+        waitlistNotificationSaved: game.notificationPreferences?.waitlistStarts === true
       };
     })()`);
     assert(
       noImageResult.gameId && noImageResult.imageCount === 0 && !noImageResult.selectedImageId,
       'a game with no saved or uploaded court photo still creates without an image'
     );
+    assert(noImageResult.waitlistNotificationSaved,
+      'the waitlist-start notification default is saved with the game');
 
     const uploadedCreate = await desktop.evaluate(`(() => {
       const set = (id, value) => {

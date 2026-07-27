@@ -27,7 +27,7 @@
 
         <div class="content-section">
             <div id="phoneGate" class="phone-gate" style="display: none;">
-                <h3>Which number do you host with?</h3>
+                <h3>Which Number Do You Host With?</h3>
                 <p>Enter the phone number you use when you create games.</p>
                 <input type="tel" id="phoneInput" placeholder="(555) 123-4567" autocomplete="tel">
                 <br>
@@ -40,7 +40,7 @@
                 <div id="rosterList"></div>
 
                 <div id="emptyState" class="no-games" style="display: none;">
-                    <h3>Nobody yet</h3>
+                    <h3>Nobody Yet</h3>
                     <p>Host a game and your roster builds itself &mdash; everyone who signs up lands here.</p>
                     <a href="/create.html" class="create-game-btn">Create a game</a>
                 </div>
@@ -148,7 +148,7 @@
             nameLabel.appendChild(nameInput);
 
             const idLabel = document.createElement('label');
-            idLabel.textContent = 'DUPR ID (optional)';
+            idLabel.textContent = 'DUPR ID (Optional)';
             const idInput = document.createElement('input');
             idInput.type = 'text';
             idInput.value = player.duprId || '';
@@ -156,7 +156,7 @@
             idLabel.appendChild(idInput);
 
             const ratingLabel = document.createElement('label');
-            ratingLabel.textContent = 'DUPR rating (optional)';
+            ratingLabel.textContent = 'DUPR Rating (Optional)';
             const ratingInput = document.createElement('input');
             ratingInput.type = 'number';
             ratingInput.step = '0.01';

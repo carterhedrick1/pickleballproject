@@ -111,7 +111,7 @@ function render() {
     document.getElementById('upcomingHeading').style.display = upcoming.length ? 'block' : 'none';
     document.getElementById('pastWrapper').style.display = past.length ? 'block' : 'none';
     document.getElementById('pastSummary').textContent =
-        `Past games (${past.length})`;
+        `Past Games (${past.length})`;
 
     renderInto('upcomingList', upcoming);
     renderInto('pastList', past);

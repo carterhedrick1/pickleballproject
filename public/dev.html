@@ -132,7 +132,7 @@
 <!-- Dashboard -->
 <div id="appView" class="hidden">
   <div class="topbar">
-    <h1>Developer Area<span class="env" id="envBadge">local</span></h1>
+    <h1>Developer Area<span class="env" id="envBadge">Local</span></h1>
     <button class="ghost" id="signOut">Sign out</button>
   </div>
 
@@ -148,7 +148,7 @@
     <!-- Status -->
     <section id="tab-status">
       <div class="panel">
-        <h2>Right now</h2>
+        <h2>Right Now</h2>
         <div class="stat-grid" id="statGrid"><p class="muted">Loading…</p></div>
       </div>
       <div class="panel">
@@ -160,7 +160,7 @@
     <!-- Ideas -->
     <section id="tab-ideas" class="hidden">
       <div class="panel">
-        <h2>Add an idea</h2>
+        <h2>Add An Idea</h2>
         <form class="idea-form" id="ideaForm">
           <input type="text" id="ideaTitle" placeholder="What's the idea?" maxlength="200">
           <textarea id="ideaBody" rows="3" placeholder="Any detail worth remembering (optional)" maxlength="5000"></textarea>
@@ -171,7 +171,7 @@
         </form>
       </div>
       <div class="panel">
-        <h2>The board</h2>
+        <h2>The Board</h2>
         <div id="ideaList"><p class="muted">Loading…</p></div>
       </div>
     </section>
@@ -179,7 +179,7 @@
     <!-- Errors -->
     <section id="tab-errors" class="hidden">
       <div class="panel">
-        <h2>Errors users hit</h2>
+        <h2>Errors Users Hit</h2>
         <p class="muted">Newest first. The app keeps the last 500, and anything older than 30 days is dropped.</p>
         <div id="errorList" style="margin-top:16px"><p class="muted">Loading…</p></div>
       </div>
@@ -188,12 +188,12 @@
     <!-- Courts -->
     <section id="tab-courts" class="hidden">
       <div class="panel">
-        <h2>Court images</h2>
+        <h2>Court Images</h2>
         <p class="muted">Upload images that'll show when hosts pick these courts for games.</p>
         <div id="courtList" style="margin-top:16px"><p class="muted">Loading…</p></div>
       </div>
       <div class="panel">
-        <h2>Upload a court image</h2>
+        <h2>Upload A Court Image</h2>
         <form class="idea-form" id="courtImageForm">
           <select id="courtSelect"><option>Loading courts…</option></select>
           <input type="file" id="courtImageFile" accept="image/jpeg,image/png,image/webp" style="margin-top:10px">
@@ -206,7 +206,7 @@
     <!-- Screens -->
     <section id="tab-screens" class="hidden">
       <div class="panel">
-        <h2>The app as a user meets it</h2>
+        <h2>The App As A User Meets It</h2>
         <p class="muted">
           Live copies of the generated documentation, served by the app itself. Rebuild them with
           <code>npm run docs</code> and push them here with <code>npm run docs:publish</code>.
@@ -348,12 +348,12 @@ async function loadStatus() {
   const cards = [];
 
   if (texts.error) {
-    cards.push(`<div class="stat"><div class="label">Texts left</div><div class="value small">—</div>
+    cards.push(`<div class="stat"><div class="label">Texts Left</div><div class="value small">—</div>
       <div class="note">${escapeHtml(texts.error)}</div></div>`);
   } else {
     const remaining = texts.quotaRemaining;
     const tone = remaining < 100 ? 'bad' : remaining < 500 ? 'warn' : 'good';
-    cards.push(`<div class="stat ${tone}"><div class="label">Texts left</div>
+    cards.push(`<div class="stat ${tone}"><div class="label">Texts Left</div>
       <div class="value">${remaining}</div>
       <div class="note">checked ${timeAgo(texts.checkedAt)}${texts.cached ? ' (cached)' : ''}</div></div>`);
   }
@@ -367,11 +367,11 @@ async function loadStatus() {
     <div class="note">${counts.photos != null ? counts.photos + ' photos' : ''}</div></div>`);
 
   const errorCount = counts.errorsLast7Days;
-  cards.push(`<div class="stat ${errorCount ? 'warn' : 'good'}"><div class="label">Errors (7 days)</div>
+  cards.push(`<div class="stat ${errorCount ? 'warn' : 'good'}"><div class="label">Errors (7 Days)</div>
     <div class="value">${errorCount != null ? errorCount : '—'}</div>
     <div class="note">${errorCount ? 'see the Errors tab' : 'nothing reported'}</div></div>`);
 
-  cards.push(`<div class="stat"><div class="label">Waiting to deploy</div>
+  cards.push(`<div class="stat"><div class="label">Waiting To Deploy</div>
     <div class="value">${counts.doneNotDeployed != null ? counts.doneNotDeployed : '—'}</div>
     <div class="note">${counts.building != null ? counts.building + ' in progress' : ''}</div></div>`);
 
@@ -502,7 +502,7 @@ async function loadErrors() {
       <div class="err-meta">
         ${error.page ? escapeHtml(error.page) + ' · ' : ''}${new Date(error.createdAt).toLocaleString()} (${timeAgo(error.createdAt)})
       </div>
-      ${error.stack ? `<details><summary>Show details</summary><pre>${escapeHtml(error.stack)}</pre></details>` : ''}
+      ${error.stack ? `<details><summary>Show Details</summary><pre>${escapeHtml(error.stack)}</pre></details>` : ''}
     </div>`).join('');
 }
 

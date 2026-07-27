@@ -11,8 +11,7 @@ const SEED_LOCATIONS = [
   'Chicken and Pickle',
   'JustPaddles',
   'Char Bar',
-  'Argosy',
-  'Wimbledom'
+  'Argosy'
 ];
 
 // The primary key. " chicken AND pickle " and "Chicken and Pickle" are the same court,
@@ -20,6 +19,15 @@ const SEED_LOCATIONS = [
 // types is the one everyone sees (display_name is never overwritten).
 function locationKey(displayName) {
   return String(displayName == null ? '' : displayName).trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+// Remove the old court from existing databases and do not remember it again if an older
+// game at that location is edited. Include the historical misspellings as well as the
+// spelling shown in the picker.
+const RETIRED_LOCATION_KEYS = new Set(['wimbledom', 'wimbledon', 'wimbleton']);
+
+function isRetiredLocation(displayName) {
+  return RETIRED_LOCATION_KEYS.has(locationKey(displayName));
 }
 
 // ---------------------------------------------------------------------------
@@ -80,6 +88,9 @@ async function initializeDatabase() {
               throw err;
             }
           }
+        }
+        for (const nameKey of RETIRED_LOCATION_KEYS) {
+          await client.query('DELETE FROM locations WHERE name_key = $1', [nameKey]);
         }
         for (const displayName of SEED_LOCATIONS) {
           await client.query(
@@ -213,6 +224,9 @@ async function initializeDatabase() {
           }
         }
       }
+      for (const nameKey of RETIRED_LOCATION_KEYS) {
+        await sqlitePrepareRun('DELETE FROM locations WHERE name_key = ?', [nameKey]);
+      }
       for (const displayName of SEED_LOCATIONS) {
         await sqlitePrepareRun(
           'INSERT OR IGNORE INTO locations (name_key, display_name) VALUES (?, ?)',
@@ -299,4 +313,4 @@ async function initializeDatabase() {
   }
 }
 
-module.exports = { initializeDatabase, locationKey };
+module.exports = { initializeDatabase, locationKey, isRetiredLocation };

@@ -344,7 +344,7 @@ async function removeWaitlisted(playerId) {
     }
     
     showConfirmModal(
-      'Remove from Waitlist', 
+      'Remove From Waitlist',
       `Are you sure you want to remove ${player.name} from the waitlist?`, 
       async () => {
         try {
@@ -438,4 +438,3 @@ window.ManageApp.players = {
     removeOutPlayer
 
 };
-

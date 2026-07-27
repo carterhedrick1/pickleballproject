@@ -28,7 +28,7 @@
         <div class="content-section">
             <!-- Shown until we know whose stats to load. -->
             <div id="phoneGate" class="phone-gate" style="display: none;">
-                <h3>Which number do you host with?</h3>
+                <h3>Which Number Do You Host With?</h3>
                 <p>Enter the phone number you use when you create games.</p>
                 <input type="tel" id="phoneInput" placeholder="(555) 123-4567" autocomplete="tel">
                 <br>
@@ -40,10 +40,10 @@
 
                 <div class="stat-grid" id="summaryCards"></div>
 
-                <h3 class="section-subtitle">Who plays</h3>
+                <h3 class="section-subtitle">Who Plays</h3>
                 <div id="playersBlock"></div>
 
-                <h3 class="section-subtitle">Where and when</h3>
+                <h3 class="section-subtitle">Where And When</h3>
                 <div class="stat-grid" id="scheduleCards"></div>
 
                 <h3 class="section-subtitle">DUPR</h3>
@@ -168,44 +168,44 @@
                 : "You haven't hosted a game with this number yet.";
 
             document.getElementById('summaryCards').innerHTML = [
-                statCard(summary.gamesHosted, 'Games hosted'),
+                statCard(summary.gamesHosted, 'Games Hosted'),
                 statCard(summary.completed, 'Played'),
-                statCard(summary.upcoming, 'Coming up'),
+                statCard(summary.upcoming, 'Coming Up'),
                 statCard(summary.cancelled, 'Cancelled'),
-                statCard(percent(fillRate.average), `Average fill${fillRate.gamesCounted ? ` (${fillRate.gamesCounted} games)` : ''}`),
-                statCard(players.distinctCount, 'Different players')
+                statCard(percent(fillRate.average), `Average Fill${fillRate.gamesCounted ? ` (${fillRate.gamesCounted} Games)` : ''}`),
+                statCard(players.distinctCount, 'Different Players')
             ].join('');
 
             document.getElementById('playersBlock').innerHTML = `
-                <h4 class="section-subtitle" style="font-size:16px;">Plays the most</h4>
+                <h4 class="section-subtitle" style="font-size:16px;">Plays The Most</h4>
                 ${list(players.top,
                     (p) => `<li>${esc(p.name)} <span class="count">- ${p.games} ${p.games === 1 ? 'game' : 'games'}</span></li>`,
                     'Nobody has played a game yet.')}
 
-                <h4 class="section-subtitle" style="font-size:16px;">Waits the most</h4>
+                <h4 class="section-subtitle" style="font-size:16px;">Waits The Most</h4>
                 ${list(players.waitlistRegulars,
                     (p) => `<li>${esc(p.name)} <span class="count">- waitlisted ${p.times} ${p.times === 1 ? 'time' : 'times'}</span></li>`,
                     'Nobody has been on a waitlist yet.')}
 
-                <h4 class="section-subtitle" style="font-size:16px;">Pulls out the most</h4>
+                <h4 class="section-subtitle" style="font-size:16px;">Pulls Out The Most</h4>
                 ${list(players.outs,
                     (p) => `<li>${esc(p.name)} <span class="count">- out ${p.timesOut} ${p.timesOut === 1 ? 'time' : 'times'}${p.confirmedCancels ? `, ${p.confirmedCancels} after taking a spot` : ''}</span></li>`,
                     'Nobody has pulled out yet.')}
 
-                <h4 class="section-subtitle" style="font-size:16px;">Signs up fastest</h4>
+                <h4 class="section-subtitle" style="font-size:16px;">Signs Up Fastest</h4>
                 ${list(signupSpeed,
                     (p) => `<li>${esc(p.name)} <span class="count">- usually within ${p.medianMinutes} min of you posting (${p.samples} games)</span></li>`,
                     'Not enough first-come signups to tell yet.')}
             `;
 
             document.getElementById('scheduleCards').innerHTML = [
-                statCard(esc(schedule.busiestLocation?.name || '--'), 'Usual court'),
-                statCard(esc(schedule.favoriteDay?.name || '--'), 'Usual day'),
-                statCard(prettyTime(schedule.favoriteTime?.name), 'Usual start time')
+                statCard(esc(schedule.busiestLocation?.name || '--'), 'Usual Court'),
+                statCard(esc(schedule.favoriteDay?.name || '--'), 'Usual Day'),
+                statCard(prettyTime(schedule.favoriteTime?.name), 'Usual Start Time')
             ].join('');
 
             document.getElementById('duprCards').innerHTML = [
-                statCard(dupr.ratedPlayers, 'Players with a rating'),
+                statCard(dupr.ratedPlayers, 'Players With A Rating'),
                 statCard(dupr.min ?? '--', 'Lowest'),
                 statCard(dupr.average ?? '--', 'Average'),
                 statCard(dupr.max ?? '--', 'Highest')

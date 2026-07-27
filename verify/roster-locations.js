@@ -4,7 +4,8 @@
 //   npm run verify:roster
 //
 // What it pins down:
-//   - the six seeded courts survive repeated boots without ever duplicating
+//   - the five seeded courts survive repeated boots without ever duplicating
+//   - Wimbledon and its historical misspellings stay retired
 //   - " chicken AND pickle " is the same court as "Chicken and Pickle"
 //   - a name the host typed is never replaced by whatever a player typed at signup
 //   - is_android is remembered once known, and a later sighting that cannot tell (null)
@@ -24,16 +25,16 @@ const SEEDS = [
   'Chicken and Pickle',
   'JustPaddles',
   'Char Bar',
-  'Argosy',
-  'Wimbledom'
+  'Argosy'
 ];
+const RETIRED = ['Wimbledom', 'Wimbledon', 'Wimbleton'];
 
 let failures = 0;
 const ok = (m) => console.log(`  PASS  ${m}`);
 const bad = (m) => { console.log(`  FAIL  ${m}`); failures++; };
 const check = (cond, m) => (cond ? ok(m) : bad(m));
 
-// Wipes just the six seed rows, so the next initializeDatabase() is indistinguishable from a
+// Wipes just the five seed rows, so the next initializeDatabase() is indistinguishable from a
 // boot against a brand new database. Host-added courts are left alone.
 function deleteSeedRows() {
   return new Promise((resolve, reject) => {
@@ -47,6 +48,22 @@ function deleteSeedRows() {
   });
 }
 
+function insertRetiredRows() {
+  return new Promise((resolve, reject) => {
+    const conn = new sqlite3.Database(path.join(ROOT, 'pickleball.db'));
+    const statement = conn.prepare(
+      'INSERT OR REPLACE INTO locations (name_key, display_name) VALUES (?, ?)'
+    );
+    for (const displayName of RETIRED) {
+      statement.run(displayName.toLowerCase(), displayName);
+    }
+    statement.finalize((err) => {
+      conn.close();
+      err ? reject(err) : resolve();
+    });
+  });
+}
+
 const roster = async () => (await db.getRosterForHost(HOST)).find((r) => r.playerPhone === PLAYER);
 
 (async () => {
@@ -57,10 +74,11 @@ const roster = async () => (await db.getRosterForHost(HOST)).find((r) => r.playe
 
   console.log('1. Seeded courts survive two boots without duplicating');
   await deleteSeedRows();
+  await insertRetiredRows();
   await db.initializeDatabase();                     // boot 1: fills an empty locations table
   const afterFirst = await db.getLocations();
   const missing = SEEDS.filter((s) => !afterFirst.includes(s));
-  check(missing.length === 0, `all six courts seeded${missing.length ? ` (missing ${missing})` : ''}`);
+  check(missing.length === 0, `all five courts seeded${missing.length ? ` (missing ${missing})` : ''}`);
 
   await db.initializeDatabase();                     // boot 2: must be a no-op
   const afterSecond = await db.getLocations();
@@ -70,13 +88,16 @@ const roster = async () => (await db.getRosterForHost(HOST)).find((r) => r.playe
   );
   const seedCounts = SEEDS.map((s) => afterSecond.filter((l) => l === s).length);
   check(seedCounts.every((n) => n === 1), `each seeded court appears exactly once (${seedCounts})`);
+  check(RETIRED.every((name) => !afterSecond.includes(name)), 'Wimbledon spellings are not seeded');
 
   console.log('\n2. The same court typed differently is one court');
   const before = (await db.getLocations()).length;
   await db.addLocation('   chicken   AND pickle  ');
+  await db.addLocation('Wimbledon');
   const after = await db.getLocations();
   check(after.length === before, `" chicken   AND pickle " added no row (${before} -> ${after.length})`);
   check(after.includes('Chicken and Pickle'), 'the original spelling is the one kept');
+  check(!after.includes('Wimbledon'), 'a retired court cannot be remembered again');
 
   console.log('\n3. Blank locations are ignored, new ones are kept with their first spelling');
   await db.addLocation('');

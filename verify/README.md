@@ -83,8 +83,8 @@ and every script now reports a 429 as a 429.
 
 | Script | What it proves |
 |---|---|
-| `user-flow.js` | Pages load, a game can be created, players join, the roster caps, overflow waitlists, "I'm out" works, and the host dashboard opens. Also checks `hostToken` is absent without a token, present with the right one, and 403 on a wrong one, that the six seeded courts are served, that host notes save and never reach the player page, and that the roster fills from signups. Cancels its own test game. Its host-history section needs players with phone numbers, so that part only runs against a local server. |
-| `roster-locations.js` | The six seeded courts survive repeated boots without duplicating, the same court typed differently is one court, a name the host typed is never replaced by a player's signup, and the Android flag is remembered once known. |
+| `user-flow.js` | Pages load, a game can be created, players join, the roster caps, overflow waitlists, "I'm out" works, and the host dashboard opens. Also checks `hostToken` is absent without a token, present with the right one, and 403 on a wrong one, that the five seeded courts are served without Wimbledon, that host notes save and never reach the player page, and that the roster fills from signups. Cancels its own test game. Its host-history section needs players with phone numbers, so that part only runs against a local server. |
+| `roster-locations.js` | The five seeded courts survive repeated boots without duplicating, Wimbledon stays retired, the same court typed differently is one court, a name the host typed is never replaced by a player's signup, and the Android flag is remembered once known. |
 | `signup-race.js` | Simultaneous signups all survive. Before the fix this reported 6 accepted but only 2 on the roster. |
 | `capacity-race.js` | 10 people rushing a 4-seat game fill it to exactly 4, waitlist 6, lose nobody, and each person's confirmation matches where they actually ended up. |
 | `mixed-race.js` | Host actions and player signups firing together leave no duplicates, no overbooking, and nobody on both the roster and the waitlist. |

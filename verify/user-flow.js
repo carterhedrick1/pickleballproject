@@ -57,11 +57,14 @@ async function req(method, path, body, extraHeaders) {
   locs.status === 200 && Array.isArray(locations)
     ? ok(`/api/locations returned ${locations.length} court(s)`)
     : bad(`/api/locations -> HTTP ${locs.status}: ${locs.text.slice(0, 120)}`);
-  const SEEDS = ['Homoly Home Court', 'Chicken and Pickle', 'JustPaddles', 'Char Bar', 'Argosy', 'Wimbledom'];
+  const SEEDS = ['Homoly Home Court', 'Chicken and Pickle', 'JustPaddles', 'Char Bar', 'Argosy'];
   const missingSeeds = SEEDS.filter((s) => !locations.includes(s));
   missingSeeds.length === 0
-    ? ok('all six seeded courts are present')
+    ? ok('all five seeded courts are present')
     : bad(`seeded courts missing: ${missingSeeds.join(', ')}`);
+  locations.some((location) => ['wimbledom', 'wimbledon', 'wimbleton'].includes(location.toLowerCase()))
+    ? bad('Wimbledon is still present')
+    : ok('Wimbledon is absent');
 
   if (!DO_WRITE) {
     console.log('\n(read-only mode: skipping game creation)');

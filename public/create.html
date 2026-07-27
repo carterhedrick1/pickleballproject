@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Create a Game</title>
+    <title>Create A Game</title>
     <link rel="stylesheet" href="/css/create-styles.css">
     <link rel="stylesheet" href="/css/footer.css">
     <link rel="stylesheet" href="/css/header.css">
@@ -48,7 +48,7 @@
                     <div id="courtImageContainer" class="court-image-panel" hidden>
                         <div class="court-image-heading">
                             <div>
-                                <div class="court-image-title">Court images</div>
+                                <div class="court-image-title">Court Images</div>
                                 <p class="court-image-intro">The first saved photo is selected automatically, or you can choose another.</p>
                             </div>
                             <span id="courtImageCount" class="court-image-count" aria-live="polite"></span>
@@ -57,7 +57,7 @@
                         <div class="court-image-upload">
                             <label for="courtImageUpload" class="court-image-upload-button">
                                 <span aria-hidden="true">＋</span>
-                                Upload a court photo
+                                Upload A Court Photo
                                 <input
                                     type="file"
                                     id="courtImageUpload"
@@ -92,7 +92,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="duration">Duration (minutes):</label>
+                        <label for="duration">Duration (Minutes):</label>
                         <input type="number" id="duration" name="duration" value="90" min="30" step="15" required>
                     </div>
                 </section>
@@ -107,12 +107,12 @@
 
                     <div class="form-group">
                         <label for="organizerName">Your Name (Organizer):</label>
-                        <input type="text" id="organizerName" name="organizerName" placeholder="Enter your full name" required>
+                        <input type="text" id="organizerName" name="organizerName" required>
                     </div>
 
                     <div class="form-group">
                         <label for="organizerPhone">Your Phone Number:</label>
-                        <input type="tel" id="organizerPhone" name="organizerPhone" placeholder="(555) 123-4567" required>
+                        <input type="tel" id="organizerPhone" name="organizerPhone" required>
                         <div class="sms-info">
                             By entering your number, you agree to receive a confirmation text where you can manage your game. Msg &amp; data rates may apply. See Terms &amp; Privacy.
                         </div>
@@ -126,14 +126,14 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="players">Number of Players Needed:</label>
+                        <label for="players">Number Of Players Needed:</label>
                         <input type="number" id="players" name="players" value="4" min="1" max="50" required>
                         <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Include yourself if you're playing. Any number from 1 to 50.</small>
                     </div>
 
                     <div class="form-group">
-                        <label for="message">Optional Message:</label>
-                        <textarea id="message" name="message" placeholder="Any additional info for players (e.g., 'Bring water and sunscreen!')"></textarea>
+                        <label for="message">Optional Message To Invitees:</label>
+                        <textarea id="message" name="message"></textarea>
                     </div>
                 </section>
 
@@ -182,7 +182,7 @@
                             <div class="notification-content">
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
-                                    <div class="notification-title">Game becomes full</div>
+                                    <div class="notification-title">Game Becomes Full</div>
                                     <div class="notification-description">Text me once every spot is taken</div>
                                 </div>
                             </div>
@@ -194,7 +194,7 @@
                             <div class="notification-content">
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
-                                    <div class="notification-title">Someone cancels their spot</div>
+                                    <div class="notification-title">Someone Cancels Their Spot</div>
                                     <div class="notification-description">Text me when a player drops out</div>
                                 </div>
                             </div>
@@ -206,7 +206,7 @@
                             <div class="notification-content">
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
-                                    <div class="notification-title">Someone joins the game</div>
+                                    <div class="notification-title">Someone Joins The Game</div>
                                     <div class="notification-description">Text me every time a player signs up</div>
                                 </div>
                             </div>
@@ -218,7 +218,7 @@
                             <div class="notification-content">
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
-                                    <div class="notification-title">Only one spot remaining</div>
+                                    <div class="notification-title">Only One Spot Remaining</div>
                                     <div class="notification-description">Text me when there's one spot left to fill</div>
                                 </div>
                             </div>
@@ -226,16 +226,16 @@
                             <input type="checkbox" id="notifyOneSpotLeft" name="notifyOneSpotLeft">
                         </div>
 
-                        <div class="notification-option" data-checkbox-id="notifyWaitlistStarts">
+                        <div class="notification-option checked" data-checkbox-id="notifyWaitlistStarts">
                             <div class="notification-content">
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
-                                    <div class="notification-title">Waitlist starts</div>
+                                    <div class="notification-title">Waitlist Starts</div>
                                     <div class="notification-description">Text me when the first person has to wait</div>
                                 </div>
                             </div>
                             <div class="toggle-switch"></div>
-                            <input type="checkbox" id="notifyWaitlistStarts" name="notifyWaitlistStarts">
+                            <input type="checkbox" id="notifyWaitlistStarts" name="notifyWaitlistStarts" checked>
                         </div>
                     </div>
                 </section>
@@ -246,7 +246,7 @@
 
         <!-- MOVE the shareLink section INSIDE the container but OUTSIDE the form-section: -->
         <div id="shareLink" class="share-section" style="display: none;">
-            <h3 class="share-title">Your Game has been Created!</h3>
+            <h3 class="share-title">Your Game Has Been Created!</h3>
 
             <div class="center-copy-section">
                 <p><strong>Send this to your players.</strong> It has the date, time, court and a link they can tap to say IN or OUT.</p>
@@ -255,7 +255,7 @@
             </div>
 
             <div class="management-reminder">
-                <h4>Keep this one for yourself</h4>
+                <h4>Keep This One For Yourself</h4>
                 <p>Your management link is different from the invitation. Reply <strong>"1"</strong> to the confirmation text you just received and we'll send it to you.</p>
                 <p><small>It opens the page where you add and remove players, add photos, send announcements and cancel the game. Because it comes by text, you can get it on any device - just reply "1" again.</small></p>
             </div>
