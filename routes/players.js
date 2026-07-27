@@ -7,8 +7,6 @@
 // mixed-race.js exist to prove that ordering holds.
 
 const {
-  getGame,
-  saveGame,
   recordRosterSighting
 } = require('../database');
 
@@ -24,20 +22,21 @@ const {
 
 const {
   validatePlayerData,
-  checkExistingPlayer,
-  addPlayerToGame,
-  removePlayerFromGame
 } = require('../game-logic');
 
-const { acquireGameLock } = require('../utils/game-lock');
 const { isGameUpcoming } = require('../utils/central-time');
 const {
-  promoteNextFromWaitlist,
-  recordOutPlayer,
   departureAlertType
 } = require('../utils/promotion');
 const { routeFailed } = require('../utils/route-error');
-const { isHost } = require('../utils/host-auth');
+const {
+  joinGame,
+  joinGameAsHost,
+  leaveGame,
+  moveToWaitlist,
+  promoteFromWaitlist,
+  removeFromGame
+} = require('../services/player-service');
 
 module.exports = function mountPlayerRoutes(app) {
   // Quietly builds the host's roster as people sign up. A roster row is a nicety - a failure
@@ -59,156 +58,11 @@ module.exports = function mountPlayerRoutes(app) {
   // Add player to game (regular signup)
   app.post('/api/games/:id/players', async (req, res) => {
     const gameId = req.params.id;
-    // Held from loading the game until the save completes, so simultaneous signups cannot
-    // overwrite one another. Released before any SMS so nobody queues behind a Textbelt call.
-    const releaseLock = await acquireGameLock(gameId);
     try {
-      const game = await getGame(gameId);
-
-      if (!game) {
-        return res.status(404).json({ error: 'Game not found' });
-      }
-
       const { name, phone, action } = req.body;
-
-      // Which phone somebody signed up on. Captured silently for now - nothing in the app
-      // behaves differently because of it yet.
       const isAndroid = /Android/i.test(req.headers['user-agent'] || '');
-
-      // Handle "I'm Out" responses.
-      //
-      // This used to only ever append to outPlayers, which meant a confirmed player who tapped
-      // OUT on the web stayed on the roster and their spot was never released - the exact
-      // last-minute-cancellation problem this app exists to fix. Now the same three cases the
-      // SMS "9" flow handles are handled here too.
-      if (action === 'out') {
-        const playerData = validatePlayerData(name, phone);
-        playerData.isAndroid = isAndroid;
-
-        // validatePlayerData has already normalized the phone, so these compare directly.
-        const confirmedIndex = playerData.phone
-          ? game.players.findIndex((p) => p.phone === playerData.phone)
-          : -1;
-        const waitlistIndex = playerData.phone && confirmedIndex === -1
-          ? (game.waitlist || []).findIndex((p) => p.phone === playerData.phone)
-          : -1;
-
-        const gameDate = formatDateForSMS(game.date);
-        const gameTime = formatTimeForSMS(game.time);
-        const locationText = formatLocationForSMS(game);
-
-        // --- 1. They are on the roster: give up the spot and fill it. -----------------------
-        if (confirmedIndex >= 0) {
-          const departing = game.players[confirmedIndex];
-
-          if (departing.isOrganizer) {
-            return res.status(400).json({
-              error: "You're the organizer of this game. Use your management link to cancel it or to remove yourself."
-            });
-          }
-
-          game.players.splice(confirmedIndex, 1);
-          const outEntry = recordOutPlayer(game, { ...departing, isAndroid }, { wasConfirmed: true });
-          const promoted = promoteNextFromWaitlist(game);
-
-          await saveGame(gameId, game, game.hostToken, game.hostPhone);
-          releaseLock();
-
-          await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
-
-          let smsResult = null;
-          if (departing.phone) {
-            const message = `Your pickleball reservation at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`;
-            smsResult = await sendSMSWithRetry(departing.phone, message, gameId);
-            if (!smsResult.success) {
-              console.error(`[SERVER] ${departing.name} cancelled on game ${gameId} but the confirmation text failed:`, smsResult.error);
-            }
-          }
-
-          // The promotion already happened in the database. If this text fails the player is
-          // still promoted - same already-committed precedent as every other promotion here.
-          if (promoted && promoted.phone) {
-            const promoMessage = `Good news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
-            const promoResult = await sendSMSWithRetry(promoted.phone, promoMessage, gameId);
-            if (!promoResult.success) {
-              console.error(`[SERVER] ${promoted.name} was promoted on game ${gameId} but could not be told:`, promoResult.error);
-            }
-          }
-
-          await sendOrganizerNotification(
-            gameId, game, departureAlertType(game, true), departing.name
-          );
-
-          return res.status(201).json({
-            action: 'out',
-            cancelled: true,
-            wasConfirmed: true,
-            playerId: outEntry.id,
-            promoted: promoted ? promoted.name : null,
-            sms: smsResult
-          });
-        }
-
-        // --- 2. They are on the waitlist: take them off it. --------------------------------
-        if (waitlistIndex >= 0) {
-          const departing = game.waitlist[waitlistIndex];
-          game.waitlist.splice(waitlistIndex, 1);
-          const outEntry = recordOutPlayer(game, { ...departing, isAndroid }, { wasWaitlisted: true });
-
-          await saveGame(gameId, game, game.hostToken, game.hostPhone);
-          releaseLock();
-
-          await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
-
-          let smsResult = null;
-          if (departing.phone) {
-            const statusText = game.registrationMode === 'waitlist' ? 'application' : 'waitlist spot';
-            const message = `Your pickleball ${statusText} at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`;
-            smsResult = await sendSMSWithRetry(departing.phone, message, gameId);
-            if (!smsResult.success) {
-              console.error(`[SERVER] ${departing.name} left the waitlist on game ${gameId} but the confirmation text failed:`, smsResult.error);
-            }
-          }
-
-          await sendOrganizerNotification(gameId, game, 'playerCancels', departing.name);
-
-          return res.status(201).json({
-            action: 'out',
-            cancelled: true,
-            wasConfirmed: false,
-            playerId: outEntry.id,
-            sms: smsResult
-          });
-        }
-
-        // --- 3. Nobody we know: an RSVP of "no", as before. --------------------------------
-        const outEntry = recordOutPlayer(game, playerData, {});
-        await saveGame(gameId, game, game.hostToken, game.hostPhone);
-        releaseLock();
-
-        await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
-
-        let smsResult = null;
-        if (playerData.phone) {
-          const message = `Thanks for letting us know you can't make the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. We appreciate the heads up!`;
-          // Retries once, and the result is reported to the client so the page can say the text
-          // did not go out rather than silently promising one.
-          smsResult = await sendSMSWithRetry(playerData.phone, message, gameId);
-          if (!smsResult.success) {
-            console.error(`[SERVER] "I'm out" recorded for ${playerData.phone} on game ${gameId} but the confirmation text failed:`, smsResult.error);
-          }
-        }
-
-        return res.status(201).json({
-          action: 'out',
-          cancelled: false,
-          wasConfirmed: false,
-          playerId: outEntry.id,
-          sms: smsResult
-        });
-      }
-          // Enhanced validation with better error messages
       let playerData;
+
       try {
         playerData = validatePlayerData(name, phone);
       } catch (validationError) {
@@ -244,19 +98,82 @@ module.exports = function mountPlayerRoutes(app) {
 
       playerData.isAndroid = isAndroid;
 
-      // Check if player already exists
-      const existingCheck = checkExistingPlayer(game, playerData.phone);
-      if (existingCheck.exists) {
-        return res.status(400).json({ error: existingCheck.message });
-      }
-      
-      // Add player to game
-      const result = addPlayerToGame(game, playerData);
-      
-      // MOVED: Save game BEFORE sending notifications
-      await saveGame(gameId, game, game.hostToken, game.hostPhone);
-      releaseLock();
+      if (action === 'out') {
+        const result = await leaveGame(
+          gameId,
+          playerData,
+          { recordUnknown: true, protectOrganizer: true }
+        );
+        if (result.status === 'game_not_found') {
+          return res.status(404).json({ error: 'Game not found' });
+        }
+        if (result.status === 'organizer') {
+          return res.status(400).json({
+            error: "You're the organizer of this game. Use your management link to cancel it or to remove yourself."
+          });
+        }
 
+        const game = result.game;
+        const departing = result.player;
+        const gameDate = formatDateForSMS(game.date);
+        const gameTime = formatTimeForSMS(game.time);
+        const locationText = formatLocationForSMS(game);
+        await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
+
+        let smsResult = null;
+        if (playerData.phone) {
+          let message;
+          if (result.previousStatus === 'confirmed') {
+            message = `Your pickleball reservation at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`;
+          } else if (result.previousStatus === 'waitlist') {
+            const statusText = game.registrationMode === 'waitlist' ? 'application' : 'waitlist spot';
+            message = `Your pickleball ${statusText} at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`;
+          } else {
+            message = `Thanks for letting us know you can't make the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. We appreciate the heads up!`;
+          }
+          smsResult = await sendSMSWithRetry(playerData.phone, message, gameId);
+        }
+
+        if (result.promotedPlayer?.phone) {
+          const promoted = result.promotedPlayer;
+          const promoMessage = `Good news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
+          const promoResult = await sendSMSWithRetry(promoted.phone, promoMessage, gameId);
+          if (!promoResult.success) {
+            console.error(`[SERVER] ${promoted.name} was promoted on game ${gameId} but could not be told:`, promoResult.error);
+          }
+        }
+
+        if (result.previousStatus) {
+          await sendOrganizerNotification(
+            gameId,
+            game,
+            departureAlertType(game, result.previousStatus === 'confirmed'),
+            departing.name
+          );
+        }
+
+        return res.status(201).json({
+          action: 'out',
+          cancelled: Boolean(result.previousStatus),
+          wasConfirmed: result.previousStatus === 'confirmed',
+          playerId: result.outEntry.id,
+          promoted: result.promotedPlayer?.name || null,
+          sms: smsResult
+        });
+      }
+
+      const result = await joinGame(gameId, playerData);
+      if (result.status === 'game_not_found') {
+        return res.status(404).json({ error: 'Game not found' });
+      }
+      if (result.status === 'duplicate') {
+        const message = result.duplicateStatus === 'confirmed'
+          ? 'This phone number is already registered for this game'
+          : 'This phone number is already on the waitlist';
+        return res.status(400).json({ error: message });
+      }
+
+      const game = result.game;
       await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
 
       // Send confirmation SMS to the player
@@ -313,15 +230,17 @@ module.exports = function mountPlayerRoutes(app) {
 
       // Send response back to client (ONLY ONE RESPONSE!)
       res.status(201).json({ 
-        ...result,
+        status: result.status,
+        position: result.position,
+        playerId: result.player.id,
+        reason: result.reason,
+        hidePosition: result.hidePosition,
+        totalPlayers: result.totalPlayers,
         sms: smsResult
       });
       
     } catch (error) {
       routeFailed(req, res, error, error.message || 'Failed to add player');
-    } finally {
-      // No-op if already released after the save; this covers the early returns and error paths.
-      releaseLock();
     }
   });
 
@@ -330,38 +249,32 @@ module.exports = function mountPlayerRoutes(app) {
   // Add player manually (host function)
   app.post('/api/games/:id/manual-player', async (req, res) => {
     const gameId = req.params.id;
-    const releaseLock = await acquireGameLock(gameId);
     try {
       const { name, phone, addTo, token } = req.body;
-      
-      const game = await getGame(gameId);
-      if (!game) {
+      const playerData = validatePlayerData(name, phone);
+      const forceWaitlist = addTo === 'waitlist';
+      const result = await joinGameAsHost(
+        gameId,
+        playerData,
+        { forceWaitlist },
+        token
+      );
+      if (result.status === 'game_not_found') {
         return res.status(404).json({ error: 'Game not found' });
       }
-      
-      if (!isHost(game, token)) {
+      if (result.status === 'unauthorized') {
         return res.status(403).json({ error: 'Unauthorized' });
       }
-      
-      // Validate player data
-      const playerData = validatePlayerData(name, phone);
-      
-      // Check if player already exists
-      const existingCheck = checkExistingPlayer(game, playerData.phone);
-      if (existingCheck.exists) {
-        return res.status(400).json({ error: existingCheck.message });
+      if (result.status === 'duplicate') {
+        const message = result.duplicateStatus === 'confirmed'
+          ? 'This phone number is already registered for this game'
+          : 'This phone number is already on the waitlist';
+        return res.status(400).json({ error: message });
       }
-
-      
-      
-      // Add player to game (force waitlist if requested)
-      const forceWaitlist = addTo === 'waitlist';
-      const result = addPlayerToGame(game, playerData, forceWaitlist);
-      await saveGame(gameId, game, game.hostToken, game.hostPhone);
-      releaseLock();
 
       // The host typed this in on their own browser, so the user agent says nothing about the
       // player's phone. Record the sighting, but leave the Android flag unknown.
+      const game = result.game;
       await noteRosterSighting(game.hostPhone, playerData, null);
 
       // Send SMS confirmation to the added player
@@ -386,49 +299,38 @@ module.exports = function mountPlayerRoutes(app) {
         success: true,
         message: `${playerData.name} added to ${statusText}`,
         sms: smsResult,
-        ...result
+        status: result.status,
+        position: result.position,
+        playerId: result.player.id,
+        reason: result.reason,
+        hidePosition: result.hidePosition,
+        totalPlayers: result.totalPlayers
       });
     } catch (error) {
       routeFailed(req, res, error, error.message || 'Failed to add player');
-    } finally {
-      releaseLock();
     }
   });
 
   // NEW ENDPOINT: Move player to waitlist with SMS notification
   app.post('/api/games/:id/move-to-waitlist/:playerId', async (req, res) => {
     const gameId = req.params.id;
-    const releaseLock = await acquireGameLock(gameId);
     try {
       const playerId = req.params.playerId;
       const { token } = req.body;
-      
-      const game = await getGame(gameId);
-      if (!game) {
+      const result = await moveToWaitlist(gameId, playerId, token);
+      if (result.status === 'game_not_found') {
         return res.status(404).json({ error: 'Game not found' });
       }
-      
-      if (!isHost(game, token)) {
+      if (result.status === 'unauthorized') {
         return res.status(403).json({ error: 'Unauthorized' });
       }
-      
-      // Find the player in confirmed players
-      const playerIndex = game.players.findIndex(p => p.id === playerId);
-      if (playerIndex === -1) {
+      if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Player not found in confirmed players' });
       }
-      
-      const player = game.players[playerIndex];
-      
-      // Remove from confirmed players and add to waitlist
-      game.players.splice(playerIndex, 1);
-      if (!game.waitlist) game.waitlist = [];
-      game.waitlist.push(player);
-
-      await saveGame(gameId, game, game.hostToken, game.hostPhone);
-      releaseLock();
 
       // Send SMS notification to the moved player
+      const game = result.game;
+      const player = result.player;
       let smsResult = null;
       if (player.phone) {
         const gameDate = formatDateForSMS(game.date);
@@ -446,49 +348,32 @@ module.exports = function mountPlayerRoutes(app) {
       });
     } catch (error) {
       routeFailed(req, res, error, 'Failed to move player to waitlist');
-    } finally {
-      releaseLock();
     }
   });
 
   // NEW ENDPOINT: Promote player from waitlist with SMS notification
   app.post('/api/games/:id/promote-from-waitlist/:playerId', async (req, res) => {
     const gameId = req.params.id;
-    const releaseLock = await acquireGameLock(gameId);
     try {
       const playerId = req.params.playerId;
       const { token } = req.body;
-      
-      const game = await getGame(gameId);
-      if (!game) {
+      const result = await promoteFromWaitlist(gameId, playerId, token);
+      if (result.status === 'game_not_found') {
         return res.status(404).json({ error: 'Game not found' });
       }
-      
-      if (!isHost(game, token)) {
+      if (result.status === 'unauthorized') {
         return res.status(403).json({ error: 'Unauthorized' });
       }
-      
-      // Check if game is full
-      if (game.players.length >= parseInt(game.totalPlayers)) {
+      if (result.status === 'full') {
         return res.status(400).json({ error: 'Cannot promote: Game is already full' });
       }
-      
-      // Find the player in waitlist
-      const waitlistIndex = (game.waitlist || []).findIndex(p => p.id === playerId);
-      if (waitlistIndex === -1) {
+      if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Player not found in waitlist' });
       }
-      
-      const player = game.waitlist[waitlistIndex];
-      
-      // Remove from waitlist and add to confirmed players
-      game.waitlist.splice(waitlistIndex, 1);
-      game.players.push(player);
-
-      await saveGame(gameId, game, game.hostToken, game.hostPhone);
-      releaseLock();
 
       // Send SMS notification to the promoted player
+      const game = result.game;
+      const player = result.player;
       let smsResult = null;
       if (player.phone) {
         const gameDate = formatDateForSMS(game.date);
@@ -511,58 +396,30 @@ module.exports = function mountPlayerRoutes(app) {
       });
     } catch (error) {
       routeFailed(req, res, error, 'Failed to promote player from waitlist');
-    } finally {
-      releaseLock();
     }
   });
 
   // ENHANCED: Remove player from game with SMS notification
   app.delete('/api/games/:id/players/:playerId', async (req, res) => {
     const gameId = req.params.id;
-    const releaseLock = await acquireGameLock(gameId);
     try {
       const playerId = req.params.playerId;
       const token = req.query.token;
-
-      const game = await getGame(gameId);
-      if (!game) {
+      const result = await removeFromGame(gameId, playerId, token);
+      if (result.status === 'game_not_found') {
         return res.status(404).json({ error: 'Game not found' });
       }
-
-      // Removing a player is a host action, so it needs the host token. This used to let a
-      // request with NO token through entirely - only a wrong one was rejected.
-      if (!isHost(game, token)) {
+      if (result.status === 'unauthorized') {
         return res.status(403).json({ error: 'Unauthorized' });
       }
-
-      // Find player to get their info before removal
-      let removedPlayer = null;
-      let removalType = null;
-      
-      // Check confirmed players
-      const confirmedIndex = game.players.findIndex(p => p.id === playerId);
-      if (confirmedIndex >= 0) {
-        removedPlayer = game.players[confirmedIndex];
-        removalType = 'confirmed';
-      } else {
-        // Check waitlist
-        const waitlistIndex = (game.waitlist || []).findIndex(p => p.id === playerId);
-        if (waitlistIndex >= 0) {
-          removedPlayer = game.waitlist[waitlistIndex];
-          removalType = 'waitlist';
-        }
-      }
-      
-      if (!removedPlayer) {
+      if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Player not found' });
       }
-      
-      // Remove player using existing game logic
-      const result = removePlayerFromGame(game, playerId);
-      await saveGame(gameId, game, game.hostToken, game.hostPhone);
-      releaseLock();
 
       // Send removal notification to the removed player (if they have a phone and aren't organizer)
+      const game = result.game;
+      const removedPlayer = result.player;
+      const removalType = result.previousStatus;
       let removalSmsResult = null;
       if (removedPlayer.phone && !removedPlayer.isOrganizer) { // the token check above guarantees the host
         const gameDate = formatDateForSMS(game.date);
@@ -576,7 +433,7 @@ module.exports = function mountPlayerRoutes(app) {
       
       // Send promotion SMS if someone was promoted from waitlist (this already exists in the logic)
       let promotionSmsResult = null;
-      if (result.promotedPlayer && result.promotedPlayer.phone) {
+      if (result.promotedPlayer?.phone) {
         const gameDate = formatDateForSMS(game.date);
         const gameTime = formatTimeForSMS(game.time);
         const locationText = formatLocationForSMS(game);
@@ -600,14 +457,16 @@ module.exports = function mountPlayerRoutes(app) {
   }
 
   res.json({ 
-    ...result,
+    status: result.status,
+    from: result.previousStatus,
+    removedPlayer: result.player,
+    promotedPlayer: result.promotedPlayer,
+    isOrganizer: result.isOrganizer,
     removalSms: removalSmsResult,
     promotionSms: promotionSmsResult
   });
     } catch (error) {
       routeFailed(req, res, error, 'Failed to remove player');
-    } finally {
-      releaseLock();
     }
   });
 };

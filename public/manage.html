@@ -40,7 +40,7 @@
         <div id="gameManagement" style="display: none;">
             <!-- Mobile Tab Selection -->
             <div class="mobile-tab-container">
-                <select id="tabSelector" class="mobile-tab-selector" onchange="openTabFromSelect(this.value)">
+                <select id="tabSelector" class="mobile-tab-selector">
                     <option value="Details">Game Details</option>
                     <option value="Players">Players</option>
                     <option value="Communication">Communication</option>
@@ -51,10 +51,10 @@
             <!-- Desktop Tab Navigation -->
             <div class="tabs-container">
                 <div class="tabs">
-                    <button class="tab active" onclick="openTab(event, 'Details')">Game Details</button>
-                    <button class="tab" onclick="openTab(event, 'Players')">Players</button>
-                    <button class="tab" onclick="openTab(event, 'Communication')">Communication</button>
-                    <button class="tab" onclick="openTab(event, 'Actions')">Game Actions</button>
+                    <button class="tab active" data-tab="Details">Game Details</button>
+                    <button class="tab" data-tab="Players">Players</button>
+                    <button class="tab" data-tab="Communication">Communication</button>
+                    <button class="tab" data-tab="Actions">Game Actions</button>
                 </div>
             </div>
 
@@ -110,7 +110,7 @@
                             <label>Organizer Notifications:</label>
                             <div class="form-help-text">Get SMS alerts when these events happen (optional)</div>
                             
-                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyGameFull')">
+                            <div class="notification-option" data-checkbox-id="notifyGameFull">
                                 <div class="notification-content">
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
@@ -122,7 +122,7 @@
                                 <input type="checkbox" id="notifyGameFull" name="notifyGameFull">
                             </div>
 
-                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerCancels')">
+                            <div class="notification-option" data-checkbox-id="notifyPlayerCancels">
                                 <div class="notification-content">
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
@@ -134,7 +134,7 @@
                                 <input type="checkbox" id="notifyPlayerCancels" name="notifyPlayerCancels">
                             </div>
                             
-                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyPlayerJoins')">
+                            <div class="notification-option" data-checkbox-id="notifyPlayerJoins">
                                 <div class="notification-content">
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
@@ -148,7 +148,7 @@
                             
                             
                             
-                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyOneSpotLeft')">
+                            <div class="notification-option" data-checkbox-id="notifyOneSpotLeft">
                                 <div class="notification-content">
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
@@ -160,7 +160,7 @@
                                 <input type="checkbox" id="notifyOneSpotLeft" name="notifyOneSpotLeft">
                             </div>
                             
-                            <div class="notification-option" onclick="toggleManageNotification(this, 'notifyWaitlistStarts')">
+                            <div class="notification-option" data-checkbox-id="notifyWaitlistStarts">
                                 <div class="notification-content">
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
@@ -268,7 +268,7 @@
                     
                     <!-- Collapsible Add Player Section -->
                     <div class="collapsible-section">
-                        <div class="collapsible-header" onclick="toggleCollapsible('addPlayerSection')">
+                        <div class="collapsible-header" data-collapsible="addPlayerSection">
                             <h3>
                                 Add Player Manually
                                 <span class="collapse-icon">▼</span>
@@ -328,15 +328,15 @@
                             <!-- Group Selection Row -->
                             <div class="recipient-groups">
                                 <div class="checkbox-option">
-                                    <input type="checkbox" id="sendToAll" name="sendToAll" onchange="toggleAllPlayers(this.checked)">
+                                    <input type="checkbox" id="sendToAll" name="sendToAll">
                                     <label for="sendToAll">All Players</label>
                                 </div>
                                 <div class="checkbox-option">
-                                    <input type="checkbox" id="sendToPlayers" name="sendToPlayers" checked onchange="updateGroupSelections()">
+                                    <input type="checkbox" id="sendToPlayers" name="sendToPlayers" checked>
                                     <label for="sendToPlayers">Confirmed Players</label>
                                 </div>
                                 <div class="checkbox-option">
-                                    <input type="checkbox" id="sendToWaitlist" name="sendToWaitlist" onchange="updateGroupSelections()">
+                                    <input type="checkbox" id="sendToWaitlist" name="sendToWaitlist">
                                     <label for="sendToWaitlist">Waitlisted Players</label>
                                 </div>
                             </div>
@@ -405,7 +405,12 @@
     <script src="/js/invitation-generator.js"></script>
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>
+    <script src="/js/page-utils.js"></script>
     <script src="/js/game-utils.js"></script>
+    <script src="/js/manage-render.js"></script>
     <script src="/js/manage-scripts.js"></script>
+    <script src="/js/manage-players.js"></script>
+    <script src="/js/manage-communications.js"></script>
+    <script src="/js/manage-media.js"></script>
 </body>
 </html>

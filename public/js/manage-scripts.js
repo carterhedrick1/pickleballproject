@@ -4,6 +4,13 @@ let gameData = null;
 let gameId = '';
 let hostToken = '';
 
+window.ManageApp = window.ManageApp || {};
+window.ManageApp.state = {
+    get gameData() { return gameData; },
+    get gameId() { return gameId; },
+    get hostToken() { return hostToken; }
+};
+
 
 
 // TIMEZONE FIX FUNCTIONS
@@ -26,14 +33,7 @@ function formatDateForInput(dateStr) {
 }
 
 function formatDateForDisplay(dateStr) {
-    // Format date for display without timezone conversion
-    if (!dateStr) return '';
-    
-    // Parse as local date to avoid timezone shift
-    const [year, month, day] = dateStr.split('-');
-    const date = new Date(year, month - 1, day); // Local date constructor
-    
-    return date.toLocaleDateString('en-US', { 
+    return PageUtils.formatLocalDate(dateStr, {
         weekday: 'long', 
         month: 'long', 
         day: 'numeric',
@@ -41,7 +41,7 @@ function formatDateForDisplay(dateStr) {
     });
 }
 
-function toggleManageNotification(element, checkboxId) {
+function toggleManageNotification(element, checkboxId, event) {
     const checkbox = document.getElementById(checkboxId);
     const isCurrentlyChecked = checkbox.checked;
     
@@ -56,9 +56,7 @@ function toggleManageNotification(element, checkboxId) {
     }
     
     // Prevent the event from bubbling up
-    if (event) {
-        event.stopPropagation();
-    }
+    event.stopPropagation();
 }
 
 function loadGameDetails(game) {
@@ -198,7 +196,7 @@ function restoreActiveTab() {
         
         // Find and activate the corresponding tab button
         for (let i = 0; i < tablinks.length; i++) {
-            if (tablinks[i].getAttribute("onclick") && tablinks[i].getAttribute("onclick").includes(activeTab)) {
+            if (tablinks[i].dataset.tab === activeTab) {
                 tablinks[i].classList.add("active");
                 break;
             }
@@ -247,8 +245,7 @@ function openTabFromSelect(tabName) {
     const tablinks = document.getElementsByClassName("tab");
     for (let i = 0; i < tablinks.length; i++) {
         tablinks[i].classList.remove("active");
-        if (tablinks[i].textContent.includes(tabName) || 
-            tablinks[i].getAttribute("onclick").includes(tabName)) {
+        if (tablinks[i].dataset.tab === tabName) {
             tablinks[i].classList.add("active");
         }
     }
@@ -326,6 +323,34 @@ function showExpiredGameWarning() {
 
 
 function setupEventListeners() {
+    document.querySelectorAll('[data-tab]').forEach((tab) => {
+        tab.addEventListener('click', (event) => openTab(event, tab.dataset.tab));
+    });
+
+    const tabSelector = document.getElementById('tabSelector');
+    if (tabSelector) {
+        tabSelector.addEventListener('change', () => openTabFromSelect(tabSelector.value));
+    }
+
+    document.querySelectorAll('.notification-option[data-checkbox-id]').forEach((element) => {
+        element.addEventListener('click', (event) => {
+            toggleManageNotification(element, element.dataset.checkboxId, event);
+        });
+    });
+
+    document.querySelectorAll('[data-collapsible]').forEach((element) => {
+        element.addEventListener('click', () => toggleCollapsible(element.dataset.collapsible));
+    });
+
+    const sendToAll = document.getElementById('sendToAll');
+    if (sendToAll) {
+        sendToAll.addEventListener('change', () => toggleAllPlayers(sendToAll.checked));
+    }
+    for (const id of ['sendToPlayers', 'sendToWaitlist']) {
+        const checkbox = document.getElementById(id);
+        if (checkbox) checkbox.addEventListener('change', updateGroupSelections);
+    }
+
     // Edit game form
     const editForm = document.getElementById('editForm');
     if (editForm) {
@@ -469,126 +494,7 @@ function populateGameDetails() {
 }
 
 
-function updatePlayerLists() {
-    const confirmedPlayers = document.getElementById('confirmedPlayers');
-    const waitlistPlayers = document.getElementById('waitlistPlayers');
-    const outPlayersContainer = document.getElementById('outPlayers'); // Add this line
-    const playerCount = document.getElementById('playerCount');
-    const totalPlayers = document.getElementById('totalPlayers');
-    const waitlistCount = document.getElementById('waitlistCount');
-    
-    // Clear existing lists - MAKE SURE TO CLEAR OUT PLAYERS TOO
-    confirmedPlayers.innerHTML = '';
-    waitlistPlayers.innerHTML = '';
-    outPlayersContainer.innerHTML = ''; // Add this line to clear out players
-    
-    // Update counts
-    playerCount.textContent = gameData.players.length;
-    totalPlayers.textContent = gameData.totalPlayers;
-    waitlistCount.textContent = gameData.waitlist.length;
 
-    // Add this new code for dynamic text:
-    const playerCountElement = document.querySelector('.player-section.confirmed .player-count');
-    if (playerCountElement) {
-        const count = gameData.players.length;
-        const total = gameData.totalPlayers;
-        const playerText = count === 1 ? 'player' : 'players';
-        playerCountElement.innerHTML = `<span id="playerCount">${count}</span>/<span id="totalPlayers">${total}</span> ${playerText}`;
-    }
-
-    const waitlistCountElement = document.querySelector('.player-section.waitlist .player-count');
-    if (waitlistCountElement) {
-        const count = gameData.waitlist.length;
-        const playerText = count === 1 ? 'player' : 'players';
-        waitlistCountElement.innerHTML = `<span id="waitlistCount">${count}</span> ${playerText} waiting`;
-    }
-
-    const outCount = document.getElementById('outCount');
-    if (outCount) {
-        const count = (gameData.outPlayers || []).length;
-        const outCountElement = document.querySelector('.player-section.out-players .player-count');
-        if (outCountElement) {
-            const playerText = count === 1 ? 'player' : 'players';
-            outCountElement.innerHTML = `<span id="outCount">${count}</span> ${playerText} can't make it`;
-        }
-    }
-    
-    // Populate confirmed players
-    if (gameData.players.length === 0) {
-        confirmedPlayers.innerHTML = '<p style="text-align: center; color: #6c757d; font-style: italic;">No players yet</p>';
-    } else {
-        gameData.players.forEach((player, index) => {
-            const playerItem = document.createElement('div');
-            playerItem.className = 'player-item';
-            
-            let playerActions = '';
-
-            // Show actions for all players, including organizer
-            playerActions = `
-                <div class="player-actions">
-                    <button class="btn-secondary" onclick="moveToWaitlist('${player.id}')">To Waitlist</button>
-                    <button class="btn-danger" onclick="removePlayer('${player.id}')">Remove</button>
-                </div>
-            `;
-            
-            playerItem.innerHTML = `
-                <div class="player-info">
-                    <div class="player-name">${player.name}${player.isOrganizer ? ' (Organizer)' : ''}</div>
-                    ${player.phone ? '<div class="player-phone">' + player.phone + '</div>' : ''}
-                </div>
-                ${playerActions}
-            `;
-            
-            confirmedPlayers.appendChild(playerItem);
-        });
-    }
-    
-    // Populate waitlist
-    if (gameData.waitlist.length === 0) {
-        waitlistPlayers.innerHTML = '<p style="text-align: center; color: #6c757d; font-style: italic;">No one waiting</p>';
-    } else {
-        gameData.waitlist.forEach((player, index) => {
-            const playerItem = document.createElement('div');
-            playerItem.className = 'player-item';
-            
-            playerItem.innerHTML = `
-                <div class="player-info">
-                    <div class="player-name">${player.name}</div>
-                    ${player.phone ? '<div class="player-phone">' + player.phone + '</div>' : ''}
-                    <div class="player-phone">Position: #${index + 1}</div>
-                </div>
-                <div class="player-actions">
-                    <button class="btn-secondary" onclick="promoteToGame('${player.id}')">Promote</button>
-                    <button class="btn-danger" onclick="removeWaitlisted('${player.id}')">Remove</button>
-                </div>
-            `;
-            
-            waitlistPlayers.appendChild(playerItem);
-        });
-    }
-
-    // Populate out players - FIXED VERSION
-    if (!gameData.outPlayers || gameData.outPlayers.length === 0) {
-        outPlayersContainer.innerHTML = '<p style="text-align: center; color: #6c757d; font-style: italic;">No one marked as out</p>';
-    } else {
-        gameData.outPlayers.forEach((player) => {
-            const playerItem = document.createElement('div');
-            playerItem.className = 'player-item';
-            
-            playerItem.innerHTML = `
-                <div class="player-info">
-                    <div class="player-name">${player.name}</div>
-                    ${player.phone ? '<div class="player-phone">' + player.phone + '</div>' : ''}
-                </div>
-            `;
-            
-            outPlayersContainer.appendChild(playerItem);
-        });
-    }
-    
-    // Update player checkboxes for messaging
-    updatePlayerCheckboxes();
-}
 
 
 
@@ -713,372 +619,14 @@ function debugNotificationPreferences() {
     console.log('=== END DEBUG ===');
 }
 
-// Updated addPlayerManually function - enhanced to show SMS status  
-async function addPlayerManually() {
-    if (!GameUtils.getGameStatus(gameData).canEdit) {
-        showStatus('Cannot add players to expired games', 'error');
-        return;
-    }
-    
-    try {
-        const name = document.getElementById('playerName').value;
-        const phone = document.getElementById('playerPhone').value;
-        const action = document.querySelector('input[name="addTo"]:checked').value;
-        
-        showStatus('Adding player...', 'info');
-        
-        const response = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name,
-                phone,
-                action,
-                token: hostToken
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to add player');
-        }
-        
-        const data = await response.json();
-        console.log('Player added manually:', data);
-        
-        // Reset form
-        document.getElementById('playerName').value = '';
-        document.getElementById('playerPhone').value = '';
-        
-        // Refresh game data
-        await fetchGameData();
-        
-        // Build status message
-        let statusMessage = `Player ${name} added successfully`;
-        
-        // Add SMS status info
-        if (phone && data.sms && data.sms.success) {
-            statusMessage += ' and notified via SMS';
-        } else if (phone && data.sms && !data.sms.success) {
-            statusMessage += ' (SMS notification failed)';
-        } else if (!phone) {
-            statusMessage += ' (no phone number provided)';
-        }
-        
-        showStatus(statusMessage, 'success');
-        
-    } catch (error) {
-        console.error('Error adding player:', error);
-        showStatus('Error adding player: ' + error.message, 'error');
-    }
-}
-
-// Updated moveToWaitlist function - now uses dedicated endpoint with SMS
-async function moveToWaitlist(playerId) {
-  try {
-    showStatus('Moving player to waitlist...', 'info');
-    
-    // First find the player in the game data
-    const player = gameData.players.find(p => p.id === playerId);
-    if (!player) {
-      throw new Error('Player not found');
-    }
-    
-    // Use new dedicated endpoint
-    const response = await fetch(`/api/games/${gameId}/move-to-waitlist/${playerId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        token: hostToken
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to move player to waitlist');
-    }
-    
-    const data = await response.json();
-    console.log('Player moved to waitlist:', data);
-    
-    // Refresh game data
-    await fetchGameData();
-    
-    // Show status with SMS info
-    let statusMessage = `Player ${player.name} moved to waitlist`;
-    if (data.sms && data.sms.success) {
-      statusMessage += ' and notified via SMS';
-    } else if (data.sms && !data.sms.success) {
-      statusMessage += ' (SMS notification failed)';
-    }
-    
-    showStatus(statusMessage, 'success');
-    
-  } catch (error) {
-    console.error('Error moving player:', error);
-    showStatus('Error moving player: ' + error.message, 'error');
-  }
-}
 
 
-// Updated promoteToGame function - now uses dedicated endpoint with SMS
-async function promoteToGame(playerId) {
-  try {
-    // Check if game is full before promoting
-    if (gameData.players.length >= parseInt(gameData.totalPlayers)) {
-      showStatus('Cannot promote: Game is already full', 'error');
-      return;
-    }
-    
-    showStatus('Promoting player to game...', 'info');
-    
-    // First find the player in the waitlist
-    const player = gameData.waitlist.find(p => p.id === playerId);
-    if (!player) {
-      throw new Error('Player not found in waitlist');
-    }
-    
-    // Use new dedicated endpoint
-    const response = await fetch(`/api/games/${gameId}/promote-from-waitlist/${playerId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        token: hostToken
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to promote player');
-    }
-    
-    const data = await response.json();
-    console.log('Player promoted:', data);
-    
-    // Refresh game data
-    await fetchGameData();
-    
-    // Show status with SMS info
-    let statusMessage = `Player ${player.name} promoted to confirmed players`;
-    if (data.sms && data.sms.success) {
-      statusMessage += ' and notified via SMS';
-    } else if (data.sms && !data.sms.success) {
-      statusMessage += ' (SMS notification failed)';
-    }
-    
-    showStatus(statusMessage, 'success');
-    
-  } catch (error) {
-    console.error('Error promoting player:', error);
-    showStatus('Error promoting player: ' + error.message, 'error');
-    
-    // Refresh to ensure UI is consistent
-    await fetchGameData();
-  }
-}
-
-async function removePlayer(playerId) {
-  try {
-    // First find the player in the game data
-    const player = gameData.players.find(p => p.id === playerId);
-    if (!player) {
-      throw new Error('Player not found');
-    }
-    
-    showConfirmModal(
-      'Remove Player', 
-      `Are you sure you want to remove ${player.name} from the game?`, 
-      async () => {
-        try {
-          showStatus('Removing player...', 'info');
-          
-          const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
-            method: 'DELETE'
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to remove player');
-          }
-          
-          const data = await response.json();
-          console.log('Player removal response:', data);
-          
-          // Refresh game data
-          await fetchGameData();
-          
-          // Build status message
-          let statusMessage = `Player ${player.name} removed from game`;
-          
-          // Add SMS status info
-          if (data.removalSms && data.removalSms.success) {
-            statusMessage += ', player notified via SMS';
-          } else if (data.removalSms && !data.removalSms.success) {
-            statusMessage += ' (SMS notification to removed player failed)';
-          }
-          
-          // Add promotion info if someone was promoted
-          if (data.promotedPlayer) {
-            statusMessage += `. ${data.promotedPlayer.name} promoted from waitlist`;
-            if (data.promotionSms && data.promotionSms.success) {
-              statusMessage += ' and notified via SMS';
-            } else if (data.promotionSms && !data.promotionSms.success) {
-              statusMessage += ' (promotion SMS failed)';
-            }
-          }
-          
-          showStatus(statusMessage, 'success');
-          
-        } catch (error) {
-          console.error('Error removing player:', error);
-          showStatus('Error removing player: ' + error.message, 'error');
-        }
-      }
-    );
-    
-  } catch (error) {
-    console.error('Error removing player:', error);
-    showStatus('Error removing player: ' + error.message, 'error');
-  }
-}
-
-async function removeWaitlisted(playerId) {
-  try {
-    // First find the player in the waitlist
-    const player = gameData.waitlist.find(p => p.id === playerId);
-    if (!player) {
-      throw new Error('Player not found in waitlist');
-    }
-    
-    showConfirmModal(
-      'Remove from Waitlist', 
-      `Are you sure you want to remove ${player.name} from the waitlist?`, 
-      async () => {
-        try {
-          showStatus('Removing from waitlist...', 'info');
-          
-          const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
-            method: 'DELETE'
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to remove from waitlist');
-          }
-          
-          const data = await response.json();
-          console.log('Waitlist removal response:', data);
-          
-          // Refresh game data
-          await fetchGameData();
-          
-          // Build status message
-          let statusMessage = `Player ${player.name} removed from waitlist`;
-          
-          // Add SMS status info if applicable
-          if (data.removalSms && data.removalSms.success) {
-            statusMessage += ', player notified via SMS';
-          } else if (data.removalSms && !data.removalSms.success) {
-            statusMessage += ' (SMS notification failed)';
-          }
-          
-          showStatus(statusMessage, 'success');
-          
-        } catch (error) {
-          console.error('Error removing from waitlist:', error);
-          showStatus('Error removing from waitlist: ' + error.message, 'error');
-        }
-      }
-    );
-    
-  } catch (error) {
-    console.error('Error removing from waitlist:', error);
-    showStatus('Error removing from waitlist: ' + error.message, 'error');
-  }
-}
-
-async function sendAnnouncement() {
-    if (!GameUtils.getGameStatus(gameData).canEdit) {
-        showStatus('Cannot send announcements for expired games', 'error');
-        return;
-    }
-    
-    try {
-        const message = document.getElementById('announcementText').value;
-        
-        if (!message) {
-            throw new Error('Please enter a message');
-        }
-        
-        // Get selected recipients
-        const recipients = getSelectedRecipients();
-        
-        if (recipients.length === 0) {
-            throw new Error('Please select at least one recipient');
-        }
-        
-        showStatus('Sending announcement...', 'info');
-        
-        // Send to individual players
-        const response = await fetch(`/api/games/${gameId}/announcement-individual?token=${hostToken}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message,
-                recipients: recipients,
-                token: hostToken
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to send announcement');
-        }
-        
-        const data = await response.json();
-        console.log('Announcement sent:', data);
-        
-        // Reset form
-        document.getElementById('announcementText').value = '';
-        clearAllRecipientSelections();
-        
-        showStatus(`Announcement sent to ${data.recipientCount} players`, 'success');
-        
-    } catch (error) {
-        console.error('Error sending announcement:', error);
-        showStatus('Error sending announcement: ' + error.message, 'error');
-    }
-}
 
 
-function sendQuickMessage(type) {
-    let message = '';
-    
-    if (type === 'reminder') {
-        // TIMEZONE FIX: Use proper date formatting
-        const formattedDate = formatDateForDisplay(gameData.date);
-        
-        message = `Reminder: Your pickleball game is on ${formattedDate} at ${formatTime(gameData.time)} at ${gameData.location}. Looking forward to seeing you there!`;
-    } else if (type === 'location') {
-        message = `Location details for our pickleball game: ${gameData.location}. Game starts at ${formatTime(gameData.time)}.`;
-    }
-    
-    // Pre-fill the announcement form
-    document.getElementById('announcementText').value = message;
-    document.getElementById('sendToPlayers').checked = true;
-    document.getElementById('sendToWaitlist').checked = false;
-    
-    // Switch to Communication tab
-    openTabFromSelect('Communication');
-}
+
+
+
+
 
 
 async function cancelGame() {
@@ -1158,12 +706,7 @@ async function cancelGame() {
 }
 
 function formatTime(timeStr) {
-    if (!timeStr) return '';
-    const [hours, minutes] = timeStr.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
+    return PageUtils.formatTime12Hour(timeStr);
 }
 
 function showConfirmModal(title, message, confirmAction) {
@@ -1343,208 +886,21 @@ function showUnauthorized() {
 // Get selected recipients from checkboxes
 // Replace your existing getSelectedRecipients function with this more robust version:
 
-function getSelectedRecipients() {
-    const recipients = [];
-    
-    console.log('Checking recipients...'); // Debug log
-    
-    // Check if group checkboxes are selected - try multiple possible IDs
-    const sendToPlayersEl = document.getElementById('sendToPlayers') || 
-                           document.querySelector('input[type="checkbox"][id*="Players"]') ||
-                           document.querySelector('input[type="checkbox"]:checked');
-    
-    const sendToWaitlistEl = document.getElementById('sendToWaitlist') || 
-                            document.querySelector('input[type="checkbox"][id*="Waitlist"]');
-    
-    const sendToPlayers = sendToPlayersEl?.checked || false;
-    const sendToWaitlist = sendToWaitlistEl?.checked || false;
-    
-    console.log('Group selections:', { sendToPlayers, sendToWaitlist }); // Debug log
-    
-    // If group checkboxes are selected, add all players from those groups
-    if (sendToPlayers && gameData?.players) {
-        gameData.players.forEach(player => {
-            if (player.phone && !player.isOrganizer) {
-                recipients.push({
-                    id: player.id,
-                    phone: player.phone,
-                    name: player.name,
-                    type: 'confirmed'
-                });
-            }
-        });
-        console.log('Added confirmed players:', recipients.length); // Debug log
-    }
-    
-    if (sendToWaitlist && gameData?.waitlist) {
-        gameData.waitlist.forEach(player => {
-            if (player.phone) {
-                recipients.push({
-                    id: player.id,
-                    phone: player.phone,
-                    name: player.name,
-                    type: 'waitlist'
-                });
-            }
-        });
-        console.log('Added waitlist players:', recipients.length); // Debug log
-    }
-    
-    // Also check individual player checkboxes (for partial selections)
-    const playerCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked');
-    console.log('Found checked checkboxes:', playerCheckboxes.length); // Debug log
-    
-    playerCheckboxes.forEach(checkbox => {
-        // Skip if it's a group checkbox
-        if (checkbox.id === 'sendToPlayers' || checkbox.id === 'sendToWaitlist' || checkbox.id === 'sendToAll') {
-            return;
-        }
-        
-        // Only add if not already included from group selection and has required data
-        if (checkbox.dataset?.phone && checkbox.dataset?.name) {
-            const existingRecipient = recipients.find(r => r.id === checkbox.value);
-            if (!existingRecipient) {
-                recipients.push({
-                    id: checkbox.value,
-                    phone: checkbox.dataset.phone,
-                    name: checkbox.dataset.name,
-                    type: checkbox.dataset.type || 'individual'
-                });
-            }
-        }
-    });
-    
-    console.log('Final recipients:', recipients); // Debug log
-    return recipients;
-}
+
 
 // Toggle all players checkbox
-function toggleAllPlayers(checked) {
-    // Update group checkboxes
-    document.getElementById('sendToPlayers').checked = checked;
-    document.getElementById('sendToWaitlist').checked = checked;
-    
-    // Update individual player checkboxes
-    const playerCheckboxes = document.querySelectorAll('.player-checkbox input[type="checkbox"]');
-    playerCheckboxes.forEach(checkbox => {
-        checkbox.checked = checked;
-    });
-}
+
 
 // Update group selections based on individual checkboxes
-function updateGroupSelections() {
-    const sendToPlayers = document.getElementById('sendToPlayers').checked;
-    const sendToWaitlist = document.getElementById('sendToWaitlist').checked;
-    const sendToAll = document.getElementById('sendToAll');
-    
-    // Update individual checkboxes based on group selections
-    const confirmedCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="confirmed"]');
-    const waitlistCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="waitlist"]');
-    
-    confirmedCheckboxes.forEach(checkbox => {
-        checkbox.checked = sendToPlayers;
-    });
-    
-    waitlistCheckboxes.forEach(checkbox => {
-        checkbox.checked = sendToWaitlist;
-    });
-    
-    // Update "All Players" checkbox
-    const allChecked = sendToPlayers && sendToWaitlist && 
-                      confirmedCheckboxes.length > 0 && waitlistCheckboxes.length > 0;
-    const someChecked = sendToPlayers || sendToWaitlist;
-    
-    if (allChecked) {
-        sendToAll.checked = true;
-        sendToAll.indeterminate = false;
-    } else if (someChecked) {
-        sendToAll.checked = false;
-        sendToAll.indeterminate = true;
-    } else {
-        sendToAll.checked = false;
-        sendToAll.indeterminate = false;
-    }
-}
+
 
 // Update individual player selection
-function updateIndividualSelection() {
-    const confirmedCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="confirmed"]');
-    const waitlistCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="waitlist"]');
-    
-    // Check group checkbox states
-    const allConfirmedChecked = Array.from(confirmedCheckboxes).every(cb => cb.checked);
-    const allWaitlistChecked = Array.from(waitlistCheckboxes).every(cb => cb.checked);
-    const anyConfirmedChecked = Array.from(confirmedCheckboxes).some(cb => cb.checked);
-    const anyWaitlistChecked = Array.from(waitlistCheckboxes).some(cb => cb.checked);
-    
-    // Update group checkboxes
-    const sendToPlayers = document.getElementById('sendToPlayers');
-    const sendToWaitlist = document.getElementById('sendToWaitlist');
-    const sendToAll = document.getElementById('sendToAll');
-    
-    // Update confirmed players checkbox
-    if (confirmedCheckboxes.length > 0) {
-        if (allConfirmedChecked) {
-            sendToPlayers.checked = true;
-            sendToPlayers.indeterminate = false;
-        } else if (anyConfirmedChecked) {
-            sendToPlayers.checked = false;
-            sendToPlayers.indeterminate = true;
-        } else {
-            sendToPlayers.checked = false;
-            sendToPlayers.indeterminate = false;
-        }
-    }
-    
-    // Update waitlist checkbox
-    if (waitlistCheckboxes.length > 0) {
-        if (allWaitlistChecked) {
-            sendToWaitlist.checked = true;
-            sendToWaitlist.indeterminate = false;
-        } else if (anyWaitlistChecked) {
-            sendToWaitlist.checked = false;
-            sendToWaitlist.indeterminate = true;
-        } else {
-            sendToWaitlist.checked = false;
-            sendToWaitlist.indeterminate = false;
-        }
-    }
-    
-    // Update "All Players" checkbox
-    const allPlayersChecked = allConfirmedChecked && allWaitlistChecked && 
-                             confirmedCheckboxes.length > 0 && waitlistCheckboxes.length > 0;
-    const anyPlayersChecked = anyConfirmedChecked || anyWaitlistChecked;
-    
-    if (allPlayersChecked) {
-        sendToAll.checked = true;
-        sendToAll.indeterminate = false;
-    } else if (anyPlayersChecked) {
-        sendToAll.checked = false;
-        sendToAll.indeterminate = true;
-    } else {
-        sendToAll.checked = false;
-        sendToAll.indeterminate = false;
-    }
-}
+
 
 // Clear all recipient selections
 // Replace your existing clearAllRecipientSelections function with this version:
 
-function clearAllRecipientSelections() {
-    // Clear all group checkboxes - start with nothing selected
-    document.getElementById('sendToAll').checked = false;
-    document.getElementById('sendToAll').indeterminate = false;
-    document.getElementById('sendToPlayers').checked = false;  // Changed from true to false
-    document.getElementById('sendToPlayers').indeterminate = false;
-    document.getElementById('sendToWaitlist').checked = false;
-    document.getElementById('sendToWaitlist').indeterminate = false;
-    
-    // Clear all individual player checkboxes
-    const playerCheckboxes = document.querySelectorAll('.player-checkbox input[type="checkbox"]');
-    playerCheckboxes.forEach(checkbox => {
-        checkbox.checked = false;  // Changed to false for all players
-    });
-}
+
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1564,223 +920,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Add this function to update the group checkbox styling to match individual players
-function updateGroupCheckboxStyling() {
-    // Style the group checkbox containers
-    const groupCheckboxes = [
-        document.getElementById('sendToAll')?.parentElement,
-        document.getElementById('sendToPlayers')?.parentElement, 
-        document.getElementById('sendToWaitlist')?.parentElement
-    ];
-    
-    groupCheckboxes.forEach(container => {
-        if (container) {
-            // Apply consistent styling to match individual players
-            container.style.cssText = `
-                display: flex !important;
-                flex-direction: row !important;
-                align-items: center !important;
-                gap: 12px !important;
-                padding: 12px 15px !important;
-                background: white !important;
-                border: 2px solid #dee2e6 !important;
-                border-radius: 8px !important;
-                transition: all 0.2s ease !important;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-                margin-bottom: 8px !important;
-            `;
-            
-            // Style the checkbox input
-            const checkbox = container.querySelector('input[type="checkbox"]');
-            if (checkbox) {
-                checkbox.style.cssText = `
-                    width: 18px !important; 
-                    height: 18px !important; 
-                    margin: 0 !important; 
-                    flex-shrink: 0 !important;
-                `;
-            }
-            
-            // Style the label
-            const label = container.querySelector('label');
-            if (label) {
-                label.style.cssText = `
-                    margin: 0 !important; 
-                    font-weight: 500 !important; 
-                    cursor: pointer !important; 
-                    flex: 1 !important;
-                `;
-            }
-        }
-    });
-    
-    // Add specific border colors for different groups
-    const sendToAll = document.getElementById('sendToAll')?.parentElement;
-    if (sendToAll) {
-        sendToAll.style.borderLeft = '4px solid #007bff !important';
-    }
-    
-    const sendToPlayers = document.getElementById('sendToPlayers')?.parentElement;
-    if (sendToPlayers) {
-        sendToPlayers.style.borderLeft = '4px solid #28a745 !important';
-    }
-    
-    const sendToWaitlist = document.getElementById('sendToWaitlist')?.parentElement;
-    if (sendToWaitlist) {
-        sendToWaitlist.style.borderLeft = '4px solid #ffc107 !important';
-    }
-}
 
-function updatePlayerCheckboxes() {
-    const container = document.getElementById('playerCheckboxes');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    // Add confirmed players
-    gameData.players.forEach(player => {
-        if (player.phone && !player.isOrganizer) { // Only players with phones who aren't organizers
-            const checkboxItem = document.createElement('div');
-            checkboxItem.className = 'player-checkbox-item confirmed';
-            
-            // Styling to match group checkboxes
-            checkboxItem.style.cssText = `
-                display: flex !important;
-                flex-direction: row !important;
-                align-items: center !important;
-                gap: 12px !important;
-                padding: 12px 15px !important;
-                background: white !important;
-                border: 2px solid #dee2e6 !important;
-                border-radius: 8px !important;
-                border-left: 4px solid #28a745 !important;
-                transition: all 0.2s ease !important;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-                margin-bottom: 8px !important;
-                font-size: inherit !important;
-                line-height: inherit !important;
-            `;
-            
-            checkboxItem.innerHTML = `
-                <input type="checkbox" 
-                       class="player-checkbox" 
-                       value="${player.id}" 
-                       data-phone="${player.phone}" 
-                       data-name="${player.name}" 
-                       data-type="confirmed"
-                       onchange="updateIndividualSelection()"
-                       style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
-                <label style="margin: 0 !important; cursor: pointer !important; flex: 1 !important; font-size: inherit !important; line-height: inherit !important;">${player.name}</label>
-            `;
-            
-            container.appendChild(checkboxItem);
-        }
-    });
-    
-    // Add waitlist players
-    if (gameData.waitlist) {
-        gameData.waitlist.forEach(player => {
-            if (player.phone) {
-                const checkboxItem = document.createElement('div');
-                checkboxItem.className = 'player-checkbox-item waitlist';
-                
-                // Styling to match group checkboxes
-                checkboxItem.style.cssText = `
-                    display: flex !important;
-                    flex-direction: row !important;
-                    align-items: center !important;
-                    gap: 12px !important;
-                    padding: 12px 15px !important;
-                    background: white !important;
-                    border: 2px solid #dee2e6 !important;
-                    border-radius: 8px !important;
-                    border-left: 4px solid #ffc107 !important;
-                    transition: all 0.2s ease !important;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-                    margin-bottom: 8px !important;
-                    font-size: inherit !important;
-                    line-height: inherit !important;
-                `;
-                
-                checkboxItem.innerHTML = `
-                    <input type="checkbox" 
-                           class="player-checkbox" 
-                           value="${player.id}" 
-                           data-phone="${player.phone}" 
-                           data-name="${player.name}" 
-                           data-type="waitlist"
-                           onchange="updateIndividualSelection()"
-                           style="width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;">
-                    <label style="margin: 0 !important; cursor: pointer !important; flex: 1 !important; font-size: inherit !important; line-height: inherit !important;">${player.name}</label>
-                `;
-                
-                container.appendChild(checkboxItem);
-            }
-        });
-    }
-    
-    // Show section only if there are players with phones
-    const individualSection = document.getElementById('individualPlayersSection');
-    if (individualSection) {
-        const hasPlayers = container.children.length > 0;
-        individualSection.style.display = hasPlayers ? 'block' : 'none';
-    }
-    
-    // Explicitly uncheck all checkboxes on initial load
-    const allPlayerCheckboxes = document.querySelectorAll('.player-checkbox');
-    allPlayerCheckboxes.forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    
-    // Also uncheck group checkboxes
-    const groupCheckboxes = ['sendToAll', 'sendToPlayers', 'sendToWaitlist'];
-    groupCheckboxes.forEach(id => {
-        const checkbox = document.getElementById(id);
-        if (checkbox) {
-            checkbox.checked = false;
-        }
-    });
-    
-    // Set "Confirmed Players" as default checked
-    const sendToPlayersCheckbox = document.getElementById('sendToPlayers');
-    if (sendToPlayersCheckbox) {
-        sendToPlayersCheckbox.checked = true;
-    }
-}
 
-async function removeOutPlayer(playerId) {
-  try {
-    showConfirmModal(
-      'Remove Player', 
-      'Are you sure you want to remove this player from the "out" list?', 
-      async () => {
-        try {
-          showStatus('Removing player...', 'info');
-          
-          const response = await fetch(`/api/games/${gameId}/out-players/${playerId}?token=${hostToken}`, {
-            method: 'DELETE'
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to remove player');
-          }
-          
-          // Refresh game data
-          await fetchGameData();
-          
-          showStatus('Player removed from "out" list', 'success');
-          
-        } catch (error) {
-          console.error('Error removing out player:', error);
-          showStatus('Error removing player: ' + error.message, 'error');
-        }
-      }
-    );
-  } catch (error) {
-    console.error('Error removing out player:', error);
-    showStatus('Error removing player: ' + error.message, 'error');
-  }
-}
+
+
+
 
 // Also call the styling function when the page loads
 document.addEventListener('DOMContentLoaded', () => {
@@ -1792,351 +936,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 200);
 });
 
-
-// ---------------------------------------------------------------------------
-// Photos
-//
-// Uploads go up as raw image bytes rather than multipart, which is why the server needs no
-// upload dependency. Phone cameras produce 3-6MB files, so each one is drawn into a canvas
-// and re-encoded first - that takes a typical photo down to a few hundred KB, which matters
-// because these are stored in the database.
-// ---------------------------------------------------------------------------
-
-const PHOTO_MAX_DIMENSION = 1600;
-const PHOTO_JPEG_QUALITY = 0.85;
-
-function setPhotoStatus(message, kind) {
-    const el = document.getElementById('photoStatus');
-    if (!el) return;
-    el.textContent = message || '';
-    el.className = 'photo-status' + (kind ? ' ' + kind : '');
-}
-
-/**
- * Shrinks an image file to something sensible to store.
- * Uses Image + object URL rather than createImageBitmap, which older iPhones do not have.
- * If anything goes wrong it falls back to uploading the original file untouched.
- */
-function resizePhoto(file) {
-    return new Promise((resolve) => {
-        const objectUrl = URL.createObjectURL(file);
-        const img = new Image();
-
-        img.onload = () => {
-            URL.revokeObjectURL(objectUrl);
-            try {
-                const scale = Math.min(1, PHOTO_MAX_DIMENSION / Math.max(img.width, img.height));
-                const canvas = document.createElement('canvas');
-                canvas.width = Math.round(img.width * scale);
-                canvas.height = Math.round(img.height * scale);
-                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob(
-                    (blob) => resolve(blob || file),
-                    'image/jpeg',
-                    PHOTO_JPEG_QUALITY
-                );
-            } catch (err) {
-                console.error('Could not resize the photo, sending it as-is:', err);
-                resolve(file);
-            }
-        };
-
-        img.onerror = () => {
-            URL.revokeObjectURL(objectUrl);
-            resolve(file);
-        };
-
-        img.src = objectUrl;
-    });
-}
-
-async function loadPhotos() {
-    const grid = document.getElementById('photoGrid');
-    const empty = document.getElementById('photoEmpty');
-    if (!grid || !gameId) return;
-
-    try {
-        const response = await fetch(`/api/games/${gameId}/photos`);
-        const data = await response.json();
-        const photos = data.photos || [];
-
-        grid.innerHTML = '';
-        if (empty) empty.style.display = photos.length ? 'none' : 'block';
-
-        photos.forEach((photo) => {
-            const card = document.createElement('div');
-            card.className = 'photo-card';
-
-            const img = document.createElement('img');
-            img.src = photo.url;
-            img.alt = photo.caption || 'Game photo';
-            img.loading = 'lazy';
-            card.appendChild(img);
-
-            if (photo.caption) {
-                const caption = document.createElement('div');
-                caption.className = 'photo-caption';
-                caption.textContent = photo.caption;
-                card.appendChild(caption);
-            }
-
-            const remove = document.createElement('button');
-            remove.type = 'button';
-            remove.className = 'photo-remove';
-            remove.textContent = 'Remove';
-            remove.addEventListener('click', () => deletePhoto(photo.id));
-            card.appendChild(remove);
-
-            grid.appendChild(card);
-        });
-    } catch (error) {
-        console.error('Error loading photos:', error);
-        setPhotoStatus('Could not load the photos for this game.', 'error');
-    }
-}
-
-async function uploadPhoto() {
-    const fileInput = document.getElementById('photoFile');
-    const captionInput = document.getElementById('photoCaption');
-    const button = document.getElementById('addPhotoBtn');
-    const file = fileInput && fileInput.files && fileInput.files[0];
-
-    if (!file) {
-        setPhotoStatus('Choose a photo first.', 'error');
-        return;
-    }
-
-    button.disabled = true;
-    setPhotoStatus('Uploading photo...');
-
-    try {
-        const blob = await resizePhoto(file);
-        const caption = (captionInput && captionInput.value.trim()) || '';
-        const query = new URLSearchParams({ token: hostToken });
-        if (caption) query.set('caption', caption);
-
-        const response = await fetch(`/api/games/${gameId}/photos?${query}`, {
-            method: 'POST',
-            headers: { 'Content-Type': blob.type || 'image/jpeg' },
-            body: blob
-        });
-
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            throw new Error(data.error || `Upload failed (${response.status})`);
-        }
-
-        fileInput.value = '';
-        if (captionInput) captionInput.value = '';
-        setPhotoStatus('Photo added.', 'success');
-        await loadPhotos();
-    } catch (error) {
-        console.error('Error uploading photo:', error);
-        setPhotoStatus(error.message || 'Could not add that photo.', 'error');
-    } finally {
-        button.disabled = false;
-    }
-}
-
-async function deletePhoto(photoId) {
-    if (!confirm('Remove this photo?')) return;
-
-    try {
-        const response = await fetch(
-            `/api/games/${gameId}/photos/${photoId}?token=${hostToken}`, { method: 'DELETE' }
-        );
-        if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data.error || `Delete failed (${response.status})`);
-        }
-        setPhotoStatus('Photo removed.', 'success');
-        await loadPhotos();
-    } catch (error) {
-        console.error('Error deleting photo:', error);
-        setPhotoStatus(error.message || 'Could not remove that photo.', 'error');
-    }
-}
-
-function setupPhotos() {
-    const button = document.getElementById('addPhotoBtn');
-    if (button) button.addEventListener('click', uploadPhoto);
-    loadPhotos();
-}
-
-async function loadCourtImages() {
-    const list = document.getElementById('courtImageList');
-    if (!list || !gameId) return;
-
-    try {
-        const response = await fetch(`/api/games/${gameId}/court-images`);
-        const data = await response.json();
-        const images = data.images || [];
-        const selectedId = data.selectedImageId;
-
-        list.innerHTML = '';
-
-        images.forEach((image) => {
-            const wrapper = document.createElement('div');
-            wrapper.style.position = 'relative';
-            wrapper.style.cursor = 'pointer';
-
-            const img = document.createElement('img');
-            img.src = `/api/games/${gameId}/court-images/${image.id}`;
-            img.alt = 'Court image';
-            img.style.width = '100%';
-            img.style.height = '100px';
-            img.style.objectFit = 'cover';
-            img.style.borderRadius = '8px';
-            img.style.border = image.isSelected ? '3px solid #4CAF50' : '2px solid #ddd';
-
-            const radioInput = document.createElement('input');
-            radioInput.type = 'radio';
-            radioInput.name = 'courtImageSelect';
-            radioInput.value = image.id;
-            radioInput.checked = image.isSelected;
-            radioInput.style.position = 'absolute';
-            radioInput.style.top = '5px';
-            radioInput.style.left = '5px';
-
-            radioInput.addEventListener('change', () => selectCourtImage(image.id));
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.type = 'button';
-            deleteBtn.textContent = '✕';
-            deleteBtn.style.position = 'absolute';
-            deleteBtn.style.top = '5px';
-            deleteBtn.style.right = '5px';
-            deleteBtn.style.background = '#e74c3c';
-            deleteBtn.style.color = 'white';
-            deleteBtn.style.border = 'none';
-            deleteBtn.style.borderRadius = '50%';
-            deleteBtn.style.width = '24px';
-            deleteBtn.style.height = '24px';
-            deleteBtn.style.cursor = 'pointer';
-            deleteBtn.style.fontSize = '16px';
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                deleteCourtImage(image.id);
-            });
-
-            wrapper.appendChild(img);
-            wrapper.appendChild(radioInput);
-            wrapper.appendChild(deleteBtn);
-            list.appendChild(wrapper);
-        });
-
-        const noImageRadio = document.getElementById('noImageRadio');
-        if (noImageRadio) {
-            noImageRadio.checked = !selectedId;
-            noImageRadio.addEventListener('change', selectNoCourtImage);
-        }
-    } catch (error) {
-        console.error('Error loading court images:', error);
-    }
-}
-
-async function uploadCourtImage() {
-    const fileInput = document.getElementById('courtImageFile');
-    const button = document.getElementById('uploadCourtImageBtn');
-    const file = fileInput && fileInput.files && fileInput.files[0];
-
-    if (!file) {
-        setCourtImageStatus('Choose an image first.', 'error');
-        return;
-    }
-
-    button.disabled = true;
-    setCourtImageStatus('Uploading image...');
-
-    try {
-        const response = await fetch(`/api/games/${gameId}/court-images?token=${hostToken}`, {
-            method: 'POST',
-            headers: { 'Content-Type': file.type || 'image/jpeg' },
-            body: file
-        });
-
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            throw new Error(data.error || `Upload failed (${response.status})`);
-        }
-
-        fileInput.value = '';
-        setCourtImageStatus('Image added to library.', 'success');
-        await loadCourtImages();
-    } catch (error) {
-        console.error('Error uploading court image:', error);
-        setCourtImageStatus(error.message || 'Could not add that image.', 'error');
-    } finally {
-        button.disabled = false;
-    }
-}
-
-async function selectCourtImage(imageId) {
-    try {
-        const response = await fetch(
-            `/api/games/${gameId}/court-image/${imageId}?token=${hostToken}`,
-            { method: 'PUT' }
-        );
-        if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data.error || 'Failed to select image');
-        }
-        setCourtImageStatus('Image selected.', 'success');
-        await loadCourtImages();
-    } catch (error) {
-        console.error('Error selecting court image:', error);
-        setCourtImageStatus(error.message || 'Could not select that image.', 'error');
-    }
-}
-
-async function selectNoCourtImage() {
-    try {
-        const response = await fetch(
-            `/api/games/${gameId}/court-image-none?token=${hostToken}`,
-            { method: 'PUT' }
-        );
-        if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data.error || 'Failed to clear image');
-        }
-        setCourtImageStatus('No image selected.', 'success');
-        await loadCourtImages();
-    } catch (error) {
-        console.error('Error clearing court image:', error);
-        setCourtImageStatus(error.message || 'Could not change image selection.', 'error');
-    }
-}
-
-async function deleteCourtImage(imageId) {
-    if (!confirm('Delete this image from the library?')) return;
-
-    try {
-        const response = await fetch(
-            `/api/games/${gameId}/court-images/${imageId}?token=${hostToken}`,
-            { method: 'DELETE' }
-        );
-        if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data.error || 'Delete failed');
-        }
-        setCourtImageStatus('Image deleted.', 'success');
-        await loadCourtImages();
-    } catch (error) {
-        console.error('Error deleting court image:', error);
-        setCourtImageStatus(error.message || 'Could not delete that image.', 'error');
-    }
-}
-
-function setCourtImageStatus(message, type) {
-    const element = document.getElementById('courtImageStatus');
-    if (element) {
-        element.textContent = message;
-        element.style.color = type === 'error' ? '#e74c3c' : type === 'success' ? '#2e7d32' : '#666';
-    }
-}
-
-function setupCourtImages() {
-    const button = document.getElementById('uploadCourtImageBtn');
-    if (button) button.addEventListener('click', uploadCourtImage);
-    loadCourtImages();
-}
+window.ManageApp.core = {
+    fetchGameData,
+    updateGameDetails,
+    showStatus
+};

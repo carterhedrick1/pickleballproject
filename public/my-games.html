@@ -117,18 +117,13 @@
 
         /** Field-by-field parse: new Date('YYYY-MM-DD') is UTC and shows the day before here. */
         function formatDateForDisplay(dateStr) {
-            if (!dateStr) return '';
-            const [year, month, day] = dateStr.split('-');
-            return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+            return PageUtils.formatLocalDate(dateStr, {
                 weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
             });
         }
 
         function formatTime(timeStr) {
-            if (!timeStr) return '';
-            const [hours, minutes] = timeStr.split(':');
-            const hour = parseInt(hours, 10);
-            return `${hour % 12 || 12}:${minutes} ${hour >= 12 ? 'PM' : 'AM'}`;
+            return PageUtils.formatTime12Hour(timeStr);
         }
 
         /** A game counts as done once its start time has passed. */
@@ -368,6 +363,7 @@
         }
     </script>
 
+    <script src="/js/page-utils.js"></script>
     <script src="/js/invitation-generator.js"></script>
     <script src="/js/header.js"></script>
     <script src="/js/footer.js"></script>

@@ -1,0 +1,874 @@
+        /* Chrome-specific font rendering fixes - targets only Chrome/Chromium browsers */
+        @supports (-webkit-mask: none) and (not (-webkit-backdrop-filter: blur(1px))) {
+            /* This targets Chrome specifically, excluding Safari */
+            
+            * {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                text-rendering: optimizeLegibility;
+            }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                font-weight: 400;
+                font-synthesis: none;
+            }
+            
+            /* Fix Chrome's tendency to make fonts too bold */
+            label,
+            .section-title,
+            .game-detail-label,
+            .confirmation-detail-label {
+                font-weight: 500 !important; /* Use 500 instead of bold for better Chrome rendering */
+            }
+            
+            .section-header h1 {
+                font-weight: 700 !important;
+                font-synthesis: none;
+            }
+            
+            .section-header .subtitle {
+                font-weight: 400 !important;
+                font-synthesis: none;
+            }
+            
+            button {
+                font-family: inherit;
+                font-weight: 500 !important;
+                text-rendering: optimizeLegibility;
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            input, select, textarea {
+                font-family: inherit;
+                font-weight: 400 !important;
+                -webkit-font-smoothing: antialiased;
+                text-rendering: optimizeLegibility;
+            }
+        }
+
+        /* Additional Chrome-only fix using user agent detection */
+        @media screen and (-webkit-min-device-pixel-ratio:0) and (min-resolution:.001dpcm) {
+            /* This is another Chrome-specific selector */
+            
+            body {
+                -webkit-font-smoothing: antialiased;
+            }
+            
+            label {
+                font-weight: 500;
+            }
+            
+            button {
+                font-weight: 500;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        /* Sleeker, smaller header with navy-to-green gradient */
+        .section-header {
+            background: linear-gradient(135deg, #475569 0%, #429046 100%);
+            color: white;
+            padding: 20px 32px 16px;
+            margin: 0;
+            position: relative;
+            overflow: hidden;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .section-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.15), transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.1), transparent),
+                radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.2), transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.1), transparent),
+                radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.15), transparent);
+            background-repeat: repeat;
+            background-size: 200px 100px;
+        }
+
+        .section-header .header-content {
+            text-align: center;
+            z-index: 2;
+            position: relative;
+        }
+
+        .section-header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: -0.01em;
+        }
+
+        .section-header .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 400;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* Section styling */
+        .section {
+            padding: 32px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            color: #4CAF50;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4CAF50;
+            display: inline-block;
+        }
+
+        /* Game details styling */
+        .game-info {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .game-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .game-detail:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .game-detail-label {
+            font-weight: 600;
+            color: #374151;
+            min-width: 120px;
+            font-size: 14px;
+        }
+
+        .game-detail-value {
+            color: #1f2937;
+            text-align: right;
+            flex: 1;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        /* Players section */
+        .players-section {
+            background: white;
+            border-top: 3px solid #e5e7eb;
+        }
+
+        /* Photos - thumbnails only; tapping one opens the full image in a new tab. */
+        .photos-section {
+            background: white;
+            border-top: 3px solid #e5e7eb;
+        }
+
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .photo-gallery figure {
+            margin: 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fafafa;
+        }
+
+        .photo-gallery img {
+            display: block;
+            width: 100%;
+            height: 130px;
+            object-fit: cover;
+        }
+
+        .photo-gallery figcaption {
+            font-size: 13px;
+            color: #4b5563;
+            padding: 8px 10px;
+            word-break: break-word;
+        }
+
+        .player-list {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .player-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .player-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .player-list li:last-child {
+            border-bottom: none;
+        }
+
+        .spots-available {
+            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 20px;
+            font-size: 16px;
+            box-shadow: 0 4px 16px rgba(22, 163, 74, 0.3);
+        }
+
+        .spots-full {
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 20px;
+            font-size: 16px;
+            box-shadow: 0 4px 16px rgba(234, 88, 12, 0.3);
+        }
+
+        .waitlist-info {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .waitlist-info h4 {
+            color: #1e40af;
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .waitlist-info p {
+            margin: 8px 0;
+            font-size: 14px;
+            color: #1e40af;
+            line-height: 1.5;
+        }
+
+        /* Form styling */
+        .signup-section {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-top: 3px solid #e5e7eb;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+            letter-spacing: 0.025em;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            box-sizing: border-box;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            background-color: white;
+            font-family: inherit;
+        }
+
+        input:focus {
+            border-color: #429046;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(66, 144, 70, 0.1);
+            transform: translateY(-1px);
+        }
+
+        button {
+            background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
+            color: white;
+            padding: 16px 28px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(66, 144, 70, 0.4);
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
+        }
+
+        /* Button group styling with "or" divider - IN button more prominent */
+        .button-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .button-group button {
+            margin-top: 0;
+        }
+
+        /* IN / Join button - larger and more prominent */
+        .button-group #joinButton {
+            flex: 2;
+            min-width: 140px;
+            font-size: 18px;
+            padding: 18px 32px;
+            box-shadow: 0 6px 20px rgba(66, 144, 70, 0.4);
+        }
+
+        .button-group #joinButton:hover {
+            box-shadow: 0 10px 30px rgba(66, 144, 70, 0.5);
+        }
+
+        /* OUT button - secondary, smaller */
+        .button-group .btn-out {
+            flex: 1;
+            min-width: 100px;
+            font-size: 14px;
+            padding: 14px 20px;
+        }
+
+        .button-or {
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 20px;
+            text-align: center;
+            padding: 0 5px;
+        }
+
+        /* "I'm Out" button styling */
+        .btn-out {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3) !important;
+        }
+
+        .btn-out:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4) !important;
+        }
+
+        .btn-out::before {
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent) !important;
+        }
+
+        /* "Out" confirmation styling */
+        .confirmation-section.out {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        }
+
+        .confirmation-section.out h2 {
+            color: #991b1b;
+        }
+
+        .confirmation-section.out .confirmation-message {
+            color: #991b1b;
+        }
+
+        .confirmation-section.out .confirmation-details {
+            border: 2px solid #ef4444;
+        }
+
+        /* Status messages */
+        .error {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 1px solid #ef4444;
+            color: #991b1b;
+            padding: 14px 18px;
+            margin: 20px 32px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .success {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border: 1px solid #16a34a;
+            color: #166534;
+            padding: 14px 18px;
+            margin: 20px 32px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        /* Shown on the confirmation screen when the spot was saved but the text could not
+           be delivered. Amber, not red: the signup itself did succeed. */
+        .sms-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #d97706;
+            color: #92400e;
+            padding: 14px 18px;
+            margin: 0 0 24px 0;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 14px;
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        .info {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+            padding: 14px 18px;
+            margin: 20px 32px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        /* Confirmation Page Styling */
+        .confirmation-section {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            text-align: center;
+            padding: 40px 32px;
+            border-top: 3px solid #e5e7eb;
+        }
+
+        .confirmation-section.waitlist {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        }
+
+        .confirmation-section h2 {
+            color: #166534;
+            font-size: 28px;
+            margin: 0 0 20px 0;
+            font-weight: 700;
+        }
+
+        .confirmation-section.waitlist h2 {
+            color: #1e40af;
+        }
+
+        .confirmation-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .confirmation-message {
+            font-size: 18px;
+            color: #166534;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .confirmation-section.waitlist .confirmation-message {
+            color: #1e40af;
+        }
+
+        .confirmation-details {
+            background: rgba(255,255,255,0.9);
+            border-radius: 16px;
+            padding: 24px;
+            margin: 20px 0;
+            border: 2px solid #16a34a;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        }
+
+        .confirmation-section.waitlist .confirmation-details {
+            border: 2px solid #3b82f6;
+        }
+
+        .confirmation-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 10px 0;
+            font-size: 16px;
+        }
+
+        .confirmation-detail:last-child {
+            margin-bottom: 0;
+        }
+
+        .confirmation-detail-label {
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .confirmation-detail-value {
+            color: #166534;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .next-steps {
+            background: rgba(255,255,255,0.9);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .next-steps h4 {
+            color: #374151;
+            margin: 0 0 15px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .next-steps ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .next-steps li {
+            padding: 10px 0;
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .next-steps li:last-child {
+            border-bottom: none;
+        }
+
+        .back-to-game-btn {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: none;
+            letter-spacing: normal;
+            width: auto;
+            margin-top: 20px;
+            box-shadow: 0 4px 16px rgba(30, 58, 138, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .back-to-game-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .back-to-game-btn:hover {
+            background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+            box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
+        }
+
+        .back-to-game-btn:hover::before {
+            left: 100%;
+        }
+
+        /* Form helper text */
+        .form-help-text {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 12px;
+            font-size: 14px;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Game status warning styling */
+        .game-status-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 16px;
+            padding: 24px 32px;
+            margin: 20px 32px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(245, 158, 11, 0.2);
+        }
+
+        .game-status-warning.expired {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-color: #ef4444;
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+            margin: 20px 32px;
+            padding: 24px 32px;
+        }
+
+        .warning-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .warning-icon {
+            font-size: 32px;
+        }
+
+        .warning-text h3 {
+            color: #92400e;
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .game-status-warning.expired .warning-text h3 {
+            color: #991b1b;
+        }
+
+        .warning-text p {
+            color: #92400e;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .game-status-warning.expired .warning-text p {
+            color: #991b1b;
+        }
+
+        /* Disabled signup form styling */
+        .signup-section.disabled {
+            opacity: 0.6;
+            pointer-events: none;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+        }
+
+        .signup-section.disabled .section-title {
+            color: #64748b !important;
+        }
+
+        .signup-section.disabled input,
+        .signup-section.disabled button {
+            background-color: #f1f5f9 !important;
+            color: #64748b !important;
+            cursor: not-allowed !important;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                margin: 0;
+            }
+
+            .container {
+                border-radius: 16px;
+                box-shadow: none;
+            }
+
+            .section-header {
+                min-height: 60px;
+                padding: 16px 20px 12px;
+                border-radius: 16px 16px 0 0;
+            }
+
+            .section-header h1 {
+                font-size: 20px;
+            }
+
+            .section-header .subtitle {
+                font-size: 13px;
+            }
+
+            .section {
+                padding: 20px;
+            }
+
+            .section-title {
+                font-size: 20px;
+            }
+
+            .game-detail {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .game-detail-value {
+                text-align: left;
+                margin-top: 4px;
+                font-weight: 600;
+            }
+
+            .confirmation-section {
+                padding: 30px 20px;
+            }
+
+            .confirmation-section h2 {
+                font-size: 24px;
+            }
+
+            .confirmation-icon {
+                font-size: 50px;
+            }
+
+            .confirmation-detail {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .confirmation-detail-value {
+                text-align: left;
+                margin-top: 5px;
+            }
+
+            input, button {
+                padding: 12px 14px;
+            }
+
+            /* Button styling for mobile - keeps side by side layout */
+            .button-group {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-top: 20px;
+            }
+
+            .button-group button {
+                flex: 1;
+                margin-top: 0;
+                font-size: 14px;
+            }
+
+            .warning-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .warning-icon {
+                font-size: 28px;
+            }
+
+            .game-status-warning {
+                margin: 20px 20px;
+                padding: 20px 24px;
+            }
+            
+            .game-status-warning.expired {
+                margin: 20px 20px;
+                padding: 20px 24px;
+            }
+        }
+
+        /* Extra small mobile devices */
+        @media (max-width: 480px) {
+            body {
+                padding: 0;
+            }
+
+            .container {
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            .section-header {
+                border-radius: 0;
+            }
+
+            /* Keep buttons side by side even on very small screens */
+            .button-group {
+                gap: 10px;
+            }
+        }

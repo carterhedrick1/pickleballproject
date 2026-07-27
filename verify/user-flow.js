@@ -92,6 +92,33 @@ async function req(method, path, body, extraHeaders) {
   const wrong = await req('GET', `/api/games/${gameId}?token=deadbeef`);
   wrong.status === 403 ? ok('wrong token -> 403') : bad(`wrong token -> HTTP ${wrong.status}, expected 403`);
 
+  console.log('\n4b. Host edits cannot overwrite protected game state');
+  const protectedEdit = await req('PUT', `/api/games/${gameId}`, {
+    token: hostToken,
+    message: 'Allowed edit',
+    hostToken: 'replacement-token',
+    hostPhone: '0000000000',
+    players: [],
+    cancelled: true,
+    created: 'replaced'
+  });
+  protectedEdit.status === 200
+    ? ok('host update still accepts known editable fields')
+    : bad(`host update -> HTTP ${protectedEdit.status}`);
+  const afterProtectedEdit = await req('GET', `/api/games/${gameId}?token=${hostToken}`);
+  afterProtectedEdit.json?.hostToken === hostToken
+    ? ok('hostToken ignored in the update body')
+    : bad('hostToken was overwritten');
+  afterProtectedEdit.json?.players?.some((player) => player.isOrganizer)
+    ? ok('players ignored in the update body')
+    : bad('players were overwritten');
+  afterProtectedEdit.json?.cancelled === false
+    ? ok('cancellation state ignored in the update body')
+    : bad('cancellation state was overwritten');
+  afterProtectedEdit.json?.message === 'Allowed edit'
+    ? ok('editable message was saved')
+    : bad('editable message did not save');
+
   console.log('\n5. Players tap IN (fills 3 open spots of 4)');
   for (const name of ['Alice', 'Bob', 'Carla']) {
     const r = await req('POST', `/api/games/${gameId}/players`, { name });

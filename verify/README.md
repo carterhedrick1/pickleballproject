@@ -22,7 +22,7 @@ If you ever change these, check Textbelt quota before and after:
 
 ## Running them
 
-Two need nothing but the repo. The rest need the app running on port 3002.
+Several start or use their own local process. The rest need the app running on port 3002.
 **Use 3002, not 3001** — port 3001 is a different project on this machine.
 
 ```
@@ -31,6 +31,7 @@ npm run verify:reminders
 npm run verify:reminder-safety
 npm run verify:late-joiner
 npm run verify:roster
+npm run verify:frontend      # starts its own safe local server and headless Chrome
 
 # Start the app first, in another terminal:
 PORT=3002 npm start
@@ -96,6 +97,7 @@ and every script now reports a 429 as a 429.
 | `all-routes.js` | Every route the app registers answers without a 500. Deliberately shallow - it does not check *what* they return, only that no handler throws. It exists because the API lives in `routes/` now, and the easy mistake when moving a handler is leaving behind something it calls, which nothing else would catch on the eight routes that have no other coverage. |
 | `photos.js` | Event photo bytes survive a full database round trip, the stored type comes from the magic bytes rather than the claimed header, twelve is the cap, and only the host can upload or delete. |
 | `court-images.js` | The court image library is shared by **court name** while the chosen image belongs to a **single game** — two games at one court see the same library but not each other's selection, and a game at another court sees none. Also byte-for-byte round trips by both fetch paths, magic-byte sniffing, and host-only upload/select/clear/delete. |
+| `scripts/refactor-browser-smoke.js` | Drives the extracted create/game scripts and split management modules in desktop and mobile Chrome, including an HTML-like player name that must render as text rather than markup. |
 
 ## Caveat worth remembering
 

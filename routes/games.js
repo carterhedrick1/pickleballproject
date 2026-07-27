@@ -35,6 +35,7 @@ const { acquireGameLock } = require('../utils/game-lock');
 const { isGameUpcoming } = require('../utils/central-time');
 const { routeFailed } = require('../utils/route-error');
 const { isHost } = require('../utils/host-auth');
+const { applyGameUpdate } = require('../utils/game-update');
 
 module.exports = function mountGameRoutes(app) {
   app.post('/api/games', async (req, res) => {
@@ -146,19 +147,7 @@ module.exports = function mountGameRoutes(app) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
       
-      // IMPORTANT: Merge the update data with existing game data
-      Object.assign(game, updateData);
-      
-      // Ensure notification preferences are properly saved
-      if (updateData.notificationPreferences) {
-        game.notificationPreferences = {
-          gameFull: updateData.notificationPreferences.gameFull === true,
-          playerJoins: updateData.notificationPreferences.playerJoins === true,
-          playerCancels: updateData.notificationPreferences.playerCancels === true,
-          oneSpotLeft: updateData.notificationPreferences.oneSpotLeft === true,
-          waitlistStarts: updateData.notificationPreferences.waitlistStarts === true
-        };
-      }
+      applyGameUpdate(game, updateData);
       
       console.log('[SERVER] Saving game with notification preferences:', game.notificationPreferences);
       
