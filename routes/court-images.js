@@ -43,8 +43,14 @@ module.exports = function mountCourtImageRoutes(app) {
           });
         }
 
+        // Keep the legacy single-image record for the developer dashboard, but also add
+        // the upload to the library used by the create-game and manage-game screens.
+        // Previously this endpoint only updated locations.image_data, so an upload could
+        // look successful in /dev.html while remaining invisible everywhere hosts choose
+        // a court image.
         await saveCourtImage(courtName, mimeType, req.body);
-        res.status(201).json({ success: true, courtName });
+        const imageId = await saveCourtImageToLibrary(courtName, mimeType, req.body);
+        res.status(201).json({ success: true, courtName, imageId });
       } catch (error) {
         routeFailed(req, res, error, 'Failed to save court image');
       }

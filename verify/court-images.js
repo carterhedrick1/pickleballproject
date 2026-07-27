@@ -175,6 +175,11 @@ function makeGame(location, courtNumber, time) {
     body: PNG_1PX,
   });
   check(devUploadAuthed.status === 201, `signed in -> HTTP ${devUploadAuthed.status} (expected 201)`);
+  const devUploadJson = await devUploadAuthed.json();
+  check(!!devUploadJson.imageId, `the library image id comes back (${devUploadJson.imageId})`);
+  const afterDevUpload = await req('GET', `/api/courts/${encodeURIComponent(COURT)}/library`);
+  check((afterDevUpload.json?.images || []).length === 3,
+    `and the create-game library now has 3 images (got ${(afterDevUpload.json?.images || []).length})`);
 
   console.log('\n11. Clearing the selection');
   const clearNoToken = await req('PUT', `/api/games/${gameId}/court-image-none`);
@@ -184,7 +189,7 @@ function makeGame(location, courtNumber, time) {
   check(clear.status === 200, `the host can clear (HTTP ${clear.status})`);
   const afterClear = await req('GET', `/api/games/${gameId}/court-images`);
   check(!afterClear.json?.selectedImageId, 'and nothing is selected any more');
-  check((afterClear.json?.images || []).length === 2, 'while the library itself is untouched');
+  check((afterClear.json?.images || []).length === 3, 'while the library itself is untouched');
 
   console.log('\n12. Deleting from the library');
   const delNoToken = await req('DELETE', `/api/games/${gameId}/court-images/${imageId}`);
@@ -194,8 +199,8 @@ function makeGame(location, courtNumber, time) {
   check(del.status === 200, `the host can delete (HTTP ${del.status})`);
 
   const afterDelete = await req('GET', `/api/games/${gameId}/court-images`);
-  check((afterDelete.json?.images || []).length === 1,
-    `1 left (got ${(afterDelete.json?.images || []).length})`);
+  check((afterDelete.json?.images || []).length === 2,
+    `2 left (got ${(afterDelete.json?.images || []).length})`);
 
   const gone = await fetch(`${BASE}/api/court-images/${imageId}`);
   check(gone.status === 404, `and the image itself is gone (HTTP ${gone.status})`);
