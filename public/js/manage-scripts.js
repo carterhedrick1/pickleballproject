@@ -601,30 +601,6 @@ async function updateGameDetails() {
 }
 }
 
-function debugNotificationPreferences() {
-    console.log('=== NOTIFICATION PREFERENCES DEBUG ===');
-    console.log('Game data:', gameData);
-    console.log('Notification preferences in game data:', gameData?.notificationPreferences);
-    
-    const checkboxes = ['notifyGameFull', 'notifyPlayerJoins', 'notifyPlayerCancels', 'notifyOneSpotLeft', 'notifyWaitlistStarts'];
-    checkboxes.forEach(id => {
-        const checkbox = document.getElementById(id);
-        const toggle = checkbox?.closest('.notification-option');
-        console.log(`${id}:`, {
-            found: !!checkbox,
-            checked: checkbox?.checked,
-            hasCheckedClass: toggle?.classList.contains('checked')
-        });
-    });
-    console.log('=== END DEBUG ===');
-}
-
-
-
-
-
-
-
 
 
 

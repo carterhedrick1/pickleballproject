@@ -1,4 +1,4 @@
-// sms-handler.js - All SMS-related functions - FINAL PRODUCTION VERSION
+// SMS-related functions: incoming message handling, notifications, and reminders.
 const {
   getAllGames,
   getGame,
@@ -444,8 +444,6 @@ async function getPlayerGames(cleanedFromNumber, allGames) {
   return playerGames;
 }
 
-// Update buildGameDetailsMessage function in sms-handler.js
-// 1. Fix buildGameDetailsMessage function
 async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
   const gameDate = formatDateForSMS(game.date);
   const gameTime = formatTimeForSMS(game.time);
@@ -541,7 +539,6 @@ responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime} ($
 }
 
 // Helper function to cancel player from game
-// Update cancelPlayerFromGame function in sms-handler.js
 async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumber) {
   try {
     const result = await leaveGame(
