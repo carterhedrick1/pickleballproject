@@ -1,0 +1,38 @@
+#!/bin/sh
+
+set -u
+
+if [ "${SKIP_AUTO_DEPLOY:-}" = "1" ]; then
+  echo "Automatic deployment skipped because SKIP_AUTO_DEPLOY=1."
+  exit 0
+fi
+
+branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" || exit 0
+
+if [ "$branch" != "main" ]; then
+  echo "Automatic deployment skipped: this commit is on '$branch', not 'main'."
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root" || exit 1
+
+echo "Checking the commit before deployment..."
+if ! npm run verify:deploy; then
+  echo "Checks failed. The commit was saved locally but was not uploaded or deployed." >&2
+  exit 1
+fi
+
+echo "Uploading the commit to Scott's GitHub repository..."
+if ! git push origin main; then
+  echo "The commit was saved locally, but the upload to origin failed. Nothing was deployed." >&2
+  exit 1
+fi
+
+echo "Uploading the commit to the production GitHub repository..."
+if ! git push upstream main; then
+  echo "The commit reached origin, but the production upload failed. Nothing new was deployed." >&2
+  exit 1
+fi
+
+echo "The commit was uploaded. Render is now deploying it to https://inorout.club."

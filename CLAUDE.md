@@ -45,5 +45,14 @@ stay fail-silent, since it runs on every player-facing page.
 ## Deploys
 
 Production auto-deploys from `upstream` (`carterhedrick1/pickleballproject`) `main`.
-Pushing there IS the deploy — never push to `upstream` without Scott explicitly
-asking to deploy. The plain Push button / `origin` is Scott's fork and is always safe.
+Pushing there IS the deploy.
+
+On 2026-07-27 Scott asked for every commit on `main` to deploy automatically, without a
+separate push or deploy request. `.githooks/post-commit` runs the deployment checks, pushes
+to `origin`, and then pushes to `upstream`. A request to commit on `main` is therefore
+standing authorization for that workflow.
+
+If Scott explicitly asks to commit without deploying, run that commit with
+`SKIP_AUTO_DEPLOY=1`. If the hook fails, report whether the commit stayed local, reached
+`origin`, or reached `upstream`; do not describe it as deployed unless the upstream push
+succeeded.
