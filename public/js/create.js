@@ -48,6 +48,7 @@
         let courtImagePreviewUrl = null;
         let courtImageRequestSerial = 0;
         let courtImageLookupTimer = null;
+        let courtImageLoadPromise = Promise.resolve();
 
         function setCourtImageStatus(message, isError = false) {
             const status = document.getElementById('courtImageStatus');
@@ -83,39 +84,13 @@
             return label;
         }
 
-        function makeNoImageChoice() {
-            const label = document.createElement('label');
-            label.className = 'court-image-choice court-image-choice--none';
-
-            const input = document.createElement('input');
-            input.type = 'radio';
-            input.name = 'selectedCourtImage';
-            input.value = 'none';
-            input.setAttribute('aria-label', 'Show no court image');
-
-            const content = document.createElement('span');
-            content.className = 'court-image-none-content';
-
-            const icon = document.createElement('span');
-            icon.className = 'court-image-none-icon';
-            icon.setAttribute('aria-hidden', 'true');
-            icon.textContent = '⊘';
-
-            const text = document.createElement('span');
-            text.textContent = 'No image';
-
-            content.append(icon, text);
-            label.append(input, content);
-            return label;
-        }
-
         function renderCourtImageGallery(preferredValue) {
             const gallery = document.getElementById('courtImageGallery');
             const previouslySelected = document.querySelector(
                 'input[name="selectedCourtImage"]:checked'
             )?.value;
-            const wanted = preferredValue || previouslySelected || 'none';
-            const availableValues = new Set(['none']);
+            const wanted = preferredValue || previouslySelected;
+            const availableValues = new Set();
             gallery.replaceChildren();
 
             currentCourtImages.forEach((image, index) => {
@@ -137,10 +112,9 @@
                 ));
             }
 
-            gallery.appendChild(makeNoImageChoice());
             const selectedValue = availableValues.has(wanted)
                 ? wanted
-                : (courtImagePreviewUrl ? UPLOAD_IMAGE_VALUE : 'none');
+                : (currentCourtImages[0]?.id || (courtImagePreviewUrl ? UPLOAD_IMAGE_VALUE : null));
             const selectedInput = Array.from(
                 gallery.querySelectorAll('input[name="selectedCourtImage"]')
             ).find((input) => input.value === selectedValue);
@@ -159,6 +133,7 @@
             const container = document.getElementById('courtImageContainer');
             clearTimeout(courtImageLookupTimer);
             courtImageRequestSerial++;
+            courtImageLoadPromise = Promise.resolve();
             clearCourtImageUpload();
             currentCourtImages = [];
             document.getElementById('courtImageGallery').replaceChildren();
@@ -193,7 +168,7 @@
                 renderCourtImageGallery();
                 setCourtImageStatus(currentCourtImages.length
                     ? `Showing all ${currentCourtImages.length} saved photo${currentCourtImages.length === 1 ? '' : 's'}.`
-                    : 'No saved photos yet. You can add the first one.');
+                    : 'No saved photos yet. Upload one if you like, or create the game without an image.');
             } catch (err) {
                 if (requestSerial !== courtImageRequestSerial) return;
                 currentCourtImages = [];
@@ -220,14 +195,14 @@
                     freeText.style.display = 'block';
                     input.value = '';
                     input.focus();
-                    loadCourtImages('');
+                    courtImageLoadPromise = loadCourtImages('');
                 } else {
                     // Keep the input in the DOM and populated - createGame() reads it.
                     input.value = select.value;
                     freeText.style.display = select.value ? 'none' : 'block';
                     if (select.value) {
-                        renderCourtImageGallery('none');
-                        loadCourtImages(select.value);
+                        renderCourtImageGallery();
+                        courtImageLoadPromise = loadCourtImages(select.value);
                     } else {
                         resetCourtImagePicker();
                     }
@@ -245,25 +220,27 @@
                     return;
                 }
                 setCourtImageStatus('Checking for photos already saved under this court name…');
-                courtImageLookupTimer = setTimeout(() => loadCourtImages(courtName), 300);
+                courtImageLookupTimer = setTimeout(() => {
+                    courtImageLoadPromise = loadCourtImages(courtName);
+                }, 300);
             });
 
             upload.addEventListener('change', () => {
                 const file = upload.files[0];
                 if (!file) {
                     clearCourtImageUpload();
-                    renderCourtImageGallery('none');
+                    renderCourtImageGallery();
                     return;
                 }
                 if (!ACCEPTED_COURT_IMAGE_TYPES.has(file.type)) {
                     clearCourtImageUpload();
-                    renderCourtImageGallery('none');
+                    renderCourtImageGallery();
                     setCourtImageStatus('Please choose a JPEG, PNG or WebP image.', true);
                     return;
                 }
                 if (file.size > MAX_COURT_IMAGE_BYTES) {
                     clearCourtImageUpload();
-                    renderCourtImageGallery('none');
+                    renderCourtImageGallery();
                     setCourtImageStatus('That photo is larger than 5 MB. Please choose a smaller image.', true);
                     return;
                 }
@@ -284,11 +261,8 @@
                         `${file.name} will be added to this court's saved photos and used for this game.`
                     );
                 } else {
-                    const choice = event.target.value === 'none'
-                        ? 'No image will show on this game.'
-                        : 'The other selected photo will show on this game.';
                     setCourtImageStatus(
-                        `${file.name} will be added to this court's saved photos. ${choice}`
+                        `${file.name} will be added to this court's saved photos. The other selected photo will show on this game.`
                     );
                 }
             });
@@ -323,7 +297,7 @@
                 select.required = false;
                 select.closest('.form-group').style.display = 'none';
                 freeText.style.display = 'block';
-                loadCourtImages(input.value);
+                courtImageLoadPromise = loadCourtImages(input.value);
             }
         }
 
@@ -415,6 +389,11 @@ async function createGame(e) {
     e.preventDefault();
     
     const formData = new FormData(e.target);
+    clearTimeout(courtImageLookupTimer);
+    if (document.getElementById('locationSelect').value === NEW_LOCATION_VALUE) {
+        courtImageLoadPromise = loadCourtImages(formData.get('location'));
+    }
+    await courtImageLoadPromise;
     const selectedImageValue = document.querySelector(
         'input[name="selectedCourtImage"]:checked'
     )?.value || 'none';

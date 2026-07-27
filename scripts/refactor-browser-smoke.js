@@ -71,20 +71,73 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     await cdp.sleep(500);
     const courtGallery = await desktop.evaluate(`(() => {
       const panel = document.getElementById('courtImageContainer');
-      const none = document.querySelector('.court-image-choice--none');
+      const savedPhotos = [...document.querySelectorAll(
+        '.court-image-choice--photo:not(.court-image-choice--upload)'
+      )];
       return {
         visible: !panel.hidden && getComputedStyle(panel).display !== 'none',
-        savedPhotos: document.querySelectorAll(
-          '.court-image-choice--photo:not(.court-image-choice--upload)'
-        ).length,
+        savedPhotos: savedPhotos.length,
         uploadAvailable: Boolean(document.getElementById('courtImageUpload')),
-        noImageIsCompact: none.getBoundingClientRect().width < panel.getBoundingClientRect().width / 2
+        firstPhotoSelected: savedPhotos[0]?.querySelector('input').checked === true,
+        noImageRemoved: !document.querySelector('input[value="none"]')
       };
     })()`);
-    assert(courtGallery.visible && courtGallery.savedPhotos === 2,
-      'create form shows every image saved for the selected court');
-    assert(courtGallery.uploadAvailable && courtGallery.noImageIsCompact,
-      'court upload is available and No image is a compact gallery tile');
+    assert(
+      courtGallery.visible && courtGallery.savedPhotos === 2 && courtGallery.firstPhotoSelected,
+      'create form shows every saved court image and defaults to the first one'
+    );
+    assert(courtGallery.uploadAvailable && courtGallery.noImageRemoved,
+      'court upload is available and there is no No image choice');
+
+    await desktop.evaluate(`(() => {
+      const set = (id, value) => {
+        const field = document.getElementById(id);
+        field.value = value;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      const select = document.getElementById('locationSelect');
+      select.value = '__new__';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      set('location', 'Sunset Park Courts');
+    })()`);
+    await cdp.sleep(500);
+    const emptyGallery = await desktop.evaluate(`(() => ({
+      panelVisible: !document.getElementById('courtImageContainer').hidden,
+      choices: document.querySelectorAll('input[name="selectedCourtImage"]').length,
+      uploadAvailable: Boolean(document.getElementById('courtImageUpload'))
+    }))()`);
+    assert(emptyGallery.panelVisible && emptyGallery.choices === 0 && emptyGallery.uploadAvailable,
+      'a court with no photos stays optional and offers an upload without an empty choice');
+
+    await desktop.evaluate(`(() => {
+      const set = (id, value) => {
+        const field = document.getElementById(id);
+        field.value = value;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      set('organizerName', 'Upload Test Host');
+      set('organizerPhone', '${fx.FORM_PHONE}');
+      set('date', '${fx.date}');
+      set('time', '17:30');
+      set('players', '4');
+      set('message', '${fx.MARKER}');
+      document.getElementById('gameForm').requestSubmit();
+    })()`);
+    await cdp.sleep(2500);
+    const noImageResult = await desktop.evaluate(`(async () => {
+      const gameId = window.currentGameId;
+      const response = await fetch('/api/games/' + gameId + '/court-images');
+      const library = await response.json();
+      return {
+        gameId,
+        imageCount: library.images.length,
+        selectedImageId: library.selectedImageId
+      };
+    })()`);
+    assert(
+      noImageResult.gameId && noImageResult.imageCount === 0 && !noImageResult.selectedImageId,
+      'a game with no saved or uploaded court photo still creates without an image'
+    );
 
     const uploadedCreate = await desktop.evaluate(`(() => {
       const set = (id, value) => {
@@ -102,7 +155,6 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       set('time', '17:30');
       set('players', '4');
       set('message', '${fx.MARKER}');
-
       const binary = atob('${PNG_1PX.toString('base64')}');
       const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
       const file = new File([bytes], 'sunset-court.png', { type: 'image/png' });
