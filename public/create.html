@@ -861,7 +861,7 @@
 
                     <div class="form-group">
                         <label for="locationSelect">Court:</label>
-                        <select id="locationSelect" name="locationSelect">
+                        <select id="locationSelect" name="locationSelect" required>
                             <option value="">Loading courts...</option>
                         </select>
                     </div>
@@ -874,15 +874,9 @@
                         </label>
                     </div>
 
-                    <div class="form-group" id="locationFreeText">
+                    <div class="form-group" id="locationFreeText" style="display: none;">
                         <label for="location">Location:</label>
                         <input type="text" id="location" name="location" placeholder="e.g., Oak Park Courts" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="courtNumber">Court Number (optional):</label>
-                        <input type="text" id="courtNumber" name="courtNumber" placeholder="e.g., Court 3, Courts 1-2, Center Court">
-                        <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Specify which court(s) you'll be using at this location</small>
                     </div>
                 </section>
 
@@ -1214,12 +1208,10 @@
                 newOption.value = NEW_LOCATION_VALUE;
                 newOption.textContent = 'Somewhere new...';
                 select.appendChild(newOption);
-
-                // Nothing chosen yet, so the free-text field stays visible and usable.
-                freeText.style.display = 'block';
             } catch (error) {
                 // Never block creating a game on this. Hide the dropdown, keep the text box.
                 console.warn('Could not load saved courts, falling back to free text:', error);
+                select.required = false;
                 select.closest('.form-group').style.display = 'none';
                 freeText.style.display = 'block';
             }
