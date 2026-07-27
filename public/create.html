@@ -40,17 +40,36 @@
                         </select>
                     </div>
 
-                    <div id="courtImageContainer" style="display: none; margin: 16px 0;">
-                        <label style="display: block; margin-bottom: 10px; font-weight: 600; font-size: 14px;">Court images:</label>
-                        <div id="courtImageGallery" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-bottom: 15px;"></div>
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
-                            <input type="radio" name="selectedCourtImage" value="none" checked> No image
-                        </label>
-                    </div>
-
                     <div class="form-group" id="locationFreeText" style="display: none;">
                         <label for="location">Location:</label>
                         <input type="text" id="location" name="location" placeholder="e.g., Oak Park Courts" required>
+                    </div>
+
+                    <div id="courtImageContainer" class="court-image-panel" hidden>
+                        <div class="court-image-heading">
+                            <div>
+                                <div class="court-image-title">Court images</div>
+                                <p class="court-image-intro">Choose what players will see, or add another photo.</p>
+                            </div>
+                            <span id="courtImageCount" class="court-image-count" aria-live="polite"></span>
+                        </div>
+
+                        <div class="court-image-upload">
+                            <label for="courtImageUpload" class="court-image-upload-button">
+                                <span aria-hidden="true">＋</span>
+                                Upload a court photo
+                                <input
+                                    type="file"
+                                    id="courtImageUpload"
+                                    class="visually-hidden"
+                                    accept="image/jpeg,image/png,image/webp"
+                                >
+                            </label>
+                            <span class="court-image-upload-help">JPEG, PNG or WebP · up to 5 MB</span>
+                        </div>
+
+                        <p id="courtImageStatus" class="court-image-status" aria-live="polite"></p>
+                        <div id="courtImageGallery" class="court-image-gallery"></div>
                     </div>
                 </section>
 

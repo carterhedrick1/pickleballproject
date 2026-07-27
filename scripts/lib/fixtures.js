@@ -179,10 +179,16 @@ function cleanup() {
           [...FIXTURE_PHONES, ...FIXTURE_PHONES],
           () => {
             db.run(
-              `DELETE FROM locations WHERE name_key IN (${FIXTURE_LOCATION_KEYS.map(() => '?').join(',')})`,
+              `DELETE FROM court_images WHERE court_name_key IN (${FIXTURE_LOCATION_KEYS.map(() => '?').join(',')})`,
               FIXTURE_LOCATION_KEYS,
               () => {
-                db.run('DELETE FROM sms_contexts WHERE phone_number IN (?,?,?)', FIXTURE_PHONES, done);
+                db.run(
+                  `DELETE FROM locations WHERE name_key IN (${FIXTURE_LOCATION_KEYS.map(() => '?').join(',')})`,
+                  FIXTURE_LOCATION_KEYS,
+                  () => {
+                    db.run('DELETE FROM sms_contexts WHERE phone_number IN (?,?,?)', FIXTURE_PHONES, done);
+                  }
+                );
               }
             );
           }
