@@ -57,6 +57,7 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       return {
         form: Boolean(document.getElementById('gameForm')),
         selected: document.getElementById('waitlistMode').checked,
+        locationPlaceholderRemoved: !document.getElementById('location').hasAttribute('placeholder'),
         waitlistNotificationDefault: document.getElementById('notifyWaitlistStarts').checked &&
           document.querySelector('[data-checkbox-id="notifyWaitlistStarts"]').classList.contains('checked'),
         notificationTitles: [...document.querySelectorAll('.notifications-section .notification-title')]
@@ -65,6 +66,7 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       };
     })()`);
     assert(createReady.form && createReady.selected, 'create form and extracted handlers work');
+    assert(createReady.locationPlaceholderRemoved, 'new-location field has no sample text');
     assert(createReady.waitlistNotificationDefault, 'waitlist-start notification is enabled by default');
     assert(
       createReady.notificationTitles.join('|') === [
