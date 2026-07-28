@@ -231,7 +231,7 @@ function normalizeDraftConfig(value) {
   TEXT_MESSAGE_CATEGORIES.forEach((category) => {
     if (category.live) return;
     normalized[category.id] = {
-      enabled: categories[category.id] && categories[category.id].enabled === true,
+      enabled: categories[category.id]?.enabled === true,
       messages: normalizeMessages(
         categories[category.id] && categories[category.id].messages,
         category.maxLength

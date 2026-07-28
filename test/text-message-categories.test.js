@@ -56,6 +56,15 @@ test('normalizes saved drafts and ignores unknown category data', () => {
   assert.equal(config.categories['youre-in'], undefined);
 });
 
+test('defaults every untouched category toggle to an explicit false value', () => {
+  const config = normalizeDraftConfig();
+  TEXT_MESSAGE_CATEGORIES
+    .filter((category) => !category.live)
+    .forEach((category) => {
+      assert.equal(config.categories[category.id].enabled, false);
+    });
+});
+
 test('wires every toggle-controlled category into an outgoing SMS path', () => {
   const root = path.resolve(__dirname, '..');
   const runtimeSources = [
