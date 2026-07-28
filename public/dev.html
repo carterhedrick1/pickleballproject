@@ -917,8 +917,8 @@ function renderTextMessageCategory() {
   note.classList.toggle('hidden', !category.previewNote);
   const mode = el('textMessageMode');
   const liveNote = el('textMessageLiveNote');
-  mode.classList.toggle('hidden', category.live);
-  liveNote.classList.toggle('hidden', !category.live);
+  mode.classList.toggle('hidden', category.live === true);
+  liveNote.classList.toggle('hidden', category.live !== true);
   el('useRandomTexts').checked = category.enabled === true;
   el('textMessageModeDetail').textContent = category.enabled
     ? category.messages.length

@@ -542,6 +542,10 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         fallback: document.getElementById('textMessageModeDetail').textContent.includes('current app text'),
         tokens: document.getElementById('textMessageTokenList').textContent.includes('{DEFAULT_TEXT}')
       };
+      document.querySelector('[data-tab="application-confirmation"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      const consecutiveToggleVisible =
+        !document.getElementById('textMessageMode').classList.contains('hidden');
       document.querySelector('[data-tab="youre-in"]').click();
       await new Promise((resolve) => setTimeout(resolve, 40));
       document.querySelector('[data-action="edit-youre-in"]')?.click();
@@ -559,6 +563,7 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         bulkPaste: Boolean(document.getElementById('bulkPasteTexts')),
         youreInLiveNote,
         waitlistToggle,
+        consecutiveToggleVisible,
         focused: document.activeElement === input,
         save: form?.querySelector('button[type="submit"]')?.textContent.trim(),
         cancel: form?.querySelector('[data-action="cancel-edit-youre-in"]')?.textContent.trim()
@@ -582,6 +587,7 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         youreInEditor.waitlistToggle.off &&
         youreInEditor.waitlistToggle.fallback &&
         youreInEditor.waitlistToggle.tokens &&
+        youreInEditor.consecutiveToggleVisible &&
         youreInEditor.focused &&
         youreInEditor.save === 'Save' &&
         youreInEditor.cancel === 'Cancel' &&
