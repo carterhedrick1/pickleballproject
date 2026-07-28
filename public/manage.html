@@ -183,14 +183,14 @@
                 <!-- Court Images: let host manage court image library -->
                 <div class="form-section court-images-section">
                     <h2 class="section-title">Court Image</h2>
-                    <p class="court-images-intro">Choose which image shows when players see this game, or use no image.</p>
+                    <p class="court-images-intro">Update the image shown on the player link you already sent, or select No Image. Players will see the change automatically.</p>
 
-                    <div id="courtImageGallery" style="margin-bottom: 20px;">
-                        <div id="courtImageList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-bottom: 15px;"></div>
-                    </div>
-
-                    <div id="noImageOption" style="margin-bottom: 15px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; text-align: center;">
-                        <input type="radio" id="noImageRadio" name="courtImageSelect" value="none"> <label for="noImageRadio" style="cursor: pointer;">No Image</label>
+                    <div id="courtImageGallery" class="court-image-gallery">
+                        <div id="courtImageList" class="court-image-list"></div>
+                        <label id="noImageOption" class="court-image-choice court-image-none-option" for="noImageRadio">
+                            <input type="radio" id="noImageRadio" name="courtImageSelect" value="none">
+                            <span>No Image</span>
+                        </label>
                     </div>
 
                     <div id="courtImageUpload" style="border-top: 1px solid #ddd; padding-top: 15px;">

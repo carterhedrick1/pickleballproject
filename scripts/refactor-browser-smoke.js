@@ -237,9 +237,13 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     await desktop.goto(
       `${local.baseUrl}/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`
     );
+    await cdp.sleep(500);
     const manageReady = await desktop.evaluate(`(() => {
       const name = [...document.querySelectorAll('.player-name')]
         .find((node) => node.textContent.startsWith('<img'));
+      const imageChoiceWidth = document.querySelector('.court-image-choice--photo')
+        ?.getBoundingClientRect().width;
+      const noImageWidth = document.getElementById('noImageOption')?.getBoundingClientRect().width;
       document.querySelector('[data-tab="Players"]').click();
       return {
         visible: getComputedStyle(document.getElementById('gameManagement')).display !== 'none',
@@ -250,12 +254,24 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         injectedElement: Boolean(name && name.querySelector('img')),
         playersActive: document.getElementById('Players').classList.contains('active'),
         locationOnly: !document.getElementById('court' + 'Number') &&
-          !document.body.innerText.includes(['Court', 'Number'].join(' '))
+          !document.body.innerText.includes(['Court', 'Number'].join(' ')),
+        imageUpdateCopy: document.querySelector('.court-images-intro')?.textContent
+          .includes('player link you already sent'),
+        imageChoiceWidth,
+        noImageWidth
       };
     })()`);
     assert(manageReady.visible && manageReady.namespaces, 'management feature modules initialize');
     assert(manageReady.playersActive, 'management tab listeners work without inline handlers');
     assert(manageReady.locationOnly, 'management details use location without a separate court field');
+    assert(manageReady.imageUpdateCopy,
+      'court image copy explains that the existing player link updates automatically');
+    assert(
+      manageReady.imageChoiceWidth === manageReady.noImageWidth &&
+        manageReady.noImageWidth <= 110,
+      `No Image is a compact choice matching the court image tiles ` +
+        `(${manageReady.imageChoiceWidth}px/${manageReady.noImageWidth}px)`
+    );
     assert(
       manageReady.playerText.startsWith('<img') && !manageReady.injectedElement,
       'HTML-like player names remain text in the live page'

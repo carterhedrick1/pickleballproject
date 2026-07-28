@@ -182,43 +182,25 @@ async function loadCourtImages() {
 
         images.forEach((image) => {
             const wrapper = document.createElement('div');
-            wrapper.style.position = 'relative';
-            wrapper.style.cursor = 'pointer';
+            wrapper.className = 'court-image-choice court-image-choice--photo';
 
             const img = document.createElement('img');
             img.src = `/api/games/${gameId}/court-images/${image.id}`;
             img.alt = 'Court image';
-            img.style.width = '100%';
-            img.style.height = '100px';
-            img.style.objectFit = 'cover';
-            img.style.borderRadius = '8px';
-            img.style.border = image.isSelected ? '3px solid #4CAF50' : '2px solid #ddd';
 
             const radioInput = document.createElement('input');
             radioInput.type = 'radio';
             radioInput.name = 'courtImageSelect';
             radioInput.value = image.id;
             radioInput.checked = image.isSelected;
-            radioInput.style.position = 'absolute';
-            radioInput.style.top = '5px';
-            radioInput.style.left = '5px';
 
             radioInput.addEventListener('change', () => selectCourtImage(image.id));
 
             const deleteBtn = document.createElement('button');
             deleteBtn.type = 'button';
+            deleteBtn.className = 'court-image-delete';
             deleteBtn.textContent = '✕';
-            deleteBtn.style.position = 'absolute';
-            deleteBtn.style.top = '5px';
-            deleteBtn.style.right = '5px';
-            deleteBtn.style.background = '#e74c3c';
-            deleteBtn.style.color = 'white';
-            deleteBtn.style.border = 'none';
-            deleteBtn.style.borderRadius = '50%';
-            deleteBtn.style.width = '24px';
-            deleteBtn.style.height = '24px';
-            deleteBtn.style.cursor = 'pointer';
-            deleteBtn.style.fontSize = '16px';
+            deleteBtn.setAttribute('aria-label', 'Delete court image');
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 deleteCourtImage(image.id);
@@ -233,7 +215,7 @@ async function loadCourtImages() {
         const noImageRadio = document.getElementById('noImageRadio');
         if (noImageRadio) {
             noImageRadio.checked = !selectedId;
-            noImageRadio.addEventListener('change', selectNoCourtImage);
+            noImageRadio.onchange = selectNoCourtImage;
         }
     } catch (error) {
         console.error('Error loading court images:', error);
@@ -286,7 +268,7 @@ async function selectCourtImage(imageId) {
             const data = await response.json().catch(() => ({}));
             throw new Error(data.error || 'Failed to select image');
         }
-        setCourtImageStatus('Image selected.', 'success');
+        setCourtImageStatus('Player link updated with this image.', 'success');
         await loadCourtImages();
     } catch (error) {
         console.error('Error selecting court image:', error);
@@ -304,7 +286,7 @@ async function selectNoCourtImage() {
             const data = await response.json().catch(() => ({}));
             throw new Error(data.error || 'Failed to clear image');
         }
-        setCourtImageStatus('No image selected.', 'success');
+        setCourtImageStatus('Player link updated to show no image.', 'success');
         await loadCourtImages();
     } catch (error) {
         console.error('Error clearing court image:', error);
