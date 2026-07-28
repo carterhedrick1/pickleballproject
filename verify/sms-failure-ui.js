@@ -74,7 +74,7 @@ function cdp(ws, method, params = {}) {
   const created = await (await fetch(BASE + '/api/games', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      location: 'Browser Test Court', courtNumber: '1', organizerName: 'Verify',
+      location: 'Browser Test Court', organizerName: 'Verify',
       organizerPlaying: false, date: '2030-02-20', time: '18:00', duration: 90,
       totalPlayers: 4, message: '', registrationMode: 'fcfs',
     }),

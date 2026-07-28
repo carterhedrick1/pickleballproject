@@ -111,14 +111,6 @@
                         }
                     }
 
-                    // Show court number if it exists
-                    if (gameData.courtNumber && gameData.courtNumber.trim()) {
-                        document.getElementById('courtNumber').textContent = gameData.courtNumber;
-                        document.getElementById('courtDetail').style.display = 'flex';
-                    } else {
-                        document.getElementById('courtDetail').style.display = 'none';
-                    }
-
                     document.getElementById('date').textContent = formatDate(gameData.date);
                     document.getElementById('time').textContent = formatTime(gameData.time);
                     document.getElementById('duration').textContent = gameData.duration;
@@ -472,13 +464,7 @@
                     }
                 }
 
-                // Include court number in confirmation location
-                let locationText = gameData.location;
-                if (gameData.courtNumber && gameData.courtNumber.trim()) {
-                    locationText += ` - ${gameData.courtNumber}`;
-                }
-                
-                confirmLocation.textContent = locationText;
+                confirmLocation.textContent = gameData.location;
                 confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
                 
                 // Handle "What's Next?" section visibility

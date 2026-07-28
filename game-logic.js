@@ -88,7 +88,6 @@ function createGameData(formData) {
   
   const gameData = {
     location: formData.location,
-    courtNumber: formData.courtNumber || '',
     organizerName: formData.organizerName || 'Organizer',
     organizerPhone: formData.organizerPhone ? formatPhoneNumber(formData.organizerPhone) : '',
     organizerPlaying: formData.organizerPlaying,

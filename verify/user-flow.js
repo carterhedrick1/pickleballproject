@@ -74,7 +74,7 @@ async function req(method, path, body, extraHeaders) {
 
   console.log('\n3. Host creates a game (no phone -> no SMS)');
   const create = await req('POST', '/api/games', {
-    location: 'Homoly Home Court', courtNumber: '2', organizerName: 'Scott',
+    location: 'Homoly Home Court', organizerName: 'Scott',
     organizerPlaying: true, date: '2026-08-15', time: '18:00', duration: 90,
     totalPlayers: 4, message: 'Deploy verification game', registrationMode: 'fcfs',
   });

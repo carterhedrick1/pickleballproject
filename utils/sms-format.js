@@ -34,11 +34,7 @@ function formatTimeForSMS(timeStr) {
 }
 
 function formatLocationForSMS(game) {
-  let locationText = game.location || '';
-  if (game.courtNumber && game.courtNumber.trim()) {
-    locationText += ` - ${game.courtNumber}`;
-  }
-  return locationText;
+  return game.location || '';
 }
 
 module.exports = {

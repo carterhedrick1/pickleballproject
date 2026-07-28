@@ -127,7 +127,6 @@ function gameCard(game) {
     const card = document.createElement('div');
     card.className = 'game-item' + (game.cancelled ? ' cancelled' : '');
 
-    const court = [game.location, game.courtNumber].filter(Boolean).join(' - ');
     const isPast = isGameCompleted(game.date, game.time);
 
     const badges = [];
@@ -146,7 +145,7 @@ function gameCard(game) {
     }
 
     card.innerHTML = `
-        <div class="game-title">${esc(court)}</div>
+        <div class="game-title">${esc(game.location)}</div>
         <div class="game-detail">${formatDateForDisplay(game.date)} at ${formatTime(game.time)}</div>
         <div class="game-badges">${badges.join('')}</div>
         <div class="card-actions">
@@ -235,7 +234,6 @@ function copyInvitation(game) {
     // history endpoint returns, so map the fields across.
     const gameData = {
         location: game.location,
-        courtNumber: game.courtNumber,
         date: game.date,
         time: game.time,
         duration: game.duration,

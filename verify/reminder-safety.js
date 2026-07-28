@@ -27,7 +27,7 @@ function makeGame(hours, phones) {
   const t = new Date(getCentralTimeNow().getTime() + hours * 3600 * 1000);
   const p = (n) => String(n).padStart(2, '0');
   return {
-    location: 'Safety Court', courtNumber: '', organizerName: 'Host', organizerPhone: '',
+    location: 'Safety Court', organizerName: 'Host', organizerPhone: '',
     organizerPlaying: false,
     date: `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`,
     time: `${p(t.getHours())}:${p(t.getMinutes())}`,

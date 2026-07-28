@@ -410,7 +410,6 @@ async function createGame(e) {
     
     const gameData = {
         location: formData.get('location'),
-        courtNumber: formData.get('courtNumber') || '',
         organizerName: formData.get('organizerName'),
         organizerPhone: formData.get('organizerPhone'),
         organizerPlaying: formData.get('organizerPlaying') === 'on',
@@ -457,7 +456,6 @@ async function createGame(e) {
             id: data.gameId,
             hostToken: data.hostToken,
             location: gameData.location,
-            courtNumber: gameData.courtNumber,
             date: gameData.date,
             time: gameData.time,
             duration: gameData.duration,

@@ -61,9 +61,9 @@ async function upload(gameId, token, bytes, { contentType = 'image/png' } = {}) 
   return { status: res.status, json, text };
 }
 
-function makeGame(location, courtNumber, time) {
+function makeGame(location, time) {
   return req('POST', '/api/games', {
-    location, courtNumber, organizerName: 'Host',
+    location, organizerName: 'Host',
     organizerPlaying: false, date: '2026-09-19', time, duration: 90,
     totalPlayers: 4, message: 'court image verification', registrationMode: 'fcfs',
   });
@@ -72,7 +72,7 @@ function makeGame(location, courtNumber, time) {
 (async () => {
   console.log(`\n=== Court images (${BASE}) ===\n`);
 
-  const created = await makeGame(COURT, '1', '18:00');
+  const created = await makeGame(COURT, '18:00');
   if (created.status !== 201) {
     console.error('could not create the test game:', created.text.slice(0, 200));
     process.exit(1);

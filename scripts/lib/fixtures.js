@@ -72,7 +72,6 @@ async function seed(baseUrl) {
   const open = await post(baseUrl, '/api/games', {
     ...common,
     location: 'Oak Park Courts',
-    courtNumber: 'Courts 1-2',
     time: '18:00',
     duration: '90',
     totalPlayers: '6',
@@ -91,7 +90,6 @@ async function seed(baseUrl) {
   const approval = await post(baseUrl, '/api/games', {
     ...common,
     location: 'Riverside Athletic Club',
-    courtNumber: 'Center Court',
     time: '09:30',
     duration: '120',
     totalPlayers: '4',
@@ -106,7 +104,6 @@ async function seed(baseUrl) {
   const full = await post(baseUrl, '/api/games', {
     ...common,
     location: 'Lakeside Park',
-    courtNumber: 'Court 4',
     time: '12:00',
     duration: '60',
     totalPlayers: '2',

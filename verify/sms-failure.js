@@ -123,7 +123,7 @@ async function retryPolicyChecks() {
   }
 
   const create = await req('POST', '/api/games', {
-    location: 'Test Court', courtNumber: '1', organizerName: 'Verify Host',
+    location: 'Test Court', organizerName: 'Verify Host',
     organizerPlaying: false, date: '2030-01-15', time: '18:00', duration: 90,
     totalPlayers: 4, message: 'SMS failure verification', registrationMode: 'fcfs',
   });

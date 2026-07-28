@@ -35,7 +35,7 @@ async function hit(method, path, { body, raw, headers = {} } = {}) {
   const created = await fetch(`${BASE}/api/games`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      location: 'Test Court', courtNumber: '1', organizerName: 'Host', organizerPlaying: false,
+      location: 'Test Court', organizerName: 'Host', organizerPlaying: false,
       date: '2026-09-19', time: '18:00', duration: 90, totalPlayers: 4,
       message: 'smoke', registrationMode: 'fcfs',
     }),

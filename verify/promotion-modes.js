@@ -50,7 +50,7 @@ const P = (n) => `55555591${String(n).padStart(2, '0')}`;
 
 async function makeGame(mode, seats) {
   const created = await req('POST', '/api/games', {
-    location: 'Test Court', courtNumber: '1', organizerName: 'Host', organizerPhone: HOST,
+    location: 'Test Court', organizerName: 'Host', organizerPhone: HOST,
     organizerPlaying: false, date: '2026-09-12', time: '18:00', duration: 90,
     totalPlayers: seats, message: 'promotion mode verification', registrationMode: mode,
   });
@@ -197,7 +197,7 @@ const readGame = async (id, token) => (await req('GET', `/api/games/${id}?token=
   console.log('\n6. The organizer cannot tap OUT of their own game');
   {
     const created = await req('POST', '/api/games', {
-      location: 'Test Court', courtNumber: '1', organizerName: 'Playing Host',
+      location: 'Test Court', organizerName: 'Playing Host',
       organizerPhone: HOST, organizerPlaying: true, date: '2026-09-12', time: '18:00',
       duration: 90, totalPlayers: 4, message: 'organizer out check', registrationMode: 'fcfs',
     });

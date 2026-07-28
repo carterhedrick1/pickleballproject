@@ -8,7 +8,6 @@
  */
 const EDITABLE_FIELDS = [
   'location',
-  'courtNumber',
   'date',
   'time',
   'duration',

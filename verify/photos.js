@@ -60,7 +60,7 @@ async function upload(gameId, token, bytes, { contentType = 'image/png', caption
   console.log(`\n=== Event photos (${BASE}) ===\n`);
 
   const created = await req('POST', '/api/games', {
-    location: 'Test Court', courtNumber: '1', organizerName: 'Host',
+    location: 'Test Court', organizerName: 'Host',
     organizerPlaying: false, date: '2026-09-19', time: '18:00', duration: 90,
     totalPlayers: 4, message: 'photo verification', registrationMode: 'fcfs',
   });
@@ -116,7 +116,7 @@ async function upload(gameId, token, bytes, { contentType = 'image/png', caption
 
   console.log('\n7. A photo id cannot be fetched against a different game');
   const other = await req('POST', '/api/games', {
-    location: 'Test Court', courtNumber: '2', organizerName: 'Host',
+    location: 'Test Court', organizerName: 'Host',
     organizerPlaying: false, date: '2026-09-19', time: '19:00', duration: 90,
     totalPlayers: 4, message: 'photo verification (other)', registrationMode: 'fcfs',
   });

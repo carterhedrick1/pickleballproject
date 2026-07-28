@@ -436,7 +436,6 @@ function populateGameDetails() {
     
     // Fill the edit form with current values
     document.getElementById('location').value = gameData.location || '';
-    document.getElementById('courtNumber').value = gameData.courtNumber || '';
     document.getElementById('date').value = formatDateForInput(gameData.date);
     document.getElementById('time').value = gameData.time || '';
     document.getElementById('duration').value = gameData.duration || '';
@@ -534,7 +533,6 @@ async function updateGameDetails() {
         
         const updatedData = {
             location: document.getElementById('location').value,
-            courtNumber: document.getElementById('courtNumber').value || '',
             date: formatDateForServer(document.getElementById('date').value),
             time: document.getElementById('time').value,
             duration: document.getElementById('duration').value,
@@ -582,7 +580,6 @@ async function updateGameDetails() {
         myGames[gameIndex] = {
             ...myGames[gameIndex], // Keep existing data
             location: document.getElementById('location').value,
-            courtNumber: document.getElementById('courtNumber').value || '',
             date: document.getElementById('date').value,
             time: document.getElementById('time').value,
             duration: parseInt(document.getElementById('duration').value),

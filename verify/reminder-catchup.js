@@ -35,7 +35,7 @@ function offsetGame(hours) {
 function makeGame(hours, extra = {}) {
   const { date, time } = offsetGame(hours);
   return {
-    location: 'Test Court', courtNumber: '1', organizerName: 'Host',
+    location: 'Test Court', organizerName: 'Host',
     organizerPhone: '', organizerPlaying: false, date, time, duration: 90,
     totalPlayers: 4, message: '', registrationMode: 'fcfs', waitlist: [], outPlayers: [],
     cancelled: false, created: new Date().toISOString(),

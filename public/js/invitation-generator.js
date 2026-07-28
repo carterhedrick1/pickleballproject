@@ -4,7 +4,6 @@
  * Generates a complete invitation message for a pickleball game
  * @param {Object} gameData - Game information
  * @param {string} gameData.location - Game location
- * @param {string} gameData.courtNumber - Court number (optional)
  * @param {string} gameData.date - Game date (YYYY-MM-DD format)
  * @param {string} gameData.time - Game time (HH:MM format)
  * @param {number} gameData.duration - Game duration in minutes
@@ -24,12 +23,6 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
     // Format date without timezone issues
     const formattedDate = formatDateForDisplay(gameData.date);
     const formattedTime = formatTime(gameData.time);
-    
-    // Build location text with court number if provided
-    let locationText = gameData.location;
-    if (gameData.courtNumber && gameData.courtNumber.trim()) {
-        locationText += ` - ${gameData.courtNumber}`;
-    }
     
     // Calculate available spots
     const totalPlayers = parseInt(gameData.totalPlayers);
@@ -60,7 +53,7 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
 
 ${gameLink}
 
-Location: ${locationText}
+Location: ${gameData.location}
 Date: ${formattedDate}
 Time: ${formattedTime}
 Duration: ${gameData.duration} minutes
@@ -209,7 +202,6 @@ function getCurrentGameDataFromStorage() {
     if (myGames.length === 0) {
         return {
             location: 'Game Location',
-            courtNumber: '',
             date: new Date().toISOString().split('T')[0], // Today's date
             time: '18:00', // 6 PM default
             duration: '90',

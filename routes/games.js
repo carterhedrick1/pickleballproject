@@ -337,7 +337,6 @@ module.exports = function mountGameRoutes(app) {
         hostGames.push({
           gameId,
           location: fullGame.location,
-          courtNumber: fullGame.courtNumber,
           date: fullGame.date,
           time: fullGame.time,
           duration: fullGame.duration,
@@ -409,7 +408,6 @@ module.exports = function mountGameRoutes(app) {
             recentGames.push({
               gameId,
               location: fullGame.location,
-              courtNumber: fullGame.courtNumber,
               date: fullGame.date,
               time: fullGame.time,
               cancelled: fullGame.cancelled || false,

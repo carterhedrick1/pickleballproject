@@ -248,11 +248,14 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         ),
         playerText: name && name.textContent,
         injectedElement: Boolean(name && name.querySelector('img')),
-        playersActive: document.getElementById('Players').classList.contains('active')
+        playersActive: document.getElementById('Players').classList.contains('active'),
+        locationOnly: !document.getElementById('court' + 'Number') &&
+          !document.body.innerText.includes(['Court', 'Number'].join(' '))
       };
     })()`);
     assert(manageReady.visible && manageReady.namespaces, 'management feature modules initialize');
     assert(manageReady.playersActive, 'management tab listeners work without inline handlers');
+    assert(manageReady.locationOnly, 'management details use location without a separate court field');
     assert(
       manageReady.playerText.startsWith('<img') && !manageReady.injectedElement,
       'HTML-like player names remain text in the live page'
@@ -268,10 +271,13 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     const gameReady = await mobile.evaluate(`(() => ({
       visible: getComputedStyle(document.getElementById('details')).display !== 'none',
       pageUtils: typeof PageUtils.formatTime12Hour === 'function',
-      external: [...document.scripts].some((s) => s.src.endsWith('/js/game-page.js'))
+      external: [...document.scripts].some((s) => s.src.endsWith('/js/game-page.js')),
+      locationOnly: !document.getElementById('court' + 'Number') &&
+        !document.body.innerText.includes(['Court', 'Number'].join(' '))
     }))()`);
     assert(gameReady.visible && gameReady.pageUtils, 'mobile game page initializes with shared utilities');
     assert(gameReady.external, 'game page uses its external script');
+    assert(gameReady.locationOnly, 'player game details use location without a separate court field');
 
     await desktop.close();
     await mobile.close();

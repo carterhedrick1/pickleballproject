@@ -5,7 +5,6 @@ const { applyGameUpdate } = require('../utils/game-update');
 function savedGame() {
   return {
     location: 'Old Court',
-    courtNumber: '1',
     date: '2026-08-01',
     time: '18:00',
     duration: 90,
@@ -34,7 +33,6 @@ describe('applyGameUpdate', () => {
 
     applyGameUpdate(game, {
       location: 'New Court',
-      courtNumber: '2',
       date: '2026-08-02',
       time: '19:00',
       duration: '120',
@@ -51,7 +49,6 @@ describe('applyGameUpdate', () => {
     });
 
     assert.equal(game.location, 'New Court');
-    assert.equal(game.courtNumber, '2');
     assert.equal(game.date, '2026-08-02');
     assert.equal(game.time, '19:00');
     assert.equal(game.duration, '120');
