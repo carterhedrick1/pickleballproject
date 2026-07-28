@@ -29,6 +29,7 @@ const {
   getDevAsset,
   getDevAssetMeta
 } = require('../database');
+const sloganModule = require('../public/js/slogans');
 
 const DEV_PASSWORD = process.env.DEV_PASSWORD || 'vibe123';
 const COOKIE_NAME = 'dev_auth';
@@ -40,6 +41,7 @@ const NOTE_STATUSES = ['idea', 'building', 'done-not-deployed', 'live'];
 // Which generated doc pages may be published. Without this an authenticated
 // caller could write any key they liked into dev_assets.
 const PUBLISHABLE = ['screens', 'containers', 'copy-deck'];
+const SLOGAN_ASSET_NAME = 'slogan-config';
 
 const SERVER_STARTED_AT = new Date();
 
@@ -109,6 +111,36 @@ async function getTextbeltQuota() {
   }
 }
 
+async function loadSloganConfig() {
+  const saved = await getDevAsset(SLOGAN_ASSET_NAME);
+  if (!saved) return sloganModule.normalizeConfig();
+  try {
+    return sloganModule.normalizeConfig(JSON.parse(saved.content));
+  } catch (err) {
+    console.error('Error parsing saved slogan configuration:', err.message);
+    return sloganModule.normalizeConfig();
+  }
+}
+
+function validateSloganConfig(body) {
+  const slogans = body && body.slogans;
+  const names = body && body.names;
+  if (!Array.isArray(slogans) || !Array.isArray(names)) {
+    return { error: 'Slogans and names must both be lists.' };
+  }
+  if (!slogans.length) return { error: 'Keep at least one slogan in the rotation.' };
+  if (!names.length) return { error: 'Keep at least one rotating name.' };
+  if (slogans.length > 200) return { error: 'The rotation can contain up to 200 slogans.' };
+  if (names.length > 100) return { error: 'The name list can contain up to 100 names.' };
+  if (slogans.some((slogan) => !String(slogan).trim() || String(slogan).trim().length > 240)) {
+    return { error: 'Each slogan must be between 1 and 240 characters.' };
+  }
+  if (names.some((name) => !String(name).trim() || String(name).trim().length > 50)) {
+    return { error: 'Each name must be between 1 and 50 characters.' };
+  }
+  return { config: sloganModule.normalizeConfig({ slogans, names }) };
+}
+
 module.exports = function mountDevRoutes(app) {
   // Brute force is the only real attack on a single shared password.
   const loginLimiter = rateLimit({
@@ -149,6 +181,28 @@ module.exports = function mountDevRoutes(app) {
   app.post('/api/dev/logout', (req, res) => {
     res.setHeader('Set-Cookie', `${COOKIE_NAME}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
     res.json({ success: true });
+  });
+
+  // Public pages only need read access. Changes stay behind the Developer Area sign-in.
+  app.get('/api/slogans', async (_req, res) => {
+    try {
+      res.json(await loadSloganConfig());
+    } catch (err) {
+      console.error('Error loading slogans:', err);
+      res.json(sloganModule.normalizeConfig());
+    }
+  });
+
+  app.put('/api/dev/slogans', requireDevAuth, async (req, res) => {
+    const result = validateSloganConfig(req.body);
+    if (result.error) return res.status(400).json({ error: result.error });
+    try {
+      await saveDevAsset(SLOGAN_ASSET_NAME, JSON.stringify(result.config));
+      res.json({ success: true, ...result.config });
+    } catch (err) {
+      console.error('Error saving slogans:', err);
+      res.status(500).json({ error: 'Could not save the slogan rotation.' });
+    }
   });
 
   // -------------------------------------------------------------------------

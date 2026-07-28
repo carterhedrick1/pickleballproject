@@ -22,25 +22,35 @@ align-items: center !important;
 .header-brand {
 display: flex !important;
 align-items: center !important;
-/* Remove center justification for desktop */
+min-width: 0;
+max-width: 680px;
 }
 .header-brand a {
 display: flex !important;
-align-items: center !important;
-/* Remove center justification for desktop */
+flex-direction: column;
+align-items: flex-start !important;
 text-decoration: none !important;
+min-width: 0;
 }
 .header-brand svg {
-height: 79px !important; /* 30% bigger than original 60px (72px + 10% more) */
+height: 63px !important;
 width: auto !important;
-max-width: 264px !important; /* 30% bigger than original 200px (240px + 10% more) */
+max-width: 264px !important;
 display: block !important;
+}
+.header-slogan {
+color: #bdc3c7;
+font-size: 14px;
+line-height: 1.35;
+margin: 3px 0 0 7px;
+max-width: 620px;
 }
 .header-nav {
 display: flex;
 gap: 20px;
 align-items: center;
-/* Remove absolute positioning */
+flex-shrink: 0;
+margin-left: 30px;
 }
 .header-nav a {
 color: #bdc3c7;
@@ -81,17 +91,24 @@ display: inline-block !important;
 text-align: center !important;
  }
 .header-brand svg {
-height: 73px !important; 
+height: 63px !important;
 max-width: 317px !important; 
 width: auto !important;
 display: block !important;
 margin: 0 auto !important;
  }
+.header-slogan {
+display: block;
+font-size: 13px;
+margin: 4px auto 0;
+max-width: 520px;
+}
 .header-nav {
 gap: 15px !important;
 flex-wrap: wrap !important;
 justify-content: center !important;
 width: 100% !important;
+margin-left: 0 !important;
 /* Remove position override since it's not needed */
  }
 .header-nav a {

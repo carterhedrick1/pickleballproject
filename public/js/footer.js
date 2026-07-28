@@ -1,12 +1,15 @@
 // footer.js
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    const slogan = window.InOrOutSlogans
+        ? await window.InOrOutSlogans.getForPage()
+        : 'Pickleball Organizer';
     const footerHTML = `
         <footer class="site-footer">
             <div class="footer-container">
                 <div class="footer-content">
                     <div class="footer-section">
                         <h4>In or Out</h4>
-                        <p>Making pickleball game organization simple and fun. Connect with players, organize games, and never miss a match.</p>
+                        <p class="footer-slogan"></p>
                     </div>
                     
                     <div class="footer-section">
@@ -44,4 +47,5 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Insert footer at the end of body
     document.body.insertAdjacentHTML('beforeend', footerHTML);
+    document.querySelector('.footer-slogan').textContent = slogan;
 });

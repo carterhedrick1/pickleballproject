@@ -62,7 +62,9 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
           document.querySelector('[data-checkbox-id="notifyWaitlistStarts"]').classList.contains('checked'),
         notificationTitles: [...document.querySelectorAll('.notifications-section .notification-title')]
           .map((element) => element.textContent.trim()),
-        scriptExternal: [...document.scripts].some((s) => s.src.endsWith('/js/create.js'))
+        scriptExternal: [...document.scripts].some((s) => s.src.endsWith('/js/create.js')),
+        headerSlogan: document.querySelector('.header-slogan')?.textContent.trim(),
+        footerSlogan: document.querySelector('.footer-slogan')?.textContent.trim()
       };
     })()`);
     assert(createReady.form && createReady.selected, 'create form and extracted handlers work');
@@ -79,6 +81,12 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       'organizer notification titles capitalize every word'
     );
     assert(createReady.scriptExternal, 'create page uses its external script');
+    assert(
+      createReady.headerSlogan &&
+        createReady.headerSlogan === createReady.footerSlogan &&
+        !createReady.headerSlogan.includes('{NAME}'),
+      'one resolved slogan is shared by the header and footer'
+    );
 
     await desktop.evaluate(`(() => {
       const select = document.getElementById('locationSelect');
@@ -453,6 +461,36 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         cancelledDeleteResult.successMessage === 'Game deleted.' &&
         deletedGameResponse.status === 404,
       'a host can permanently delete a cancelled upcoming game immediately'
+    );
+
+    await desktop.goto(`${local.baseUrl}/dev.html`);
+    const devPassword = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+    const devLogin = await desktop.evaluate(`(async () => {
+      const res = await fetch('/api/dev/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: ${devPassword} })
+      });
+      if (res.ok) {
+        showApp();
+        document.querySelector('[data-tab="slogans"]').click();
+      }
+      return res.ok;
+    })()`);
+    await cdp.sleep(500);
+    const sloganEditor = await desktop.evaluate(`(() => ({
+      slogans: document.querySelectorAll('#sloganList .slogan-entry').length,
+      names: document.querySelectorAll('#sloganNameList .name-chip').length,
+      sloganForm: Boolean(document.getElementById('sloganForm')),
+      nameForm: Boolean(document.getElementById('sloganNameForm'))
+    }))()`);
+    assert(
+      devLogin &&
+        sloganEditor.slogans > 0 &&
+        sloganEditor.names > 0 &&
+        sloganEditor.sloganForm &&
+        sloganEditor.nameForm,
+      'developer area can manage the slogan and name rotations'
     );
 
     const mobile = await browser.newPage({
