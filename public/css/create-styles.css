@@ -58,8 +58,7 @@
                 -webkit-font-smoothing: antialiased;
             }
             
-            .share-title,
-            .management-reminder h4 {
+            .share-title {
                 font-weight: 500 !important;
             }
         }
@@ -628,17 +627,6 @@
             padding: 16px 0;
         }
 
-        .create-another-section {
-            margin-top: 24px;
-            text-align: center;
-        }
-
-        .create-another-link {
-            color: #2563eb;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
         .center-copy-section p {
             color: #6b7280;
             margin: 14px 0;
@@ -680,28 +668,6 @@
         .copy-btn:active {
             transform: translateY(0);
             box-shadow: 0 4px 16px rgba(30, 58, 138, 0.3);
-        }
-
-        .management-reminder {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 1px solid #f59e0b;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .management-reminder h4 {
-            color: #92400e;
-            margin: 0 0 10px 0;
-            font-size: 15px;
-            font-weight: 600;
-        }
-
-        .management-reminder p {
-            color: #92400e;
-            margin: 6px 0;
-            font-size: 13px;
         }
 
         /* REPLACE your notifications CSS - MOVE this OUTSIDE the @media query and BEFORE the @media (max-width: 768px) section */

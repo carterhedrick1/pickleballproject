@@ -170,6 +170,7 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       formHidden: document.querySelector('.form-section').hidden,
       shareVisible: getComputedStyle(document.getElementById('shareLink')).display !== 'none',
       heading: document.querySelector('.page-header h1').textContent.trim(),
+      hasManagementReminder: Boolean(document.querySelector('.management-reminder')),
       canCreateAnother: Boolean(document.querySelector('a[href="/create.html"].create-another-link'))
     }))()`);
     assert(
@@ -177,8 +178,8 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       createSuccessView.heading === 'Game Created',
       'successful creation replaces the reset form with the invitation step'
     );
-    assert(createSuccessView.canCreateAnother,
-      'the success step offers a clear way to create another game');
+    assert(!createSuccessView.hasManagementReminder && !createSuccessView.canCreateAnother,
+      'the success step omits the management reminder and create-another link');
 
     const uploadedCreate = await desktop.evaluate(`(() => {
       const set = (id, value) => {

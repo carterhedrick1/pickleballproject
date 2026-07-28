@@ -5,6 +5,12 @@
 Run the checks that cover the changed behavior and exercise user-facing changes locally.
 `npm run verify:deploy` is the minimum deployment gate.
 
+## Commit and deploy completed changes
+
+Unless Scott explicitly says otherwise, commit completed changes made to IN or OUT and deploy
+them to production. Follow the automatic deployment workflow below and verify the affected
+behavior in production.
+
 ## Commits on main deploy automatically
 
 This repository uses `.githooks/post-commit`. After every commit on `main`, the hook:
