@@ -55,5 +55,29 @@
         return item;
     }
 
-    return { createPlayerItem, createRecipientOption };
+    function createRosterOption(document, player, onChange) {
+        const option = element(document, 'label', 'roster-player-option');
+        const input = element(document, 'input', 'roster-player-checkbox');
+        input.type = 'checkbox';
+        input.value = player.phone || '';
+        input.dataset.phone = player.phone || '';
+        input.addEventListener('change', onChange);
+
+        const details = element(document, 'span', 'roster-player-details');
+        details.appendChild(
+            element(document, 'span', 'roster-player-name', player.name || player.phone || '')
+        );
+
+        const metadata = [player.phone || ''];
+        if (player.duprRating != null) metadata.push(`DUPR ${player.duprRating}`);
+        details.appendChild(
+            element(document, 'span', 'roster-player-meta', metadata.filter(Boolean).join(' · '))
+        );
+
+        option.appendChild(input);
+        option.appendChild(details);
+        return option;
+    }
+
+    return { createPlayerItem, createRecipientOption, createRosterOption };
 });

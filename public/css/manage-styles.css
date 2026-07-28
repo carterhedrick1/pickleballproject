@@ -736,11 +736,122 @@ button:active {
 }
 
 .collapsible-content.expanded {
-    max-height: 600px;
+    max-height: 1600px;
 }
 
 .collapsible-inner {
     padding: 24px;
+}
+
+.roster-picker h4 {
+    color: #1f2937;
+    font-size: 17px;
+    margin: 0;
+}
+
+.roster-picker-status {
+    color: #6b7280;
+    font-size: 14px;
+    margin-top: 18px;
+}
+
+.roster-picker-status.error-text {
+    color: #991b1b;
+}
+
+.roster-picker-list {
+    display: grid;
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 18px;
+    padding-right: 4px;
+}
+
+.roster-player-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 12px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.roster-player-option:hover {
+    border-color: #86b789;
+    background: #f0fdf4;
+}
+
+.roster-player-option:has(input:checked) {
+    border-color: #429046;
+    background: #f0fdf4;
+}
+
+.roster-player-checkbox {
+    width: 19px;
+    height: 19px;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 auto;
+    accent-color: #429046;
+}
+
+.roster-player-details {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.roster-player-name {
+    color: #1f2937;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.roster-player-meta {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.35;
+}
+
+.roster-picker-actions {
+    margin-top: 20px;
+}
+
+.roster-picker-actions .form-group {
+    margin-bottom: 14px;
+}
+
+button:disabled {
+    background: #9ca3af;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.add-player-divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 30px 0 24px;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.add-player-divider::before,
+.add-player-divider::after {
+    content: '';
+    height: 1px;
+    flex: 1;
+    background: #d1d5db;
 }
 
 /* Modern notifications - matching index page */

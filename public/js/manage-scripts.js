@@ -293,6 +293,10 @@ async function fetchGameData() {
         
         // Populate player lists
         updatePlayerLists();
+
+        // Populate the host's saved roster picker. The first load fetches the roster;
+        // later game refreshes only re-filter the cached roster against the current players.
+        loadHostRoster();
         
         // Generate share links (only if not expired)
         if (!GameUtils.getGameStatus(gameData).canEdit) {
@@ -367,6 +371,11 @@ function setupEventListeners() {
             e.preventDefault();
             addPlayerManually();
         });
+    }
+
+    const addRosterPlayersBtn = document.getElementById('addRosterPlayersBtn');
+    if (addRosterPlayersBtn) {
+        addRosterPlayersBtn.addEventListener('click', addPlayersFromRoster);
     }
     
     // Announcement form

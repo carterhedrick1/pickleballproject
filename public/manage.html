@@ -264,12 +264,41 @@
                     <div class="collapsible-section">
                         <div class="collapsible-header" data-collapsible="addPlayerSection">
                             <h3>
-                                Add Player Manually
+                                Add Players
                                 <span class="collapse-icon">▼</span>
                             </h3>
                         </div>
                         <div id="addPlayerSection" class="collapsible-content">
                             <div class="collapsible-inner">
+                                <section class="roster-picker" aria-labelledby="rosterPickerTitle">
+                                    <h4 id="rosterPickerTitle">Select Players From Your Roster</h4>
+                                    <p class="form-help-text">
+                                        Choose one or more saved players to add to this game.
+                                    </p>
+                                    <div id="rosterPickerStatus" class="roster-picker-status" aria-live="polite">
+                                        Loading your roster...
+                                    </div>
+                                    <div id="rosterPlayerList" class="roster-picker-list"></div>
+                                    <div id="rosterPickerActions" class="roster-picker-actions" hidden>
+                                        <div class="form-group">
+                                            <label>Add Selected Players To:</label>
+                                            <div class="radio-group">
+                                                <div class="radio-option">
+                                                    <input type="radio" id="rosterAddToConfirmed" name="rosterAddTo" value="add" checked>
+                                                    <label for="rosterAddToConfirmed">Confirmed Players</label>
+                                                </div>
+                                                <div class="radio-option">
+                                                    <input type="radio" id="rosterAddToWaitlist" name="rosterAddTo" value="waitlist">
+                                                    <label for="rosterAddToWaitlist">Waitlist</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="button" id="addRosterPlayersBtn" disabled>Add Selected Players</button>
+                                    </div>
+                                </section>
+
+                                <div class="add-player-divider"><span>Or Add A Player Manually</span></div>
+
                                 <form id="addPlayerForm">
                                     <div class="form-group">
                                         <label for="playerName">Player Name:</label>

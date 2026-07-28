@@ -240,6 +240,21 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       'a local creation says that no confirmation text was sent'
     );
 
+    for (const player of [
+      { phone: fx.JOIN_PHONE, name: 'Roster Player One', duprRating: 3.5 },
+      { phone: fx.FORM_PHONE, name: 'Roster Player Two', duprRating: 4.1 }
+    ]) {
+      const response = await fetch(
+        `${local.baseUrl}/api/roster/${fx.HOST_PHONE}/${player.phone}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(player)
+        }
+      );
+      assert(response.ok, `${player.name} is available in the host roster fixture`);
+    }
+
     await desktop.goto(
       `${local.baseUrl}/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`
     );
@@ -288,6 +303,73 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     assert(
       manageReady.playerText.startsWith('<img') && !manageReady.injectedElement,
       'HTML-like player names remain text in the live page'
+    );
+
+    const rosterPickerReady = await desktop.evaluate(`(() => {
+      document.querySelector('[data-collapsible="addPlayerSection"]').click();
+      const choices = [...document.querySelectorAll('.roster-player-checkbox')];
+      const names = [...document.querySelectorAll('.roster-player-name')]
+        .map((node) => node.textContent.trim());
+      choices.forEach((choice) => {
+        choice.checked = true;
+        choice.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      const button = document.getElementById('addRosterPlayersBtn');
+      const result = {
+        count: choices.length,
+        names,
+        buttonText: button.textContent,
+        buttonEnabled: !button.disabled
+      };
+      button.click();
+      return result;
+    })()`);
+    assert(
+      rosterPickerReady.count === 2 &&
+        rosterPickerReady.names.join('|') === 'Roster Player One|Roster Player Two',
+      'management loads the host roster as safe multi-select choices'
+    );
+    assert(
+      rosterPickerReady.buttonEnabled &&
+        rosterPickerReady.buttonText === 'Add 2 Selected Players',
+      'the roster action reflects the number of selected players'
+    );
+    await cdp.sleep(1000);
+    const rosterAddResult = await desktop.evaluate(`(() => {
+      const names = [
+        ...document.querySelectorAll('#confirmedPlayers .player-name'),
+        ...document.querySelectorAll('#waitlistPlayers .player-name')
+      ].map((node) => node.textContent.trim());
+      return {
+        firstAdded: names.includes('Roster Player One'),
+        secondAdded: names.includes('Roster Player Two'),
+        status: document.getElementById('status').textContent,
+        pickerEmpty: document.getElementById('rosterPickerStatus').textContent
+      };
+    })()`);
+    assert(
+      rosterAddResult.firstAdded && rosterAddResult.secondAdded,
+      'multiple selected roster players are added through the management page'
+    );
+    assert(
+      rosterAddResult.status === '2 roster players added successfully' &&
+        rosterAddResult.pickerEmpty === 'Everyone on your roster is already listed for this game.',
+      'the roster picker reports success and filters players already in the game'
+    );
+
+    await desktop.evaluate(`(() => {
+      document.getElementById('playerName').value = 'Manual Waitlist Player';
+      document.getElementById('addToWaitlist').checked = true;
+      document.getElementById('addPlayerForm').requestSubmit();
+    })()`);
+    await cdp.sleep(700);
+    const manualWaitlistAdded = await desktop.evaluate(`(() =>
+      [...document.querySelectorAll('#waitlistPlayers .player-name')]
+        .some((node) => node.textContent.trim() === 'Manual Waitlist Player')
+    )()`);
+    assert(
+      manualWaitlistAdded,
+      'the manual Waitlist choice sends the destination expected by the server'
     );
 
     const activeDeleteResponse = await fetch(

@@ -1,5 +1,194 @@
 // players features for the management page.
 
+let hostRoster = [];
+let hostRosterState = 'idle';
+
+function normalizedPlayerPhone(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    return digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+}
+
+function currentGamePhones() {
+    return new Set([
+        ...(gameData?.players || []),
+        ...(gameData?.waitlist || []),
+        ...(gameData?.outPlayers || [])
+    ].map((player) => normalizedPlayerPhone(player.phone)).filter(Boolean));
+}
+
+function updateRosterSelectionState() {
+    const button = document.getElementById('addRosterPlayersBtn');
+    if (!button) return;
+
+    const count = document.querySelectorAll(
+        '#rosterPlayerList .roster-player-checkbox:checked'
+    ).length;
+    button.disabled = count === 0;
+    button.textContent = count === 1 ? 'Add 1 Selected Player' :
+        (count > 1 ? `Add ${count} Selected Players` : 'Add Selected Players');
+}
+
+function renderHostRoster() {
+    const list = document.getElementById('rosterPlayerList');
+    const status = document.getElementById('rosterPickerStatus');
+    const actions = document.getElementById('rosterPickerActions');
+    if (!list || !status || !actions) return;
+
+    list.innerHTML = '';
+    status.classList.remove('error-text');
+
+    if (hostRosterState === 'loading' || hostRosterState === 'idle') {
+        status.textContent = 'Loading your roster...';
+        actions.hidden = true;
+        return;
+    }
+
+    if (hostRosterState === 'error') {
+        status.textContent = 'Could not load your roster. Please refresh the page to try again.';
+        status.classList.add('error-text');
+        actions.hidden = true;
+        return;
+    }
+
+    const listedPhones = currentGamePhones();
+    const available = hostRoster.filter(
+        (player) => !listedPhones.has(normalizedPlayerPhone(player.phone))
+    );
+
+    if (hostRoster.length === 0) {
+        status.textContent =
+            'Your roster is empty. Players with phone numbers appear here after they join one of your games.';
+        actions.hidden = true;
+        return;
+    }
+
+    if (available.length === 0) {
+        status.textContent = 'Everyone on your roster is already listed for this game.';
+        actions.hidden = true;
+        return;
+    }
+
+    status.textContent = `${available.length} ${available.length === 1 ? 'player is' : 'players are'} available.`;
+    available.forEach((player) => {
+        list.appendChild(
+            ManageRender.createRosterOption(document, player, updateRosterSelectionState)
+        );
+    });
+    actions.hidden = false;
+    updateRosterSelectionState();
+}
+
+async function loadHostRoster() {
+    if (!gameData?.hostPhone) {
+        hostRoster = [];
+        hostRosterState = 'loaded';
+        renderHostRoster();
+        return;
+    }
+
+    if (hostRosterState === 'loaded') {
+        renderHostRoster();
+        return;
+    }
+
+    if (hostRosterState === 'loading') return;
+    hostRosterState = 'loading';
+    renderHostRoster();
+
+    try {
+        const response = await fetch(`/api/roster/${encodeURIComponent(gameData.hostPhone)}`);
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        const data = await response.json();
+        hostRoster = Array.isArray(data.roster) ? data.roster : [];
+        hostRosterState = 'loaded';
+    } catch (error) {
+        console.error('Error loading host roster:', error);
+        hostRosterState = 'error';
+    }
+
+    renderHostRoster();
+}
+
+async function postHostPlayer(player, addTo) {
+    const response = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            name: player.name,
+            phone: player.phone,
+            addTo,
+            token: hostToken
+        })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || 'Failed to add player');
+    }
+    return data;
+}
+
+async function addPlayersFromRoster() {
+    if (!GameUtils.getGameStatus(gameData).canEdit) {
+        showStatus('Cannot add players to expired games', 'error');
+        return;
+    }
+
+    const selectedPhones = new Set(
+        [...document.querySelectorAll('#rosterPlayerList .roster-player-checkbox:checked')]
+            .map((input) => normalizedPlayerPhone(input.dataset.phone))
+    );
+    const selectedPlayers = hostRoster.filter(
+        (player) => selectedPhones.has(normalizedPlayerPhone(player.phone))
+    );
+
+    if (selectedPlayers.length === 0) {
+        showStatus('Select at least one roster player to add', 'error');
+        return;
+    }
+
+    const addTo = document.querySelector('input[name="rosterAddTo"]:checked').value;
+    const button = document.getElementById('addRosterPlayersBtn');
+    button.disabled = true;
+    showStatus(
+        `Adding ${selectedPlayers.length} roster ${selectedPlayers.length === 1 ? 'player' : 'players'}...`,
+        'info'
+    );
+
+    const added = [];
+    const failed = [];
+    let smsFailures = 0;
+
+    for (const player of selectedPlayers) {
+        try {
+            const result = await postHostPlayer(player, addTo);
+            added.push(player);
+            if (player.phone && result.sms && !result.sms.success) smsFailures += 1;
+        } catch (error) {
+            failed.push({ player, message: error.message });
+        }
+    }
+
+    await fetchGameData();
+
+    const addedText = `${added.length} roster ${added.length === 1 ? 'player' : 'players'} added`;
+    if (failed.length) {
+        const failedNames = failed.map(({ player }) => player.name || player.phone).join(', ');
+        showStatus(
+            `${added.length ? `${addedText}. ` : ''}Could not add ${failedNames}.`,
+            'error'
+        );
+        return;
+    }
+
+    const smsText = smsFailures
+        ? ` (${smsFailures} SMS ${smsFailures === 1 ? 'notification' : 'notifications'} failed)`
+        : '';
+    showStatus(`${addedText} successfully${smsText}`, smsFailures ? 'error' : 'success');
+}
+
 function updatePlayerLists() {
     const confirmedPlayers = document.getElementById('confirmedPlayers');
     const waitlistPlayers = document.getElementById('waitlistPlayers');
@@ -113,29 +302,11 @@ async function addPlayerManually() {
     try {
         const name = document.getElementById('playerName').value;
         const phone = document.getElementById('playerPhone').value;
-        const action = document.querySelector('input[name="addTo"]:checked').value;
+        const addTo = document.querySelector('input[name="addTo"]:checked').value;
         
         showStatus('Adding player...', 'info');
-        
-        const response = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name,
-                phone,
-                action,
-                token: hostToken
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to add player');
-        }
-        
-        const data = await response.json();
+
+        const data = await postHostPlayer({ name, phone }, addTo);
         console.log('Player added manually:', data);
         
         // Reset form
@@ -430,6 +601,8 @@ async function removeOutPlayer(playerId) {
 window.ManageApp.players = {
 
     updatePlayerLists,
+    loadHostRoster,
+    addPlayersFromRoster,
     addPlayerManually,
     moveToWaitlist,
     promoteToGame,

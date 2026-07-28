@@ -44,4 +44,20 @@ describe('ManageRender', () => {
     assert.equal(item.children[0].dataset.name, name);
     assert.equal(item.children[1].textContent, name);
   });
+
+  it('renders roster choices as safe text with their phone and DUPR rating', () => {
+    const name = '<img src=x onerror="globalThis.hacked=true">';
+    const option = ManageRender.createRosterOption(
+      document,
+      { name, phone: '5551234567', duprRating: 3.75 },
+      () => {}
+    );
+
+    assert.equal(option.tag, 'label');
+    assert.equal(option.children[0].type, 'checkbox');
+    assert.equal(option.children[0].dataset.phone, '5551234567');
+    assert.equal(option.children[1].children[0].textContent, name);
+    assert.equal(option.children[1].children[1].textContent, '5551234567 · DUPR 3.75');
+    assert.equal(option.children.some((child) => child.tag === 'img'), false);
+  });
 });
