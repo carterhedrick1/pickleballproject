@@ -8,6 +8,7 @@ const {
 const smsHandler = require('../sms-handler');
 const { formatDateForSMS, formatTimeForSMS, formatLocationForSMS } = require('../utils/sms-format');
 const { getCentralTimeNow, isGameUpcoming } = require('../utils/central-time');
+const { resolveTextMessage } = require('./text-message-rotation');
 
 const sentRemindersCache = new Map();
 const remindedPlayersCache = new Map();
@@ -102,10 +103,21 @@ async function checkAndSendReminders() {
           }
           if (alreadySent) continue;
 
-          const message =
-            `Reminder: Your pickleball game is ${describeGameDay(game, centralNow)} ` +
+          const gameDay = describeGameDay(game, centralNow);
+          const defaultMessage =
+            `Reminder: Your pickleball game is ${gameDay} ` +
             `at ${formatTimeForSMS(game.time)} at ${formatLocationForSMS(game)}. ` +
             'Looking forward to seeing you! Reply 2 for details or 9 to cancel.';
+          const message = await resolveTextMessage(
+            'upcoming-reminder',
+            defaultMessage,
+            {
+              LOCATION: formatLocationForSMS(game),
+              DATE: formatDateForSMS(game.date),
+              TIME: formatTimeForSMS(game.time),
+              DAY: gameDay
+            }
+          );
 
           reminderAttempts.set(playerKey, {
             count: priorAttempts + 1,

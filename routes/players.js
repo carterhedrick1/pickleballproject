@@ -38,6 +38,7 @@ const {
   removeFromGame
 } = require('../services/player-service');
 const { buildSelectedPlayerMessage } = require('../services/youre-in-rotation');
+const { resolveTextMessage } = require('../services/text-message-rotation');
 
 module.exports = function mountPlayerRoutes(app) {
   // Quietly builds the host's roster as people sign up. A roster row is a nicety - a failure
@@ -132,6 +133,16 @@ module.exports = function mountPlayerRoutes(app) {
           } else {
             message = `Thanks for letting us know you can't make the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. We appreciate the heads up!`;
           }
+          message = await resolveTextMessage(
+            'player-cancellation',
+            message,
+            {
+              LOCATION: locationText,
+              DATE: gameDate,
+              TIME: gameTime,
+              STATUS: result.previousStatus || 'out'
+            }
+          );
           smsResult = await sendSMSWithRetry(playerData.phone, message, gameId);
         }
 
@@ -196,6 +207,18 @@ module.exports = function mountPlayerRoutes(app) {
             // Regular waitlist - show position, allow details
             message = `You've been added to the waitlist for Pickleball at ${locationText}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.`;
           }
+          message = await resolveTextMessage(
+            game.registrationMode === 'waitlist'
+              ? 'application-confirmation'
+              : 'waitlist-confirmation',
+            message,
+            {
+              LOCATION: locationText,
+              DATE: gameDate,
+              TIME: gameTime,
+              POSITION: result.position
+            }
+          );
         }
         
         // Retries once, and the result is reported to the client so the page can say the text
@@ -290,6 +313,18 @@ module.exports = function mountPlayerRoutes(app) {
           message = await buildSelectedPlayerMessage(game, result.position);
         } else {
           message = `You've been added to the waitlist for the pickleball game at ${locationText}. You are #${result.position} on the waitlist. You'll be notified if a spot opens up! Reply 2 for details or 9 to cancel.`;
+          message = await resolveTextMessage(
+            game.registrationMode === 'waitlist'
+              ? 'application-confirmation'
+              : 'waitlist-confirmation',
+            message,
+            {
+              LOCATION: locationText,
+              DATE: gameDate,
+              TIME: gameTime,
+              POSITION: result.position
+            }
+          );
         }
         
         smsResult = await sendSMS(playerData.phone, message, gameId);
@@ -338,7 +373,18 @@ module.exports = function mountPlayerRoutes(app) {
         const gameTime = formatTimeForSMS(game.time);
         const locationText = formatLocationForSMS(game);
 
-        const message = `You've been moved to the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. You are #${game.waitlist.length} on the waitlist. Reply 2 for details or 9 to cancel.`;
+        const defaultMessage = `You've been moved to the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. You are #${game.waitlist.length} on the waitlist. Reply 2 for details or 9 to cancel.`;
+        const message = await resolveTextMessage(
+          'roster-status-change',
+          defaultMessage,
+          {
+            LOCATION: locationText,
+            DATE: gameDate,
+            TIME: gameTime,
+            POSITION: game.waitlist.length,
+            STATUS: 'waitlist'
+          }
+        );
         smsResult = await sendSMS(player.phone, message, gameId);
       }
       
@@ -424,7 +470,17 @@ module.exports = function mountPlayerRoutes(app) {
         const locationText = formatLocationForSMS(game);
 
         const statusText = removalType === 'confirmed' ? 'registration' : 'waitlist spot';
-        const message = `Your ${statusText} for the pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been cancelled by the organizer.`;
+        const defaultMessage = `Your ${statusText} for the pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been cancelled by the organizer.`;
+        const message = await resolveTextMessage(
+          'roster-status-change',
+          defaultMessage,
+          {
+            LOCATION: locationText,
+            DATE: gameDate,
+            TIME: gameTime,
+            STATUS: removalType
+          }
+        );
         removalSmsResult = await sendSMS(removedPlayer.phone, message);
       }
       

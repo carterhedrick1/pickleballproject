@@ -1,9 +1,11 @@
 // The Developer Area's inventory of every functional SMS category.
 //
 // These previews intentionally use realistic sample values instead of template tokens so the
-// page shows what a person actually sees on their phone. Only the You're In rotation is wired
-// into live delivery today; the other rotations are saved as drafts until their send paths are
-// deliberately connected later.
+// page shows what a person actually sees on their phone. The You're In rotation is always live.
+// Every other category has an opt-in toggle and keeps its current hard-coded text until enabled.
+
+const TEXT_MESSAGE_CONFIG_ASSET_NAME = 'text-message-draft-config';
+const DEFAULT_TEXT_TOKEN = '{DEFAULT_TEXT}';
 
 const TEXT_MESSAGE_CATEGORIES = Object.freeze([
   {
@@ -30,6 +32,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       'Sent when a player joins a numbered first-come waitlist. The app adds their live position and game details.',
     preview:
       "You've been added to the waitlist for Pickleball at Oak Park Courts. You are #1 on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.",
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'POSITION'],
     maxLength: 1600
   },
   {
@@ -42,6 +45,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       'Sent in approval mode after a player applies. Positions and the player list stay hidden until the organizer selects players.',
     preview:
       "Thanks for signing up for Pickleball at Oak Park Courts on Sat, Aug 1 at 9:00 AM! The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.",
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME'],
     maxLength: 1600
   },
   {
@@ -56,6 +60,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       "You've been moved to the waitlist for the pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM. You are #1 on the waitlist. Reply 2 for details or 9 to cancel.",
     previewNote:
       'Selection and promotion use the You’re In text. Organizer removal uses registration or waitlist wording.',
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'POSITION', 'STATUS'],
     maxLength: 1600
   },
   {
@@ -68,6 +73,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       'Confirms a reservation, waitlist spot, or approval-mode application cancellation. It also acknowledges an unregistered “out” response.',
     preview:
       'Your pickleball reservation at Oak Park Courts on Sat, Aug 1 at 9:00 AM has been cancelled. Thanks for letting us know!',
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'STATUS'],
     maxLength: 1600
   },
   {
@@ -80,6 +86,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       'Sent once to confirmed players when their game enters the 24-hour reminder window.',
     preview:
       'Reminder: Your pickleball game is tomorrow at 9:00 AM at Oak Park Courts. Looking forward to seeing you! Reply 2 for details or 9 to cancel.',
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'DAY'],
     maxLength: 1600
   },
   {
@@ -92,6 +99,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       'Sent to every confirmed and waitlisted player when the organizer cancels the entire game.',
     preview:
       'CANCELLED: Your pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM has been cancelled. Reason: Courts are closed.',
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'REASON'],
     maxLength: 1600
   },
   {
@@ -106,6 +114,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       'We moved to courts 3 and 4. Please arrive ten minutes early so we can warm up.',
     previewNote:
       'There is no fixed default body today—the organizer’s message is delivered exactly as written.',
+    tokens: ['DEFAULT_TEXT', 'ANNOUNCEMENT', 'LOCATION', 'DATE', 'TIME'],
     maxLength: 1600
   },
   {
@@ -118,6 +127,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       'Sent to the organizer immediately after a new game is successfully created.',
     preview:
       'Your pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM has been created! Reply "1" for management link or "2" for game details.',
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME'],
     maxLength: 1600
   },
   {
@@ -132,6 +142,17 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       'HOST ALERT: Jamie just joined your pickleball game at Oak Park Courts on Sat, Aug 1. 1 spot remaining.',
     previewNote:
       'This is the player-joined version. The current app has five other event-specific versions.',
+    tokens: [
+      'DEFAULT_TEXT',
+      'EVENT',
+      'PLAYER_NAME',
+      'LOCATION',
+      'DATE',
+      'TIME',
+      'SPOTS_LEFT',
+      'WAITLIST_COUNT',
+      'TOTAL_PLAYERS'
+    ],
     maxLength: 1600
   },
   {
@@ -146,6 +167,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       "Here's your management link for Oak Park Courts on Sat, Aug 1 at 9:00 AM: https://inorout.club/manage.html?id=example&token=example",
     previewNote:
       'When the organizer has multiple games, the current app sends a list or highlights the next game.',
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'MANAGEMENT_LINK', 'GAME_COUNT'],
     maxLength: 1600
   },
   {
@@ -160,6 +182,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       'Oak Park Courts\nSat, Aug 1 at 9:00 AM\nDuration: 90 minutes\n\nConfirmed Players (2/4):\n• Scott (Organizer)\n• Jamie\n\nYou are: Confirmed Player\nReply "9" to cancel',
     previewNote:
       'People registered for multiple games first receive a numbered game-selection list.',
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'DURATION', 'ROLE', 'GAME_COUNT'],
     maxLength: 1600
   },
   {
@@ -174,6 +197,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       'Reply 1 for host management, 2 for your game details, or 9 to cancel a spot. If you need anything else, reach out to the organizer.',
     previewNote:
       'Cancellation menus, confirmations, no-game responses, and error replies use additional current versions.',
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'STATUS', 'GAME_COUNT'],
     maxLength: 1600
   }
 ]);
@@ -207,6 +231,7 @@ function normalizeDraftConfig(value) {
   TEXT_MESSAGE_CATEGORIES.forEach((category) => {
     if (category.live) return;
     normalized[category.id] = {
+      enabled: categories[category.id] && categories[category.id].enabled === true,
       messages: normalizeMessages(
         categories[category.id] && categories[category.id].messages,
         category.maxLength
@@ -217,6 +242,8 @@ function normalizeDraftConfig(value) {
 }
 
 module.exports = {
+  TEXT_MESSAGE_CONFIG_ASSET_NAME,
+  DEFAULT_TEXT_TOKEN,
   TEXT_MESSAGE_CATEGORIES,
   getTextMessageCategory,
   normalizeMessages,

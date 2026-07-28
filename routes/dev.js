@@ -36,11 +36,13 @@ const {
   loadYoureInConfig
 } = require('../services/youre-in-rotation');
 const {
+  TEXT_MESSAGE_CONFIG_ASSET_NAME,
   TEXT_MESSAGE_CATEGORIES,
   getTextMessageCategory,
   normalizeMessages,
   normalizeDraftConfig
 } = require('../text-message-categories');
+const { clearTextMessageConfigCache } = require('../services/text-message-rotation');
 
 const DEV_PASSWORD = process.env.DEV_PASSWORD || 'vibe123';
 const COOKIE_NAME = 'dev_auth';
@@ -53,7 +55,6 @@ const NOTE_STATUSES = ['idea', 'building', 'done-not-deployed', 'live'];
 // caller could write any key they liked into dev_assets.
 const PUBLISHABLE = ['screens', 'containers', 'copy-deck'];
 const SLOGAN_ASSET_NAME = 'slogan-config';
-const TEXT_MESSAGE_DRAFT_ASSET_NAME = 'text-message-draft-config';
 
 const SERVER_STARTED_AT = new Date();
 
@@ -167,7 +168,7 @@ function validateYoureInConfig(body) {
 }
 
 async function loadTextMessageDraftConfig() {
-  const saved = await getDevAsset(TEXT_MESSAGE_DRAFT_ASSET_NAME);
+  const saved = await getDevAsset(TEXT_MESSAGE_CONFIG_ASSET_NAME);
   if (!saved) return normalizeDraftConfig();
   try {
     return normalizeDraftConfig(JSON.parse(saved.content));
@@ -287,6 +288,9 @@ module.exports = function mountDevRoutes(app) {
       res.json({
         categories: TEXT_MESSAGE_CATEGORIES.map((category) => ({
           ...category,
+          enabled: category.live
+            ? true
+            : draftConfig.categories[category.id].enabled,
           messages: category.id === 'youre-in'
             ? youreInConfig.messages
             : draftConfig.categories[category.id].messages
@@ -313,9 +317,17 @@ module.exports = function mountDevRoutes(app) {
       }
 
       const config = await loadTextMessageDraftConfig();
-      config.categories[category.id] = { messages: result.messages };
-      await saveDevAsset(TEXT_MESSAGE_DRAFT_ASSET_NAME, JSON.stringify(config));
-      res.json({ success: true, messages: result.messages });
+      config.categories[category.id] = {
+        enabled: req.body && req.body.enabled === true,
+        messages: result.messages
+      };
+      await saveDevAsset(TEXT_MESSAGE_CONFIG_ASSET_NAME, JSON.stringify(config));
+      clearTextMessageConfigCache();
+      res.json({
+        success: true,
+        enabled: config.categories[category.id].enabled,
+        messages: result.messages
+      });
     } catch (err) {
       console.error(`Error saving ${category.title} texts:`, err);
       res.status(500).json({ error: `Could not save the ${category.title} texts.` });

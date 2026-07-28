@@ -12,6 +12,7 @@ const { departureAlertType } = require('../utils/promotion');
 const { leaveGame } = require('./player-service');
 const { sendSMS, sendSMSWithRetry } = require('./sms-client');
 const { buildSelectedPlayerMessage } = require('./youre-in-rotation');
+const { resolveTextMessage } = require('./text-message-rotation');
 const {
   formatPhoneNumber,
   formatDateForSMS,
@@ -20,6 +21,17 @@ const {
 } = require('../utils/sms-format');
 
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
+
+async function sendCategorySMS(
+  categoryId,
+  to,
+  defaultMessage,
+  values = {},
+  gameId = null
+) {
+  const message = await resolveTextMessage(categoryId, defaultMessage, values);
+  return sendSMS(to, message, gameId);
+}
 
 async function sendOrganizerNotification(gameId, game, eventType, playerName = null) {
   try {
@@ -91,6 +103,20 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
     }
 
     if (shouldSend && message) {
+      message = await resolveTextMessage(
+        'host-alerts',
+        message,
+        {
+          EVENT: eventType,
+          PLAYER_NAME: playerName || '',
+          LOCATION: locationText,
+          DATE: gameDate,
+          TIME: gameTime,
+          SPOTS_LEFT: parseInt(game.totalPlayers) - game.players.length,
+          WAITLIST_COUNT: (game.waitlist || []).length,
+          TOTAL_PLAYERS: game.totalPlayers
+        }
+      );
       const smsResult = await sendSMS(game.hostPhone, message, gameId);
       if (smsResult.success) {
         console.log(`[ORGANIZER NOTIFICATION] Sent ${eventType} to host for game ${gameId}`);
@@ -133,7 +159,11 @@ async function handleIncomingSMS(req, res) {
     } 
     // Default response for unrecognized commands
     else {
-      await sendSMS(fromNumber, `Reply 1 for host management, 2 for your game details, or 9 to cancel a spot. If you need anything else, reach out to the organizer.`);
+      await sendCategorySMS(
+        'cancellation-help',
+        fromNumber,
+        `Reply 1 for host management, 2 for your game details, or 9 to cancel a spot. If you need anything else, reach out to the organizer.`
+      );
       await clearLastCommand(cleanedFromNumber);
     }
     
@@ -155,7 +185,11 @@ async function handleNumberResponse(fromNumber, cleanedFromNumber, messageText, 
     await handleCancellationSelection(fromNumber, cleanedFromNumber, selection);
   } else {
     await clearLastCommand(cleanedFromNumber);
-    await sendSMS(fromNumber, `Reply "1" for management link, "2" for game details, or "9" to cancel your reservation.`);
+    await sendCategorySMS(
+      'cancellation-help',
+      fromNumber,
+      `Reply "1" for management link, "2" for game details, or "9" to cancel your reservation.`
+    );
   }
 }
 
@@ -168,7 +202,12 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
     console.log(`[SMS DEBUG] Host games found:`, hostGames.map(g => `${g.game.location}`));
     
     if (hostGames.length === 0) {
-      await sendSMS(fromNumber, `Sorry, we couldn't find any upcoming games that you're hosting.`);
+      await sendCategorySMS(
+        'management-links',
+        fromNumber,
+        `Sorry, we couldn't find any upcoming games that you're hosting.`,
+        { GAME_COUNT: 0 }
+      );
     } else if (hostGames.length === 1) {
       console.log(`[SMS] Sending single management link for: ${hostGames[0].game.location}`);
       const { id, game, hostInfo } = hostGames[0];
@@ -178,7 +217,18 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
       const gameTime = formatTimeForSMS(game.time);
       const locationText = formatLocationForSMS(game);
 
-      await sendSMS(fromNumber, `Here's your management link for ${locationText} on ${gameDate} at ${gameTime}: ${managementLink}`);
+      await sendCategorySMS(
+        'management-links',
+        fromNumber,
+        `Here's your management link for ${locationText} on ${gameDate} at ${gameTime}: ${managementLink}`,
+        {
+          LOCATION: locationText,
+          DATE: gameDate,
+          TIME: gameTime,
+          MANAGEMENT_LINK: managementLink,
+          GAME_COUNT: 1
+        }
+      );
     } else {
       console.log(`[SMS] User has ${hostGames.length} host games, sending all links`);
       let responseMessage = `You have ${hostGames.length} upcoming games:\n\n`;
@@ -199,11 +249,20 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
         responseMessage = `You have ${hostGames.length} upcoming games. Please visit the website to manage them.`;
       }
       
-      await sendSMS(fromNumber, responseMessage);
+      await sendCategorySMS(
+        'management-links',
+        fromNumber,
+        responseMessage,
+        { GAME_COUNT: hostGames.length }
+      );
     }
   } catch (error) {
     console.error('Error in handleManagementLinkRequest:', error);
-    await sendSMS(fromNumber, `Sorry, there was an error retrieving your management links. Please try again.`);
+    await sendCategorySMS(
+      'management-links',
+      fromNumber,
+      `Sorry, there was an error retrieving your management links. Please try again.`
+    );
   }
 }
 
@@ -218,15 +277,36 @@ async function handleGameDetailsSelection(fromNumber, cleanedFromNumber, selecti
       
       // Send details for all users - buildGameDetailsMessage handles the logic
       const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
-      await sendSMS(fromNumber, responseMessage);
+      await sendCategorySMS(
+        'game-details',
+        fromNumber,
+        responseMessage,
+        {
+          LOCATION: formatLocationForSMS(game),
+          DATE: formatDateForSMS(game.date),
+          TIME: formatTimeForSMS(game.time),
+          DURATION: game.duration,
+          ROLE: role,
+          GAME_COUNT: userGames.length
+        }
+      );
       await clearLastCommand(cleanedFromNumber);
     } else {
-      await sendSMS(fromNumber, `Invalid game number. Please reply with a number from 1 to ${userGames.length}, or text "2" to see the list again.`);
+      await sendCategorySMS(
+        'game-details',
+        fromNumber,
+        `Invalid game number. Please reply with a number from 1 to ${userGames.length}, or text "2" to see the list again.`,
+        { GAME_COUNT: userGames.length }
+      );
     }
   } catch (error) {
     console.error('Error in handleGameDetailsSelection:', error);
     await clearLastCommand(cleanedFromNumber);
-    await sendSMS(fromNumber, `Sorry, there was an error. Please text "2" to try again.`);
+    await sendCategorySMS(
+      'game-details',
+      fromNumber,
+      `Sorry, there was an error. Please text "2" to try again.`
+    );
   }
 }
 
@@ -241,13 +321,22 @@ async function handleCancellationSelection(fromNumber, cleanedFromNumber, select
       await cancelPlayerFromGame(id, game, player, status, fromNumber);
       await clearLastCommand(cleanedFromNumber);
     } else {
-      await sendSMS(fromNumber, `Invalid selection. Please reply with a valid number from the list or text "9" to try cancelling again.`);
+      await sendCategorySMS(
+        'cancellation-help',
+        fromNumber,
+        `Invalid selection. Please reply with a valid number from the list or text "9" to try cancelling again.`,
+        { GAME_COUNT: playerGames.length }
+      );
       await clearLastCommand(cleanedFromNumber);
     }
   } catch (error) {
     console.error('Error in handleCancellationSelection:', error);
     await clearLastCommand(cleanedFromNumber);
-    await sendSMS(fromNumber, `Sorry, there was an error. Please text "9" to try again.`);
+    await sendCategorySMS(
+      'cancellation-help',
+      fromNumber,
+      `Sorry, there was an error. Please text "9" to try again.`
+    );
   }
 }
 
@@ -303,7 +392,12 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
     console.log(`[SMS DEBUG] Games found:`, userGames.map(g => `${g.game.location} (${g.role})`));
     
     if (userGames.length === 0) {
-      await sendSMS(fromNumber, `You don't have any upcoming games registered to this phone number.`);
+      await sendCategorySMS(
+        'game-details',
+        fromNumber,
+        `You don't have any upcoming games registered to this phone number.`,
+        { GAME_COUNT: 0 }
+      );
       return;
     } 
     
@@ -313,7 +407,20 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
       
       // Send details for all users - buildGameDetailsMessage handles the logic
       const responseMessage = await buildGameDetailsMessage(game, role, cleanedFromNumber);
-      await sendSMS(fromNumber, responseMessage, gameId);
+      await sendCategorySMS(
+        'game-details',
+        fromNumber,
+        responseMessage,
+        {
+          LOCATION: formatLocationForSMS(game),
+          DATE: formatDateForSMS(game.date),
+          TIME: formatTimeForSMS(game.time),
+          DURATION: game.duration,
+          ROLE: role,
+          GAME_COUNT: 1
+        },
+        gameId
+      );
       return;
     } 
     
@@ -322,12 +429,22 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
     await saveLastCommand(cleanedFromNumber, 'details_selection');
     const responseMessage = await buildGameListMessage(userGames);
     const firstGameId = userGames[0].id;
-    await sendSMS(fromNumber, responseMessage, firstGameId);
+    await sendCategorySMS(
+      'game-details',
+      fromNumber,
+      responseMessage,
+      { GAME_COUNT: userGames.length },
+      firstGameId
+    );
     
   } catch (error) {
     console.error('Error in handleGameDetailsRequest:', error);
     await clearLastCommand(cleanedFromNumber);
-    await sendSMS(fromNumber, `Sorry, there was an error retrieving your game details. Please try again.`);
+    await sendCategorySMS(
+      'game-details',
+      fromNumber,
+      `Sorry, there was an error retrieving your game details. Please try again.`
+    );
   }
 }
 
@@ -339,18 +456,32 @@ async function handleCancellationRequest(fromNumber, cleanedFromNumber) {
     const playerGames = await getPlayerGames(cleanedFromNumber, allGames);
     
     if (playerGames.length === 0) {
-      await sendSMS(fromNumber, `We couldn't find any upcoming game registrations for your number.`);
+      await sendCategorySMS(
+        'cancellation-help',
+        fromNumber,
+        `We couldn't find any upcoming game registrations for your number.`,
+        { GAME_COUNT: 0 }
+      );
     } else if (playerGames.length === 1) {
       const { id, game, player, status } = playerGames[0];
       await cancelPlayerFromGame(id, game, player, status, fromNumber);
     } else {
       const responseMessage = await buildCancellationListMessage(playerGames);
-      await sendSMS(fromNumber, responseMessage);
+      await sendCategorySMS(
+        'cancellation-help',
+        fromNumber,
+        responseMessage,
+        { GAME_COUNT: playerGames.length }
+      );
       await saveLastCommand(cleanedFromNumber, 'cancellation_selection');
     }
   } catch (error) {
     console.error('Error in handleCancellationRequest:', error);
-    await sendSMS(fromNumber, `Sorry, there was an error processing your cancellation request. Please try again.`);
+    await sendCategorySMS(
+      'cancellation-help',
+      fromNumber,
+      `Sorry, there was an error processing your cancellation request. Please try again.`
+    );
   }
 }
 
@@ -548,14 +679,18 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
       { protectOrganizer: false }
     );
     if (result.status === 'game_not_found') {
-      await sendSMS(fromNumber, `Sorry, we couldn't find that game anymore.`);
+      await sendCategorySMS(
+        'cancellation-help',
+        fromNumber,
+        `Sorry, we couldn't find that game anymore.`
+      );
       return;
     }
     if (result.status === 'not_found') {
       const message = status === 'confirmed'
         ? `You're no longer registered for that game, so there was nothing to cancel.`
         : `You're no longer on that waitlist, so there was nothing to cancel.`;
-      await sendSMS(fromNumber, message);
+      await sendCategorySMS('cancellation-help', fromNumber, message);
       return;
     }
 
@@ -598,10 +733,24 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
       statusText = (game.registrationMode === 'waitlist') ? 'application' : 'waitlist spot';
     }
     
-    await sendSMS(fromNumber, `Your pickleball ${statusText} at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`);
+    await sendCategorySMS(
+      'player-cancellation',
+      fromNumber,
+      `Your pickleball ${statusText} at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`,
+      {
+        LOCATION: locationText,
+        DATE: gameDate,
+        TIME: gameTime,
+        STATUS: statusText
+      }
+    );
   } catch (error) {
     console.error('Error cancelling player from game:', error);
-    await sendSMS(fromNumber, `Sorry, there was an error cancelling your registration. Please try again or contact the organizer.`);
+    await sendCategorySMS(
+      'cancellation-help',
+      fromNumber,
+      `Sorry, there was an error cancelling your registration. Please try again or contact the organizer.`
+    );
   }
 }
 

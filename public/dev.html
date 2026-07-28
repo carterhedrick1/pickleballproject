@@ -141,6 +141,29 @@
     border-left: 3px solid #4CAF50; padding-left: 11px; color: #495057;
     font-size: 13px;
   }
+  .message-mode {
+    display: flex; align-items: center; gap: 12px; margin-top: 16px;
+    border: 1px solid #e8ecf1; border-radius: 10px; padding: 12px;
+  }
+  .message-mode-copy { flex: 1; }
+  .message-mode-title { font-size: 14px; font-weight: 600; }
+  .message-mode-detail { color: #6c757d; font-size: 13px; }
+  .message-toggle { position: relative; width: 46px; height: 26px; flex: 0 0 46px; }
+  .message-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+  .message-toggle-track {
+    display: block; width: 46px; height: 26px; border-radius: 20px;
+    background: #b0bec5; transition: background 0.2s;
+  }
+  .message-toggle-track::after {
+    content: ''; position: absolute; width: 20px; height: 20px; top: 3px; left: 3px;
+    border-radius: 50%; background: #fff; transition: transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+  .message-toggle input:checked + .message-toggle-track { background: #4CAF50; }
+  .message-toggle input:checked + .message-toggle-track::after { transform: translateX(20px); }
+  .message-toggle input:focus-visible + .message-toggle-track { outline: 2px solid #2e7d32; outline-offset: 2px; }
+  .message-token-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .message-token-list code { font-size: 12px; }
   .bulk-message-fields { display: grid; gap: 10px; }
   .bulk-message-field { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; }
   .bulk-message-field .ghost { margin-top: 5px; }
@@ -298,12 +321,31 @@
             <h2 id="textMessagePreviewTitle">Current App Text</h2>
             <p class="muted" id="textMessageDescription"></p>
             <p class="message-preview-note hidden" id="textMessagePreviewNote"></p>
+            <div class="message-mode hidden" id="textMessageMode">
+              <label class="message-toggle">
+                <input type="checkbox" id="useRandomTexts" aria-label="Use random saved texts">
+                <span class="message-toggle-track"></span>
+              </label>
+              <div class="message-mode-copy">
+                <div class="message-mode-title">Use Random Saved Texts</div>
+                <div class="message-mode-detail" id="textMessageModeDetail">Off — the current app text is used.</div>
+              </div>
+            </div>
+            <div id="textMessageLiveNote" class="message-preview-note hidden">
+              This rotation is already live and randomly selected.
+            </div>
           </div>
         </div>
       </div>
       <div class="panel">
         <h2 id="textMessageAddTitle">Add A You're In Text</h2>
         <p class="muted">Add one or add several before saving. Use a separate box for each complete text.</p>
+        <div id="textMessageTokens" class="hidden">
+          <p class="muted" style="margin-bottom:0">
+            Optional Values: use <code>{DEFAULT_TEXT}</code> to include the complete current message, or insert any value shown below.
+          </p>
+          <div class="message-token-list" id="textMessageTokenList"></div>
+        </div>
         <form class="idea-form" id="youreInForm" style="margin-top:16px">
           <div id="bulkMessageFields" class="bulk-message-fields"></div>
           <details class="bulk-paste">
@@ -873,9 +915,33 @@ function renderTextMessageCategory() {
   const note = el('textMessagePreviewNote');
   note.textContent = category.previewNote || '';
   note.classList.toggle('hidden', !category.previewNote);
+  const mode = el('textMessageMode');
+  const liveNote = el('textMessageLiveNote');
+  mode.classList.toggle('hidden', category.live);
+  liveNote.classList.toggle('hidden', !category.live);
+  el('useRandomTexts').checked = category.enabled === true;
+  el('textMessageModeDetail').textContent = category.enabled
+    ? category.messages.length
+      ? 'On — one saved text is selected randomly.'
+      : 'On — add a saved text; the current app text is the fallback.'
+    : 'Off — the current app text is used.';
+  const tokenPanel = el('textMessageTokens');
+  const tokens = category.tokens || [];
+  tokenPanel.classList.toggle('hidden', !tokens.length);
+  el('textMessageTokenList').innerHTML = tokens
+    .map((token) => `<code>{${escapeHtml(token)}}</code>`)
+    .join('');
   resetBulkMessageFields();
   renderYoureInMessages();
-  setYoureInStatus(category.live ? 'Changes here affect live You’re In texts.' : 'Saved here as drafts; not connected to live delivery yet.');
+  setYoureInStatus(
+    category.live
+      ? 'Changes here affect live You’re In texts.'
+      : category.enabled
+        ? category.messages.length
+          ? 'Random saved texts are live for this category.'
+          : 'Random mode is on, but the current app text is used until a saved text is added.'
+        : 'The current app text remains live until the toggle is turned on.'
+  );
 }
 
 function renderYoureInMessages() {
@@ -944,11 +1010,12 @@ async function saveYoureInMessages(messages, successMessage) {
     const res = await fetch(`/api/dev/text-message-categories/${category.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages })
+      body: JSON.stringify({ messages, enabled: category.enabled === true })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Could not save the ${category.title} texts.`);
     category.messages = data.messages || [];
+    if (!category.live) category.enabled = data.enabled === true;
     youreInConfig = { messages: data.messages };
     editingYoureInIndex = null;
     renderYoureInMessages();
@@ -992,6 +1059,27 @@ el('youreInForm').addEventListener('submit', async (e) => {
 });
 
 el('addAnotherText').addEventListener('click', () => addBulkMessageField());
+
+el('useRandomTexts').addEventListener('change', async (e) => {
+  const category = activeTextMessageCategory();
+  if (!category || category.live) return;
+  const previous = category.enabled === true;
+  category.enabled = e.target.checked;
+  const saved = await saveYoureInMessages(
+    category.messages,
+    category.enabled
+      ? category.messages.length
+        ? 'Random saved texts are now live.'
+        : 'Random mode is on, but the current text will be used until a saved text is added.'
+      : 'The current app text is now live.'
+  );
+  if (!saved) {
+    category.enabled = previous;
+    e.target.checked = previous;
+    return;
+  }
+  renderTextMessageCategory();
+});
 
 el('bulkMessageFields').addEventListener('click', (e) => {
   if (e.target.dataset.action !== 'remove-bulk-text') return;

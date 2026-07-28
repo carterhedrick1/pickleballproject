@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   TEXT_MESSAGE_CATEGORIES,
@@ -48,7 +50,29 @@ test('normalizes saved drafts and ignores unknown category data', () => {
     config.categories['waitlist-confirmation'].messages,
     ['One', 'Two']
   );
+  assert.equal(config.categories['waitlist-confirmation'].enabled, false);
   assert.equal(config.categories['application-confirmation'].messages.length, 0);
   assert.equal(config.categories.unknown, undefined);
   assert.equal(config.categories['youre-in'], undefined);
+});
+
+test('wires every toggle-controlled category into an outgoing SMS path', () => {
+  const root = path.resolve(__dirname, '..');
+  const runtimeSources = [
+    'routes/announcements.js',
+    'routes/games.js',
+    'routes/players.js',
+    'services/reminders.js',
+    'services/sms-webhook.js'
+  ].map((file) => fs.readFileSync(path.join(root, file), 'utf8')).join('\n');
+
+  TEXT_MESSAGE_CATEGORIES
+    .filter((category) => !category.live)
+    .forEach((category) => {
+      assert.match(
+        runtimeSources,
+        new RegExp(`['"]${category.id}['"]`),
+        `${category.id} must be used by an outgoing SMS path`
+      );
+    });
 });

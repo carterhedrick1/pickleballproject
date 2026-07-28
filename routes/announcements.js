@@ -20,6 +20,7 @@ const {
 const { acquireGameLock } = require('../utils/game-lock');
 const { routeFailed } = require('../utils/route-error');
 const { isHost } = require('../utils/host-auth');
+const { resolveTextMessage } = require('../services/text-message-rotation');
 
 module.exports = function mountAnnouncementRoutes(app) {
   // Send announcement
@@ -43,11 +44,21 @@ module.exports = function mountAnnouncementRoutes(app) {
       
       let recipientCount = 0;
       const results = [];
+      const configuredMessage = await resolveTextMessage(
+        'organizer-announcement',
+        message,
+        {
+          ANNOUNCEMENT: message,
+          LOCATION: formatLocationForSMS(game),
+          DATE: formatDateForSMS(game.date),
+          TIME: formatTimeForSMS(game.time)
+        }
+      );
       
       if (includeConfirmed) {
         for (const player of game.players) {
           if (player.phone && !player.isOrganizer) {
-            const result = await sendSMS(player.phone, message, gameId);
+            const result = await sendSMS(player.phone, configuredMessage, gameId);
             results.push({ player: player.name, type: 'confirmed', result });
             if (result.success) recipientCount++;
           }
@@ -57,7 +68,7 @@ module.exports = function mountAnnouncementRoutes(app) {
       if (includeWaitlist) {
         for (const player of game.waitlist || []) {
           if (player.phone) {
-            const result = await sendSMS(player.phone, message);
+            const result = await sendSMS(player.phone, configuredMessage);
             results.push({ player: player.name, type: 'waitlist', result });
             if (result.success) recipientCount++;
           }
@@ -99,11 +110,21 @@ module.exports = function mountAnnouncementRoutes(app) {
       
       let recipientCount = 0;
       const results = [];
+      const configuredMessage = await resolveTextMessage(
+        'organizer-announcement',
+        message,
+        {
+          ANNOUNCEMENT: message,
+          LOCATION: formatLocationForSMS(game),
+          DATE: formatDateForSMS(game.date),
+          TIME: formatTimeForSMS(game.time)
+        }
+      );
       
       // Send to each selected recipient
       for (const recipient of recipients) {
         if (recipient.phone) {
-          const result = await sendSMS(recipient.phone, message, gameId);
+          const result = await sendSMS(recipient.phone, configuredMessage, gameId);
           results.push({ 
             player: recipient.name, 
             type: recipient.type, 

@@ -533,6 +533,17 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       document.getElementById('addAnotherText').click();
       const bulkFields = document.querySelectorAll('#bulkMessageFields .text-message-input').length;
       const bulkButton = document.getElementById('addAllTexts').textContent.trim();
+      const youreInLiveNote = !document.getElementById('textMessageLiveNote').classList.contains('hidden');
+      document.querySelector('[data-tab="waitlist-confirmation"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      const waitlistToggle = {
+        visible: !document.getElementById('textMessageMode').classList.contains('hidden'),
+        off: document.getElementById('useRandomTexts').checked === false,
+        fallback: document.getElementById('textMessageModeDetail').textContent.includes('current app text'),
+        tokens: document.getElementById('textMessageTokenList').textContent.includes('{DEFAULT_TEXT}')
+      };
+      document.querySelector('[data-tab="youre-in"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 40));
       document.querySelector('[data-action="edit-youre-in"]')?.click();
       const form = document.querySelector('.youre-in-edit-form');
       const input = form?.querySelector('textarea');
@@ -546,6 +557,8 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         bulkFields,
         bulkButton,
         bulkPaste: Boolean(document.getElementById('bulkPasteTexts')),
+        youreInLiveNote,
+        waitlistToggle,
         focused: document.activeElement === input,
         save: form?.querySelector('button[type="submit"]')?.textContent.trim(),
         cancel: form?.querySelector('[data-action="cancel-edit-youre-in"]')?.textContent.trim()
@@ -564,6 +577,11 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         youreInEditor.bulkFields === 2 &&
         youreInEditor.bulkButton === 'Add All 2 Texts' &&
         youreInEditor.bulkPaste &&
+        youreInEditor.youreInLiveNote &&
+        youreInEditor.waitlistToggle.visible &&
+        youreInEditor.waitlistToggle.off &&
+        youreInEditor.waitlistToggle.fallback &&
+        youreInEditor.waitlistToggle.tokens &&
         youreInEditor.focused &&
         youreInEditor.save === 'Save' &&
         youreInEditor.cancel === 'Cancel' &&

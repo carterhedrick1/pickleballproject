@@ -36,6 +36,7 @@ const { isGameUpcoming } = require('../utils/central-time');
 const { routeFailed } = require('../utils/route-error');
 const { isHost } = require('../utils/host-auth');
 const { applyGameUpdate } = require('../utils/game-update');
+const { resolveTextMessage } = require('../services/text-message-rotation');
 
 module.exports = function mountGameRoutes(app) {
   app.post('/api/games', async (req, res) => {
@@ -89,7 +90,12 @@ module.exports = function mountGameRoutes(app) {
         const gameDate = formatDateForSMS(gameData.date);
         const gameTime = formatTimeForSMS(gameData.time);
         const locationText = formatLocationForSMS(gameData);
-        const hostMessage = `Your pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been created! Reply "1" for management link or "2" for game details.`;
+        const defaultHostMessage = `Your pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been created! Reply "1" for management link or "2" for game details.`;
+        const hostMessage = await resolveTextMessage(
+          'game-created',
+          defaultHostMessage,
+          { LOCATION: locationText, DATE: gameDate, TIME: gameTime }
+        );
         smsResult = await sendSMS(formattedHostPhone, hostMessage, gameId);
       }
       
@@ -234,7 +240,18 @@ module.exports = function mountGameRoutes(app) {
       // Notify all players
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      const cancellationMessage = `CANCELLED: Your pickleball game at ${game.location} on ${gameDate} at ${gameTime} has been cancelled. Reason: ${reason || 'No reason provided'}.`;
+      const cancellationReason = reason || 'No reason provided';
+      const defaultCancellationMessage = `CANCELLED: Your pickleball game at ${game.location} on ${gameDate} at ${gameTime} has been cancelled. Reason: ${cancellationReason}.`;
+      const cancellationMessage = await resolveTextMessage(
+        'game-cancelled',
+        defaultCancellationMessage,
+        {
+          LOCATION: game.location,
+          DATE: gameDate,
+          TIME: gameTime,
+          REASON: cancellationReason
+        }
+      );
       
       let notificationCount = 0;
       const results = [];
@@ -445,6 +462,20 @@ module.exports = function mountGameRoutes(app) {
           message = `You have ${recentGames.length} recent games. Here's your ${upcomingGames.length > 0 ? 'next' : 'most recent'} game:\n\n${locationText}\n${gameDate} at ${gameTime}\n\n${gameToShow.managementLink}`;
         }
         
+        const templateGame = recentGames.length === 1
+          ? recentGames[0]
+          : recentGames.find(g => new Date(g.date) >= new Date()) || recentGames[0];
+        message = await resolveTextMessage(
+          'management-links',
+          message,
+          {
+            LOCATION: formatLocationForSMS(templateGame),
+            DATE: formatDateForSMS(templateGame.date),
+            TIME: formatTimeForSMS(templateGame.time),
+            MANAGEMENT_LINK: templateGame.managementLink,
+            GAME_COUNT: recentGames.length
+          }
+        );
         smsResult = await sendSMS(phoneNumber, message);
       }
       
