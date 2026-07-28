@@ -519,6 +519,13 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     );
 
     const youreInEditor = await desktop.evaluate(`(async () => {
+      const textMessagingTab = document.getElementById('textMessagingTab');
+      textMessagingTab.click();
+      const dropdownOpened = {
+        label: textMessagingTab.textContent.trim().replace('▼', '').trim(),
+        expanded: textMessagingTab.getAttribute('aria-expanded') === 'true',
+        visible: !document.getElementById('textMessagingMenu').classList.contains('hidden')
+      };
       document.querySelector('[data-tab="youre-in"]').click();
       await new Promise((resolve) => setTimeout(resolve, 250));
       const categoryTabs = [
@@ -556,6 +563,13 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         editButtons,
         startsWithYoureIn: first.startsWith("You're IN"),
         form: Boolean(document.getElementById('youreInForm')),
+        dropdownOpened,
+        topLevelCategoryTabs:
+          document.querySelectorAll('.tabs > button[data-tab="youre-in"]').length,
+        dropdownActive: textMessagingTab.classList.contains('active'),
+        dropdownClosed:
+          textMessagingTab.getAttribute('aria-expanded') === 'false' &&
+          document.getElementById('textMessagingMenu').classList.contains('hidden'),
         categoryTabs: categoryTabs.filter((id) => document.querySelector('[data-tab="' + id + '"]')).length,
         preview: document.getElementById('textMessagePreviewBody')?.textContent.includes('Pickleball at'),
         bulkFields,
@@ -577,6 +591,12 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         youreInEditor.editButtons === youreInEditor.messages &&
         youreInEditor.startsWithYoureIn &&
         youreInEditor.form &&
+        youreInEditor.dropdownOpened.label === 'Text Messaging' &&
+        youreInEditor.dropdownOpened.expanded &&
+        youreInEditor.dropdownOpened.visible &&
+        youreInEditor.topLevelCategoryTabs === 0 &&
+        youreInEditor.dropdownActive &&
+        youreInEditor.dropdownClosed &&
         youreInEditor.categoryTabs === 13 &&
         youreInEditor.preview &&
         youreInEditor.bulkFields === 2 &&
@@ -592,7 +612,7 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         youreInEditor.save === 'Save' &&
         youreInEditor.cancel === 'Cancel' &&
         youreInEditor.cancelled,
-      'developer area shows all text categories, previews, bulk entry, and inline editing'
+      'developer area dropdown shows all text categories, previews, bulk entry, and inline editing'
     );
 
     const mobile = await browser.newPage({

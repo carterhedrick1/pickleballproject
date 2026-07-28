@@ -47,12 +47,40 @@
     background: #e8f5e9; color: #2e7d32; padding: 3px 9px; border-radius: 20px; margin-left: 10px;
   }
   .topbar .env.production { background: #fff3e0; color: #ef6c00; }
-  .tabs { background: #fff; border-bottom: 1px solid #e8ecf1; padding: 0 24px; display: flex; gap: 4px; overflow-x: auto; }
-  .tabs button {
+  .tabs {
+    background: #fff; border-bottom: 1px solid #e8ecf1; padding: 0 24px;
+    display: flex; gap: 4px; flex-wrap: wrap; overflow: visible;
+  }
+  .tabs > button, .tab-dropdown > button {
     background: none; border: none; border-bottom: 3px solid transparent; border-radius: 0;
     padding: 13px 16px; font-size: 15px; color: #6c757d; white-space: nowrap;
   }
-  .tabs button.active { color: #4CAF50; border-bottom-color: #4CAF50; font-weight: 600; }
+  .tabs > button.active, .tab-dropdown > button.active {
+    color: #4CAF50; border-bottom-color: #4CAF50; font-weight: 600;
+  }
+  .tab-dropdown { position: relative; }
+  .tab-dropdown-trigger { display: flex; align-items: center; gap: 7px; }
+  .tab-dropdown-trigger .arrow {
+    font-size: 11px; transition: transform 0.15s ease;
+  }
+  .tab-dropdown-trigger[aria-expanded="true"] .arrow { transform: rotate(180deg); }
+  .tab-dropdown-menu {
+    position: absolute; z-index: 20; top: calc(100% + 1px); left: 0;
+    width: max-content; min-width: 260px; max-width: min(360px, calc(100vw - 32px));
+    max-height: min(560px, calc(100vh - 140px)); overflow-y: auto;
+    padding: 7px; background: #fff; border: 1px solid #e1e6eb; border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(31, 45, 61, 0.16);
+  }
+  .tab-dropdown-menu button {
+    display: block; width: 100%; padding: 10px 12px; border-radius: 7px;
+    background: #fff; color: #495057; text-align: left; white-space: normal;
+  }
+  .tab-dropdown-menu button:hover, .tab-dropdown-menu button:focus {
+    background: #f3f8f3; color: #2e7d32; outline: none;
+  }
+  .tab-dropdown-menu button.active {
+    background: #e8f5e9; color: #2e7d32; font-weight: 600;
+  }
   main { max-width: 1000px; margin: 0 auto; padding: 24px; }
   .panel { background: #fff; border-radius: 12px; padding: 22px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
   .panel h2 { margin: 0 0 16px; font-size: 17px; }
@@ -230,19 +258,27 @@
     <button data-tab="status" class="active">Status</button>
     <button data-tab="ideas">Ideas</button>
     <button data-tab="slogans">Slogans</button>
-    <button data-tab="youre-in">You're In</button>
-    <button data-tab="waitlist-confirmation">Waitlist Confirmation</button>
-    <button data-tab="application-confirmation">Application Confirmation</button>
-    <button data-tab="roster-status-change">Roster Status Change</button>
-    <button data-tab="player-cancellation">Player Cancellation</button>
-    <button data-tab="upcoming-reminder">Upcoming Game Reminder</button>
-    <button data-tab="game-cancelled">Entire Game Cancelled</button>
-    <button data-tab="organizer-announcement">Organizer-Written Announcement</button>
-    <button data-tab="game-created">Game Creation Confirmation</button>
-    <button data-tab="host-alerts">Host Activity Alerts</button>
-    <button data-tab="management-links">Management Link Delivery</button>
-    <button data-tab="game-details">Game Details</button>
-    <button data-tab="cancellation-help">Cancellation Workflow And Command Help</button>
+    <div class="tab-dropdown">
+      <button type="button" class="tab-dropdown-trigger" id="textMessagingTab"
+        aria-haspopup="menu" aria-expanded="false" aria-controls="textMessagingMenu">
+        Text Messaging <span class="arrow" aria-hidden="true">▼</span>
+      </button>
+      <div class="tab-dropdown-menu hidden" id="textMessagingMenu" role="menu">
+        <button type="button" data-tab="youre-in" role="menuitem">You're In</button>
+        <button type="button" data-tab="waitlist-confirmation" role="menuitem">Waitlist Confirmation</button>
+        <button type="button" data-tab="application-confirmation" role="menuitem">Application Confirmation</button>
+        <button type="button" data-tab="roster-status-change" role="menuitem">Roster Status Change</button>
+        <button type="button" data-tab="player-cancellation" role="menuitem">Player Cancellation</button>
+        <button type="button" data-tab="upcoming-reminder" role="menuitem">Upcoming Game Reminder</button>
+        <button type="button" data-tab="game-cancelled" role="menuitem">Entire Game Cancelled</button>
+        <button type="button" data-tab="organizer-announcement" role="menuitem">Organizer-Written Announcement</button>
+        <button type="button" data-tab="game-created" role="menuitem">Game Creation Confirmation</button>
+        <button type="button" data-tab="host-alerts" role="menuitem">Host Activity Alerts</button>
+        <button type="button" data-tab="management-links" role="menuitem">Management Link Delivery</button>
+        <button type="button" data-tab="game-details" role="menuitem">Game Details</button>
+        <button type="button" data-tab="cancellation-help" role="menuitem">Cancellation Workflow And Command Help</button>
+      </div>
+    </div>
     <button data-tab="errors">Errors</button>
     <button data-tab="courts">Courts</button>
     <button data-tab="screens">Screens</button>
@@ -515,22 +551,78 @@ function showApp() {
 // Tabs
 // ---------------------------------------------------------------------------
 
-document.querySelectorAll('.tabs button').forEach((button) => {
-  button.addEventListener('click', () => {
-    document.querySelectorAll('.tabs button').forEach((b) => b.classList.remove('active'));
-    button.classList.add('active');
-    const tab = button.dataset.tab;
-    STANDARD_TAB_IDS.forEach((name) => {
-      el('tab-' + name).classList.toggle('hidden', name !== tab);
-    });
-    el('tab-youre-in').classList.toggle('hidden', !TEXT_MESSAGE_TAB_IDS.includes(tab));
-    if (tab === 'status') loadStatus();
-    if (tab === 'ideas') loadNotes();
-    if (tab === 'slogans') loadSlogans();
-    if (TEXT_MESSAGE_TAB_IDS.includes(tab)) loadTextMessageCategory(tab);
-    if (tab === 'errors') loadErrors();
-    if (tab === 'courts') loadCourts();
+function closeTextMessagingMenu({ restoreFocus = false } = {}) {
+  el('textMessagingMenu').classList.add('hidden');
+  el('textMessagingTab').setAttribute('aria-expanded', 'false');
+  if (restoreFocus) el('textMessagingTab').focus();
+}
+
+function activateTab(tab) {
+  const isTextMessaging = TEXT_MESSAGE_TAB_IDS.includes(tab);
+  document.querySelectorAll('.tabs > button[data-tab]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.tab === tab);
   });
+  el('textMessagingTab').classList.toggle('active', isTextMessaging);
+  el('textMessagingMenu').querySelectorAll('[data-tab]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.tab === tab);
+    button.setAttribute('aria-current', button.dataset.tab === tab ? 'page' : 'false');
+  });
+  STANDARD_TAB_IDS.forEach((name) => {
+    el('tab-' + name).classList.toggle('hidden', name !== tab);
+  });
+  el('tab-youre-in').classList.toggle('hidden', !isTextMessaging);
+  if (tab === 'status') loadStatus();
+  if (tab === 'ideas') loadNotes();
+  if (tab === 'slogans') loadSlogans();
+  if (isTextMessaging) loadTextMessageCategory(tab);
+  if (tab === 'errors') loadErrors();
+  if (tab === 'courts') loadCourts();
+}
+
+document.querySelectorAll('.tabs > button[data-tab]').forEach((button) => {
+  button.addEventListener('click', () => {
+    closeTextMessagingMenu();
+    activateTab(button.dataset.tab);
+  });
+});
+
+el('textMessagingTab').addEventListener('click', () => {
+  const menu = el('textMessagingMenu');
+  const willOpen = menu.classList.contains('hidden');
+  menu.classList.toggle('hidden', !willOpen);
+  el('textMessagingTab').setAttribute('aria-expanded', String(willOpen));
+});
+
+el('textMessagingMenu').querySelectorAll('[data-tab]').forEach((button) => {
+  button.addEventListener('click', () => {
+    activateTab(button.dataset.tab);
+    closeTextMessagingMenu({ restoreFocus: true });
+  });
+});
+
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.tab-dropdown')) closeTextMessagingMenu();
+});
+
+el('textMessagingTab').addEventListener('keydown', (event) => {
+  if (event.key !== 'ArrowDown') return;
+  event.preventDefault();
+  el('textMessagingMenu').classList.remove('hidden');
+  el('textMessagingTab').setAttribute('aria-expanded', 'true');
+  el('textMessagingMenu').querySelector('[data-tab]').focus();
+});
+
+el('textMessagingMenu').addEventListener('keydown', (event) => {
+  const items = [...el('textMessagingMenu').querySelectorAll('[data-tab]')];
+  const currentIndex = items.indexOf(document.activeElement);
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeTextMessagingMenu({ restoreFocus: true });
+  } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    const offset = event.key === 'ArrowDown' ? 1 : -1;
+    items[(currentIndex + offset + items.length) % items.length].focus();
+  }
 });
 
 // ---------------------------------------------------------------------------
