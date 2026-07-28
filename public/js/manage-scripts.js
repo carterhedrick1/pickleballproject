@@ -439,7 +439,17 @@ function populateGameDetails() {
     document.getElementById('date').value = formatDateForInput(gameData.date);
     document.getElementById('time').value = gameData.time || '';
     document.getElementById('duration').value = gameData.duration || '';
-    document.getElementById('players').value = gameData.totalPlayers || '';
+    const organizerPlaying = gameData.organizerPlaying === true;
+    document.getElementById('players').value = PlayerCapacity.additionalFromTotal(
+        gameData.totalPlayers,
+        organizerPlaying
+    );
+    document.getElementById('playersLabel').textContent = organizerPlaying
+        ? 'Number Of Additional Players Needed:'
+        : 'Number Of Players Needed:';
+    document.getElementById('playersHelp').textContent = organizerPlaying
+        ? 'You are Player 1. Enter only the number of other players needed.'
+        : 'Enter the total number of players needed. No organizer is included.';
     document.getElementById('message').value = gameData.message || '';
     
     // Set notification preferences with explicit error handling
@@ -536,7 +546,7 @@ async function updateGameDetails() {
             date: formatDateForServer(document.getElementById('date').value),
             time: document.getElementById('time').value,
             duration: document.getElementById('duration').value,
-            totalPlayers: document.getElementById('players').value,
+            playersNeeded: document.getElementById('players').value,
             message: document.getElementById('message').value,
             notificationPreferences: formattedPreferences,
             token: hostToken
@@ -583,7 +593,10 @@ async function updateGameDetails() {
             date: document.getElementById('date').value,
             time: document.getElementById('time').value,
             duration: parseInt(document.getElementById('duration').value),
-            totalPlayers: parseInt(document.getElementById('players').value),
+            totalPlayers: PlayerCapacity.totalFromAdditional(
+                document.getElementById('players').value,
+                gameData.organizerPlaying === true
+            ),
             message: document.getElementById('message').value,
             // Keep other existing properties like id, hostToken, created, etc.
         };

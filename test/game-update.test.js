@@ -108,4 +108,25 @@ describe('applyGameUpdate', () => {
       waitlistStarts: true
     });
   });
+
+  it('turns additional players needed into full capacity for a playing organizer', () => {
+    const game = savedGame();
+    game.organizerPlaying = true;
+
+    applyGameUpdate(game, {
+      playersNeeded: '3',
+      totalPlayers: '99'
+    });
+
+    assert.equal(game.totalPlayers, 4);
+  });
+
+  it('uses the entered count directly when the organizer is not playing', () => {
+    const game = savedGame();
+    game.organizerPlaying = false;
+
+    applyGameUpdate(game, { playersNeeded: '3' });
+
+    assert.equal(game.totalPlayers, 3);
+  });
 });

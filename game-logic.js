@@ -4,6 +4,7 @@ const { formatPhoneNumber } = require('./utils/sms-format');
 const reminders = require('./services/reminders');
 reminders.resetReminderState();
 const { checkAndSendReminders } = reminders;
+const PlayerCapacity = require('./public/js/player-capacity');
 const {
   findExistingPlayer,
   joinPlayer,
@@ -85,16 +86,25 @@ function checkGameNotExpired(game) {
 // Create game data function
 function createGameData(formData) {
   if (DEBUG) console.log('[DEBUG] Creating game data, received:', formData);
+
+  const organizerPlaying = formData.organizerPlaying === true ||
+    formData.organizerPlaying === 'true' ||
+    formData.organizerPlaying === 'on';
+  const hasAdditionalPlayerCount =
+    Object.prototype.hasOwnProperty.call(formData, 'playersNeeded');
+  const totalPlayers = hasAdditionalPlayerCount
+    ? PlayerCapacity.totalFromAdditional(formData.playersNeeded, organizerPlaying)
+    : parseInt(formData.totalPlayers);
   
   const gameData = {
     location: formData.location,
     organizerName: formData.organizerName || 'Organizer',
     organizerPhone: formData.organizerPhone ? formatPhoneNumber(formData.organizerPhone) : '',
-    organizerPlaying: formData.organizerPlaying,
+    organizerPlaying,
     date: formData.date,
     time: formData.time,
     duration: parseInt(formData.duration),
-    totalPlayers: parseInt(formData.totalPlayers),
+    totalPlayers,
     message: formData.message,
     registrationMode: formData.registrationMode || 'fcfs',
     waitlist: [],

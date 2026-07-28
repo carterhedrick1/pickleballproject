@@ -238,6 +238,7 @@ function copyInvitation(game) {
         time: game.time,
         duration: game.duration,
         totalPlayers: game.totalPlayers,
+        organizerPlaying: game.organizerPlaying,
         registrationMode: game.registrationMode
     };
 

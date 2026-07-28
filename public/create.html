@@ -125,9 +125,9 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="players">Number Of Players Needed:</label>
-                        <input type="number" id="players" name="players" value="4" min="1" max="50" required>
-                        <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">Include yourself if you're playing. Any number from 1 to 50.</small>
+                        <label for="players">Number Of Additional Players Needed:</label>
+                        <input type="number" id="players" name="players" value="3" min="1" max="50" required>
+                        <small id="playersHelp" style="color: #666; font-size: 12px; margin-top: 5px; display: block;">You are already Player 1. Enter 3 for a four-player game.</small>
                     </div>
 
                     <div class="form-group">
@@ -265,6 +265,7 @@
         </div>
     </div> <!-- Close container -->
 
+    <script src="/js/player-capacity.js"></script>
     <script src="/js/create.js"></script>
     <script src="/js/invitation-generator.js"></script>
     <script src="/js/footer.js"></script>

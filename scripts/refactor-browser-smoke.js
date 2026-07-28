@@ -136,7 +136,7 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       set('organizerPhone', '${fx.FORM_PHONE}');
       set('date', '${fx.date}');
       set('time', '17:30');
-      set('players', '4');
+      set('players', '3');
       set('message', '${fx.MARKER}');
       document.getElementById('gameForm').requestSubmit();
     })()`);
@@ -151,6 +151,8 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         gameId,
         imageCount: library.images.length,
         selectedImageId: library.selectedImageId,
+        totalPlayers: game.totalPlayers,
+        confirmedPlayers: game.players.length,
         waitlistNotificationSaved: game.notificationPreferences?.waitlistStarts === true
       };
     })()`);
@@ -160,6 +162,10 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     );
     assert(noImageResult.waitlistNotificationSaved,
       'the waitlist-start notification default is saved with the game');
+    assert(
+      noImageResult.totalPlayers === 4 && noImageResult.confirmedPlayers === 1,
+      'three additional players plus the playing organizer creates a four-player game'
+    );
     const createSuccessView = await desktop.evaluate(`(() => ({
       formHidden: document.querySelector('.form-section').hidden,
       shareVisible: getComputedStyle(document.getElementById('shareLink')).display !== 'none',
@@ -188,7 +194,7 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       set('organizerPhone', '${fx.FORM_PHONE}');
       set('date', '${fx.date}');
       set('time', '17:30');
-      set('players', '4');
+      set('players', '3');
       set('message', '${fx.MARKER}');
       const binary = atob('${PNG_1PX.toString('base64')}');
       const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
@@ -255,6 +261,8 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         playersActive: document.getElementById('Players').classList.contains('active'),
         locationOnly: !document.getElementById('court' + 'Number') &&
           !document.body.innerText.includes(['Court', 'Number'].join(' ')),
+        additionalPlayers: document.getElementById('players').value,
+        additionalPlayersHelp: document.getElementById('playersHelp').textContent,
         imageUpdateCopy: document.querySelector('.court-images-intro')?.textContent
           .includes('player link you already sent'),
         imageChoiceWidth,
@@ -264,6 +272,11 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     assert(manageReady.visible && manageReady.namespaces, 'management feature modules initialize');
     assert(manageReady.playersActive, 'management tab listeners work without inline handlers');
     assert(manageReady.locationOnly, 'management details use location without a separate court field');
+    assert(
+      manageReady.additionalPlayers === '5' &&
+        manageReady.additionalPlayersHelp.includes('Player 1'),
+      'management shows five additional players for a six-player game with the host playing'
+    );
     assert(manageReady.imageUpdateCopy,
       'court image copy explains that the existing player link updates automatically');
     assert(

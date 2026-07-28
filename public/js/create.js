@@ -18,6 +18,9 @@
             document.getElementById('date').value = tomorrowStr;
             // Set default start time to 6:00 PM
             document.getElementById('time').value = '18:00';
+            const organizerPlaying = document.getElementById('organizerPlaying');
+            organizerPlaying.addEventListener('change', updatePlayersHelp);
+            updatePlayersHelp();
             setupLocationPicker();
             document.querySelectorAll('[data-checkbox-id]').forEach((element) => {
                 element.addEventListener('click', (event) => {
@@ -30,6 +33,14 @@
                 });
             });
         });
+
+        function updatePlayersHelp() {
+            const organizerPlaying = document.getElementById('organizerPlaying').checked;
+            const help = document.getElementById('playersHelp');
+            help.textContent = organizerPlaying
+                ? 'You are already Player 1. Enter 3 for a four-player game.'
+                : 'Enter the total number of players you need. No organizer will be added.';
+        }
 
         // ---------------------------------------------------------------------------
         // Location picker
@@ -408,15 +419,17 @@ async function createGame(e) {
         waitlistStarts: formData.get('notifyWaitlistStarts') === 'on'
     };
     
+    const organizerPlaying = formData.get('organizerPlaying') === 'on';
+    const playersNeeded = parseInt(formData.get('players'), 10);
     const gameData = {
         location: formData.get('location'),
         organizerName: formData.get('organizerName'),
         organizerPhone: formData.get('organizerPhone'),
-        organizerPlaying: formData.get('organizerPlaying') === 'on',
+        organizerPlaying,
         date: formData.get('date'),
         time: formData.get('time'),
         duration: parseInt(formData.get('duration')),
-        totalPlayers: parseInt(formData.get('players')),
+        playersNeeded,
         message: formData.get('message'),
         registrationMode: formData.get('registrationMode'),
         notificationPreferences: notificationPreferences,
@@ -459,7 +472,8 @@ async function createGame(e) {
             date: gameData.date,
             time: gameData.time,
             duration: gameData.duration,
-            totalPlayers: gameData.totalPlayers,
+            totalPlayers: data.totalPlayers ??
+                PlayerCapacity.totalFromAdditional(playersNeeded, organizerPlaying),
             organizerPlaying: gameData.organizerPlaying,
             registrationMode: gameData.registrationMode,
             message: gameData.message,

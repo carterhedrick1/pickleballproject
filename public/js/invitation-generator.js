@@ -27,7 +27,7 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
     // Calculate available spots
     const totalPlayers = parseInt(gameData.totalPlayers);
     const organizerPlaying = gameData.organizerPlaying !== false; // Default to true if not specified
-    const availableSpots = organizerPlaying ? totalPlayers - 1 : totalPlayers;
+    const availableSpots = PlayerCapacity.additionalFromTotal(totalPlayers, organizerPlaying);
     
     // Handle singular/plural spots
     const spotsText = availableSpots === 1 ? 'Spot' : 'Spots';

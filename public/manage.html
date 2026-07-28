@@ -90,9 +90,9 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="players">Number Of Players:</label>
+                            <label id="playersLabel" for="players">Number Of Additional Players Needed:</label>
                             <input type="number" id="players" name="players" min="1" max="50" required>
-                            <div class="form-help-text">Enter any number from 1 to 50 players</div>
+                            <div id="playersHelp" class="form-help-text">This does not include you as the organizer.</div>
                         </div>
                         
                         <div class="form-group">
@@ -396,6 +396,7 @@
     </div>
 
     <!-- Load our separated JavaScript files -->
+    <script src="/js/player-capacity.js"></script>
     <script src="/js/invitation-generator.js"></script>
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>

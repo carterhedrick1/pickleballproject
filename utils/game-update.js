@@ -25,10 +25,22 @@ const NOTIFICATION_FIELDS = [
 ];
 
 function applyGameUpdate(game, updateData = {}) {
+  const hasAdditionalPlayerCount =
+    Object.prototype.hasOwnProperty.call(updateData, 'playersNeeded');
+
   for (const field of EDITABLE_FIELDS) {
+    if (field === 'totalPlayers' && hasAdditionalPlayerCount) continue;
     if (Object.prototype.hasOwnProperty.call(updateData, field)) {
       game[field] = updateData[field];
     }
+  }
+
+  if (hasAdditionalPlayerCount) {
+    const PlayerCapacity = require('../public/js/player-capacity');
+    game.totalPlayers = PlayerCapacity.totalFromAdditional(
+      updateData.playersNeeded,
+      game.organizerPlaying === true
+    );
   }
 
   if (updateData.notificationPreferences &&

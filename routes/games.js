@@ -77,6 +77,8 @@ module.exports = function mountGameRoutes(app) {
       const response = {
         gameId,
         hostToken,
+        totalPlayers: gameData.totalPlayers,
+        playersNeeded: gameData.totalPlayers - (gameData.organizerPlaying ? 1 : 0),
         playerLink: `/game.html?id=${gameId}`,
         hostLink: `/manage.html?id=${gameId}&token=${hostToken}`
       };
@@ -346,6 +348,7 @@ module.exports = function mountGameRoutes(app) {
           hostNotes: fullGame.hostNotes || '',
           playerCount: fullGame.players ? fullGame.players.length : 0,
           totalPlayers: fullGame.totalPlayers,
+          organizerPlaying: fullGame.organizerPlaying === true,
           waitlistCount: fullGame.waitlist ? fullGame.waitlist.length : 0,
           photoCount: photoCounts[gameId] || 0,
           // Already inside managementLink; named separately so callers that need to authorize
