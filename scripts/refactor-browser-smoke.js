@@ -290,6 +290,44 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       'HTML-like player names remain text in the live page'
     );
 
+    const cancelResponse = await fetch(
+      `${local.baseUrl}/api/games/${fx.approval.gameId}`,
+      {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: fx.approval.hostToken,
+          reason: 'Browser smoke cancellation'
+        })
+      }
+    );
+    assert(cancelResponse.ok, 'future fixture can be cancelled for My Games coverage');
+
+    await desktop.evaluate(
+      `localStorage.setItem('hostPhone', '${fx.HOST_PHONE}')`
+    );
+    await desktop.goto(`${local.baseUrl}/my-games.html`);
+    await cdp.sleep(500);
+    const myGamesGrouping = await desktop.evaluate(`(() => ({
+      cancelledInUpcoming: document.querySelectorAll('#upcomingList .game-item.cancelled').length,
+      cancelledInPast: document.querySelectorAll('#pastList .game-item.cancelled').length,
+      cancelledPastLocation: document.querySelector('#pastList .game-item.cancelled .game-title')
+        ?.textContent.trim(),
+      cancelledHasDelete: Boolean(
+        document.querySelector('#pastList .game-item.cancelled [data-delete]')
+      )
+    }))()`);
+    assert(
+      myGamesGrouping.cancelledInUpcoming === 0 &&
+        myGamesGrouping.cancelledInPast === 1 &&
+        myGamesGrouping.cancelledPastLocation === 'Riverside Athletic Club',
+      'a cancelled upcoming game moves from Upcoming to Past Games'
+    );
+    assert(
+      !myGamesGrouping.cancelledHasDelete,
+      'an upcoming cancellation does not bypass the permanent-delete time restriction'
+    );
+
     const mobile = await browser.newPage({
       width: 420,
       height: 900,

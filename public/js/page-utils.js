@@ -25,5 +25,24 @@
         return `${hour % 12 || 12}:${minutes} ${hour >= 12 ? 'PM' : 'AM'}`;
     }
 
-    return { parseLocalDate, formatLocalDate, formatTime12Hour };
+    function isGameCompleted(gameDate, gameTime, now = new Date()) {
+        if (!gameDate || !gameTime) return false;
+        const [year, month, day] = String(gameDate).split('-').map(Number);
+        const [hours, minutes] = String(gameTime).split(':').map(Number);
+        if (![year, month, day, hours, minutes].every(Number.isFinite)) return false;
+        return new Date(year, month - 1, day, hours, minutes) < now;
+    }
+
+    function belongsInPastGames(game, now = new Date()) {
+        return Boolean(game?.cancelled) ||
+            isGameCompleted(game?.date, game?.time, now);
+    }
+
+    return {
+        parseLocalDate,
+        formatLocalDate,
+        formatTime12Hour,
+        isGameCompleted,
+        belongsInPastGames
+    };
 });

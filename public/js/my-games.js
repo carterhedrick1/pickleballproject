@@ -57,14 +57,6 @@ function formatTime(timeStr) {
     return PageUtils.formatTime12Hour(timeStr);
 }
 
-/** A game counts as done once its start time has passed. */
-function isGameCompleted(gameDate, gameTime) {
-    if (!gameDate || !gameTime) return false;
-    const [year, month, day] = gameDate.split('-');
-    const [hours, minutes] = gameTime.split(':');
-    return new Date(year, month - 1, day, hours, minutes) < new Date();
-}
-
 function esc(text) {
     const div = document.createElement('div');
     div.textContent = text == null ? '' : text;
@@ -96,7 +88,7 @@ function render() {
     const upcoming = [];
     const past = [];
     loadedGames.forEach((game) => {
-        (isGameCompleted(game.date, game.time) ? past : upcoming).push(game);
+        (PageUtils.belongsInPastGames(game) ? past : upcoming).push(game);
     });
 
     upcoming.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
@@ -127,7 +119,9 @@ function gameCard(game) {
     const card = document.createElement('div');
     card.className = 'game-item' + (game.cancelled ? ' cancelled' : '');
 
-    const isPast = isGameCompleted(game.date, game.time);
+    // Cancelled upcoming games appear in Past Games, but permanent deletion remains limited
+    // to games whose scheduled start has passed because the server enforces that safety rule.
+    const isPast = PageUtils.isGameCompleted(game.date, game.time);
 
     const badges = [];
     if (game.cancelled) {

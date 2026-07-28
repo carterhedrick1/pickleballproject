@@ -15,4 +15,38 @@ describe('PageUtils', () => {
     assert.equal(PageUtils.formatTime12Hour('12:30'), '12:30 PM');
     assert.equal(PageUtils.formatTime12Hour('18:45'), '6:45 PM');
   });
+
+  it('groups a cancelled upcoming game under Past Games immediately', () => {
+    const now = new Date(2026, 6, 27, 12, 0);
+    const game = {
+      date: '2026-07-28',
+      time: '19:15',
+      cancelled: true
+    };
+
+    assert.equal(PageUtils.isGameCompleted(game.date, game.time, now), false);
+    assert.equal(PageUtils.belongsInPastGames(game, now), true);
+  });
+
+  it('keeps active upcoming games out of Past Games', () => {
+    const now = new Date(2026, 6, 27, 12, 0);
+    const game = {
+      date: '2026-07-28',
+      time: '19:15',
+      cancelled: false
+    };
+
+    assert.equal(PageUtils.belongsInPastGames(game, now), false);
+  });
+
+  it('continues to group completed active games under Past Games', () => {
+    const now = new Date(2026, 6, 29, 12, 0);
+    const game = {
+      date: '2026-07-28',
+      time: '19:15',
+      cancelled: false
+    };
+
+    assert.equal(PageUtils.belongsInPastGames(game, now), true);
+  });
 });
