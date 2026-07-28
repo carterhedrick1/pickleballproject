@@ -11,6 +11,7 @@ const { isGameUpcoming } = require('../utils/central-time');
 const { departureAlertType } = require('../utils/promotion');
 const { leaveGame } = require('./player-service');
 const { sendSMS, sendSMSWithRetry } = require('./sms-client');
+const { buildSelectedPlayerMessage } = require('./youre-in-rotation');
 const {
   formatPhoneNumber,
   formatDateForSMS,
@@ -562,13 +563,9 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
     const game = result.game;
     const promotedPlayer = result.promotedPlayer;
     if (promotedPlayer && promotedPlayer.phone) {
-      const promoDate = formatDateForSMS(game.date);
-      const promoTime = formatTimeForSMS(game.time);
-      const promoLocation = formatLocationForSMS(game);
-
       // Only first-come games reach this point, so there is no approval-mode wording to pick
       // between any more - promoteNextFromWaitlist never promotes in approval mode.
-      const promotionMessage = `Good news! You've been selected for Pickleball at ${promoLocation} on ${promoDate} at ${promoTime}! Reply 2 for who is playing and details or 9 to cancel.`;
+      const promotionMessage = await buildSelectedPlayerMessage(game, game.players.length);
       // Retried: there is no screen behind this one. The promotion happened because someone
       // else texted 9, so if this text is lost the promoted player is never told at all.
       const promoResult = await sendSMSWithRetry(promotedPlayer.phone, promotionMessage, gameId);

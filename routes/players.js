@@ -37,6 +37,7 @@ const {
   promoteFromWaitlist,
   removeFromGame
 } = require('../services/player-service');
+const { buildSelectedPlayerMessage } = require('../services/youre-in-rotation');
 
 module.exports = function mountPlayerRoutes(app) {
   // Quietly builds the host's roster as people sign up. A roster row is a nicety - a failure
@@ -136,7 +137,7 @@ module.exports = function mountPlayerRoutes(app) {
 
         if (result.promotedPlayer?.phone) {
           const promoted = result.promotedPlayer;
-          const promoMessage = `Good news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
+          const promoMessage = await buildSelectedPlayerMessage(game, game.players.length);
           const promoResult = await sendSMSWithRetry(promoted.phone, promoMessage, gameId);
           if (!promoResult.success) {
             console.error(`[SERVER] ${promoted.name} was promoted on game ${gameId} but could not be told:`, promoResult.error);
@@ -185,7 +186,7 @@ module.exports = function mountPlayerRoutes(app) {
 
         let message;
         if (result.status === 'confirmed') {
-          message = `You're confirmed for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for game details or 9 to cancel.`;
+          message = await buildSelectedPlayerMessage(game, result.position);
         } else {
           // Handle waitlist mode vs regular waitlist
           if (result.hidePosition || game.registrationMode === 'waitlist') {
@@ -286,7 +287,7 @@ module.exports = function mountPlayerRoutes(app) {
 
         let message;
         if (result.status === 'confirmed') {
-          message = `You've been added to the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${result.position} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
+          message = await buildSelectedPlayerMessage(game, result.position);
         } else {
           message = `You've been added to the waitlist for the pickleball game at ${locationText}. You are #${result.position} on the waitlist. You'll be notified if a spot opens up! Reply 2 for details or 9 to cancel.`;
         }
@@ -376,11 +377,7 @@ module.exports = function mountPlayerRoutes(app) {
       const player = result.player;
       let smsResult = null;
       if (player.phone) {
-        const gameDate = formatDateForSMS(game.date);
-        const gameTime = formatTimeForSMS(game.time);
-        const locationText = formatLocationForSMS(game);
-
-        const message = `Great news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for who is playing and details or 9 to cancel.`;
+        const message = await buildSelectedPlayerMessage(game, game.players.length);
         // Retried for the same reason as the promotion above: a promotion the player never hears
         // about looks identical to still being on the waitlist.
         smsResult = await sendSMSWithRetry(player.phone, message, gameId);
@@ -434,11 +431,7 @@ module.exports = function mountPlayerRoutes(app) {
       // Send promotion SMS if someone was promoted from waitlist (this already exists in the logic)
       let promotionSmsResult = null;
       if (result.promotedPlayer?.phone) {
-        const gameDate = formatDateForSMS(game.date);
-        const gameTime = formatTimeForSMS(game.time);
-        const locationText = formatLocationForSMS(game);
-
-        const message = `Good news! You've been promoted from the waitlist to confirmed for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}! You are Player ${game.players.length} of ${game.totalPlayers}. Reply 2 for details or 9 to cancel.`;
+        const message = await buildSelectedPlayerMessage(game, game.players.length);
         // Retried: this is the one text nobody can recover from missing. The player has been
         // moved onto the roster in the database either way, so if it never arrives they believe
         // they are still on the waitlist and simply do not turn up.

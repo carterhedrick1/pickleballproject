@@ -518,6 +518,40 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       'developer area opens and cancels inline slogan editing'
     );
 
+    const youreInEditor = await desktop.evaluate(`(async () => {
+      document.querySelector('[data-tab="youre-in"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      const messages = document.querySelectorAll('#youreInList .slogan-entry').length;
+      const editButtons = document.querySelectorAll('[data-action="edit-youre-in"]').length;
+      const first = document.querySelector('#youreInList .copy')?.textContent || '';
+      document.querySelector('[data-action="edit-youre-in"]')?.click();
+      const form = document.querySelector('.youre-in-edit-form');
+      const input = form?.querySelector('input');
+      const result = {
+        messages,
+        editButtons,
+        startsWithYoureIn: first.startsWith("You're IN"),
+        form: Boolean(document.getElementById('youreInForm')),
+        focused: document.activeElement === input,
+        save: form?.querySelector('button[type="submit"]')?.textContent.trim(),
+        cancel: form?.querySelector('[data-action="cancel-edit-youre-in"]')?.textContent.trim()
+      };
+      form?.querySelector('[data-action="cancel-edit-youre-in"]')?.click();
+      result.cancelled = !document.querySelector('.youre-in-edit-form');
+      return result;
+    })()`);
+    assert(
+      youreInEditor.messages === 22 &&
+        youreInEditor.editButtons === youreInEditor.messages &&
+        youreInEditor.startsWithYoureIn &&
+        youreInEditor.form &&
+        youreInEditor.focused &&
+        youreInEditor.save === 'Save' &&
+        youreInEditor.cancel === 'Cancel' &&
+        youreInEditor.cancelled,
+      "developer area can manage the You're In rotation"
+    );
+
     const mobile = await browser.newPage({
       width: 420,
       height: 900,

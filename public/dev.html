@@ -159,6 +159,7 @@
     <button data-tab="status" class="active">Status</button>
     <button data-tab="ideas">Ideas</button>
     <button data-tab="slogans">Slogans</button>
+    <button data-tab="youre-in">You're In</button>
     <button data-tab="errors">Errors</button>
     <button data-tab="courts">Courts</button>
     <button data-tab="screens">Screens</button>
@@ -221,6 +222,23 @@
         </form>
         <div id="sloganNameList" class="name-list"></div>
         <p id="sloganStatus" class="muted" style="min-height:20px; margin-top:14px"></p>
+      </div>
+    </section>
+
+    <!-- You're In -->
+    <section id="tab-youre-in" class="hidden">
+      <div class="panel">
+        <h2>Add A You're In Text</h2>
+        <p class="muted">One text is selected whenever a player is confirmed automatically or chosen by the host. Game details and reply instructions are added after it.</p>
+        <form class="idea-form" id="youreInForm" style="margin-top:16px">
+          <textarea id="youreInText" rows="2" placeholder="Write a new You're In text" maxlength="240"></textarea>
+          <button type="submit" class="primary">Add Text</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>You're In Rotation</h2>
+        <div id="youreInList"><p class="muted">Loading…</p></div>
+        <p id="youreInStatus" class="muted" style="min-height:20px; margin-top:14px"></p>
       </div>
     </section>
 
@@ -362,12 +380,13 @@ document.querySelectorAll('.tabs button').forEach((button) => {
     document.querySelectorAll('.tabs button').forEach((b) => b.classList.remove('active'));
     button.classList.add('active');
     const tab = button.dataset.tab;
-    ['status', 'ideas', 'slogans', 'errors', 'courts', 'screens'].forEach((name) => {
+    ['status', 'ideas', 'slogans', 'youre-in', 'errors', 'courts', 'screens'].forEach((name) => {
       el('tab-' + name).classList.toggle('hidden', name !== tab);
     });
     if (tab === 'status') loadStatus();
     if (tab === 'ideas') loadNotes();
     if (tab === 'slogans') loadSlogans();
+    if (tab === 'youre-in') loadYoureInMessages();
     if (tab === 'errors') loadErrors();
     if (tab === 'courts') loadCourts();
   });
@@ -680,6 +699,134 @@ el('sloganNameList').addEventListener('click', async (e) => {
     { slogans: sloganConfig.slogans, names: sloganConfig.names.filter((_name, i) => i !== index) },
     'Name removed.'
   );
+});
+
+// ---------------------------------------------------------------------------
+// You're In
+// ---------------------------------------------------------------------------
+
+let youreInConfig = { messages: [] };
+let editingYoureInIndex = null;
+
+function setYoureInStatus(message, isError) {
+  const status = el('youreInStatus');
+  status.textContent = message || '';
+  status.style.color = isError ? '#e74c3c' : '#2e7d32';
+}
+
+function renderYoureInMessages() {
+  el('youreInList').innerHTML = youreInConfig.messages.map((message, index) => `
+    <div class="slogan-entry">
+      <span class="number">${index + 1}.</span>
+      ${editingYoureInIndex === index ? `
+        <form class="slogan-edit-form youre-in-edit-form" data-index="${index}">
+          <input type="text" value="${escapeHtml(message)}" maxlength="240" aria-label="Edit You're In text ${index + 1}" required>
+          <button type="submit" class="primary">Save</button>
+          <button type="button" class="ghost" data-action="cancel-edit-youre-in">Cancel</button>
+        </form>` : `
+        <span class="copy">${escapeHtml(message)}</span>
+        <span class="slogan-actions">
+          <button type="button" class="ghost" data-action="edit-youre-in" data-index="${index}">Edit</button>
+          <button type="button" class="ghost" data-action="delete-youre-in" data-index="${index}">Delete</button>
+        </span>`}
+    </div>`).join('');
+}
+
+async function loadYoureInMessages() {
+  try {
+    const res = await fetch('/api/youre-in-messages');
+    if (!res.ok) throw new Error('Could not load You’re In texts');
+    const data = await res.json();
+    youreInConfig = { messages: data.messages || [] };
+    renderYoureInMessages();
+  } catch (_err) {
+    el('youreInList').innerHTML = '<p class="muted">Could not load You’re In texts.</p>';
+    setYoureInStatus('Could not reach the server.', true);
+  }
+}
+
+async function saveYoureInMessages(messages, successMessage) {
+  setYoureInStatus('Saving…');
+  try {
+    const res = await fetch('/api/dev/youre-in-messages', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Could not save the You’re In rotation.');
+    youreInConfig = { messages: data.messages };
+    editingYoureInIndex = null;
+    renderYoureInMessages();
+    setYoureInStatus(successMessage);
+    return true;
+  } catch (err) {
+    setYoureInStatus(err.message, true);
+    return false;
+  }
+}
+
+el('youreInForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const message = el('youreInText').value.trim();
+  if (!message) return;
+  const saved = await saveYoureInMessages(
+    youreInConfig.messages.concat(message),
+    'Text added to the rotation.'
+  );
+  if (saved) el('youreInText').value = '';
+});
+
+el('youreInList').addEventListener('click', async (e) => {
+  if (e.target.dataset.action === 'edit-youre-in') {
+    editingYoureInIndex = Number(e.target.dataset.index);
+    renderYoureInMessages();
+    const input = el('youreInList').querySelector('.youre-in-edit-form input');
+    input.focus();
+    input.select();
+    return;
+  }
+  if (e.target.dataset.action === 'cancel-edit-youre-in') {
+    editingYoureInIndex = null;
+    renderYoureInMessages();
+    setYoureInStatus('');
+    return;
+  }
+  if (e.target.dataset.action !== 'delete-youre-in') return;
+  const index = Number(e.target.dataset.index);
+  if (youreInConfig.messages.length === 1) {
+    setYoureInStatus('Keep at least one You’re In text in the rotation.', true);
+    return;
+  }
+  if (!confirm('Delete this You’re In text?')) return;
+  await saveYoureInMessages(
+    youreInConfig.messages.filter((_message, i) => i !== index),
+    'Text removed.'
+  );
+});
+
+el('youreInList').addEventListener('submit', async (e) => {
+  if (!e.target.classList.contains('youre-in-edit-form')) return;
+  e.preventDefault();
+  const index = Number(e.target.dataset.index);
+  const message = e.target.querySelector('input').value.trim();
+  if (!message) {
+    setYoureInStatus('A You’re In text cannot be empty.', true);
+    return;
+  }
+  if (youreInConfig.messages.some((existing, i) => i !== index && existing === message)) {
+    setYoureInStatus('That text is already in the rotation.', true);
+    return;
+  }
+  if (message === youreInConfig.messages[index]) {
+    editingYoureInIndex = null;
+    renderYoureInMessages();
+    setYoureInStatus('No changes to save.');
+    return;
+  }
+  const messages = youreInConfig.messages.slice();
+  messages[index] = message;
+  await saveYoureInMessages(messages, 'Text updated.');
 });
 
 // ---------------------------------------------------------------------------

@@ -30,6 +30,11 @@ const {
   getDevAssetMeta
 } = require('../database');
 const sloganModule = require('../public/js/slogans');
+const youreInMessages = require('../youre-in-messages');
+const {
+  ASSET_NAME: YOURE_IN_ASSET_NAME,
+  loadYoureInConfig
+} = require('../services/youre-in-rotation');
 
 const DEV_PASSWORD = process.env.DEV_PASSWORD || 'vibe123';
 const COOKIE_NAME = 'dev_auth';
@@ -141,6 +146,19 @@ function validateSloganConfig(body) {
   return { config: sloganModule.normalizeConfig({ slogans, names }) };
 }
 
+function validateYoureInConfig(body) {
+  const messages = body && body.messages;
+  if (!Array.isArray(messages)) {
+    return { error: 'You’re In texts must be a list.' };
+  }
+  if (!messages.length) return { error: 'Keep at least one You’re In text in the rotation.' };
+  if (messages.length > 200) return { error: 'The rotation can contain up to 200 You’re In texts.' };
+  if (messages.some((message) => !String(message).trim() || String(message).trim().length > 240)) {
+    return { error: 'Each You’re In text must be between 1 and 240 characters.' };
+  }
+  return { config: youreInMessages.normalizeConfig({ messages }) };
+}
+
 module.exports = function mountDevRoutes(app) {
   // Brute force is the only real attack on a single shared password.
   const loginLimiter = rateLimit({
@@ -202,6 +220,22 @@ module.exports = function mountDevRoutes(app) {
     } catch (err) {
       console.error('Error saving slogans:', err);
       res.status(500).json({ error: 'Could not save the slogan rotation.' });
+    }
+  });
+
+  app.get('/api/youre-in-messages', async (_req, res) => {
+    res.json(await loadYoureInConfig());
+  });
+
+  app.put('/api/dev/youre-in-messages', requireDevAuth, async (req, res) => {
+    const result = validateYoureInConfig(req.body);
+    if (result.error) return res.status(400).json({ error: result.error });
+    try {
+      await saveDevAsset(YOURE_IN_ASSET_NAME, JSON.stringify(result.config));
+      res.json({ success: true, ...result.config });
+    } catch (err) {
+      console.error('Error saving You\'re In texts:', err);
+      res.status(500).json({ error: 'Could not save the You’re In rotation.' });
     }
   });
 
