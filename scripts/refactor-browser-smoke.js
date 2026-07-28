@@ -280,6 +280,9 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         additionalPlayersHelp: document.getElementById('playersHelp').textContent,
         imageUpdateCopy: document.querySelector('.court-images-intro')?.textContent
           .includes('player link you already sent'),
+        manualPlayerSamplesRemoved:
+          !document.getElementById('playerName').hasAttribute('placeholder') &&
+          !document.getElementById('playerPhone').hasAttribute('placeholder'),
         imageChoiceWidth,
         noImageWidth
       };
@@ -294,6 +297,10 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     );
     assert(manageReady.imageUpdateCopy,
       'court image copy explains that the existing player link updates automatically');
+    assert(
+      manageReady.manualPlayerSamplesRemoved,
+      'manual player name and phone fields have no pre-populated sample text'
+    );
     assert(
       manageReady.imageChoiceWidth === manageReady.noImageWidth &&
         manageReady.noImageWidth <= 110,
