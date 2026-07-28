@@ -482,15 +482,40 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       slogans: document.querySelectorAll('#sloganList .slogan-entry').length,
       names: document.querySelectorAll('#sloganNameList .name-chip').length,
       sloganForm: Boolean(document.getElementById('sloganForm')),
-      nameForm: Boolean(document.getElementById('sloganNameForm'))
+      nameForm: Boolean(document.getElementById('sloganNameForm')),
+      editButtons: document.querySelectorAll('[data-action="edit-slogan"]').length
     }))()`);
     assert(
       devLogin &&
         sloganEditor.slogans > 0 &&
         sloganEditor.names > 0 &&
         sloganEditor.sloganForm &&
-        sloganEditor.nameForm,
+        sloganEditor.nameForm &&
+        sloganEditor.editButtons === sloganEditor.slogans,
       'developer area can manage the slogan and name rotations'
+    );
+    const sloganEditControls = await desktop.evaluate(`(() => {
+      const original = document.querySelector('#sloganList .copy').textContent;
+      document.querySelector('[data-action="edit-slogan"]').click();
+      const form = document.querySelector('.slogan-edit-form');
+      const input = form.querySelector('input');
+      const result = {
+        value: input.value,
+        focused: document.activeElement === input,
+        save: form.querySelector('button[type="submit"]').textContent.trim(),
+        cancel: form.querySelector('[data-action="cancel-edit-slogan"]').textContent.trim()
+      };
+      form.querySelector('[data-action="cancel-edit-slogan"]').click();
+      result.cancelled = document.querySelector('#sloganList .copy').textContent === original;
+      return result;
+    })()`);
+    assert(
+      sloganEditControls.value &&
+        sloganEditControls.focused &&
+        sloganEditControls.save === 'Save' &&
+        sloganEditControls.cancel === 'Cancel' &&
+        sloganEditControls.cancelled,
+      'developer area opens and cancels inline slogan editing'
     );
 
     const mobile = await browser.newPage({

@@ -100,6 +100,10 @@
   }
   .slogan-entry .number { color: #95a5a6; font-size: 13px; min-width: 24px; }
   .slogan-entry .copy { flex: 1; font-size: 14px; }
+  .slogan-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .slogan-edit-form { display: flex; align-items: center; gap: 8px; flex: 1; flex-wrap: wrap; }
+  .slogan-edit-form input { flex: 1 1 360px; }
+  .slogan-edit-form .primary { padding: 8px 14px; font-size: 14px; }
   .name-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
   .name-chip {
     display: inline-flex; align-items: center; gap: 7px; background: #e8f5e9; color: #2e7d32;
@@ -522,6 +526,7 @@ el('ideaList').addEventListener('click', async (e) => {
 // ---------------------------------------------------------------------------
 
 let sloganConfig = { slogans: [], names: [] };
+let editingSloganIndex = null;
 
 function setSloganStatus(message, isError) {
   const status = el('sloganStatus');
@@ -533,8 +538,17 @@ function renderSlogans() {
   el('sloganList').innerHTML = sloganConfig.slogans.map((slogan, index) => `
     <div class="slogan-entry">
       <span class="number">${index + 1}.</span>
-      <span class="copy">${escapeHtml(slogan)}</span>
-      <button class="ghost" data-action="delete-slogan" data-index="${index}">Delete</button>
+      ${editingSloganIndex === index ? `
+        <form class="slogan-edit-form" data-index="${index}">
+          <input type="text" value="${escapeHtml(slogan)}" maxlength="240" aria-label="Edit slogan ${index + 1}" required>
+          <button type="submit" class="primary">Save</button>
+          <button type="button" class="ghost" data-action="cancel-edit-slogan">Cancel</button>
+        </form>` : `
+        <span class="copy">${escapeHtml(slogan)}</span>
+        <span class="slogan-actions">
+          <button type="button" class="ghost" data-action="edit-slogan" data-index="${index}">Edit</button>
+          <button type="button" class="ghost" data-action="delete-slogan" data-index="${index}">Delete</button>
+        </span>`}
     </div>`).join('');
 
   el('sloganNameList').innerHTML = sloganConfig.names.map((name, index) => `
@@ -568,6 +582,7 @@ async function saveSlogans(nextConfig, successMessage) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'Could not save the slogan rotation.');
     sloganConfig = { slogans: data.slogans, names: data.names };
+    editingSloganIndex = null;
     renderSlogans();
     setSloganStatus(successMessage);
     return true;
@@ -600,6 +615,20 @@ el('sloganNameForm').addEventListener('submit', async (e) => {
 });
 
 el('sloganList').addEventListener('click', async (e) => {
+  if (e.target.dataset.action === 'edit-slogan') {
+    editingSloganIndex = Number(e.target.dataset.index);
+    renderSlogans();
+    const input = el('sloganList').querySelector('.slogan-edit-form input');
+    input.focus();
+    input.select();
+    return;
+  }
+  if (e.target.dataset.action === 'cancel-edit-slogan') {
+    editingSloganIndex = null;
+    renderSlogans();
+    setSloganStatus('');
+    return;
+  }
   if (e.target.dataset.action !== 'delete-slogan') return;
   const index = Number(e.target.dataset.index);
   if (sloganConfig.slogans.length === 1) {
@@ -610,6 +639,33 @@ el('sloganList').addEventListener('click', async (e) => {
   await saveSlogans(
     { slogans: sloganConfig.slogans.filter((_slogan, i) => i !== index), names: sloganConfig.names },
     'Slogan removed.'
+  );
+});
+
+el('sloganList').addEventListener('submit', async (e) => {
+  if (!e.target.classList.contains('slogan-edit-form')) return;
+  e.preventDefault();
+  const index = Number(e.target.dataset.index);
+  const slogan = e.target.querySelector('input').value.trim();
+  if (!slogan) {
+    setSloganStatus('A slogan cannot be empty.', true);
+    return;
+  }
+  if (sloganConfig.slogans.some((existing, i) => i !== index && existing === slogan)) {
+    setSloganStatus('That slogan is already in the rotation.', true);
+    return;
+  }
+  if (slogan === sloganConfig.slogans[index]) {
+    editingSloganIndex = null;
+    renderSlogans();
+    setSloganStatus('No changes to save.');
+    return;
+  }
+  const slogans = sloganConfig.slogans.slice();
+  slogans[index] = slogan;
+  await saveSlogans(
+    { slogans, names: sloganConfig.names },
+    'Slogan updated.'
   );
 });
 
