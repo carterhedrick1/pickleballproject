@@ -12,6 +12,16 @@ async function sendSMS(to, message, gameId = null) {
       return { success: false, error: 'simulated failure', simulated: true };
     }
 
+    // A normal local server writes games to SQLite, but .env intentionally points BASE_URL at
+    // the production site. Sending a real text from that combination creates a split
+    // conversation: the game exists only locally while replies are delivered to production,
+    // where commands 1, 2 and 9 cannot find it. Keep local sends simulated unless a developer
+    // explicitly opts in while using a reachable callback (for example, a tunnel).
+    if (!process.env.DATABASE_URL && process.env.ALLOW_LOCAL_SMS !== '1') {
+      console.log(`[DEV MODE] SMS would be sent to ${to}: ${message}`);
+      return { success: true, dev: true, localSafety: true };
+    }
+
     if (!process.env.TEXTBELT_API_KEY) {
       console.log(`[DEV MODE] SMS would be sent to ${to}: ${message}`);
       return { success: true, dev: true };

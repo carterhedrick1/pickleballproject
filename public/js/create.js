@@ -499,12 +499,12 @@ async function createGame(e) {
         
         // Check SMS status and show appropriate message
         let successMessage;
-        if (data.hostSms && data.hostSms.success) {
+        if (data.hostSms && data.hostSms.dev) {
+            successMessage = 'Game created successfully! SMS confirmation is disabled in development mode.';
+        } else if (data.hostSms && data.hostSms.success) {
             successMessage = 'Game created successfully! Check your phone for confirmation. Reply "1" to get your management link.';
         } else if (data.hostSms && !data.hostSms.success) {
             successMessage = 'Game created successfully! However, we couldn\'t send the confirmation text.';
-        } else if (data.hostSms && data.hostSms.dev) {
-            successMessage = 'Game created successfully! (SMS confirmation disabled in development mode)';
         } else {
             successMessage = 'Game created successfully!';
         }

@@ -219,7 +219,8 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         hasHostToken: Boolean(saved && saved.hostToken),
         imageCount: library.images.length,
         selectedImageId: library.selectedImageId,
-        selectedFlag: library.images.some((image) => image.isSelected)
+        selectedFlag: library.images.some((image) => image.isSelected),
+        statusText: document.getElementById('status').textContent
       };
     })()`);
     assert(
@@ -227,6 +228,10 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       uploadedResult.imageCount === 1 && uploadedResult.selectedImageId &&
       uploadedResult.selectedFlag,
       'a Somewhere new photo uploads after creation and is selected for the game'
+    );
+    assert(
+      uploadedResult.statusText.includes('SMS confirmation is disabled in development mode'),
+      'a local creation says that no confirmation text was sent'
     );
 
     await desktop.goto(
