@@ -38,11 +38,17 @@
             isGameCompleted(game?.date, game?.time, now);
     }
 
+    function canPermanentlyDelete(game, now = new Date()) {
+        return Boolean(game?.cancelled) ||
+            isGameCompleted(game?.date, game?.time, now);
+    }
+
     return {
         parseLocalDate,
         formatLocalDate,
         formatTime12Hour,
         isGameCompleted,
-        belongsInPastGames
+        belongsInPastGames,
+        canPermanentlyDelete
     };
 });

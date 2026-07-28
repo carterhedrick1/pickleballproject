@@ -119,9 +119,9 @@ function gameCard(game) {
     const card = document.createElement('div');
     card.className = 'game-item' + (game.cancelled ? ' cancelled' : '');
 
-    // Cancelled upcoming games appear in Past Games, but permanent deletion remains limited
-    // to games whose scheduled start has passed because the server enforces that safety rule.
-    const isPast = PageUtils.isGameCompleted(game.date, game.time);
+    // Cancellation tells the players first, so a cancelled game is safe for its host to erase
+    // immediately. Active upcoming games remain protected until their scheduled start passes.
+    const canDelete = PageUtils.canPermanentlyDelete(game);
 
     const badges = [];
     if (game.cancelled) {
@@ -146,14 +146,14 @@ function gameCard(game) {
             <a class="btn btn-primary" href="${game.managementLink}">Manage</a>
             <button type="button" class="btn" id="copyButton-${game.gameId}">Copy Invitation</button>
             <button type="button" class="btn" data-notes-toggle>Notes</button>
-            ${isPast ? '<button type="button" class="btn btn-danger" data-delete>Delete</button>' : ''}
+            ${canDelete ? '<button type="button" class="btn btn-danger" data-delete>Delete</button>' : ''}
         </div>
         <div class="notes-panel" style="display: none;">
             <textarea placeholder="e.g. 'Gate code 4417'">${esc(game.hostNotes || '')}</textarea>
             <button type="button" class="btn" data-notes-save>Save note</button>
             <div class="notes-status"></div>
         </div>
-        ${isPast ? `
+        ${canDelete ? `
         <div class="delete-panel" style="display: none;">
             <p>Delete this game for good? Its photos and its place in your stats go too,
                and there is no undo.</p>
@@ -179,7 +179,7 @@ function gameCard(game) {
 
     // Delete asks first, in the card rather than a browser confirm() dialog, so the
     // warning about photos and stats is actually readable before the second click.
-    if (isPast) {
+    if (canDelete) {
         const deletePanel = card.querySelector('.delete-panel');
         const deleteStatus = card.querySelector('.delete-status');
         card.querySelector('[data-delete]').addEventListener('click', () => {

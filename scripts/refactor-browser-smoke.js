@@ -290,6 +290,19 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       'HTML-like player names remain text in the live page'
     );
 
+    const activeDeleteResponse = await fetch(
+      `${local.baseUrl}/api/games/${fx.full.gameId}/permanent`,
+      {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: fx.full.hostToken })
+      }
+    );
+    assert(
+      activeDeleteResponse.status === 400,
+      'an active upcoming game remains protected from permanent deletion'
+    );
+
     const cancelResponse = await fetch(
       `${local.baseUrl}/api/games/${fx.approval.gameId}`,
       {
@@ -324,8 +337,32 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       'a cancelled upcoming game moves from Upcoming to Past Games'
     );
     assert(
-      !myGamesGrouping.cancelledHasDelete,
-      'an upcoming cancellation does not bypass the permanent-delete time restriction'
+      myGamesGrouping.cancelledHasDelete,
+      'a cancelled upcoming game offers immediate permanent deletion'
+    );
+
+    const deletePanelOpened = await desktop.evaluate(`(() => {
+      const card = document.querySelector('#pastList .game-item.cancelled');
+      card.querySelector('[data-delete]').click();
+      const panel = card.querySelector('.delete-panel');
+      const opened = getComputedStyle(panel).display !== 'none';
+      card.querySelector('[data-delete-confirm]').click();
+      return opened;
+    })()`);
+    assert(deletePanelOpened, 'cancelled-game deletion still requires confirmation');
+    await cdp.sleep(500);
+    const cancelledDeleteResult = await desktop.evaluate(`(() => ({
+      cardRemoved: !document.querySelector('#pastList .game-item.cancelled'),
+      successMessage: document.getElementById('status').textContent
+    }))()`);
+    const deletedGameResponse = await fetch(
+      `${local.baseUrl}/api/games/${fx.approval.gameId}`
+    );
+    assert(
+      cancelledDeleteResult.cardRemoved &&
+        cancelledDeleteResult.successMessage === 'Game deleted.' &&
+        deletedGameResponse.status === 404,
+      'a host can permanently delete a cancelled upcoming game immediately'
     );
 
     const mobile = await browser.newPage({

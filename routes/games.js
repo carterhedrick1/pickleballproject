@@ -267,13 +267,13 @@ module.exports = function mountGameRoutes(app) {
     }
   });
 
-  // Erase a past game for good.
+  // Erase a past or cancelled game for good.
   //
   // Deliberately a separate route from the DELETE above, which only cancels: cancelling tells
   // the players something, this tells nobody and cannot be undone. Two guards keep it from
-  // becoming a way to make a game people are counting on vanish out from under them:
-  // the host token, and the game having already started. No SMS goes out - everyone the game
-  // concerned has already played it.
+  // becoming a way to make an active game people are counting on vanish out from under them:
+  // the host token, plus either prior cancellation (which already notified players) or the
+  // scheduled start having passed. This route itself sends no SMS.
   app.delete('/api/games/:id/permanent', async (req, res) => {
     const gameId = req.params.id;
     const releaseLock = await acquireGameLock(gameId);
@@ -290,7 +290,9 @@ module.exports = function mountGameRoutes(app) {
       }
 
       // Central Time, the same clock the reminders use, so "past" means past to the players.
-      if (isGameUpcoming(game.date, game.time)) {
+      // A cancelled game is already closed and its players were notified, so it can be erased
+      // immediately even if its scheduled start is still upcoming.
+      if (!game.cancelled && isGameUpcoming(game.date, game.time)) {
         return res.status(400).json({
           error: 'This game has not happened yet. Cancel it instead so the players are told.'
         });

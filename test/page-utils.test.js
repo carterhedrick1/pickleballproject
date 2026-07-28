@@ -26,6 +26,7 @@ describe('PageUtils', () => {
 
     assert.equal(PageUtils.isGameCompleted(game.date, game.time, now), false);
     assert.equal(PageUtils.belongsInPastGames(game, now), true);
+    assert.equal(PageUtils.canPermanentlyDelete(game, now), true);
   });
 
   it('keeps active upcoming games out of Past Games', () => {
@@ -37,6 +38,7 @@ describe('PageUtils', () => {
     };
 
     assert.equal(PageUtils.belongsInPastGames(game, now), false);
+    assert.equal(PageUtils.canPermanentlyDelete(game, now), false);
   });
 
   it('continues to group completed active games under Past Games', () => {
@@ -48,5 +50,6 @@ describe('PageUtils', () => {
     };
 
     assert.equal(PageUtils.belongsInPastGames(game, now), true);
+    assert.equal(PageUtils.canPermanentlyDelete(game, now), true);
   });
 });
