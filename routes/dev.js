@@ -40,6 +40,7 @@ const {
   TEXT_MESSAGE_CATEGORIES,
   getTextMessageCategory,
   normalizeMessages,
+  normalizeDetailsTemplate,
   normalizeDraftConfig
 } = require('../text-message-categories');
 const { clearTextMessageConfigCache } = require('../services/text-message-rotation');
@@ -196,7 +197,33 @@ function validateTextMessageCategory(category, body) {
   if (category.requiresOne && !cleaned.length) {
     return { error: `Keep at least one ${category.title} text in the rotation.` };
   }
-  return { messages: normalizeMessages(cleaned, category.maxLength) };
+  const detailsTemplate = String(body && body.detailsTemplate || '').trim();
+  if (!detailsTemplate || detailsTemplate.length > category.detailsMaxLength) {
+    return {
+      error: `The ${category.title} details must be between 1 and ${category.detailsMaxLength} characters.`
+    };
+  }
+
+  const allowedTokens = new Set(category.tokens || []);
+  const unsupportedTokens = [...cleaned, detailsTemplate]
+    .flatMap((text) => [...text.matchAll(/\{([A-Z][A-Z0-9_]*)\}/g)].map((match) => match[1]))
+    .filter((token, index, tokens) => !allowedTokens.has(token) && tokens.indexOf(token) === index);
+  if (unsupportedTokens.length) {
+    return {
+      error: `Unsupported value${unsupportedTokens.length === 1 ? '' : 's'}: ${unsupportedTokens
+        .map((token) => `{${token}}`)
+        .join(', ')}.`
+    };
+  }
+
+  return {
+    messages: normalizeMessages(cleaned, category.maxLength),
+    detailsTemplate: normalizeDetailsTemplate(
+      detailsTemplate,
+      category.defaultDetailsTemplate,
+      category.detailsMaxLength
+    )
+  };
 }
 
 module.exports = function mountDevRoutes(app) {
@@ -271,8 +298,13 @@ module.exports = function mountDevRoutes(app) {
     const result = validateYoureInConfig(req.body);
     if (result.error) return res.status(400).json({ error: result.error });
     try {
-      await saveDevAsset(YOURE_IN_ASSET_NAME, JSON.stringify(result.config));
-      res.json({ success: true, ...result.config });
+      const current = await loadYoureInConfig();
+      const config = youreInMessages.normalizeConfig({
+        messages: result.config.messages,
+        detailsTemplate: current.detailsTemplate
+      });
+      await saveDevAsset(YOURE_IN_ASSET_NAME, JSON.stringify(config));
+      res.json({ success: true, ...config });
     } catch (err) {
       console.error('Error saving You\'re In texts:', err);
       res.status(500).json({ error: 'Could not save the You’re In rotation.' });
@@ -293,7 +325,10 @@ module.exports = function mountDevRoutes(app) {
             : draftConfig.categories[category.id].enabled,
           messages: category.id === 'youre-in'
             ? youreInConfig.messages
-            : draftConfig.categories[category.id].messages
+            : draftConfig.categories[category.id].messages,
+          detailsTemplate: category.id === 'youre-in'
+            ? youreInConfig.detailsTemplate
+            : draftConfig.categories[category.id].detailsTemplate
         }))
       });
     } catch (err) {
@@ -311,22 +346,31 @@ module.exports = function mountDevRoutes(app) {
 
     try {
       if (category.id === 'youre-in') {
-        const config = youreInMessages.normalizeConfig({ messages: result.messages });
+        const config = youreInMessages.normalizeConfig({
+          messages: result.messages,
+          detailsTemplate: result.detailsTemplate
+        });
         await saveDevAsset(YOURE_IN_ASSET_NAME, JSON.stringify(config));
-        return res.json({ success: true, messages: config.messages });
+        return res.json({
+          success: true,
+          messages: config.messages,
+          detailsTemplate: config.detailsTemplate
+        });
       }
 
       const config = await loadTextMessageDraftConfig();
       config.categories[category.id] = {
         enabled: req.body && req.body.enabled === true,
-        messages: result.messages
+        messages: result.messages,
+        detailsTemplate: result.detailsTemplate
       };
       await saveDevAsset(TEXT_MESSAGE_CONFIG_ASSET_NAME, JSON.stringify(config));
       clearTextMessageConfigCache();
       res.json({
         success: true,
         enabled: config.categories[category.id].enabled,
-        messages: result.messages
+        messages: result.messages,
+        detailsTemplate: result.detailsTemplate
       });
     } catch (err) {
       console.error(`Error saving ${category.title} texts:`, err);

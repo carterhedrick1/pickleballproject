@@ -540,6 +540,11 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       document.getElementById('addAnotherText').click();
       const bulkFields = document.querySelectorAll('#bulkMessageFields .text-message-input').length;
       const bulkButton = document.getElementById('addAllTexts').textContent.trim();
+      const detailsEditor = {
+        form: Boolean(document.getElementById('textMessageDetailsForm')),
+        value: document.getElementById('textMessageDetailsTemplate')?.value || '',
+        save: document.querySelector('#textMessageDetailsForm button[type="submit"]')?.textContent.trim()
+      };
       const youreInLiveNote = !document.getElementById('textMessageLiveNote').classList.contains('hidden');
       document.querySelector('[data-tab="waitlist-confirmation"]').click();
       await new Promise((resolve) => setTimeout(resolve, 40));
@@ -575,6 +580,7 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         bulkFields,
         bulkButton,
         bulkPaste: Boolean(document.getElementById('bulkPasteTexts')),
+        detailsEditor,
         youreInLiveNote,
         waitlistToggle,
         consecutiveToggleVisible,
@@ -600,8 +606,12 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         youreInEditor.categoryTabs === 13 &&
         youreInEditor.preview &&
         youreInEditor.bulkFields === 2 &&
-        youreInEditor.bulkButton === 'Add All 2 Texts' &&
+        youreInEditor.bulkButton === 'Add All 2 Openings' &&
         youreInEditor.bulkPaste &&
+        youreInEditor.detailsEditor.form &&
+        youreInEditor.detailsEditor.value.includes('{LOCATION}') &&
+        youreInEditor.detailsEditor.value.includes('{TOTAL_PLAYERS}') &&
+        youreInEditor.detailsEditor.save === 'Save Details' &&
         youreInEditor.youreInLiveNote &&
         youreInEditor.waitlistToggle.visible &&
         youreInEditor.waitlistToggle.off &&

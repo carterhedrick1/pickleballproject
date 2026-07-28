@@ -22,6 +22,8 @@ const DEFAULT_MESSAGES = Object.freeze([
   "You're IN. Two people immediately checked who else is playing.",
   "You're IN. The waitlist has been told and is coping."
 ]);
+const DEFAULT_DETAILS_TEMPLATE =
+  'Pickleball at {LOCATION} on {DATE} at {TIME}! You are Player {POSITION} of {TOTAL_PLAYERS}. Reply 2 for who is playing and game details or 9 to cancel.';
 
 function cleanMessages(value) {
   if (!Array.isArray(value)) return DEFAULT_MESSAGES.slice();
@@ -38,7 +40,11 @@ function cleanMessages(value) {
 
 function normalizeConfig(value) {
   const config = value && typeof value === 'object' ? value : {};
-  return { messages: cleanMessages(config.messages) };
+  const detailsTemplate = String(config.detailsTemplate || '').trim();
+  return {
+    messages: cleanMessages(config.messages),
+    detailsTemplate: detailsTemplate || DEFAULT_DETAILS_TEMPLATE
+  };
 }
 
 function choose(config, random = Math.random) {
@@ -47,13 +53,34 @@ function choose(config, random = Math.random) {
   return messages[Math.min(Math.max(index, 0), messages.length - 1)];
 }
 
-function build(config, details, random) {
-  return `${choose(config, random)}\n\n${String(details || '').trim()}`.trim();
+function renderTemplate(template, values = {}) {
+  const normalized = {};
+  Object.entries(values).forEach(([key, value]) => {
+    normalized[String(key).toUpperCase()] = value == null ? '' : String(value);
+  });
+  return String(template).replace(/\{([A-Z][A-Z0-9_]*)\}/g, (token, key) => (
+    Object.prototype.hasOwnProperty.call(normalized, key) ? normalized[key] : token
+  ));
+}
+
+function build(config, defaultDetails, values = {}, random = Math.random) {
+  if (typeof values === 'function') {
+    random = values;
+    values = {};
+  }
+  const normalized = normalizeConfig(config);
+  const details = renderTemplate(normalized.detailsTemplate, {
+    ...values,
+    DEFAULT_TEXT: defaultDetails
+  });
+  return `${choose(normalized, random)}\n\n${details.trim()}`.trim();
 }
 
 module.exports = {
   DEFAULT_MESSAGES,
+  DEFAULT_DETAILS_TEMPLATE,
   normalizeConfig,
   choose,
+  renderTemplate,
   build
 };

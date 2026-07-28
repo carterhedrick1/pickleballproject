@@ -7,6 +7,7 @@ const {
   TEXT_MESSAGE_CATEGORIES,
   getTextMessageCategory,
   normalizeMessages,
+  normalizeDetailsTemplate,
   normalizeDraftConfig
 } = require('../text-message-categories');
 
@@ -20,6 +21,8 @@ test('defines all 13 editable text message categories with current previews', ()
     assert.ok(category.recipient);
     assert.ok(category.description);
     assert.ok(category.preview);
+    assert.ok(category.defaultDetailsTemplate);
+    assert.ok(category.detailsMaxLength >= category.defaultDetailsTemplate.length);
     assert.ok(category.maxLength >= category.preview.length);
     assert.equal(getTextMessageCategory(category.id), category);
   });
@@ -38,10 +41,24 @@ test('normalizes bulk message additions without merging their bodies', () => {
   );
 });
 
+test('normalizes one required non-random details template', () => {
+  assert.equal(
+    normalizeDetailsTemplate('  Game at {LOCATION}.  ', '{DEFAULT_TEXT}', 100),
+    'Game at {LOCATION}.'
+  );
+  assert.equal(
+    normalizeDetailsTemplate('', '{DEFAULT_TEXT}', 100),
+    '{DEFAULT_TEXT}'
+  );
+});
+
 test('normalizes saved drafts and ignores unknown category data', () => {
   const config = normalizeDraftConfig({
     categories: {
-      'waitlist-confirmation': { messages: [' One ', 'Two'] },
+      'waitlist-confirmation': {
+        messages: [' One ', 'Two'],
+        detailsTemplate: 'Game at {LOCATION}.'
+      },
       unknown: { messages: ['Do not keep'] }
     }
   });
@@ -51,7 +68,15 @@ test('normalizes saved drafts and ignores unknown category data', () => {
     ['One', 'Two']
   );
   assert.equal(config.categories['waitlist-confirmation'].enabled, false);
+  assert.equal(
+    config.categories['waitlist-confirmation'].detailsTemplate,
+    'Game at {LOCATION}.'
+  );
   assert.equal(config.categories['application-confirmation'].messages.length, 0);
+  assert.equal(
+    config.categories['application-confirmation'].detailsTemplate,
+    getTextMessageCategory('application-confirmation').defaultDetailsTemplate
+  );
   assert.equal(config.categories.unknown, undefined);
   assert.equal(config.categories['youre-in'], undefined);
 });

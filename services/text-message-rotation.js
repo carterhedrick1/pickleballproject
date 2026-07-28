@@ -19,6 +19,13 @@ function renderTemplate(template, values = {}) {
   ));
 }
 
+function joinMessageSections(opening, details) {
+  return [opening, details]
+    .map((section) => String(section || '').trim())
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 function selectCategoryMessage(
   config,
   categoryId,
@@ -31,18 +38,24 @@ function selectCategoryMessage(
 
   const normalized = normalizeDraftConfig(config);
   const categoryConfig = normalized.categories[categoryId];
-  if (!categoryConfig.enabled || !categoryConfig.messages.length) {
+  if (!categoryConfig.enabled) {
     return String(defaultMessage);
   }
 
-  const index = Math.min(
-    Math.max(Math.floor(random() * categoryConfig.messages.length), 0),
-    categoryConfig.messages.length - 1
-  );
-  return renderTemplate(categoryConfig.messages[index], {
+  const templateValues = {
     ...values,
     DEFAULT_TEXT: defaultMessage
-  });
+  };
+  let opening = '';
+  if (categoryConfig.messages.length) {
+    const index = Math.min(
+      Math.max(Math.floor(random() * categoryConfig.messages.length), 0),
+      categoryConfig.messages.length - 1
+    );
+    opening = renderTemplate(categoryConfig.messages[index], templateValues);
+  }
+  const details = renderTemplate(categoryConfig.detailsTemplate, templateValues);
+  return joinMessageSections(opening, details);
 }
 
 async function loadTextMessageConfig() {
@@ -87,6 +100,7 @@ async function resolveTextMessage(categoryId, defaultMessage, values = {}, rando
 
 module.exports = {
   renderTemplate,
+  joinMessageSections,
   selectCategoryMessage,
   loadTextMessageConfig,
   clearTextMessageConfigCache,

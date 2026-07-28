@@ -19,8 +19,8 @@ async function loadYoureInConfig() {
   }
 }
 
-async function buildYoureInMessage(details, random) {
-  return youreInMessages.build(await loadYoureInConfig(), details, random);
+async function buildYoureInMessage(details, values = {}, random) {
+  return youreInMessages.build(await loadYoureInConfig(), details, values, random);
 }
 
 async function buildSelectedPlayerMessage(game, position, random) {
@@ -28,7 +28,17 @@ async function buildSelectedPlayerMessage(game, position, random) {
   const date = formatDateForSMS(game.date);
   const time = formatTimeForSMS(game.time);
   const details = `Pickleball at ${location} on ${date} at ${time}! You are Player ${position} of ${game.totalPlayers}. Reply 2 for who is playing and game details or 9 to cancel.`;
-  return buildYoureInMessage(details, random);
+  return buildYoureInMessage(
+    details,
+    {
+      LOCATION: location,
+      DATE: date,
+      TIME: time,
+      POSITION: position,
+      TOTAL_PLAYERS: game.totalPlayers
+    },
+    random
+  );
 }
 
 module.exports = {

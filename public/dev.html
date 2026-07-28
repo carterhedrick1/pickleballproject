@@ -359,44 +359,52 @@
             <p class="message-preview-note hidden" id="textMessagePreviewNote"></p>
             <div class="message-mode hidden" id="textMessageMode">
               <label class="message-toggle">
-                <input type="checkbox" id="useRandomTexts" aria-label="Use random saved texts">
+                <input type="checkbox" id="useRandomTexts" aria-label="Use edited text">
                 <span class="message-toggle-track"></span>
               </label>
               <div class="message-mode-copy">
-                <div class="message-mode-title">Use Random Saved Texts</div>
+                <div class="message-mode-title">Use Edited Text</div>
                 <div class="message-mode-detail" id="textMessageModeDetail">Off — the current app text is used.</div>
               </div>
             </div>
             <div id="textMessageLiveNote" class="message-preview-note hidden">
-              This rotation is already live and randomly selected.
+              The random openings and saved details are already live.
             </div>
           </div>
         </div>
       </div>
       <div class="panel">
-        <h2 id="textMessageAddTitle">Add A You're In Text</h2>
-        <p class="muted">Add one or add several before saving. Use a separate box for each complete text.</p>
-        <div id="textMessageTokens" class="hidden">
+        <h2 id="textMessageDetailsTitle">Edit The You're In Details</h2>
+        <p class="muted">This non-random second section is added after the opening message. Values in curly braces are filled when the text is sent.</p>
+        <div id="textMessageTokens">
           <p class="muted" style="margin-bottom:0">
-            Optional Values: use <code>{DEFAULT_TEXT}</code> to include the complete current message, or insert any value shown below.
+            Available Values: use <code>{DEFAULT_TEXT}</code> to keep the complete current details, or insert any value shown below.
           </p>
           <div class="message-token-list" id="textMessageTokenList"></div>
         </div>
+        <form class="idea-form" id="textMessageDetailsForm" style="margin-top:16px">
+          <textarea id="textMessageDetailsTemplate" rows="6" maxlength="1600" required></textarea>
+          <button type="submit" class="primary">Save Details</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h2 id="textMessageAddTitle">Add A Random Opening Message</h2>
+        <p class="muted">Each saved entry is a possible first section. The app randomly selects one and adds the same details section after it.</p>
         <form class="idea-form" id="youreInForm" style="margin-top:16px">
           <div id="bulkMessageFields" class="bulk-message-fields"></div>
           <details class="bulk-paste">
-            <summary>Paste Multiple Texts</summary>
-            <p class="muted">Put each complete text on its own line. All non-empty lines will be added together.</p>
-            <textarea id="bulkPasteTexts" rows="6" placeholder="First text&#10;Second text&#10;Third text"></textarea>
+            <summary>Paste Multiple Openings</summary>
+            <p class="muted">Put each opening message on its own line. All non-empty lines will be added together.</p>
+            <textarea id="bulkPasteTexts" rows="6" placeholder="First opening&#10;Second opening&#10;Third opening"></textarea>
           </details>
           <div class="bulk-message-actions">
-            <button type="button" class="ghost" id="addAnotherText">Add Another Text</button>
-            <button type="submit" class="primary" id="addAllTexts">Add All Texts</button>
+            <button type="button" class="ghost" id="addAnotherText">Add Another Opening</button>
+            <button type="submit" class="primary" id="addAllTexts">Add All Openings</button>
           </div>
         </form>
       </div>
       <div class="panel">
-        <h2 id="textMessageListTitle">You're In Rotation</h2>
+        <h2 id="textMessageListTitle">Random Opening Messages</h2>
         <div id="youreInList"><p class="muted">Loading…</p></div>
         <p id="youreInStatus" class="muted" style="min-height:20px; margin-top:14px"></p>
       </div>
@@ -940,7 +948,7 @@ el('sloganNameList').addEventListener('click', async (e) => {
 
 let textMessageCategories = [];
 let activeTextMessageCategoryId = 'youre-in';
-let youreInConfig = { messages: [] }; // Kept for the existing browser smoke test.
+let youreInConfig = { messages: [], detailsTemplate: '' }; // Kept for the browser smoke test.
 let editingYoureInIndex = null;
 
 function activeTextMessageCategory() {
@@ -962,10 +970,10 @@ function addBulkMessageField(value = '') {
   wrapper.className = 'bulk-message-field';
   wrapper.innerHTML = `
     <textarea class="text-message-input" rows="3"
-      placeholder="Write a new ${escapeHtml(category.title)} text"
+      placeholder="Write a random opening message"
       maxlength="${category.maxLength}">${escapeHtml(value)}</textarea>
     <button type="button" class="ghost" data-action="remove-bulk-text"
-      aria-label="Remove this text">Remove</button>`;
+      aria-label="Remove this opening">Remove</button>`;
   el('bulkMessageFields').appendChild(wrapper);
   wrapper.querySelector('textarea').focus();
   updateBulkMessageControls();
@@ -979,7 +987,9 @@ function updateBulkMessageControls() {
       fields.length === 1
     );
   });
-  el('addAllTexts').textContent = fields.length === 1 ? 'Add Text' : `Add All ${fields.length} Texts`;
+  el('addAllTexts').textContent = fields.length === 1
+    ? 'Add Opening'
+    : `Add All ${fields.length} Openings`;
 }
 
 function resetBulkMessageFields() {
@@ -989,20 +999,62 @@ function resetBulkMessageFields() {
   addBulkMessageField();
 }
 
+function renderSampleText(template, category) {
+  const values = {
+    DEFAULT_TEXT: category.detailsPreview || category.preview,
+    LOCATION: 'Oak Park Courts',
+    DATE: 'Sat, Aug 1',
+    TIME: '9:00 AM',
+    POSITION: category.id === 'youre-in' ? 2 : 1,
+    TOTAL_PLAYERS: 4,
+    STATUS: 'reservation',
+    DAY: 'tomorrow',
+    REASON: 'Courts are closed',
+    ANNOUNCEMENT: 'We moved to courts 3 and 4. Please arrive ten minutes early.',
+    EVENT: 'playerJoins',
+    PLAYER_NAME: 'Jamie',
+    SPOTS_LEFT: 1,
+    WAITLIST_COUNT: 1,
+    DURATION: 90,
+    ROLE: 'Confirmed Player',
+    MANAGEMENT_LINK: 'https://inorout.club/manage.html?id=example&token=example',
+    GAME_COUNT: 1
+  };
+  return String(template || '').replace(/\{([A-Z][A-Z0-9_]*)\}/g, (token, key) => (
+    Object.prototype.hasOwnProperty.call(values, key) ? values[key] : token
+  ));
+}
+
+function renderTextMessagePreview() {
+  const category = activeTextMessageCategory();
+  if (!category) return;
+  if (!category.live && !category.enabled) {
+    el('textMessagePreviewBody').textContent = category.preview;
+    return;
+  }
+  const opening = category.messages[0] ? renderSampleText(category.messages[0], category) : '';
+  const details = renderSampleText(category.detailsTemplate, category);
+  el('textMessagePreviewBody').textContent = [opening, details].filter(Boolean).join('\n\n');
+}
+
 function renderTextMessageCategory() {
   const category = activeTextMessageCategory();
   if (!category) return;
-  youreInConfig = { messages: category.messages };
+  youreInConfig = {
+    messages: category.messages,
+    detailsTemplate: category.detailsTemplate
+  };
   editingYoureInIndex = null;
   el('textMessageRecipient').textContent = category.recipient;
-  el('textMessagePreviewBody').textContent = category.preview;
+  renderTextMessagePreview();
   el('textMessagePreview').setAttribute(
     'aria-label',
     `${category.title} current text preview for ${category.recipient}`
   );
   el('textMessageDescription').textContent = category.description;
-  el('textMessageAddTitle').textContent = category.addTitle;
-  el('textMessageListTitle').textContent = category.listTitle;
+  el('textMessageDetailsTitle').textContent = `Edit The ${category.title} Details`;
+  el('textMessageAddTitle').textContent = 'Add A Random Opening Message';
+  el('textMessageListTitle').textContent = 'Random Opening Messages';
   el('textMessagePreviewTitle').textContent = `Current ${category.title} Text`;
   const note = el('textMessagePreviewNote');
   note.textContent = category.previewNote || '';
@@ -1014,8 +1066,8 @@ function renderTextMessageCategory() {
   el('useRandomTexts').checked = category.enabled === true;
   el('textMessageModeDetail').textContent = category.enabled
     ? category.messages.length
-      ? 'On — one saved text is selected randomly.'
-      : 'On — add a saved text; the current app text is the fallback.'
+      ? 'On — the saved details and one random opening are live.'
+      : 'On — the saved details are live without a random opening.'
     : 'Off — the current app text is used.';
   const tokenPanel = el('textMessageTokens');
   const tokens = category.tokens || [];
@@ -1023,16 +1075,16 @@ function renderTextMessageCategory() {
   el('textMessageTokenList').innerHTML = tokens
     .map((token) => `<code>{${escapeHtml(token)}}</code>`)
     .join('');
+  el('textMessageDetailsTemplate').maxLength = category.detailsMaxLength;
+  el('textMessageDetailsTemplate').value = category.detailsTemplate;
   resetBulkMessageFields();
   renderYoureInMessages();
   setYoureInStatus(
     category.live
-      ? 'Changes here affect live You’re In texts.'
+      ? 'Changes to either section affect live You’re In texts.'
       : category.enabled
-        ? category.messages.length
-          ? 'Random saved texts are live for this category.'
-          : 'Random mode is on, but the current app text is used until a saved text is added.'
-        : 'The current app text remains live until the toggle is turned on.'
+        ? 'The saved details and any random openings are live for this category.'
+        : 'Edits are saved as drafts until Use Edited Text is turned on.'
   );
 }
 
@@ -1042,7 +1094,7 @@ function renderYoureInMessages() {
   if (!youreInConfig.messages.length) {
     el('youreInList').innerHTML = `
       <div class="empty-rotation">
-        <p class="muted">No alternate texts have been added yet. The current app text shown above is unchanged.</p>
+        <p class="muted">No random openings have been added. The details section is sent by itself.</p>
       </div>`;
     return;
   }
@@ -1052,7 +1104,7 @@ function renderYoureInMessages() {
       ${editingYoureInIndex === index ? `
         <form class="slogan-edit-form youre-in-edit-form" data-index="${index}">
           <textarea rows="3" maxlength="${category.maxLength}"
-            aria-label="Edit ${escapeHtml(category.title)} text ${index + 1}"
+            aria-label="Edit ${escapeHtml(category.title)} opening ${index + 1}"
             required>${escapeHtml(message)}</textarea>
           <button type="submit" class="primary">Save</button>
           <button type="button" class="ghost" data-action="cancel-edit-youre-in">Cancel</button>
@@ -1094,7 +1146,7 @@ async function loadYoureInMessages() {
   return loadTextMessageCategory('youre-in');
 }
 
-async function saveYoureInMessages(messages, successMessage) {
+async function saveTextMessageCategory(messages, detailsTemplate, successMessage) {
   const category = activeTextMessageCategory();
   if (!category) return false;
   setYoureInStatus('Saving…');
@@ -1102,15 +1154,24 @@ async function saveYoureInMessages(messages, successMessage) {
     const res = await fetch(`/api/dev/text-message-categories/${category.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, enabled: category.enabled === true })
+      body: JSON.stringify({
+        messages,
+        detailsTemplate,
+        enabled: category.enabled === true
+      })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Could not save the ${category.title} texts.`);
     category.messages = data.messages || [];
+    category.detailsTemplate = data.detailsTemplate;
     if (!category.live) category.enabled = data.enabled === true;
-    youreInConfig = { messages: data.messages };
+    youreInConfig = {
+      messages: data.messages || [],
+      detailsTemplate: data.detailsTemplate
+    };
     editingYoureInIndex = null;
     renderYoureInMessages();
+    renderTextMessagePreview();
     setYoureInStatus(successMessage);
     return true;
   } catch (err) {
@@ -1118,6 +1179,27 @@ async function saveYoureInMessages(messages, successMessage) {
     return false;
   }
 }
+
+el('textMessageDetailsForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const category = activeTextMessageCategory();
+  const detailsTemplate = el('textMessageDetailsTemplate').value.trim();
+  if (!detailsTemplate) {
+    setYoureInStatus('The details section cannot be empty.', true);
+    return;
+  }
+  if (detailsTemplate === category.detailsTemplate) {
+    setYoureInStatus('No changes to save.');
+    return;
+  }
+  await saveTextMessageCategory(
+    category.messages,
+    detailsTemplate,
+    category.live || category.enabled
+      ? 'Details updated and live.'
+      : 'Details saved as a draft. Turn on Use Edited Text when ready.'
+  );
+});
 
 el('youreInForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -1132,7 +1214,7 @@ el('youreInForm').addEventListener('submit', async (e) => {
         .filter(Boolean)
     );
   if (!newMessages.length) {
-    setYoureInStatus('Write at least one text before adding.', true);
+    setYoureInStatus('Write at least one opening before adding.', true);
     return;
   }
   const duplicates = newMessages.filter(
@@ -1140,12 +1222,15 @@ el('youreInForm').addEventListener('submit', async (e) => {
       newMessages.indexOf(message) !== index || youreInConfig.messages.includes(message)
   );
   if (duplicates.length) {
-    setYoureInStatus(`Remove duplicate ${category.title} texts before adding.`, true);
+    setYoureInStatus('Remove duplicate opening messages before adding.', true);
     return;
   }
-  const saved = await saveYoureInMessages(
+  const saved = await saveTextMessageCategory(
     youreInConfig.messages.concat(newMessages),
-    newMessages.length === 1 ? 'Text added.' : `${newMessages.length} texts added together.`
+    category.detailsTemplate,
+    newMessages.length === 1
+      ? 'Random opening added.'
+      : `${newMessages.length} random openings added together.`
   );
   if (saved) resetBulkMessageFields();
 });
@@ -1157,12 +1242,13 @@ el('useRandomTexts').addEventListener('change', async (e) => {
   if (!category || category.live) return;
   const previous = category.enabled === true;
   category.enabled = e.target.checked;
-  const saved = await saveYoureInMessages(
+  const saved = await saveTextMessageCategory(
     category.messages,
+    category.detailsTemplate,
     category.enabled
       ? category.messages.length
-        ? 'Random saved texts are now live.'
-        : 'Random mode is on, but the current text will be used until a saved text is added.'
+        ? 'The saved details and random openings are now live.'
+        : 'The saved details are now live without a random opening.'
       : 'The current app text is now live.'
   );
   if (!saved) {
@@ -1198,13 +1284,14 @@ el('youreInList').addEventListener('click', async (e) => {
   const index = Number(e.target.dataset.index);
   const category = activeTextMessageCategory();
   if (category.requiresOne && youreInConfig.messages.length === 1) {
-    setYoureInStatus(`Keep at least one ${category.title} text in the rotation.`, true);
+    setYoureInStatus(`Keep at least one ${category.title} opening in the rotation.`, true);
     return;
   }
-  if (!confirm(`Delete this ${category.title} text?`)) return;
-  await saveYoureInMessages(
+  if (!confirm(`Delete this ${category.title} opening?`)) return;
+  await saveTextMessageCategory(
     youreInConfig.messages.filter((_message, i) => i !== index),
-    'Text removed.'
+    category.detailsTemplate,
+    'Random opening removed.'
   );
 });
 
@@ -1215,11 +1302,11 @@ el('youreInList').addEventListener('submit', async (e) => {
   const category = activeTextMessageCategory();
   const message = e.target.querySelector('textarea').value.trim();
   if (!message) {
-    setYoureInStatus(`A ${category.title} text cannot be empty.`, true);
+    setYoureInStatus(`A ${category.title} opening cannot be empty.`, true);
     return;
   }
   if (youreInConfig.messages.some((existing, i) => i !== index && existing === message)) {
-    setYoureInStatus('That text is already in the rotation.', true);
+    setYoureInStatus('That opening is already in the rotation.', true);
     return;
   }
   if (message === youreInConfig.messages[index]) {
@@ -1230,7 +1317,11 @@ el('youreInList').addEventListener('submit', async (e) => {
   }
   const messages = youreInConfig.messages.slice();
   messages[index] = message;
-  await saveYoureInMessages(messages, 'Text updated.');
+  await saveTextMessageCategory(
+    messages,
+    category.detailsTemplate,
+    'Random opening updated.'
+  );
 });
 
 // ---------------------------------------------------------------------------
