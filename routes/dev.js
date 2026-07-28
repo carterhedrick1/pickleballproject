@@ -35,6 +35,12 @@ const {
   ASSET_NAME: YOURE_IN_ASSET_NAME,
   loadYoureInConfig
 } = require('../services/youre-in-rotation');
+const {
+  TEXT_MESSAGE_CATEGORIES,
+  getTextMessageCategory,
+  normalizeMessages,
+  normalizeDraftConfig
+} = require('../text-message-categories');
 
 const DEV_PASSWORD = process.env.DEV_PASSWORD || 'vibe123';
 const COOKIE_NAME = 'dev_auth';
@@ -47,6 +53,7 @@ const NOTE_STATUSES = ['idea', 'building', 'done-not-deployed', 'live'];
 // caller could write any key they liked into dev_assets.
 const PUBLISHABLE = ['screens', 'containers', 'copy-deck'];
 const SLOGAN_ASSET_NAME = 'slogan-config';
+const TEXT_MESSAGE_DRAFT_ASSET_NAME = 'text-message-draft-config';
 
 const SERVER_STARTED_AT = new Date();
 
@@ -159,6 +166,38 @@ function validateYoureInConfig(body) {
   return { config: youreInMessages.normalizeConfig({ messages }) };
 }
 
+async function loadTextMessageDraftConfig() {
+  const saved = await getDevAsset(TEXT_MESSAGE_DRAFT_ASSET_NAME);
+  if (!saved) return normalizeDraftConfig();
+  try {
+    return normalizeDraftConfig(JSON.parse(saved.content));
+  } catch (err) {
+    console.error('Error parsing saved text message drafts:', err.message);
+    return normalizeDraftConfig();
+  }
+}
+
+function validateTextMessageCategory(category, body) {
+  const messages = body && body.messages;
+  if (!Array.isArray(messages)) {
+    return { error: `${category.title} texts must be a list.` };
+  }
+
+  const cleaned = messages.map((message) => String(message == null ? '' : message).trim());
+  if (cleaned.some((message) => !message || message.length > category.maxLength)) {
+    return {
+      error: `Each ${category.title} text must be between 1 and ${category.maxLength} characters.`
+    };
+  }
+  if (new Set(cleaned).size !== cleaned.length) {
+    return { error: `${category.title} texts cannot contain duplicates.` };
+  }
+  if (category.requiresOne && !cleaned.length) {
+    return { error: `Keep at least one ${category.title} text in the rotation.` };
+  }
+  return { messages: normalizeMessages(cleaned, category.maxLength) };
+}
+
 module.exports = function mountDevRoutes(app) {
   // Brute force is the only real attack on a single shared password.
   const loginLimiter = rateLimit({
@@ -236,6 +275,50 @@ module.exports = function mountDevRoutes(app) {
     } catch (err) {
       console.error('Error saving You\'re In texts:', err);
       res.status(500).json({ error: 'Could not save the You’re In rotation.' });
+    }
+  });
+
+  app.get('/api/dev/text-message-categories', requireDevAuth, async (_req, res) => {
+    try {
+      const [youreInConfig, draftConfig] = await Promise.all([
+        loadYoureInConfig(),
+        loadTextMessageDraftConfig()
+      ]);
+      res.json({
+        categories: TEXT_MESSAGE_CATEGORIES.map((category) => ({
+          ...category,
+          messages: category.id === 'youre-in'
+            ? youreInConfig.messages
+            : draftConfig.categories[category.id].messages
+        }))
+      });
+    } catch (err) {
+      console.error('Error loading text message categories:', err);
+      res.status(500).json({ error: 'Could not load the text message editors.' });
+    }
+  });
+
+  app.put('/api/dev/text-message-categories/:categoryId', requireDevAuth, async (req, res) => {
+    const category = getTextMessageCategory(req.params.categoryId);
+    if (!category) return res.status(404).json({ error: 'Unknown text message category.' });
+
+    const result = validateTextMessageCategory(category, req.body);
+    if (result.error) return res.status(400).json({ error: result.error });
+
+    try {
+      if (category.id === 'youre-in') {
+        const config = youreInMessages.normalizeConfig({ messages: result.messages });
+        await saveDevAsset(YOURE_IN_ASSET_NAME, JSON.stringify(config));
+        return res.json({ success: true, messages: config.messages });
+      }
+
+      const config = await loadTextMessageDraftConfig();
+      config.categories[category.id] = { messages: result.messages };
+      await saveDevAsset(TEXT_MESSAGE_DRAFT_ASSET_NAME, JSON.stringify(config));
+      res.json({ success: true, messages: result.messages });
+    } catch (err) {
+      console.error(`Error saving ${category.title} texts:`, err);
+      res.status(500).json({ error: `Could not save the ${category.title} texts.` });
     }
   });
 

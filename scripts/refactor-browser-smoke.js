@@ -521,17 +521,31 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     const youreInEditor = await desktop.evaluate(`(async () => {
       document.querySelector('[data-tab="youre-in"]').click();
       await new Promise((resolve) => setTimeout(resolve, 250));
+      const categoryTabs = [
+        'youre-in', 'waitlist-confirmation', 'application-confirmation',
+        'roster-status-change', 'player-cancellation', 'upcoming-reminder',
+        'game-cancelled', 'organizer-announcement', 'game-created', 'host-alerts',
+        'management-links', 'game-details', 'cancellation-help'
+      ];
       const messages = document.querySelectorAll('#youreInList .slogan-entry').length;
       const editButtons = document.querySelectorAll('[data-action="edit-youre-in"]').length;
       const first = document.querySelector('#youreInList .copy')?.textContent || '';
+      document.getElementById('addAnotherText').click();
+      const bulkFields = document.querySelectorAll('#bulkMessageFields .text-message-input').length;
+      const bulkButton = document.getElementById('addAllTexts').textContent.trim();
       document.querySelector('[data-action="edit-youre-in"]')?.click();
       const form = document.querySelector('.youre-in-edit-form');
-      const input = form?.querySelector('input');
+      const input = form?.querySelector('textarea');
       const result = {
         messages,
         editButtons,
         startsWithYoureIn: first.startsWith("You're IN"),
         form: Boolean(document.getElementById('youreInForm')),
+        categoryTabs: categoryTabs.filter((id) => document.querySelector('[data-tab="' + id + '"]')).length,
+        preview: document.getElementById('textMessagePreviewBody')?.textContent.includes('Pickleball at'),
+        bulkFields,
+        bulkButton,
+        bulkPaste: Boolean(document.getElementById('bulkPasteTexts')),
         focused: document.activeElement === input,
         save: form?.querySelector('button[type="submit"]')?.textContent.trim(),
         cancel: form?.querySelector('[data-action="cancel-edit-youre-in"]')?.textContent.trim()
@@ -545,11 +559,16 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         youreInEditor.editButtons === youreInEditor.messages &&
         youreInEditor.startsWithYoureIn &&
         youreInEditor.form &&
+        youreInEditor.categoryTabs === 13 &&
+        youreInEditor.preview &&
+        youreInEditor.bulkFields === 2 &&
+        youreInEditor.bulkButton === 'Add All 2 Texts' &&
+        youreInEditor.bulkPaste &&
         youreInEditor.focused &&
         youreInEditor.save === 'Save' &&
         youreInEditor.cancel === 'Cancel' &&
         youreInEditor.cancelled,
-      "developer area can manage the You're In rotation"
+      'developer area shows all text categories, previews, bulk entry, and inline editing'
     );
 
     const mobile = await browser.newPage({

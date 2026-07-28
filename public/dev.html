@@ -112,6 +112,54 @@
   .name-chip button { padding: 1px 6px; border-radius: 50%; background: transparent; color: #2e7d32; }
   .name-chip button:hover { background: rgba(46, 125, 50, 0.12); }
 
+  /* Text message editors */
+  .message-preview-layout {
+    display: grid; grid-template-columns: minmax(230px, 320px) 1fr; gap: 24px;
+    align-items: center;
+  }
+  .message-phone {
+    width: 100%; max-width: 320px; margin: 0 auto; padding: 12px 12px 18px;
+    border: 8px solid #263238; border-radius: 32px; background: #f3f3f8;
+    box-shadow: 0 10px 24px rgba(44, 62, 80, 0.16);
+  }
+  .message-phone-bar {
+    width: 82px; height: 7px; margin: 0 auto 14px; border-radius: 10px;
+    background: #263238;
+  }
+  .message-phone-recipient {
+    color: #6c757d; font-size: 12px; font-weight: 600; text-align: center;
+    margin-bottom: 14px;
+  }
+  .message-bubble {
+    background: #e5e5ea; color: #111; border-radius: 18px 18px 18px 5px;
+    padding: 11px 13px; font-size: 13px; line-height: 1.35; white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .message-preview-copy h2 { margin-bottom: 8px; }
+  .message-preview-copy p { margin: 0 0 10px; }
+  .message-preview-note {
+    border-left: 3px solid #4CAF50; padding-left: 11px; color: #495057;
+    font-size: 13px;
+  }
+  .bulk-message-fields { display: grid; gap: 10px; }
+  .bulk-message-field { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; }
+  .bulk-message-field .ghost { margin-top: 5px; }
+  .bulk-message-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .bulk-message-actions .primary { flex: 1 1 240px; }
+  .bulk-paste {
+    border: 1px solid #e8ecf1; border-radius: 10px; padding: 10px 12px;
+    background: #f8f9fa;
+  }
+  .bulk-paste summary { color: #4CAF50; cursor: pointer; font-weight: 600; }
+  .bulk-paste p { margin: 8px 0; }
+  .empty-rotation {
+    border: 1px dashed #cfd8dc; border-radius: 10px; padding: 22px; text-align: center;
+  }
+  @media (max-width: 680px) {
+    .message-preview-layout { grid-template-columns: 1fr; }
+    .message-preview-copy { order: -1; }
+  }
+
   /* Errors */
   .err { border: 1px solid #e8ecf1; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
   .err .err-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
@@ -160,6 +208,18 @@
     <button data-tab="ideas">Ideas</button>
     <button data-tab="slogans">Slogans</button>
     <button data-tab="youre-in">You're In</button>
+    <button data-tab="waitlist-confirmation">Waitlist Confirmation</button>
+    <button data-tab="application-confirmation">Application Confirmation</button>
+    <button data-tab="roster-status-change">Roster Status Change</button>
+    <button data-tab="player-cancellation">Player Cancellation</button>
+    <button data-tab="upcoming-reminder">Upcoming Game Reminder</button>
+    <button data-tab="game-cancelled">Entire Game Cancelled</button>
+    <button data-tab="organizer-announcement">Organizer-Written Announcement</button>
+    <button data-tab="game-created">Game Creation Confirmation</button>
+    <button data-tab="host-alerts">Host Activity Alerts</button>
+    <button data-tab="management-links">Management Link Delivery</button>
+    <button data-tab="game-details">Game Details</button>
+    <button data-tab="cancellation-help">Cancellation Workflow And Command Help</button>
     <button data-tab="errors">Errors</button>
     <button data-tab="courts">Courts</button>
     <button data-tab="screens">Screens</button>
@@ -225,18 +285,40 @@
       </div>
     </section>
 
-    <!-- You're In -->
+    <!-- Text Message Editors -->
     <section id="tab-youre-in" class="hidden">
       <div class="panel">
-        <h2>Add A You're In Text</h2>
-        <p class="muted">One text is selected whenever a player is confirmed automatically or chosen by the host. Game details and reply instructions are added after it.</p>
+        <div class="message-preview-layout">
+          <div class="message-phone" role="img" id="textMessagePreview" aria-label="Current text message preview">
+            <div class="message-phone-bar"></div>
+            <div class="message-phone-recipient" id="textMessageRecipient"></div>
+            <div class="message-bubble" id="textMessagePreviewBody"></div>
+          </div>
+          <div class="message-preview-copy">
+            <h2 id="textMessagePreviewTitle">Current App Text</h2>
+            <p class="muted" id="textMessageDescription"></p>
+            <p class="message-preview-note hidden" id="textMessagePreviewNote"></p>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 id="textMessageAddTitle">Add A You're In Text</h2>
+        <p class="muted">Add one or add several before saving. Use a separate box for each complete text.</p>
         <form class="idea-form" id="youreInForm" style="margin-top:16px">
-          <textarea id="youreInText" rows="2" placeholder="Write a new You're In text" maxlength="240"></textarea>
-          <button type="submit" class="primary">Add Text</button>
+          <div id="bulkMessageFields" class="bulk-message-fields"></div>
+          <details class="bulk-paste">
+            <summary>Paste Multiple Texts</summary>
+            <p class="muted">Put each complete text on its own line. All non-empty lines will be added together.</p>
+            <textarea id="bulkPasteTexts" rows="6" placeholder="First text&#10;Second text&#10;Third text"></textarea>
+          </details>
+          <div class="bulk-message-actions">
+            <button type="button" class="ghost" id="addAnotherText">Add Another Text</button>
+            <button type="submit" class="primary" id="addAllTexts">Add All Texts</button>
+          </div>
         </form>
       </div>
       <div class="panel">
-        <h2>You're In Rotation</h2>
+        <h2 id="textMessageListTitle">You're In Rotation</h2>
         <div id="youreInList"><p class="muted">Loading…</p></div>
         <p id="youreInStatus" class="muted" style="min-height:20px; margin-top:14px"></p>
       </div>
@@ -314,6 +396,22 @@ const STATUS_LABELS = {
   'live': 'Live'
 };
 let noteStatuses = ['idea', 'building', 'done-not-deployed', 'live'];
+const TEXT_MESSAGE_TAB_IDS = [
+  'youre-in',
+  'waitlist-confirmation',
+  'application-confirmation',
+  'roster-status-change',
+  'player-cancellation',
+  'upcoming-reminder',
+  'game-cancelled',
+  'organizer-announcement',
+  'game-created',
+  'host-alerts',
+  'management-links',
+  'game-details',
+  'cancellation-help'
+];
+const STANDARD_TAB_IDS = ['status', 'ideas', 'slogans', 'errors', 'courts', 'screens'];
 
 function el(id) { return document.getElementById(id); }
 function escapeHtml(s) {
@@ -380,13 +478,14 @@ document.querySelectorAll('.tabs button').forEach((button) => {
     document.querySelectorAll('.tabs button').forEach((b) => b.classList.remove('active'));
     button.classList.add('active');
     const tab = button.dataset.tab;
-    ['status', 'ideas', 'slogans', 'youre-in', 'errors', 'courts', 'screens'].forEach((name) => {
+    STANDARD_TAB_IDS.forEach((name) => {
       el('tab-' + name).classList.toggle('hidden', name !== tab);
     });
+    el('tab-youre-in').classList.toggle('hidden', !TEXT_MESSAGE_TAB_IDS.includes(tab));
     if (tab === 'status') loadStatus();
     if (tab === 'ideas') loadNotes();
     if (tab === 'slogans') loadSlogans();
-    if (tab === 'youre-in') loadYoureInMessages();
+    if (TEXT_MESSAGE_TAB_IDS.includes(tab)) loadTextMessageCategory(tab);
     if (tab === 'errors') loadErrors();
     if (tab === 'courts') loadCourts();
   });
@@ -702,11 +801,19 @@ el('sloganNameList').addEventListener('click', async (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// You're In
+// Text Message Editors
 // ---------------------------------------------------------------------------
 
-let youreInConfig = { messages: [] };
+let textMessageCategories = [];
+let activeTextMessageCategoryId = 'youre-in';
+let youreInConfig = { messages: [] }; // Kept for the existing browser smoke test.
 let editingYoureInIndex = null;
+
+function activeTextMessageCategory() {
+  return textMessageCategories.find(
+    (category) => category.id === activeTextMessageCategoryId
+  ) || null;
+}
 
 function setYoureInStatus(message, isError) {
   const status = el('youreInStatus');
@@ -714,13 +821,81 @@ function setYoureInStatus(message, isError) {
   status.style.color = isError ? '#e74c3c' : '#2e7d32';
 }
 
+function addBulkMessageField(value = '') {
+  const category = activeTextMessageCategory();
+  if (!category) return;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'bulk-message-field';
+  wrapper.innerHTML = `
+    <textarea class="text-message-input" rows="3"
+      placeholder="Write a new ${escapeHtml(category.title)} text"
+      maxlength="${category.maxLength}">${escapeHtml(value)}</textarea>
+    <button type="button" class="ghost" data-action="remove-bulk-text"
+      aria-label="Remove this text">Remove</button>`;
+  el('bulkMessageFields').appendChild(wrapper);
+  wrapper.querySelector('textarea').focus();
+  updateBulkMessageControls();
+}
+
+function updateBulkMessageControls() {
+  const fields = el('bulkMessageFields').querySelectorAll('.bulk-message-field');
+  fields.forEach((field) => {
+    field.querySelector('[data-action="remove-bulk-text"]').classList.toggle(
+      'hidden',
+      fields.length === 1
+    );
+  });
+  el('addAllTexts').textContent = fields.length === 1 ? 'Add Text' : `Add All ${fields.length} Texts`;
+}
+
+function resetBulkMessageFields() {
+  el('bulkMessageFields').innerHTML = '';
+  el('bulkPasteTexts').value = '';
+  el('bulkPasteTexts').closest('details').open = false;
+  addBulkMessageField();
+}
+
+function renderTextMessageCategory() {
+  const category = activeTextMessageCategory();
+  if (!category) return;
+  youreInConfig = { messages: category.messages };
+  editingYoureInIndex = null;
+  el('textMessageRecipient').textContent = category.recipient;
+  el('textMessagePreviewBody').textContent = category.preview;
+  el('textMessagePreview').setAttribute(
+    'aria-label',
+    `${category.title} current text preview for ${category.recipient}`
+  );
+  el('textMessageDescription').textContent = category.description;
+  el('textMessageAddTitle').textContent = category.addTitle;
+  el('textMessageListTitle').textContent = category.listTitle;
+  el('textMessagePreviewTitle').textContent = `Current ${category.title} Text`;
+  const note = el('textMessagePreviewNote');
+  note.textContent = category.previewNote || '';
+  note.classList.toggle('hidden', !category.previewNote);
+  resetBulkMessageFields();
+  renderYoureInMessages();
+  setYoureInStatus(category.live ? 'Changes here affect live You’re In texts.' : 'Saved here as drafts; not connected to live delivery yet.');
+}
+
 function renderYoureInMessages() {
+  const category = activeTextMessageCategory();
+  if (!category) return;
+  if (!youreInConfig.messages.length) {
+    el('youreInList').innerHTML = `
+      <div class="empty-rotation">
+        <p class="muted">No alternate texts have been added yet. The current app text shown above is unchanged.</p>
+      </div>`;
+    return;
+  }
   el('youreInList').innerHTML = youreInConfig.messages.map((message, index) => `
     <div class="slogan-entry">
       <span class="number">${index + 1}.</span>
       ${editingYoureInIndex === index ? `
         <form class="slogan-edit-form youre-in-edit-form" data-index="${index}">
-          <input type="text" value="${escapeHtml(message)}" maxlength="240" aria-label="Edit You're In text ${index + 1}" required>
+          <textarea rows="3" maxlength="${category.maxLength}"
+            aria-label="Edit ${escapeHtml(category.title)} text ${index + 1}"
+            required>${escapeHtml(message)}</textarea>
           <button type="submit" class="primary">Save</button>
           <button type="button" class="ghost" data-action="cancel-edit-youre-in">Cancel</button>
         </form>` : `
@@ -732,29 +907,48 @@ function renderYoureInMessages() {
     </div>`).join('');
 }
 
-async function loadYoureInMessages() {
+async function loadTextMessageCategories() {
+  if (textMessageCategories.length) return true;
   try {
-    const res = await fetch('/api/youre-in-messages');
-    if (!res.ok) throw new Error('Could not load You’re In texts');
+    const res = await fetch('/api/dev/text-message-categories');
+    if (res.status === 401) {
+      el('appView').classList.add('hidden');
+      el('loginView').classList.remove('hidden');
+      return false;
+    }
+    if (!res.ok) throw new Error('Could not load text message categories');
     const data = await res.json();
-    youreInConfig = { messages: data.messages || [] };
-    renderYoureInMessages();
+    textMessageCategories = data.categories || [];
+    return true;
   } catch (_err) {
-    el('youreInList').innerHTML = '<p class="muted">Could not load You’re In texts.</p>';
+    el('youreInList').innerHTML = '<p class="muted">Could not load text message editors.</p>';
     setYoureInStatus('Could not reach the server.', true);
+    return false;
   }
 }
 
+async function loadTextMessageCategory(categoryId) {
+  activeTextMessageCategoryId = categoryId;
+  if (await loadTextMessageCategories()) renderTextMessageCategory();
+}
+
+async function loadYoureInMessages() {
+  return loadTextMessageCategory('youre-in');
+}
+
 async function saveYoureInMessages(messages, successMessage) {
+  const category = activeTextMessageCategory();
+  if (!category) return false;
   setYoureInStatus('Saving…');
   try {
-    const res = await fetch('/api/dev/youre-in-messages', {
+    const res = await fetch(`/api/dev/text-message-categories/${category.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages })
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || 'Could not save the You’re In rotation.');
+    if (!res.ok) throw new Error(data.error || `Could not save the ${category.title} texts.`);
+    category.messages = data.messages || [];
     youreInConfig = { messages: data.messages };
     editingYoureInIndex = null;
     renderYoureInMessages();
@@ -768,20 +962,48 @@ async function saveYoureInMessages(messages, successMessage) {
 
 el('youreInForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const message = el('youreInText').value.trim();
-  if (!message) return;
-  const saved = await saveYoureInMessages(
-    youreInConfig.messages.concat(message),
-    'Text added to the rotation.'
+  const category = activeTextMessageCategory();
+  const newMessages = [...el('bulkMessageFields').querySelectorAll('.text-message-input')]
+    .map((input) => input.value.trim())
+    .filter(Boolean)
+    .concat(
+      el('bulkPasteTexts').value
+        .split(/\r?\n/)
+        .map((message) => message.trim())
+        .filter(Boolean)
+    );
+  if (!newMessages.length) {
+    setYoureInStatus('Write at least one text before adding.', true);
+    return;
+  }
+  const duplicates = newMessages.filter(
+    (message, index) =>
+      newMessages.indexOf(message) !== index || youreInConfig.messages.includes(message)
   );
-  if (saved) el('youreInText').value = '';
+  if (duplicates.length) {
+    setYoureInStatus(`Remove duplicate ${category.title} texts before adding.`, true);
+    return;
+  }
+  const saved = await saveYoureInMessages(
+    youreInConfig.messages.concat(newMessages),
+    newMessages.length === 1 ? 'Text added.' : `${newMessages.length} texts added together.`
+  );
+  if (saved) resetBulkMessageFields();
+});
+
+el('addAnotherText').addEventListener('click', () => addBulkMessageField());
+
+el('bulkMessageFields').addEventListener('click', (e) => {
+  if (e.target.dataset.action !== 'remove-bulk-text') return;
+  e.target.closest('.bulk-message-field').remove();
+  updateBulkMessageControls();
 });
 
 el('youreInList').addEventListener('click', async (e) => {
   if (e.target.dataset.action === 'edit-youre-in') {
     editingYoureInIndex = Number(e.target.dataset.index);
     renderYoureInMessages();
-    const input = el('youreInList').querySelector('.youre-in-edit-form input');
+    const input = el('youreInList').querySelector('.youre-in-edit-form textarea');
     input.focus();
     input.select();
     return;
@@ -794,11 +1016,12 @@ el('youreInList').addEventListener('click', async (e) => {
   }
   if (e.target.dataset.action !== 'delete-youre-in') return;
   const index = Number(e.target.dataset.index);
-  if (youreInConfig.messages.length === 1) {
-    setYoureInStatus('Keep at least one You’re In text in the rotation.', true);
+  const category = activeTextMessageCategory();
+  if (category.requiresOne && youreInConfig.messages.length === 1) {
+    setYoureInStatus(`Keep at least one ${category.title} text in the rotation.`, true);
     return;
   }
-  if (!confirm('Delete this You’re In text?')) return;
+  if (!confirm(`Delete this ${category.title} text?`)) return;
   await saveYoureInMessages(
     youreInConfig.messages.filter((_message, i) => i !== index),
     'Text removed.'
@@ -809,9 +1032,10 @@ el('youreInList').addEventListener('submit', async (e) => {
   if (!e.target.classList.contains('youre-in-edit-form')) return;
   e.preventDefault();
   const index = Number(e.target.dataset.index);
-  const message = e.target.querySelector('input').value.trim();
+  const category = activeTextMessageCategory();
+  const message = e.target.querySelector('textarea').value.trim();
   if (!message) {
-    setYoureInStatus('A You’re In text cannot be empty.', true);
+    setYoureInStatus(`A ${category.title} text cannot be empty.`, true);
     return;
   }
   if (youreInConfig.messages.some((existing, i) => i !== index && existing === message)) {
