@@ -286,6 +286,17 @@
 
   /* Hosts And Players */
   .roster-summary { margin-bottom: 18px; }
+  .roster-source {
+    align-items: center; background: var(--brand-soft); border: 1px solid var(--brand-border);
+    border-radius: 10px; display: flex; gap: 16px; justify-content: space-between;
+    margin-bottom: 18px; padding: 13px 15px;
+  }
+  .roster-source.local {
+    background: var(--warning-soft); border-color: var(--warning-border);
+  }
+  .roster-source-title { font-size: 14px; font-weight: 750; }
+  .roster-source-detail { color: var(--muted); font-size: 13px; }
+  .roster-source button { flex: 0 0 auto; }
   .roster-toolbar {
     align-items: center; display: flex; gap: 12px; justify-content: space-between;
     margin-bottom: 16px;
@@ -346,6 +357,7 @@
   }
   .host-roster-player:last-child { border-bottom: 0; }
   @media (max-width: 600px) {
+    .roster-source { align-items: stretch; flex-direction: column; }
     .roster-toolbar, .master-player-main { align-items: stretch; flex-direction: column; }
     .roster-toolbar input { max-width: none; }
     .roster-actions { width: 100%; }
@@ -720,6 +732,13 @@
     <section id="tab-rosters" class="hidden">
       <div class="stat-grid roster-summary" id="rosterSummary">
         <p class="muted">Loading…</p>
+      </div>
+      <div class="roster-source hidden" id="rosterSourceNotice">
+        <div>
+          <div class="roster-source-title" id="rosterSourceTitle"></div>
+          <div class="roster-source-detail" id="rosterSourceDetail"></div>
+        </div>
+        <button type="button" class="ghost" id="rosterSourceToggle"></button>
       </div>
       <div class="panel">
         <h2>Master Player Roster</h2>
@@ -2031,7 +2050,7 @@ el('youreInList').addEventListener('submit', async (e) => {
 // Hosts And Players
 // ---------------------------------------------------------------------------
 
-let rosterDirectory = { hosts: [], players: [], counts: {} };
+let rosterDirectory = { hosts: [], players: [], counts: {}, source: null };
 
 function formatDisplayPhone(phone) {
   const digits = String(phone || '').replace(/\D/g, '');
@@ -2129,9 +2148,38 @@ function renderRosters() {
     : '<p class="muted">No host rosters match that search.</p>';
 }
 
-async function loadRosters() {
+function renderRosterSource() {
+  const notice = el('rosterSourceNotice');
+  if (!rosterDirectory.showSourceNotice) {
+    notice.classList.add('hidden');
+    return;
+  }
+  const showingProduction = rosterDirectory.source === 'production';
+  notice.classList.remove('hidden');
+  notice.classList.toggle('local', !showingProduction);
+  el('rosterSourceTitle').textContent = showingProduction
+    ? 'Showing Live Production Data'
+    : 'Showing Local Test Data';
+  el('rosterSourceDetail').textContent = showingProduction
+    ? 'These are the real rosters from inorout.club. Edits and deletions affect the live app.'
+    : 'These rows only exist in this computer’s SQLite test database.';
+  const toggle = el('rosterSourceToggle');
+  toggle.classList.toggle('hidden', !rosterDirectory.canChooseSource);
+  toggle.textContent = showingProduction
+    ? 'Show Local Test Data'
+    : 'Show Live Production Data';
+}
+
+function rosterSourceQuery() {
+  return rosterDirectory.source
+    ? `?source=${encodeURIComponent(rosterDirectory.source)}`
+    : '';
+}
+
+async function loadRosters(requestedSource = null) {
   try {
-    const res = await fetch('/api/dev/rosters');
+    const query = requestedSource ? `?source=${encodeURIComponent(requestedSource)}` : '';
+    const res = await fetch('/api/dev/rosters' + query);
     if (res.status === 401) {
       el('appView').classList.add('hidden');
       el('loginView').classList.remove('hidden');
@@ -2140,6 +2188,7 @@ async function loadRosters() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Could not load rosters.');
     rosterDirectory = data;
+    renderRosterSource();
     el('rosterSummary').innerHTML = `
       <div class="stat good"><div class="label">Hosts</div>
         <div class="value">${data.counts.hosts}</div><div class="note">With a saved game or roster</div></div>
@@ -2150,12 +2199,24 @@ async function loadRosters() {
     renderRosters();
   } catch (err) {
     el('rosterSummary').innerHTML = '';
+    if (requestedSource === 'production') {
+      rosterDirectory = {
+        ...rosterDirectory,
+        source: 'production',
+        showSourceNotice: true,
+        canChooseSource: true
+      };
+      renderRosterSource();
+    }
     el('masterRosterList').innerHTML = `<p class="muted">${escapeHtml(err.message)}</p>`;
     el('hostRosterList').innerHTML = '<p class="muted">Could not load host rosters.</p>';
   }
 }
 
 el('rosterSearch').addEventListener('input', renderRosters);
+el('rosterSourceToggle').addEventListener('click', () => {
+  loadRosters(rosterDirectory.source === 'production' ? 'local' : 'production');
+});
 
 el('masterRosterList').addEventListener('click', (event) => {
   const button = event.target.closest('[data-roster-action]');
@@ -2181,14 +2242,14 @@ el('masterRosterList').addEventListener('click', (event) => {
     const status = deleteConfirm.querySelector('.roster-form-status');
     button.disabled = true;
     status.textContent = 'Deleting player…';
-    fetch('/api/dev/players/' + encodeURIComponent(phone), {
+    fetch('/api/dev/players/' + encodeURIComponent(phone) + rosterSourceQuery(), {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ confirmPhone: phone })
     }).then(async (res) => {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Could not delete the player.');
-      await loadRosters();
+      await loadRosters(rosterDirectory.source);
     }).catch((err) => {
       status.textContent = err.message;
       button.disabled = false;
@@ -2208,17 +2269,20 @@ el('masterRosterList').addEventListener('submit', async (event) => {
   status.textContent = 'Saving changes…';
 
   try {
-    const res = await fetch('/api/dev/players/' + encodeURIComponent(oldPhone), {
+    const res = await fetch(
+      '/api/dev/players/' + encodeURIComponent(oldPhone) + rosterSourceQuery(),
+      {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: form.elements.name.value,
         phone: form.elements.phone.value
       })
-    });
+      }
+    );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'Could not update the player.');
-    await loadRosters();
+    await loadRosters(rosterDirectory.source);
   } catch (err) {
     status.textContent = err.message;
     submit.disabled = false;

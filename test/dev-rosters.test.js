@@ -1,12 +1,40 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  chooseDeveloperRosterSource,
   buildDeveloperRosters,
   editPlayerInGame,
   deletePlayerFromGame
 } = require('../utils/dev-rosters');
 
 describe('developer roster directory', () => {
+  it('uses live data by default in local development while allowing fixture isolation', () => {
+    assert.equal(chooseDeveloperRosterSource(), 'production');
+    assert.equal(
+      chooseDeveloperRosterSource({ requestedSource: 'local' }),
+      'local'
+    );
+    assert.equal(
+      chooseDeveloperRosterSource({ configuredSource: 'local' }),
+      'local'
+    );
+    assert.equal(
+      chooseDeveloperRosterSource({
+        configuredSource: 'local',
+        requestedSource: 'production'
+      }),
+      'local'
+    );
+    assert.equal(
+      chooseDeveloperRosterSource({
+        production: true,
+        configuredSource: 'local',
+        requestedSource: 'local'
+      }),
+      'production'
+    );
+  });
+
   it('groups every player under each host and deduplicates the master roster', () => {
     const result = buildDeveloperRosters({
       games: [

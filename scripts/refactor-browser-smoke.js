@@ -559,7 +559,9 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         playerFound: Boolean(player),
         editButton: player?.querySelector('[data-roster-action="edit"]')?.textContent.trim(),
         deleteButton: player?.querySelector('[data-roster-action="delete"]')?.textContent.trim(),
-        phone: player?.querySelector('.roster-person-phone')?.textContent.trim()
+        phone: player?.querySelector('.roster-person-phone')?.textContent.trim(),
+        sourceTitle: document.getElementById('rosterSourceTitle').textContent.trim(),
+        sourceSwitchHidden: document.getElementById('rosterSourceToggle').classList.contains('hidden')
       };
     })()`);
     assert(
@@ -569,8 +571,10 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         rosterDirectory.playerFound &&
         rosterDirectory.editButton === 'Edit' &&
         rosterDirectory.deleteButton === 'Delete' &&
-        rosterDirectory.phone === '(555) 555-0777',
-      'developer area shows every host roster and a master player roster with edit and delete controls'
+        rosterDirectory.phone === '(555) 555-0777' &&
+        rosterDirectory.sourceTitle === 'Showing Local Test Data' &&
+        rosterDirectory.sourceSwitchHidden,
+      'developer area shows fixture rosters while automated local servers stay locked away from production'
     );
 
     const rosterEdit = await desktop.evaluate(`(async () => {

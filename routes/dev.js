@@ -32,7 +32,10 @@ const {
   updateDeveloperPlayer,
   deleteDeveloperPlayer
 } = require('../database');
-const { buildDeveloperRosters } = require('../utils/dev-rosters');
+const {
+  buildDeveloperRosters,
+  chooseDeveloperRosterSource
+} = require('../utils/dev-rosters');
 const { formatPhoneNumber } = require('../utils/sms-format');
 const sloganModule = require('../public/js/slogans');
 const youreInMessages = require('../youre-in-messages');
@@ -60,6 +63,9 @@ const {
 } = require('../sms-reply-options');
 
 const DEV_PASSWORD = process.env.DEV_PASSWORD || 'vibe123';
+const PRODUCTION_ROSTER_BASE_URL = String(
+  process.env.PRODUCTION_ROSTER_BASE_URL || 'https://inorout.club'
+).replace(/\/+$/, '');
 const COOKIE_NAME = 'dev_auth';
 const THIRTY_DAYS = 30 * 24 * 60 * 60;
 
@@ -113,6 +119,30 @@ function requireDevAuth(req, res, next) {
       <p><a href="/dev.html">Sign in first</a>, then come back.</p></div></body></html>`);
   }
   return res.status(401).json({ error: 'Not signed in' });
+}
+
+function selectedDeveloperRosterSource(req) {
+  return chooseDeveloperRosterSource({
+    production: isProduction,
+    configuredSource: process.env.DEV_ROSTER_SOURCE,
+    requestedSource: req.query && req.query.source
+  });
+}
+
+async function requestProductionRoster(pathname, { method = 'GET', body } = {}) {
+  const response = await fetch(`${PRODUCTION_ROSTER_BASE_URL}${pathname}`, {
+    method,
+    headers: {
+      'X-Dev-Password': DEV_PASSWORD,
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    signal: AbortSignal.timeout(15000)
+  });
+  const data = await response.json().catch(() => ({
+    error: `Live production returned HTTP ${response.status}.`
+  }));
+  return { status: response.status, data };
 }
 
 // Textbelt charges per request, so a dashboard refresh should not mean a fresh lookup.
@@ -483,11 +513,30 @@ module.exports = function mountDevRoutes(app) {
   // -------------------------------------------------------------------------
 
   app.get('/api/dev/rosters', requireDevAuth, async (_req, res) => {
+    const source = selectedDeveloperRosterSource(_req);
     try {
-      res.json(buildDeveloperRosters(await getDeveloperRosterSources()));
+      if (!isProduction && source === 'production') {
+        const live = await requestProductionRoster('/api/dev/rosters');
+        return res.status(live.status).json({
+          ...live.data,
+          source: 'production',
+          showSourceNotice: true,
+          canChooseSource: true
+        });
+      }
+      res.json({
+        ...buildDeveloperRosters(await getDeveloperRosterSources()),
+        source: isProduction ? 'production' : 'local',
+        showSourceNotice: !isProduction,
+        canChooseSource: !isProduction && process.env.DEV_ROSTER_SOURCE !== 'local'
+      });
     } catch (err) {
       console.error('Error loading developer rosters:', err);
-      res.status(500).json({ error: 'Could not load the host and player rosters.' });
+      res.status(source === 'production' && !isProduction ? 502 : 500).json({
+        error: source === 'production' && !isProduction
+          ? 'Could not load the live production rosters. You can switch to local test data.'
+          : 'Could not load the host and player rosters.'
+      });
     }
   });
 
@@ -505,6 +554,14 @@ module.exports = function mountDevRoutes(app) {
     }
 
     try {
+      const source = selectedDeveloperRosterSource(req);
+      if (!isProduction && source === 'production') {
+        const live = await requestProductionRoster(
+          `/api/dev/players/${encodeURIComponent(oldPhone)}`,
+          { method: 'PUT', body: { phone: newPhone, name } }
+        );
+        return res.status(live.status).json(live.data);
+      }
       const current = buildDeveloperRosters(await getDeveloperRosterSources());
       if (!current.players.some((player) => player.phone === oldPhone)) {
         return res.status(404).json({ error: 'That player is no longer in the master roster.' });
@@ -532,6 +589,14 @@ module.exports = function mountDevRoutes(app) {
     }
 
     try {
+      const source = selectedDeveloperRosterSource(req);
+      if (!isProduction && source === 'production') {
+        const live = await requestProductionRoster(
+          `/api/dev/players/${encodeURIComponent(phone)}`,
+          { method: 'DELETE', body: { confirmPhone: phone } }
+        );
+        return res.status(live.status).json(live.data);
+      }
       const current = buildDeveloperRosters(await getDeveloperRosterSources());
       if (!current.players.some((player) => player.phone === phone)) {
         return res.status(404).json({ error: 'That player is no longer in the master roster.' });

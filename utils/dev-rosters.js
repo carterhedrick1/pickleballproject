@@ -2,6 +2,19 @@ const { formatPhoneNumber } = require('./sms-format');
 
 const PLAYER_LIST_FIELDS = ['players', 'waitlist', 'outPlayers'];
 
+function chooseDeveloperRosterSource({
+  production = false,
+  configuredSource = '',
+  requestedSource = ''
+} = {}) {
+  if (production) return 'production';
+  // The screenshot and browser-test server sets this hard lock so no test action or query
+  // string can ever redirect a fixture mutation to the live production database.
+  if (configuredSource === 'local') return 'local';
+  if (requestedSource === 'local' || requestedSource === 'production') return requestedSource;
+  return 'production';
+}
+
 function cleanPhone(value) {
   const phone = formatPhoneNumber(value);
   return phone.length === 10 ? phone : '';
@@ -188,6 +201,7 @@ function deletePlayerFromGame(game, phone, hostPhone = '') {
 
 module.exports = {
   PLAYER_LIST_FIELDS,
+  chooseDeveloperRosterSource,
   buildDeveloperRosters,
   editPlayerInGame,
   deletePlayerFromGame
