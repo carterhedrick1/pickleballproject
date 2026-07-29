@@ -25,7 +25,6 @@ const BUTTON_CLASSES = new Set([
   'back-to-game-btn',
   'btn',
   'copy-btn',
-  'court-image-upload-button',
   'create-game-btn',
   'lab-button',
   'mock-button',

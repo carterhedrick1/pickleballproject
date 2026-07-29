@@ -127,12 +127,12 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     const courtGallery = await desktop.evaluate(`(() => {
       const panel = document.getElementById('courtImageContainer');
       const savedPhotos = [...document.querySelectorAll(
-        '.court-image-choice--photo:not(.court-image-choice--upload)'
+        '.court-image-choice--photo'
       )];
       return {
         visible: !panel.hidden && getComputedStyle(panel).display !== 'none',
         savedPhotos: savedPhotos.length,
-        uploadAvailable: Boolean(document.getElementById('courtImageUpload')),
+        uploadRemoved: !document.getElementById('courtImageUpload'),
         firstPhotoSelected: savedPhotos[0]?.querySelector('input').checked === true,
         noImageRemoved: !document.querySelector('input[value="none"]')
       };
@@ -141,8 +141,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       courtGallery.visible && courtGallery.savedPhotos === 2 && courtGallery.firstPhotoSelected,
       'create form shows every saved court image and defaults to the first one'
     );
-    assert(courtGallery.uploadAvailable && courtGallery.noImageRemoved,
-      'court upload is available and there is no No image choice');
+    assert(courtGallery.uploadRemoved && courtGallery.noImageRemoved,
+      'create form has no court-image upload or No image choice');
 
     await desktop.evaluate(`(() => {
       const set = (id, value) => {
@@ -159,10 +159,10 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     const emptyGallery = await desktop.evaluate(`(() => ({
       panelVisible: !document.getElementById('courtImageContainer').hidden,
       choices: document.querySelectorAll('input[name="selectedCourtImage"]').length,
-      uploadAvailable: Boolean(document.getElementById('courtImageUpload'))
+      uploadRemoved: !document.getElementById('courtImageUpload')
     }))()`);
-    assert(emptyGallery.panelVisible && emptyGallery.choices === 0 && emptyGallery.uploadAvailable,
-      'a court with no photos stays optional and offers an upload without an empty choice');
+    assert(!emptyGallery.panelVisible && emptyGallery.choices === 0 && emptyGallery.uploadRemoved,
+      'a court with no saved photos does not show an empty image panel or upload');
 
     await desktop.evaluate(`(() => {
       const set = (id, value) => {
@@ -196,7 +196,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     })()`);
     assert(
       noImageResult.gameId && noImageResult.imageCount === 0 && !noImageResult.selectedImageId,
-      'a game with no saved or uploaded court photo still creates without an image'
+      'a game with no saved court photo still creates without an image'
     );
     assert(noImageResult.waitlistNotificationSaved,
       'the waitlist-start notification default is saved with the game');
@@ -218,66 +218,6 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     );
     assert(!createSuccessView.hasManagementReminder && !createSuccessView.canCreateAnother,
       'the success step omits the management reminder and create-another link');
-
-    const uploadedCreate = await desktop.evaluate(`(() => {
-      const set = (id, value) => {
-        const field = document.getElementById(id);
-        field.value = value;
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-      };
-      const select = document.getElementById('locationSelect');
-      select.value = '__new__';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-      set('location', 'Sunset Park Courts');
-      set('organizerName', 'Upload Test Host');
-      set('organizerPhone', '${fx.FORM_PHONE}');
-      set('date', '${fx.date}');
-      set('time', '17:30');
-      set('players', '3');
-      set('message', '${fx.MARKER}');
-      const binary = atob('${PNG_1PX.toString('base64')}');
-      const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-      const file = new File([bytes], 'sunset-court.png', { type: 'image/png' });
-      const transfer = new DataTransfer();
-      transfer.items.add(file);
-      const upload = document.getElementById('courtImageUpload');
-      upload.files = transfer.files;
-      upload.dispatchEvent(new Event('change', { bubbles: true }));
-
-      const previewSelected = document.querySelector(
-        'input[name="selectedCourtImage"][value="__upload__"]'
-      )?.checked === true;
-      document.getElementById('gameForm').requestSubmit();
-      return { previewSelected };
-    })()`);
-    assert(uploadedCreate.previewSelected,
-      'a Somewhere new upload gets a preview and is selected automatically');
-    await cdp.sleep(2800);
-    const uploadedResult = await desktop.evaluate(`(async () => {
-      const gameId = window.currentGameId;
-      const saved = JSON.parse(localStorage.getItem('myGames') || '[]')
-        .find((game) => game.id === gameId);
-      const response = await fetch('/api/games/' + gameId + '/court-images');
-      const library = await response.json();
-      return {
-        gameId,
-        hasHostToken: Boolean(saved && saved.hostToken),
-        imageCount: library.images.length,
-        selectedImageId: library.selectedImageId,
-        selectedFlag: library.images.some((image) => image.isSelected),
-        statusText: document.getElementById('status').textContent
-      };
-    })()`);
-    assert(
-      uploadedResult.gameId && uploadedResult.hasHostToken &&
-      uploadedResult.imageCount === 1 && uploadedResult.selectedImageId &&
-      uploadedResult.selectedFlag,
-      'a Somewhere new photo uploads after creation and is selected for the game'
-    );
-    assert(
-      uploadedResult.statusText.includes('SMS confirmation is disabled in development mode'),
-      'a local creation says that no confirmation text was sent'
-    );
 
     for (const player of [
       { phone: fx.JOIN_PHONE, name: 'Roster Player One', duprRating: 3.5 },

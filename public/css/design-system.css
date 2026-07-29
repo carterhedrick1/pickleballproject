@@ -348,7 +348,6 @@ body > .container {
 .notification-description,
 .mode-option .notification-description,
 .court-image-intro,
-.court-image-upload-help,
 .photos-intro,
 .roster-player-meta,
 .player-phone,
@@ -524,7 +523,6 @@ button,
 .btn-danger,
 .quick-action-btn,
 .back-to-game-btn,
-.court-image-upload-button,
 .mock-button {
     align-items: center !important;
     display: inline-flex !important;
@@ -541,8 +539,7 @@ button,
     .back-btn,
     .section-nav-btn,
     .btn-primary,
-    .back-to-game-btn,
-    .court-image-upload-button
+    .back-to-game-btn
 ) {
     align-items: center;
     background: var(--brand) !important;
@@ -572,8 +569,7 @@ button,
     .back-btn,
     .section-nav-btn,
     .btn-primary,
-    .back-to-game-btn,
-    .court-image-upload-button
+    .back-to-game-btn
 ):hover {
     background: var(--brand-hover) !important;
     border-color: var(--brand-hover) !important;
@@ -1231,8 +1227,7 @@ button:disabled,
         .btn-secondary,
         .quick-action-btn,
         .btn-danger,
-        .mock-button,
-        .court-image-upload-button
+        .mock-button
     ) {
         min-height: 44px;
     }

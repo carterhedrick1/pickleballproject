@@ -276,62 +276,6 @@
             display: none;
         }
 
-        .court-image-upload {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px 12px;
-            padding: 10px;
-            border: 1px dashed var(--brand);
-            border-radius: 10px;
-            background: var(--surface);
-        }
-
-        .court-image-upload-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            width: auto;
-            margin: 0;
-            padding: 8px 11px;
-            border: 1px solid var(--brand);
-            border-radius: 8px;
-            background: var(--brand-soft);
-            color: var(--brand);
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 0;
-            transition: background 0.2s ease, border-color 0.2s ease;
-        }
-
-        .court-image-upload-button:hover {
-            border-color: var(--brand);
-            background: var(--brand-soft);
-        }
-
-        .court-image-upload-button:focus-within {
-            outline: 3px solid color-mix(in srgb, var(--brand) 18%, transparent);
-            outline-offset: 2px;
-        }
-
-        .court-image-upload-help {
-            color: var(--text-muted);
-            font-size: 11px;
-        }
-
-        .visually-hidden {
-            position: absolute !important;
-            width: 1px !important;
-            height: 1px !important;
-            padding: 0 !important;
-            margin: -1px !important;
-            overflow: hidden !important;
-            clip: rect(0, 0, 0, 0) !important;
-            white-space: nowrap !important;
-            border: 0 !important;
-        }
-
         .court-image-status {
             min-height: 18px;
             margin: 8px 0;
@@ -396,19 +340,6 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-        }
-
-        .court-image-choice--upload::after {
-            content: 'New photo';
-            position: absolute;
-            right: 6px;
-            bottom: 6px;
-            padding: 2px 6px;
-            border-radius: 999px;
-            background: color-mix(in srgb, var(--brand) 90%, transparent);
-            color: var(--surface);
-            font-size: 9px;
-            font-weight: 600;
         }
 
         label {
