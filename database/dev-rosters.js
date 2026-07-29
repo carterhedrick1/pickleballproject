@@ -246,8 +246,83 @@ async function deleteDeveloperPlayer(phone) {
   }
 }
 
+async function deleteDeveloperHost(phone) {
+  if (isProduction) {
+    return withPgClient(async (client) => {
+      await client.query('BEGIN');
+      try {
+        await client.query(
+          'SELECT id FROM games WHERE host_phone = $1 FOR UPDATE',
+          [phone]
+        );
+        const photoResult = await client.query(
+          `DELETE FROM game_photos
+           WHERE game_id IN (SELECT id FROM games WHERE host_phone = $1)`,
+          [phone]
+        );
+        const reminderResult = await client.query(
+          `DELETE FROM reminder_log
+           WHERE game_id IN (SELECT id FROM games WHERE host_phone = $1)`,
+          [phone]
+        );
+        const gameResult = await client.query(
+          'DELETE FROM games WHERE host_phone = $1',
+          [phone]
+        );
+        const rosterResult = await client.query(
+          'DELETE FROM host_roster WHERE host_phone = $1',
+          [phone]
+        );
+        await client.query('COMMIT');
+        return {
+          games: gameResult.rowCount,
+          photos: photoResult.rowCount,
+          reminders: reminderResult.rowCount,
+          rosterEntries: rosterResult.rowCount
+        };
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      }
+    });
+  }
+
+  await sqliteRun('BEGIN IMMEDIATE');
+  try {
+    const photoResult = await sqliteRun(
+      `DELETE FROM game_photos
+       WHERE game_id IN (SELECT id FROM games WHERE host_phone = ?)`,
+      [phone]
+    );
+    const reminderResult = await sqliteRun(
+      `DELETE FROM reminder_log
+       WHERE game_id IN (SELECT id FROM games WHERE host_phone = ?)`,
+      [phone]
+    );
+    const gameResult = await sqliteRun(
+      'DELETE FROM games WHERE host_phone = ?',
+      [phone]
+    );
+    const rosterResult = await sqliteRun(
+      'DELETE FROM host_roster WHERE host_phone = ?',
+      [phone]
+    );
+    await sqliteRun('COMMIT');
+    return {
+      games: gameResult.changes,
+      photos: photoResult.changes,
+      reminders: reminderResult.changes,
+      rosterEntries: rosterResult.changes
+    };
+  } catch (error) {
+    await sqliteRun('ROLLBACK');
+    throw error;
+  }
+}
+
 module.exports = {
   getDeveloperRosterSources,
   updateDeveloperPlayer,
-  deleteDeveloperPlayer
+  deleteDeveloperPlayer,
+  deleteDeveloperHost
 };

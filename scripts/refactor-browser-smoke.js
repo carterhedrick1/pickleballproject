@@ -814,6 +814,30 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     assert(gameReady.external, 'game page uses its external script');
     assert(gameReady.locationOnly, 'player game details use location without a separate court field');
 
+    const hostDelete = await desktop.evaluate(`(async () => {
+      document.querySelector('[data-tab="rosters"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      const host = document.querySelector('[data-host-phone="${fx.HOST_PHONE}"]');
+      host.querySelector('[data-host-action="delete"]').click();
+      const warning = host.querySelector('.host-delete-confirm');
+      const warned = !warning.classList.contains('hidden') &&
+        warning.textContent.includes('including every game they host') &&
+        warning.textContent.includes('People listed with other hosts will remain there');
+      warning.querySelector('[data-host-action="confirm-delete"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 450));
+      const response = await fetch('/api/dev/rosters?source=local');
+      const directory = await response.json();
+      return {
+        warned,
+        removed: !document.querySelector('[data-host-phone="${fx.HOST_PHONE}"]'),
+        gamesRemoved: directory.hosts.every((item) => item.phone !== '${fx.HOST_PHONE}')
+      };
+    })()`);
+    assert(
+      hostDelete.warned && hostDelete.removed && hostDelete.gamesRemoved,
+      'deleting a host requires a specific warning and removes the host’s games and roster'
+    );
+
     await desktop.close();
     await mobile.close();
   } finally {

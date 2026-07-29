@@ -122,6 +122,7 @@ const openDeveloperRosters = async (p) => {
     const search = document.getElementById('rosterSearch');
     search.value = '555555';
     search.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('#hostRosterList [data-host-action="delete"]')?.click();
   })()`);
   await cdp.sleep(300);
 };
@@ -213,7 +214,7 @@ function buildScreens(fx) {
 
     { file: 'dev-hosts-and-players', of: '/dev.html', size: 'wide', url: '/dev.html',
       title: 'Hosts And Players',
-      note: 'The password-protected master player roster and every host roster, with global edit and delete controls.',
+      note: 'The password-protected master player roster and every host roster, with guarded global edit and delete controls.',
       act: openDeveloperRosters },
 
     { file: 'lookup-redirect', of: '/lookup.html', size: 'narrow', url: '/lookup.html',

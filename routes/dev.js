@@ -30,7 +30,8 @@ const {
   getDevAssetMeta,
   getDeveloperRosterSources,
   updateDeveloperPlayer,
-  deleteDeveloperPlayer
+  deleteDeveloperPlayer,
+  deleteDeveloperHost
 } = require('../database');
 const {
   buildDeveloperRosters,
@@ -606,6 +607,34 @@ module.exports = function mountDevRoutes(app) {
     } catch (err) {
       console.error('Error deleting master player:', err);
       res.status(500).json({ error: 'Could not delete the player.' });
+    }
+  });
+
+  app.delete('/api/dev/hosts/:phone', requireDevAuth, async (req, res) => {
+    const phone = formatPhoneNumber(req.params.phone);
+    const confirmation = formatPhoneNumber(req.body && req.body.confirmPhone);
+    if (phone.length !== 10 || confirmation !== phone) {
+      return res.status(400).json({ error: 'Confirm the host’s phone number before deleting.' });
+    }
+
+    try {
+      const source = selectedDeveloperRosterSource(req);
+      if (!isProduction && source === 'production') {
+        const live = await requestProductionRoster(
+          `/api/dev/hosts/${encodeURIComponent(phone)}`,
+          { method: 'DELETE', body: { confirmPhone: phone } }
+        );
+        return res.status(live.status).json(live.data);
+      }
+      const current = buildDeveloperRosters(await getDeveloperRosterSources());
+      if (!current.hosts.some((host) => host.phone === phone)) {
+        return res.status(404).json({ error: 'That host is no longer in the directory.' });
+      }
+      const removed = await deleteDeveloperHost(phone);
+      res.json({ success: true, removed });
+    } catch (err) {
+      console.error('Error deleting developer host:', err);
+      res.status(500).json({ error: 'Could not delete the host.' });
     }
   });
 

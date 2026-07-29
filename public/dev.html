@@ -321,7 +321,7 @@
     background: var(--danger); color: var(--surface);
   }
   .danger-button:hover { background: var(--danger-hover); }
-  .player-edit-form, .player-delete-confirm {
+  .player-edit-form, .player-delete-confirm, .host-delete-confirm {
     border-top: 1px solid var(--border); display: grid; gap: 12px;
     margin-top: 14px; padding-top: 14px;
   }
@@ -331,11 +331,11 @@
   .player-edit-fields label {
     color: var(--muted); display: grid; font-size: 12px; font-weight: 700; gap: 5px;
   }
-  .player-delete-confirm {
+  .player-delete-confirm, .host-delete-confirm {
     background: var(--danger-soft); border: 1px solid var(--danger-border);
     border-radius: 8px; padding: 13px;
   }
-  .player-delete-confirm p { font-size: 13px; margin: 0; }
+  .player-delete-confirm p, .host-delete-confirm p { font-size: 13px; margin: 0; }
   .roster-form-status { color: var(--danger); font-size: 13px; min-height: 20px; }
   .host-roster {
     border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
@@ -346,10 +346,19 @@
   }
   .host-roster summary::-webkit-details-marker { display: none; }
   .host-roster summary:hover { background: var(--quiet); }
+  .host-roster-summary-actions {
+    align-items: center; display: flex; flex: 0 0 auto; gap: 8px;
+  }
   .host-roster-count {
     background: var(--brand-soft); border-radius: 20px; color: var(--brand);
     flex: 0 0 auto; font-size: 12px; font-weight: 700; padding: 4px 9px;
   }
+  .host-delete-button {
+    background: var(--surface); border: 1px solid var(--danger-border); color: var(--danger);
+    font-size: 12px; font-weight: 700; min-height: 32px; padding: 0 10px;
+  }
+  .host-delete-button:hover { background: var(--danger-soft); }
+  .host-delete-confirm { margin: 0 15px 15px; }
   .host-roster-players { border-top: 1px solid var(--border); padding: 4px 15px; }
   .host-roster-player {
     align-items: center; border-bottom: 1px solid var(--border); display: flex;
@@ -2129,14 +2138,29 @@ function renderRosters() {
 
   el('hostRosterList').innerHTML = visibleHosts.length
     ? visibleHosts.map((host) => `
-      <details class="host-roster"${query ? ' open' : ''}>
+      <details class="host-roster" data-host-phone="${escapeHtml(host.phone)}"${query ? ' open' : ''}>
         <summary>
           <div class="roster-person">
             <div class="roster-person-name">${escapeHtml(host.name || 'Host Name Not Available')}</div>
             <div class="roster-person-phone">${escapeHtml(formatDisplayPhone(host.phone))}</div>
           </div>
-          <span class="host-roster-count">${host.players.length} player${host.players.length === 1 ? '' : 's'}</span>
+          <div class="host-roster-summary-actions">
+            <span class="host-roster-count">${host.players.length} player${host.players.length === 1 ? '' : 's'}</span>
+            <button type="button" class="host-delete-button" data-host-action="delete">Delete</button>
+          </div>
         </summary>
+        <div class="host-delete-confirm hidden">
+          <p>
+            This permanently deletes <strong>${escapeHtml(host.name || formatDisplayPhone(host.phone))}</strong>
+            as a host, including every game they host, game photo, reminder record, and saved roster entry.
+            People listed with other hosts will remain there. No text message will be sent.
+          </p>
+          <div class="roster-actions">
+            <button type="button" class="danger-button" data-host-action="confirm-delete">Delete Host</button>
+            <button type="button" class="ghost" data-host-action="cancel">Cancel</button>
+          </div>
+          <div class="roster-form-status" aria-live="polite"></div>
+        </div>
         <div class="host-roster-players">
           ${host.players.length ? host.players.map((player) => `
             <div class="host-roster-player">
@@ -2216,6 +2240,43 @@ async function loadRosters(requestedSource = null) {
 el('rosterSearch').addEventListener('input', renderRosters);
 el('rosterSourceToggle').addEventListener('click', () => {
   loadRosters(rosterDirectory.source === 'production' ? 'local' : 'production');
+});
+
+el('hostRosterList').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-host-action]');
+  if (!button) return;
+  event.preventDefault();
+  event.stopPropagation();
+
+  const card = button.closest('.host-roster');
+  const deleteConfirm = card.querySelector('.host-delete-confirm');
+  const action = button.dataset.hostAction;
+
+  if (action === 'delete') {
+    card.open = true;
+    deleteConfirm.classList.remove('hidden');
+    deleteConfirm.querySelector('[data-host-action="confirm-delete"]').focus();
+  } else if (action === 'cancel') {
+    deleteConfirm.classList.add('hidden');
+    card.querySelector('[data-host-action="delete"]').focus();
+  } else if (action === 'confirm-delete') {
+    const phone = card.dataset.hostPhone;
+    const status = deleteConfirm.querySelector('.roster-form-status');
+    button.disabled = true;
+    status.textContent = 'Deleting host…';
+    fetch('/api/dev/hosts/' + encodeURIComponent(phone) + rosterSourceQuery(), {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmPhone: phone })
+    }).then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not delete the host.');
+      await loadRosters(rosterDirectory.source);
+    }).catch((err) => {
+      status.textContent = err.message;
+      button.disabled = false;
+    });
+  }
 });
 
 el('masterRosterList').addEventListener('click', (event) => {
