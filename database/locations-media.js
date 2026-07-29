@@ -301,7 +301,7 @@ async function getAllUploadedImages() {
       mimeType: row.mime_type,
       bytes: Number(row.bytes),
       createdAt: row.created_at,
-      uploaderName: row.uploader_name || '',
+      uploaderName: row.uploader_name || (row.uploaded_from_dev ? 'Developer Area' : ''),
       location: row.display_name || row.court_name_key,
       caption: '',
       gameId: null
@@ -326,7 +326,7 @@ async function getAllUploadedImages() {
       mimeType: row.image_mime_type,
       bytes: Number(row.bytes),
       createdAt: row.created_at,
-      uploaderName: '',
+      uploaderName: 'Developer Area',
       location: row.display_name,
       caption: '',
       gameId: null
@@ -342,7 +342,12 @@ async function getAllUploadedImages() {
         const [courtResult, photoResult, legacyResult] = await Promise.all([
           client.query(`
             SELECT ci.id, ci.court_name_key, ci.mime_type, ci.created_at, ci.uploader_name,
-                   LENGTH(ci.image_data) AS bytes, l.display_name
+                   LENGTH(ci.image_data) AS bytes, l.display_name,
+                   EXISTS (
+                     SELECT 1 FROM locations source
+                      WHERE source.name_key = ci.court_name_key
+                        AND source.image_data = ci.image_data
+                   ) AS uploaded_from_dev
               FROM court_images ci
               LEFT JOIN locations l ON l.name_key = ci.court_name_key
              ORDER BY ci.created_at DESC, ci.id DESC
@@ -374,7 +379,12 @@ async function getAllUploadedImages() {
     const [courtRows, photoRows, legacyRows] = await Promise.all([
       sqliteAll(`
         SELECT ci.id, ci.court_name_key, ci.mime_type, ci.created_at, ci.uploader_name,
-               LENGTH(ci.image_data) AS bytes, l.display_name
+               LENGTH(ci.image_data) AS bytes, l.display_name,
+               EXISTS (
+                 SELECT 1 FROM locations source
+                  WHERE source.name_key = ci.court_name_key
+                    AND source.image_data = ci.image_data
+               ) AS uploaded_from_dev
           FROM court_images ci
           LEFT JOIN locations l ON l.name_key = ci.court_name_key
          ORDER BY ci.created_at DESC, ci.id DESC
