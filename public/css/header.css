@@ -4,12 +4,12 @@ padding: 0;
 }
 /* header.css - Updated for In or Out logo with proper mobile centering */
 .site-header {
-background-color: #2c3e50 !important;
-color: #ecf0f1;
+background-color: var(--ink) !important;
+color: var(--surface);
 /* match footer's desktop padding */
 padding: 40px 0 20px;
 margin-bottom: 60px;
-box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+box-shadow: 0 2px 4px color-mix(in srgb, var(--ink) 10%, transparent);
 }
 .header-container {
 max-width: 1200px !important;
@@ -39,7 +39,7 @@ max-width: 264px !important;
 display: block !important;
 }
 .header-slogan {
-color: #bdc3c7;
+color: var(--text-muted);
 font-size: 14px;
 line-height: 1.35;
 margin: 3px 0 0 7px;
@@ -53,19 +53,19 @@ flex-shrink: 0;
 margin-left: 30px;
 }
 .header-nav a {
-color: #bdc3c7;
+color: var(--text-muted);
 text-decoration: none;
 padding: 8px 12px;
 border-radius: 4px;
 transition: color 0.3s, background-color 0.3s;
 }
 .header-nav a:hover {
-color: #4CAF50;
-background-color: rgba(76, 175, 80, 0.1);
+color: var(--brand);
+background-color: color-mix(in srgb, var(--brand) 10%, transparent);
 }
 .header-nav a.active {
-color: #4CAF50;
-background-color: rgba(76, 175, 80, 0.2);
+color: var(--brand);
+background-color: color-mix(in srgb, var(--brand) 20%, transparent);
 }
 @media (max-width: 768px) {
 .site-header {

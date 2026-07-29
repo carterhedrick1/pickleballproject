@@ -179,9 +179,9 @@ function showCopyFeedback(buttonId, message, isError = false) {
     // Update button appearance
     button.textContent = message;
     if (isError) {
-        button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+        button.style.background = 'var(--danger)';
     } else {
-        button.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
+        button.style.background = 'var(--brand)';
     }
     
     // Reset after 3 seconds

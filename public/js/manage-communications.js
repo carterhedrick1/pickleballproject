@@ -290,11 +290,11 @@ function updateGroupCheckboxStyling() {
                 align-items: center !important;
                 gap: 12px !important;
                 padding: 12px 15px !important;
-                background: white !important;
-                border: 2px solid #dee2e6 !important;
+                background: var(--surface) !important;
+                border: 2px solid var(--border) !important;
                 border-radius: 8px !important;
                 transition: all 0.2s ease !important;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                box-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 10%, transparent) !important;
                 margin-bottom: 8px !important;
             `;
             
@@ -325,17 +325,17 @@ function updateGroupCheckboxStyling() {
     // Add specific border colors for different groups
     const sendToAll = document.getElementById('sendToAll')?.parentElement;
     if (sendToAll) {
-        sendToAll.style.borderLeft = '4px solid #007bff !important';
+        sendToAll.style.borderLeft = '4px solid var(--brand) !important';
     }
     
     const sendToPlayers = document.getElementById('sendToPlayers')?.parentElement;
     if (sendToPlayers) {
-        sendToPlayers.style.borderLeft = '4px solid #28a745 !important';
+        sendToPlayers.style.borderLeft = '4px solid var(--brand) !important';
     }
     
     const sendToWaitlist = document.getElementById('sendToWaitlist')?.parentElement;
     if (sendToWaitlist) {
-        sendToWaitlist.style.borderLeft = '4px solid #ffc107 !important';
+        sendToWaitlist.style.borderLeft = '4px solid var(--warning) !important';
     }
 }
 
@@ -362,12 +362,12 @@ function updatePlayerCheckboxes() {
                 align-items: center !important;
                 gap: 12px !important;
                 padding: 12px 15px !important;
-                background: white !important;
-                border: 2px solid #dee2e6 !important;
+                background: var(--surface) !important;
+                border: 2px solid var(--border) !important;
                 border-radius: 8px !important;
-                border-left: 4px solid #28a745 !important;
+                border-left: 4px solid var(--brand) !important;
                 transition: all 0.2s ease !important;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                box-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 10%, transparent) !important;
                 margin-bottom: 8px !important;
                 font-size: inherit !important;
                 line-height: inherit !important;
@@ -395,12 +395,12 @@ function updatePlayerCheckboxes() {
                     align-items: center !important;
                     gap: 12px !important;
                     padding: 12px 15px !important;
-                    background: white !important;
-                    border: 2px solid #dee2e6 !important;
+                    background: var(--surface) !important;
+                    border: 2px solid var(--border) !important;
                     border-radius: 8px !important;
-                    border-left: 4px solid #ffc107 !important;
+                    border-left: 4px solid var(--warning) !important;
                     transition: all 0.2s ease !important;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                    box-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 10%, transparent) !important;
                     margin-bottom: 8px !important;
                     font-size: inherit !important;
                     line-height: inherit !important;

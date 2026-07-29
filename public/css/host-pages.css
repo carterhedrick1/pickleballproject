@@ -14,7 +14,7 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     line-height: 1.6;
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    background: var(--canvas);
     min-height: 100vh;
     padding: 20px;
 }
@@ -22,17 +22,17 @@ body {
 .container {
     max-width: 800px;
     margin: 0 auto;
-    background: white;
+    background: var(--surface);
     border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 20px 60px color-mix(in srgb, var(--ink) 8%, transparent);
     overflow: hidden;
 }
 
 /* Header ------------------------------------------------------------------ */
 
 .page-header {
-    background: linear-gradient(135deg, #475569 0%, #429046 100%);
-    color: white;
+    background: var(--brand);
+    color: var(--surface);
     padding: 20px 32px 16px;
     position: relative;
     overflow: hidden;
@@ -47,12 +47,6 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background-image:
-        radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.15), transparent),
-        radial-gradient(2px 2px at 40px 70px, rgba(255, 255, 255, 0.1), transparent),
-        radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.2), transparent),
-        radial-gradient(1px 1px at 130px 80px, rgba(255, 255, 255, 0.1), transparent),
-        radial-gradient(2px 2px at 160px 30px, rgba(255, 255, 255, 0.15), transparent);
     background-repeat: repeat;
     background-size: 200px 100px;
 }
@@ -67,14 +61,14 @@ body {
     font-size: 22px;
     font-weight: 600;
     margin: 0 0 4px 0;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 2px 4px color-mix(in srgb, var(--ink) 30%, transparent);
     letter-spacing: -0.01em;
 }
 
 .page-header .subtitle {
     font-size: 14px;
     opacity: 0.9;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 20%, transparent);
 }
 
 /* Links across to the other two host pages. */
@@ -84,92 +78,92 @@ body {
     gap: 8px;
     justify-content: center;
     padding: 14px 32px;
-    background: #f8fafc;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--canvas);
+    border-bottom: 1px solid var(--border);
 }
 
 .host-nav a {
-    color: #475569;
+    color: var(--ink);
     text-decoration: none;
     font-size: 14px;
     font-weight: 500;
     padding: 6px 14px;
     border-radius: 999px;
-    border: 1px solid #cbd5e1;
-    background: white;
+    border: 1px solid var(--border);
+    background: var(--surface);
 }
 
 .host-nav a:hover {
-    border-color: #429046;
-    color: #16a34a;
+    border-color: var(--brand);
+    color: var(--brand);
 }
 
 .host-nav a[aria-current="page"] {
-    background: #429046;
-    border-color: #429046;
-    color: white;
+    background: var(--brand);
+    border-color: var(--brand);
+    color: var(--surface);
 }
 
 /* Content ----------------------------------------------------------------- */
 
 .content-section {
     padding: 32px;
-    background-color: white;
+    background-color: var(--surface);
 }
 
 .section-title {
-    color: #4CAF50;
+    color: var(--brand);
     font-size: 24px;
     font-weight: bold;
     margin: 0 0 20px 0;
     padding-bottom: 10px;
-    border-bottom: 3px solid #4CAF50;
+    border-bottom: 3px solid var(--brand);
     display: inline-block;
 }
 
 .section-subtitle {
-    color: #475569;
+    color: var(--ink);
     font-size: 18px;
     font-weight: 600;
     margin: 28px 0 14px;
 }
 
 .summary-line {
-    color: #475569;
+    color: var(--ink);
     font-size: 16px;
     margin-bottom: 20px;
 }
 
 .muted {
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 14px;
 }
 
 /* Cards ------------------------------------------------------------------- */
 
 .game-item {
-    background: white;
-    border: 2px solid #e5e7eb;
+    background: var(--surface);
+    border: 2px solid var(--border);
     border-radius: 16px;
     padding: 20px;
     margin-bottom: 16px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--ink) 6%, transparent);
 }
 
 .game-item.cancelled {
-    border-color: #fecaca;
-    background: #fef2f2;
+    border-color: var(--danger-soft);
+    background: var(--danger-soft);
 }
 
 .game-title {
     font-size: 18px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--ink);
     margin-bottom: 4px;
 }
 
 .game-detail {
-    color: #475569;
+    color: var(--ink);
     font-size: 15px;
 }
 
@@ -184,15 +178,15 @@ body {
     font-size: 13px;
     padding: 4px 10px;
     border-radius: 999px;
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #e2e8f0;
+    background: var(--canvas);
+    color: var(--ink);
+    border: 1px solid var(--border);
 }
 
 .badge.cancelled {
-    background: #fee2e2;
-    color: #b91c1c;
-    border-color: #fecaca;
+    background: var(--danger-soft);
+    color: var(--danger);
+    border-color: var(--danger-soft);
 }
 
 .card-actions {
@@ -206,9 +200,9 @@ body {
     display: inline-block;
     padding: 10px 16px;
     border-radius: 10px;
-    border: 1px solid #cbd5e1;
-    background: white;
-    color: #334155;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -217,31 +211,31 @@ body {
 }
 
 .btn:hover {
-    border-color: #429046;
-    color: #16a34a;
+    border-color: var(--brand);
+    color: var(--brand);
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
+    background: var(--brand);
     border-color: transparent;
-    color: white;
+    color: var(--surface);
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-    color: white;
+    background: var(--brand);
+    color: var(--surface);
 }
 
 /* Outlined rather than filled: deleting is never the action a host came here for. */
 .btn-danger {
-    border-color: #fecaca;
-    color: #b91c1c;
+    border-color: var(--danger-soft);
+    color: var(--danger);
 }
 
 .btn-danger:hover {
-    border-color: #b91c1c;
-    background: #fef2f2;
-    color: #991b1b;
+    border-color: var(--danger);
+    background: var(--danger-soft);
+    color: var(--danger);
 }
 
 .btn:disabled {
@@ -254,14 +248,14 @@ body {
 .notes-panel {
     margin-top: 12px;
     padding-top: 12px;
-    border-top: 1px dashed #e2e8f0;
+    border-top: 1px dashed var(--border);
 }
 
 .notes-panel textarea {
     width: 100%;
     min-height: 80px;
     padding: 10px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border);
     border-radius: 8px;
     font-family: inherit;
     font-size: 16px; /* 16px keeps iOS from zooming the page on focus */
@@ -270,7 +264,7 @@ body {
 
 .notes-status {
     font-size: 13px;
-    color: #64748b;
+    color: var(--text-muted);
     margin-top: 6px;
     min-height: 18px;
 }
@@ -280,15 +274,15 @@ body {
 .delete-panel {
     margin-top: 12px;
     padding: 12px;
-    border: 1px solid #fecaca;
+    border: 1px solid var(--danger-soft);
     border-radius: 10px;
-    background: #fef2f2;
+    background: var(--danger-soft);
 }
 
 .delete-panel p {
     margin: 0 0 10px;
     font-size: 14px;
-    color: #7f1d1d;
+    color: var(--danger);
 }
 
 .delete-panel .btn {
@@ -306,20 +300,20 @@ body {
 .phone-gate {
     text-align: center;
     padding: 40px 24px;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    background: var(--canvas);
     border-radius: 16px;
-    border: 2px dashed #cbd5e1;
+    border: 2px dashed var(--border);
 }
 
 .phone-gate h3 {
-    color: #475569;
+    color: var(--ink);
     font-size: 22px;
     font-weight: 600;
     margin-bottom: 10px;
 }
 
 .phone-gate p {
-    color: #64748b;
+    color: var(--text-muted);
     margin-bottom: 20px;
 }
 
@@ -328,7 +322,7 @@ body {
     max-width: 280px;
     padding: 14px;
     font-size: 16px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border);
     border-radius: 10px;
     margin-bottom: 14px;
     text-align: center;
@@ -337,7 +331,7 @@ body {
 .switch-number {
     background: none;
     border: none;
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 13px;
     text-decoration: underline;
     cursor: pointer;
@@ -350,38 +344,38 @@ body {
 .no-games {
     text-align: center;
     padding: 48px 32px;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    background: var(--canvas);
     border-radius: 16px;
-    border: 2px dashed #cbd5e1;
+    border: 2px dashed var(--border);
 }
 
 .no-games h3 {
-    color: #475569;
+    color: var(--ink);
     margin: 0 0 12px 0;
     font-size: 22px;
     font-weight: 600;
 }
 
 .no-games p {
-    color: #64748b;
+    color: var(--text-muted);
     margin: 0 0 20px 0;
 }
 
 .create-game-btn {
     display: inline-block;
-    background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
-    color: white;
+    background: var(--brand);
+    color: var(--surface);
     padding: 14px 28px;
     text-decoration: none;
     border-radius: 12px;
     font-weight: 600;
-    box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--brand) 30%, transparent);
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
 .create-game-btn:hover {
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    background: var(--brand);
 }
 
 /* Status ------------------------------------------------------------------ */
@@ -394,23 +388,23 @@ body {
 }
 
 .status.error {
-    background: #fee2e2;
-    color: #b91c1c;
+    background: var(--danger-soft);
+    color: var(--danger);
 }
 
 .status.success {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--brand-soft);
+    color: var(--brand);
 }
 
 .status.info {
-    background: #e0f2fe;
-    color: #075985;
+    background: var(--brand-soft);
+    color: var(--brand);
 }
 
 .footer-note {
     padding: 20px 32px 28px;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 13px;
     text-align: center;
 }
@@ -425,8 +419,8 @@ body {
 }
 
 .stat-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: var(--canvas);
+    border: 1px solid var(--border);
     border-radius: 14px;
     padding: 18px;
     text-align: center;
@@ -435,19 +429,19 @@ body {
 .stat-value {
     font-size: 30px;
     font-weight: 700;
-    color: #16a34a;
+    color: var(--brand);
     line-height: 1.2;
 }
 
 .stat-label {
     font-size: 13px;
-    color: #64748b;
+    color: var(--text-muted);
     margin-top: 4px;
 }
 
 .top-list {
     margin: 0 0 8px 20px;
-    color: #334155;
+    color: var(--ink);
 }
 
 .top-list li {
@@ -455,16 +449,16 @@ body {
 }
 
 .top-list .count {
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 14px;
 }
 
 .caveat {
-    background: #fffbeb;
-    border: 1px solid #fde68a;
+    background: var(--warning-soft);
+    border: 1px solid var(--warning-soft);
     border-radius: 10px;
     padding: 12px 14px;
-    color: #78350f;
+    color: var(--warning);
     font-size: 13px;
     margin-top: 8px;
 }
@@ -472,25 +466,25 @@ body {
 /* Roster rows -------------------------------------------------------------- */
 
 .roster-row {
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 12px;
-    background: white;
+    background: var(--surface);
 }
 
 .roster-row label {
     display: block;
     font-size: 13px;
     font-weight: 600;
-    color: #475569;
+    color: var(--ink);
     margin: 8px 0 4px;
 }
 
 .roster-row input {
     width: 100%;
     padding: 10px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border);
     border-radius: 8px;
     font-size: 16px;
     font-family: inherit;
@@ -498,19 +492,19 @@ body {
 
 .roster-phone {
     font-size: 14px;
-    color: #64748b;
+    color: var(--text-muted);
     margin-top: 8px;
 }
 
 .roster-meta {
     font-size: 13px;
-    color: #94a3b8;
+    color: var(--text-muted);
     margin-top: 4px;
 }
 
 .row-status {
     font-size: 13px;
-    color: #16a34a;
+    color: var(--brand);
     margin-top: 6px;
     min-height: 18px;
 }
@@ -525,7 +519,7 @@ details.past-games > summary {
     cursor: pointer;
     font-size: 18px;
     font-weight: 600;
-    color: #475569;
+    color: var(--ink);
     padding: 10px 0;
 }
 

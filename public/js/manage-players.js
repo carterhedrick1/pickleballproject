@@ -235,7 +235,7 @@ function updatePlayerLists() {
     
     // Populate confirmed players
     if (gameData.players.length === 0) {
-        confirmedPlayers.innerHTML = '<p style="text-align: center; color: #6c757d; font-style: italic;">No players yet</p>';
+        confirmedPlayers.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">No players yet</p>';
     } else {
         gameData.players.forEach((player) => {
             confirmedPlayers.appendChild(ManageRender.createPlayerItem(document, player, {
@@ -257,7 +257,7 @@ function updatePlayerLists() {
     
     // Populate waitlist
     if (gameData.waitlist.length === 0) {
-        waitlistPlayers.innerHTML = '<p style="text-align: center; color: #6c757d; font-style: italic;">No one waiting</p>';
+        waitlistPlayers.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">No one waiting</p>';
     } else {
         gameData.waitlist.forEach((player, index) => {
             waitlistPlayers.appendChild(ManageRender.createPlayerItem(document, player, {
@@ -280,7 +280,7 @@ function updatePlayerLists() {
 
     // Populate out players - FIXED VERSION
     if (!gameData.outPlayers || gameData.outPlayers.length === 0) {
-        outPlayersContainer.innerHTML = '<p style="text-align: center; color: #6c757d; font-style: italic;">No one marked as out</p>';
+        outPlayersContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">No one marked as out</p>';
     } else {
         gameData.outPlayers.forEach((player) => {
             outPlayersContainer.appendChild(

@@ -318,7 +318,7 @@ function setCourtImageStatus(message, type) {
     const element = document.getElementById('courtImageStatus');
     if (element) {
         element.textContent = message;
-        element.style.color = type === 'error' ? '#e74c3c' : type === 'success' ? '#2e7d32' : '#666';
+        element.style.color = type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--brand)' : 'var(--text-muted)';
     }
 }
 

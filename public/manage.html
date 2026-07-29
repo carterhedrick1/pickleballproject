@@ -9,8 +9,9 @@
     <link rel="stylesheet" href="/css/header.css">
     <link rel="stylesheet" href="/css/footer.css">
     <link rel="stylesheet" href="/css/manage-styles.css">
+    <link rel="stylesheet" href="/css/design-system.css">
 </head>
-<body>
+<body class="page-manage">
     <div class="container">
         <div class="page-header">
             <div class="header-content">
@@ -193,11 +194,11 @@
                         </label>
                     </div>
 
-                    <div id="courtImageUpload" style="border-top: 1px solid #ddd; padding-top: 15px;">
+                    <div id="courtImageUpload" style="border-top: 1px solid var(--border); padding-top: 15px;">
                         <h3 style="margin-bottom: 10px; font-size: 14px;">Upload New Image</h3>
                         <input type="file" id="courtImageFile" accept="image/jpeg,image/png,image/webp" style="margin-bottom: 10px;">
                         <button type="button" id="uploadCourtImageBtn" class="copy-btn">Upload</button>
-                        <p id="courtImageStatus" style="margin-top: 10px; font-size: 14px; color: #666; min-height: 20px;"></p>
+                        <p id="courtImageStatus" style="margin-top: 10px; font-size: 14px; color: var(--text-muted); min-height: 20px;"></p>
                     </div>
                 </div>
 

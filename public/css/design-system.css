@@ -1,0 +1,1248 @@
+/*
+ * Court Classic
+ * Shared visual system for every customer-facing IN or OUT page.
+ *
+ * These are the only authored base colors. Every supporting color is derived
+ * from them with opacity or color mixing.
+ */
+:root {
+    --brand: #166534;
+    --ink: #172033;
+    --canvas: #F4F6F3;
+    --surface: #FFFFFF;
+    --warning: #A85D00;
+    --danger: #B42318;
+
+    --text-muted: color-mix(in srgb, var(--ink) 64%, transparent);
+    --text-subtle: color-mix(in srgb, var(--ink) 48%, transparent);
+    --border: color-mix(in srgb, var(--ink) 16%, var(--surface));
+    --border-strong: color-mix(in srgb, var(--ink) 28%, var(--surface));
+    --quiet: color-mix(in srgb, var(--ink) 8%, var(--surface));
+    --quiet-hover: color-mix(in srgb, var(--ink) 12%, var(--surface));
+    --brand-soft: color-mix(in srgb, var(--brand) 10%, var(--surface));
+    --brand-border: color-mix(in srgb, var(--brand) 30%, var(--surface));
+    --brand-hover: color-mix(in srgb, var(--brand) 86%, var(--ink));
+    --warning-soft: color-mix(in srgb, var(--warning) 10%, var(--surface));
+    --warning-border: color-mix(in srgb, var(--warning) 30%, var(--surface));
+    --danger-soft: color-mix(in srgb, var(--danger) 9%, var(--surface));
+    --danger-border: color-mix(in srgb, var(--danger) 30%, var(--surface));
+    --danger-hover: color-mix(in srgb, var(--danger) 86%, var(--ink));
+    --disabled-bg: color-mix(in srgb, var(--ink) 7%, var(--surface));
+    --disabled-text: color-mix(in srgb, var(--ink) 38%, transparent);
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --radius-small: 8px;
+    --radius: 12px;
+    --radius-large: 18px;
+    --shadow-small: 0 7px 22px color-mix(in srgb, var(--ink) 8%, transparent);
+    --shadow: 0 18px 50px color-mix(in srgb, var(--ink) 10%, transparent);
+    --focus-ring: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent);
+    --content-wide: 1120px;
+    --content-medium: 900px;
+    --content-narrow: 680px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    background: var(--canvas);
+    color: var(--ink);
+    scroll-behavior: smooth;
+}
+
+body {
+    background: var(--canvas) !important;
+    color: var(--ink);
+    font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    line-height: 1.5;
+    margin: 0;
+    min-height: 100vh;
+    padding: 0 !important;
+}
+
+button,
+input,
+select,
+textarea {
+    color: inherit;
+    font: inherit;
+}
+
+button,
+[role="button"],
+summary {
+    cursor: pointer;
+}
+
+a {
+    color: var(--brand);
+}
+
+a:hover {
+    color: var(--brand-hover);
+}
+
+:where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--brand) 35%, transparent) !important;
+    outline-offset: 3px !important;
+}
+
+::selection {
+    background: var(--brand-soft);
+    color: var(--ink);
+}
+
+/* Shared site shell ------------------------------------------------------ */
+
+.site-header {
+    background: color-mix(in srgb, var(--surface) 94%, transparent) !important;
+    border-bottom: 1px solid var(--border);
+    box-shadow: none !important;
+    color: var(--ink) !important;
+    margin: 0 0 var(--space-10) !important;
+    padding: 0 !important;
+}
+
+.header-container {
+    min-height: 76px;
+    padding: var(--space-3) var(--space-6) !important;
+}
+
+.header-brand a {
+    color: var(--ink) !important;
+}
+
+.header-wordmark {
+    color: var(--ink);
+    display: inline-flex;
+    font-size: 24px;
+    font-weight: 760;
+    gap: 5px;
+    letter-spacing: -0.04em;
+    line-height: 1;
+}
+
+.header-wordmark strong {
+    color: var(--brand);
+    font-weight: 850;
+}
+
+.header-slogan {
+    color: var(--text-muted) !important;
+    font-size: 12px !important;
+    margin-left: var(--space-1) !important;
+}
+
+.header-nav {
+    gap: var(--space-2) !important;
+    margin-left: var(--space-6) !important;
+}
+
+.header-nav a {
+    border-radius: var(--radius-small) !important;
+    color: var(--text-muted) !important;
+    font-size: 14px;
+    font-weight: 700;
+    min-height: 44px;
+    padding: 11px 14px !important;
+}
+
+.header-nav a:hover {
+    background: var(--quiet) !important;
+    color: var(--ink) !important;
+}
+
+.header-nav a.active {
+    background: var(--brand-soft) !important;
+    color: var(--brand) !important;
+}
+
+.site-footer {
+    background: var(--surface) !important;
+    border-top: 1px solid var(--border);
+    color: var(--ink) !important;
+    font-size: 14px;
+    margin-top: var(--space-12) !important;
+    padding: var(--space-10) 0 var(--space-5) !important;
+}
+
+.footer-content {
+    gap: var(--space-8) !important;
+    margin-bottom: var(--space-6) !important;
+}
+
+.footer-section h4 {
+    color: var(--ink) !important;
+    font-size: 14px !important;
+    margin: 0 0 var(--space-3) !important;
+}
+
+.footer-section p,
+.footer-section ul li a,
+.footer-bottom {
+    color: var(--text-muted) !important;
+}
+
+.footer-section a,
+.footer-section ul li a:hover {
+    color: var(--brand) !important;
+}
+
+.footer-bottom {
+    border-top-color: var(--border) !important;
+}
+
+/* Page frame and headings ------------------------------------------------ */
+
+body > .container {
+    background: var(--surface) !important;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-large) !important;
+    box-shadow: var(--shadow) !important;
+    color: var(--ink);
+    margin-left: auto !important;
+    margin-right: auto !important;
+    overflow: hidden;
+}
+
+.page-create > .container,
+.page-game > .container {
+    max-width: var(--content-narrow) !important;
+}
+
+.page-manage > .container,
+.page-host > .container,
+.page-legal > .container,
+.page-demo > .container {
+    max-width: var(--content-medium) !important;
+}
+
+.page-guide > .container {
+    max-width: var(--content-wide) !important;
+}
+
+.page-header,
+.section-header {
+    background: var(--surface) !important;
+    background-image: none !important;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink) !important;
+}
+
+.page-header {
+    border-radius: var(--radius-large) var(--radius-large) 0 0 !important;
+    justify-content: flex-start !important;
+    min-height: auto !important;
+    padding: var(--space-8) !important;
+}
+
+.page-header::before,
+.section-header::before,
+.mock-header::before {
+    display: none !important;
+}
+
+.page-header .header-content,
+.section-header .header-content {
+    text-align: left !important;
+}
+
+.page-header h1,
+.section-header h1 {
+    color: var(--ink) !important;
+    font-size: clamp(26px, 4vw, 36px) !important;
+    font-weight: 780 !important;
+    letter-spacing: -0.035em !important;
+    line-height: 1.1;
+    margin: 0 !important;
+    text-shadow: none !important;
+}
+
+.page-header .subtitle,
+.section-header .subtitle {
+    color: var(--text-muted) !important;
+    font-size: 14px !important;
+    margin-top: var(--space-2);
+    opacity: 1 !important;
+    text-shadow: none !important;
+}
+
+.section-title {
+    border: 0 !important;
+    color: var(--ink) !important;
+    display: block !important;
+    font-size: 22px !important;
+    font-weight: 760 !important;
+    letter-spacing: -0.025em;
+    margin: 0 0 var(--space-5) !important;
+    padding: 0 !important;
+}
+
+.subsection-title,
+.section-subtitle {
+    color: var(--ink) !important;
+    font-weight: 720 !important;
+}
+
+.muted,
+.summary-line,
+.footer-note,
+.form-help-text,
+.step-explainer,
+.notification-description,
+.mode-option .notification-description,
+.court-image-intro,
+.court-image-upload-help,
+.photos-intro,
+.roster-player-meta,
+.player-phone,
+.game-detail,
+.roster-phone,
+.roster-meta,
+.stat-label,
+.top-list .count,
+.last-updated,
+.subtitle {
+    color: var(--text-muted) !important;
+}
+
+/* Forms ------------------------------------------------------------------ */
+
+label {
+    color: var(--ink) !important;
+    display: block;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
+    margin: 0 0 7px !important;
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select) {
+    appearance: none;
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-small) !important;
+    min-height: 44px !important;
+    padding: 0 13px !important;
+    width: 100%;
+}
+
+textarea {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-small) !important;
+    min-height: 104px;
+    padding: 11px 13px !important;
+    width: 100%;
+}
+
+:where(input, select, textarea):hover:not(:disabled) {
+    border-color: var(--border-strong) !important;
+}
+
+:where(input, select, textarea):focus {
+    border-color: var(--brand) !important;
+    box-shadow: var(--focus-ring) !important;
+    outline: 0 !important;
+    transform: none !important;
+}
+
+:where(input, select, textarea):disabled {
+    background: var(--disabled-bg) !important;
+    color: var(--disabled-text) !important;
+    cursor: not-allowed;
+}
+
+:where(input, select, textarea)[aria-invalid="true"],
+.field-error :where(input, select, textarea),
+.form-group.error :where(input, select, textarea) {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 3px var(--danger-soft) !important;
+}
+
+.form-group {
+    margin-bottom: var(--space-5) !important;
+}
+
+.form-section,
+.content-section,
+.section,
+.signup-section {
+    background: var(--surface) !important;
+}
+
+.form-section,
+.content-section {
+    padding: var(--space-8) !important;
+}
+
+.form-step {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: none !important;
+    margin-bottom: var(--space-5) !important;
+    padding: var(--space-6) !important;
+}
+
+.step-heading {
+    border-bottom: 1px solid var(--border) !important;
+}
+
+.step-badge,
+.step-number,
+.flow-icon,
+.management-icon,
+.mode-icon,
+.creation-icon,
+.player-icon,
+.faq-icon,
+.notification-icon {
+    background: var(--brand) !important;
+    color: var(--surface) !important;
+}
+
+.notifications-section,
+.court-image-panel,
+.photos-section,
+.roster-picker,
+.individual-players-section,
+.sms-info,
+.save-suggestion {
+    background: var(--canvas) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: none !important;
+}
+
+.notification-option,
+.mode-option,
+.radio-option,
+.checkbox-option,
+.roster-player-option,
+.player-checkbox-item,
+.court-image-choice {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--ink) !important;
+}
+
+:where(.notification-option, .mode-option, .radio-option, .checkbox-option, .roster-player-option, .court-image-choice):hover {
+    border-color: var(--brand-border) !important;
+}
+
+:where(.notification-option.checked, .mode-option.checked, .roster-player-option:has(input:checked), .court-image-choice:has(input:checked)) {
+    background: var(--brand-soft) !important;
+    border-color: var(--brand) !important;
+    box-shadow: 0 0 0 2px var(--brand-soft) !important;
+}
+
+.toggle-switch {
+    background: var(--border-strong) !important;
+}
+
+.checked .toggle-switch {
+    background: var(--brand) !important;
+}
+
+.toggle-switch::before {
+    background: var(--surface) !important;
+}
+
+/* Buttons ---------------------------------------------------------------- */
+
+:where(
+    button[type="submit"],
+    .copy-btn,
+    .persistent-copy-btn,
+    .create-game-btn,
+    .back-btn,
+    .section-nav-btn,
+    .btn-primary,
+    .back-to-game-btn,
+    .court-image-upload-button
+) {
+    align-items: center;
+    background: var(--brand) !important;
+    background-image: none !important;
+    border: 1px solid var(--brand) !important;
+    border-radius: var(--radius-small) !important;
+    box-shadow: none !important;
+    color: var(--surface) !important;
+    display: inline-flex;
+    font-size: 14px !important;
+    font-weight: 750 !important;
+    justify-content: center;
+    letter-spacing: 0 !important;
+    min-height: 44px;
+    padding: 0 18px !important;
+    text-decoration: none;
+    text-transform: none !important;
+    transform: none !important;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+:where(
+    button[type="submit"],
+    .copy-btn,
+    .persistent-copy-btn,
+    .create-game-btn,
+    .back-btn,
+    .section-nav-btn,
+    .btn-primary,
+    .back-to-game-btn,
+    .court-image-upload-button
+):hover {
+    background: var(--brand-hover) !important;
+    border-color: var(--brand-hover) !important;
+    color: var(--surface) !important;
+    transform: none !important;
+}
+
+:where(.btn, .btn-secondary, .quick-action-btn, .section-nav-btn.close, .mock-button.secondary) {
+    align-items: center;
+    background: var(--surface) !important;
+    background-image: none !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-small) !important;
+    box-shadow: none !important;
+    color: var(--ink) !important;
+    display: inline-flex;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 16px !important;
+    text-decoration: none;
+    text-transform: none !important;
+    transform: none !important;
+}
+
+:where(.btn, .btn-secondary, .quick-action-btn, .section-nav-btn.close, .mock-button.secondary):hover {
+    background: var(--quiet) !important;
+    border-color: var(--border-strong) !important;
+    color: var(--ink) !important;
+    transform: none !important;
+}
+
+.btn.btn-primary {
+    background: var(--brand) !important;
+    border-color: var(--brand) !important;
+    color: var(--surface) !important;
+}
+
+.btn.btn-primary:hover {
+    background: var(--brand-hover) !important;
+    border-color: var(--brand-hover) !important;
+    color: var(--surface) !important;
+}
+
+:where(.btn-danger, .mock-button.danger, .photo-remove, .court-image-delete) {
+    align-items: center;
+    background: var(--danger) !important;
+    background-image: none !important;
+    border: 1px solid var(--danger) !important;
+    border-radius: var(--radius-small) !important;
+    box-shadow: none !important;
+    color: var(--surface) !important;
+    display: inline-flex;
+    font-weight: 700 !important;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 16px !important;
+}
+
+:where(.btn-danger, .mock-button.danger, .photo-remove, .court-image-delete):hover {
+    background: var(--danger-hover) !important;
+    border-color: var(--danger-hover) !important;
+    color: var(--surface) !important;
+}
+
+.switch-number,
+.close {
+    background: transparent !important;
+    border: 0 !important;
+    color: var(--text-muted) !important;
+}
+
+.switch-number:hover,
+.close:hover {
+    background: var(--quiet) !important;
+    color: var(--ink) !important;
+}
+
+button:disabled,
+.disabled,
+[aria-disabled="true"] {
+    background: var(--disabled-bg) !important;
+    border-color: var(--border) !important;
+    box-shadow: none !important;
+    color: var(--disabled-text) !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+.button-group,
+.modal-buttons,
+.card-actions,
+.player-actions,
+.quick-actions,
+.section-nav-buttons,
+.roster-picker-actions {
+    align-items: stretch;
+    display: flex;
+    gap: var(--space-2) !important;
+}
+
+.button-group > *,
+.modal-buttons > *,
+.section-nav-buttons > * {
+    flex: 1 1 0 !important;
+    width: auto !important;
+}
+
+/* Dense desktop controls */
+.player-actions button,
+.card-actions .btn,
+.quick-action-btn,
+.tabs .tab {
+    min-height: 36px;
+}
+
+/* Status and validation -------------------------------------------------- */
+
+:where(.success, .status.success, .confirmation-section) {
+    background: var(--brand-soft) !important;
+    border: 1px solid var(--brand-border) !important;
+    color: var(--brand) !important;
+}
+
+:where(.warning, .status.info, .caveat, .waitlist-info, .sms-warning, .confirmation-section.waitlist) {
+    background: var(--warning-soft) !important;
+    border: 1px solid var(--warning-border) !important;
+    color: var(--warning) !important;
+}
+
+:where(
+    .error,
+    .status.error,
+    .danger-warning,
+    .expired-game-warning,
+    .game-status-warning,
+    .confirmation-section.out,
+    .delete-panel,
+    .game-item.cancelled,
+    .warning
+) {
+    background: var(--danger-soft) !important;
+    border: 1px solid var(--danger-border) !important;
+    color: var(--danger) !important;
+}
+
+:where(.success, .warning, .error, .status, .confirmation-section, .danger-warning, .expired-game-warning, .game-status-warning) {
+    border-radius: var(--radius-small) !important;
+    box-shadow: none !important;
+}
+
+.status.info {
+    background: var(--brand-soft) !important;
+    border-color: var(--brand-border) !important;
+    color: var(--brand) !important;
+}
+
+.spots-available {
+    background: var(--brand-soft) !important;
+    border: 1px solid var(--brand-border) !important;
+    box-shadow: none !important;
+    color: var(--brand) !important;
+}
+
+.spots-full {
+    background: var(--warning-soft) !important;
+    border: 1px solid var(--warning-border) !important;
+    box-shadow: none !important;
+    color: var(--warning) !important;
+}
+
+.badge {
+    background: var(--quiet) !important;
+    border-color: var(--border) !important;
+    color: var(--text-muted) !important;
+}
+
+.badge.cancelled {
+    background: var(--danger-soft) !important;
+    border-color: var(--danger-border) !important;
+    color: var(--danger) !important;
+}
+
+.row-status,
+.photo-status.success {
+    color: var(--brand) !important;
+}
+
+.error-text,
+.photo-status.error,
+.court-image-status.is-error {
+    color: var(--danger) !important;
+}
+
+/* Cards, lists, navigation, and dialogs --------------------------------- */
+
+.game-info,
+.player-list,
+.game-item,
+.roster-row,
+.stat-card,
+.phone-gate,
+.no-games,
+.interface-example,
+.mock-interface,
+.mock-game-info,
+.mock-player-list,
+.mock-join-section,
+.share-section,
+.collapsible-section,
+.player-section,
+.photo-card,
+.modal-content {
+    background: var(--surface) !important;
+    background-image: none !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: none !important;
+    color: var(--ink) !important;
+}
+
+.photos-section {
+    background: var(--surface) !important;
+}
+
+.photo-upload {
+    display: block;
+}
+
+.game-item,
+.roster-row,
+.stat-card,
+.phone-gate,
+.no-games {
+    padding: var(--space-5) !important;
+}
+
+.stat-value,
+.row-status,
+.share-title,
+.notification-title,
+.mock-section-title,
+.mock-join-title {
+    color: var(--brand) !important;
+}
+
+.tabs-container,
+.tabs,
+.mobile-tab-container,
+.host-nav {
+    background: var(--canvas) !important;
+    border-color: var(--border) !important;
+}
+
+.tab {
+    background: transparent !important;
+    border-color: transparent !important;
+    border-radius: var(--radius-small) var(--radius-small) 0 0 !important;
+    box-shadow: none !important;
+    color: var(--text-muted) !important;
+}
+
+.tab:hover:not(.active) {
+    background: var(--quiet) !important;
+    color: var(--ink) !important;
+}
+
+.tab.active {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    border-bottom-color: var(--surface) !important;
+    box-shadow: none !important;
+    color: var(--brand) !important;
+}
+
+.host-nav a {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-muted) !important;
+}
+
+.host-nav a:hover {
+    border-color: var(--brand-border) !important;
+    color: var(--brand) !important;
+}
+
+.host-nav a[aria-current="page"] {
+    background: var(--brand) !important;
+    border-color: var(--brand) !important;
+    color: var(--surface) !important;
+}
+
+.collapsible-header {
+    background: var(--surface) !important;
+    color: var(--ink) !important;
+}
+
+.collapsible-header:hover {
+    background: var(--quiet) !important;
+}
+
+.modal {
+    background: color-mix(in srgb, var(--ink) 55%, transparent) !important;
+}
+
+.modal-content {
+    box-shadow: var(--shadow) !important;
+}
+
+/* Guide ------------------------------------------------------------------ */
+
+.page-guide .back-to-create,
+.page-guide .toc-section,
+.page-guide .subsection,
+.page-guide .content-section,
+.page-guide [class$="-flow-section"],
+.page-guide :where(
+    .sms-flow-section,
+    .management-flow-section,
+    .mode-flow-section,
+    .creation-flow-section,
+    .player-flow-section,
+    .faq-flow-section
+),
+.page-guide .mode-explanation,
+.page-guide .highlight-box,
+.page-guide .waitlist-mode-notice {
+    background: var(--surface) !important;
+    background-image: none !important;
+}
+
+.page-guide .back-to-create {
+    border-bottom: 1px solid var(--border);
+}
+
+.page-guide .toc-section {
+    border-bottom: 1px solid var(--border) !important;
+}
+
+.toc-item {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: none !important;
+}
+
+.toc-item:hover,
+.toc-item.active {
+    background: var(--brand-soft) !important;
+    border-color: var(--brand) !important;
+    color: var(--ink) !important;
+    transform: none !important;
+}
+
+.page-guide [class$="-flow-section"],
+.page-guide :where(
+    .sms-flow-section,
+    .management-flow-section,
+    .mode-flow-section,
+    .creation-flow-section,
+    .player-flow-section,
+    .faq-flow-section
+),
+.page-guide .mode-explanation,
+.page-guide .highlight-box,
+.page-guide .waitlist-mode-notice {
+    border: 1px solid var(--border) !important;
+    border-left: 3px solid var(--brand) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: none !important;
+}
+
+.page-guide :where(
+    .waitlist,
+    .waitlist-mode,
+    .waitlist-management,
+    .waitlist-creation,
+    .waitlist-player,
+    .setup-faq,
+    .warning,
+    .waitlist-mode-notice
+) {
+    border-left-color: var(--warning) !important;
+}
+
+.page-guide :where(.troubleshooting-faq, .danger) {
+    border-left-color: var(--danger) !important;
+}
+
+.page-guide :where(
+    h1, h2, h3, h4,
+    .flow-title h3,
+    .management-title h3,
+    .mode-title h4,
+    .creation-title h3,
+    .player-title h3,
+    .faq-title h3,
+    .faq-question,
+    .step-text strong,
+    .faq-answer strong
+) {
+    color: var(--ink) !important;
+}
+
+.page-guide :where(
+    p,
+    li,
+    .flow-description,
+    .management-description,
+    .mode-subtitle,
+    .creation-description,
+    .player-description,
+    .faq-description,
+    .faq-answer,
+    .sms-label
+) {
+    color: var(--text-muted) !important;
+}
+
+.steps-list {
+    border-left-color: var(--border) !important;
+}
+
+.steps-list li,
+.sms-example,
+.interface-example {
+    background: var(--canvas) !important;
+    border-color: var(--border) !important;
+    box-shadow: none !important;
+    color: var(--ink) !important;
+}
+
+.sms-example.received {
+    background: var(--brand-soft) !important;
+    border: 1px solid var(--brand-border);
+    color: var(--ink) !important;
+}
+
+.sms-example::after {
+    display: none !important;
+}
+
+.mock-header {
+    background: var(--brand) !important;
+    background-image: none !important;
+    color: var(--surface) !important;
+}
+
+.mock-header h3,
+.mock-header p {
+    color: var(--surface) !important;
+    text-shadow: none !important;
+}
+
+.mock-spots-available {
+    background: var(--brand-soft) !important;
+    border: 1px solid var(--brand-border);
+    box-shadow: none !important;
+    color: var(--brand) !important;
+}
+
+.mock-spots-full,
+.waitlist-mode-notice,
+.highlight-box.warning {
+    background: var(--warning-soft) !important;
+    border-color: var(--warning-border) !important;
+    color: var(--warning) !important;
+}
+
+.highlight-box.success {
+    background: var(--brand-soft) !important;
+    border-color: var(--brand-border) !important;
+}
+
+.mock-button {
+    background: var(--brand) !important;
+    background-image: none !important;
+    border: 1px solid var(--brand) !important;
+    box-shadow: none !important;
+    color: var(--surface) !important;
+}
+
+/* Legal, redirect, and carrier-review pages ------------------------------ */
+
+.page-legal > .container,
+.page-demo > .container {
+    margin-bottom: var(--space-12) !important;
+    padding: var(--space-10) !important;
+}
+
+.page-legal h1,
+.page-demo h1 {
+    color: var(--ink) !important;
+    font-size: clamp(30px, 5vw, 44px);
+    letter-spacing: -0.04em;
+    line-height: 1.08;
+    margin: 0 0 var(--space-2);
+    text-align: left !important;
+}
+
+.page-legal h2 {
+    border-bottom: 1px solid var(--border) !important;
+    color: var(--ink) !important;
+    font-size: 22px;
+    margin-top: var(--space-10);
+    padding-bottom: var(--space-2);
+}
+
+.page-legal h3,
+.page-demo h2,
+.page-demo h3 {
+    color: var(--ink) !important;
+}
+
+.page-legal .last-updated,
+.page-demo .subtitle {
+    text-align: left !important;
+}
+
+.page-legal .highlight,
+.page-demo .consent-checkbox {
+    background: var(--warning-soft) !important;
+    border: 1px solid var(--warning-border) !important;
+    border-radius: var(--radius) !important;
+    color: var(--warning) !important;
+}
+
+.page-legal .warning {
+    background: var(--danger-soft) !important;
+    border-color: var(--danger-border) !important;
+    color: var(--danger) !important;
+}
+
+.page-legal .contact-info,
+.page-demo .info-box,
+.page-demo .privacy-section,
+.page-demo .sample-messages,
+.page-demo .demo-section {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+}
+
+.page-demo .step-number {
+    background: var(--brand) !important;
+}
+
+.page-lookup {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    padding: var(--space-6) !important;
+}
+
+.page-lookup main {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow-small);
+    max-width: 540px;
+    padding: var(--space-8);
+    text-align: center;
+}
+
+/* Responsive rules ------------------------------------------------------- */
+
+@media (max-width: 768px) {
+    .site-header {
+        margin-bottom: var(--space-5) !important;
+    }
+
+    .header-container {
+        align-items: stretch !important;
+        padding: var(--space-3) var(--space-4) !important;
+    }
+
+    .header-brand {
+        margin-bottom: var(--space-2) !important;
+    }
+
+    .header-wordmark {
+        font-size: 22px;
+    }
+
+    .header-nav {
+        display: grid;
+        gap: var(--space-1) !important;
+        grid-template-columns: repeat(3, 1fr);
+        margin: 0 !important;
+    }
+
+    .header-nav a {
+        align-items: center;
+        display: flex;
+        font-size: 13px !important;
+        justify-content: center;
+        padding: var(--space-2) var(--space-1) !important;
+        text-align: center;
+    }
+
+    body > .container {
+        border-left: 0;
+        border-radius: 0 !important;
+        border-right: 0;
+        box-shadow: none !important;
+        width: 100%;
+    }
+
+    .page-header {
+        border-radius: 0 !important;
+        padding: var(--space-6) var(--space-5) !important;
+    }
+
+    .form-section,
+    .content-section,
+    .section,
+    .signup-section {
+        padding: var(--space-5) !important;
+    }
+
+    .form-step {
+        padding: var(--space-5) !important;
+    }
+
+    :where(
+        button[type="submit"],
+        .copy-btn,
+        .persistent-copy-btn,
+        .create-game-btn,
+        .back-btn,
+        .section-nav-btn,
+        .btn-primary,
+        .back-to-game-btn,
+        .btn,
+        .btn-secondary,
+        .quick-action-btn,
+        .btn-danger,
+        .mock-button,
+        .court-image-upload-button
+    ) {
+        min-height: 44px;
+    }
+
+    .page-create button[type="submit"],
+    .page-create .copy-btn,
+    .page-game button[type="submit"],
+    .page-game .back-to-game-btn,
+    .page-manage .persistent-copy-btn,
+    .page-manage .form-section > form > button[type="submit"],
+    .page-manage .photo-upload .copy-btn,
+    .page-manage #cancelGameBtn,
+    .page-host .phone-gate .btn-primary,
+    .page-host .create-game-btn,
+    .page-guide .back-btn,
+    .page-demo button[type="submit"] {
+        width: 100% !important;
+    }
+
+    .button-group,
+    .modal-buttons,
+    .section-nav-buttons,
+    .quick-actions {
+        flex-direction: column;
+    }
+
+    .button-group > *,
+    .modal-buttons > *,
+    .section-nav-buttons > *,
+    .quick-actions > * {
+        width: 100% !important;
+    }
+
+    .card-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .card-actions > * {
+        width: 100%;
+    }
+
+    .player-item {
+        align-items: stretch !important;
+        flex-direction: column;
+    }
+
+    .player-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        width: 100%;
+    }
+
+    .player-actions button {
+        min-height: 44px;
+        width: 100%;
+    }
+
+    .site-footer {
+        margin-top: var(--space-5) !important;
+        padding: var(--space-6) 0 !important;
+    }
+
+    .footer-content {
+        gap: var(--space-5) !important;
+    }
+
+    .page-legal > .container,
+    .page-demo > .container {
+        padding: var(--space-5) !important;
+    }
+
+    .page-guide [class$="-flow-section"] {
+        border-left: 3px solid var(--brand) !important;
+        border-radius: 0 !important;
+    }
+
+    .page-guide :where(
+        .sms-flow-section,
+        .management-flow-section,
+        .mode-flow-section,
+        .creation-flow-section,
+        .player-flow-section,
+        .faq-flow-section
+    ) {
+        border-radius: 0 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .tabs {
+        display: none !important;
+    }
+
+    .mobile-tab-container {
+        display: block !important;
+        padding: var(--space-4) !important;
+    }
+}

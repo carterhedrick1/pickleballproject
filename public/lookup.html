@@ -12,27 +12,15 @@
          following an old link lands on My Games rather than a dead page. -->
     <meta http-equiv="refresh" content="0; url=/my-games.html">
     <link rel="canonical" href="/my-games.html">
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-            padding: 20px;
-            text-align: center;
-            color: #475569;
-        }
-        a { color: #16a34a; }
-    </style>
+    <link rel="stylesheet" href="/css/design-system.css">
 </head>
-<body>
-    <p>
+<body class="page-lookup">
+    <main>
+        <p>
         Finding your games...<br>
         <a href="/my-games.html">Continue to My Games</a>
-    </p>
+        </p>
+    </main>
     <script>
         // replace() rather than assigning href, so the back button does not land the user
         // here again and bounce them straight forward into a loop.

@@ -199,7 +199,7 @@ function gameCard(game) {
 
 async function deleteGame(game, button, statusEl) {
     button.disabled = true;
-    statusEl.style.color = '#64748b';
+    statusEl.style.color = 'var(--text-muted)';
     statusEl.textContent = 'Deleting...';
 
     try {
@@ -218,7 +218,7 @@ async function deleteGame(game, button, statusEl) {
     } catch (error) {
         console.error('Error deleting game:', error);
         button.disabled = false;
-        statusEl.style.color = '#b91c1c';
+        statusEl.style.color = 'var(--danger)';
         statusEl.textContent = error.message || 'Could not delete that game. Please try again.';
     }
 }

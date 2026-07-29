@@ -89,7 +89,7 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            background: var(--canvas);
             min-height: 100vh;
             padding: 20px;
         }
@@ -97,16 +97,16 @@
         .container {
             max-width: 600px;
             margin: 0 auto;
-            background: white;
+            background: var(--surface);
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+            box-shadow: 0 20px 60px color-mix(in srgb, var(--ink) 8%, transparent);
             overflow: hidden;
         }
 
         /* Sleeker, smaller header with navy-to-green gradient */
         .page-header {
-            background: linear-gradient(135deg, #475569 0%, #429046 100%);
-            color: white;
+            background: var(--brand);
+            color: var(--surface);
             padding: 20px 32px 16px;
             margin: 0;
             position: relative;
@@ -125,12 +125,6 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-image: 
-                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.15), transparent),
-                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.1), transparent),
-                radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.2), transparent),
-                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.1), transparent),
-                radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.15), transparent);
             background-repeat: repeat;
             background-size: 200px 100px;
         }
@@ -145,7 +139,7 @@
             font-size: 22px;
             font-weight: 600;
             margin: 0 0 4px 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 0 2px 4px color-mix(in srgb, var(--ink) 30%, transparent);
             letter-spacing: -0.01em;
         }
 
@@ -153,22 +147,22 @@
             font-size: 14px;
             opacity: 0.9;
             font-weight: 400;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            text-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 20%, transparent);
         }
 
         /* Form section */
         .form-section {
             padding: 32px;
-            background-color: white;
+            background-color: var(--surface);
         }
 
         .section-title {
-            color: #4CAF50;
+            color: var(--brand);
             font-size: 24px;
             font-weight: bold;
             margin: 0 0 20px 0;
             padding-bottom: 10px;
-            border-bottom: 3px solid #4CAF50;
+            border-bottom: 3px solid var(--brand);
             display: inline-block;
         }
 
@@ -176,11 +170,11 @@
            break it into four things a host can think about one at a time, each with a line
            saying why it matters. */
         .form-step {
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border);
             border-radius: 14px;
             padding: 20px;
             margin-bottom: 24px;
-            background: #fcfcfd;
+            background: var(--canvas);
         }
 
         .step-heading {
@@ -197,8 +191,8 @@
             width: 28px;
             height: 28px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
-            color: white;
+            background: var(--brand);
+            color: var(--surface);
             font-size: 14px;
             font-weight: 700;
             flex-shrink: 0;
@@ -207,12 +201,12 @@
         .step-title {
             font-size: 19px;
             font-weight: 600;
-            color: #1f2937;
+            color: var(--ink);
             margin: 0;
         }
 
         .step-explainer {
-            color: #6b7280;
+            color: var(--text-muted);
             font-size: 14px;
             margin: 0 0 18px;
             line-height: 1.5;
@@ -221,12 +215,12 @@
         #locationSelect {
             width: 100%;
             padding: 14px;
-            border: 2px solid #e5e7eb;
+            border: 2px solid var(--border);
             border-radius: 10px;
             font-size: 16px;
             font-family: inherit;
-            background: white;
-            color: #374151;
+            background: var(--surface);
+            color: var(--ink);
         }
 
         .form-group {
@@ -236,9 +230,9 @@
         .court-image-panel {
             margin-top: 6px;
             padding: 16px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border);
             border-radius: 12px;
-            background: #f8fafc;
+            background: var(--canvas);
         }
 
         .court-image-panel[hidden] {
@@ -254,7 +248,7 @@
         }
 
         .court-image-title {
-            color: #374151;
+            color: var(--ink);
             font-size: 14px;
             font-weight: 600;
             letter-spacing: 0.025em;
@@ -262,7 +256,7 @@
 
         .court-image-intro {
             margin: 2px 0 0;
-            color: #6b7280;
+            color: var(--text-muted);
             font-size: 12px;
             line-height: 1.4;
         }
@@ -272,8 +266,8 @@
             min-height: 22px;
             padding: 2px 8px;
             border-radius: 999px;
-            background: #e5e7eb;
-            color: #4b5563;
+            background: var(--border);
+            color: var(--ink);
             font-size: 11px;
             font-weight: 600;
         }
@@ -288,9 +282,9 @@
             flex-wrap: wrap;
             gap: 8px 12px;
             padding: 10px;
-            border: 1px dashed #a7c7aa;
+            border: 1px dashed var(--brand);
             border-radius: 10px;
-            background: white;
+            background: var(--surface);
         }
 
         .court-image-upload-button {
@@ -300,10 +294,10 @@
             width: auto;
             margin: 0;
             padding: 8px 11px;
-            border: 1px solid #429046;
+            border: 1px solid var(--brand);
             border-radius: 8px;
-            background: #f0fdf4;
-            color: #166534;
+            background: var(--brand-soft);
+            color: var(--brand);
             cursor: pointer;
             font-size: 13px;
             font-weight: 600;
@@ -312,17 +306,17 @@
         }
 
         .court-image-upload-button:hover {
-            border-color: #166534;
-            background: #dcfce7;
+            border-color: var(--brand);
+            background: var(--brand-soft);
         }
 
         .court-image-upload-button:focus-within {
-            outline: 3px solid rgba(66, 144, 70, 0.18);
+            outline: 3px solid color-mix(in srgb, var(--brand) 18%, transparent);
             outline-offset: 2px;
         }
 
         .court-image-upload-help {
-            color: #6b7280;
+            color: var(--text-muted);
             font-size: 11px;
         }
 
@@ -341,13 +335,13 @@
         .court-image-status {
             min-height: 18px;
             margin: 8px 0;
-            color: #6b7280;
+            color: var(--text-muted);
             font-size: 12px;
             line-height: 1.4;
         }
 
         .court-image-status.is-error {
-            color: #b91c1c;
+            color: var(--danger);
         }
 
         .court-image-gallery {
@@ -364,23 +358,23 @@
             aspect-ratio: 4 / 3;
             margin: 0;
             overflow: hidden;
-            border: 2px solid #d1d5db;
+            border: 2px solid var(--border);
             border-radius: 10px;
-            background: white;
+            background: var(--surface);
             cursor: pointer;
             letter-spacing: 0;
             transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
         }
 
         .court-image-choice:hover {
-            border-color: #429046;
+            border-color: var(--brand);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(66, 144, 70, 0.14);
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 14%, transparent);
         }
 
         .court-image-choice:has(input:checked) {
-            border-color: #16a34a;
-            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 15%, transparent);
         }
 
         .court-image-choice input[type="radio"] {
@@ -393,7 +387,7 @@
             margin: 0;
             padding: 0;
             border: 0;
-            accent-color: #16a34a;
+            accent-color: var(--brand);
             cursor: pointer;
         }
 
@@ -411,8 +405,8 @@
             bottom: 6px;
             padding: 2px 6px;
             border-radius: 999px;
-            background: rgba(22, 101, 52, 0.9);
-            color: white;
+            background: color-mix(in srgb, var(--brand) 90%, transparent);
+            color: var(--surface);
             font-size: 9px;
             font-weight: 600;
         }
@@ -421,7 +415,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #374151;
+            color: var(--ink);
             font-size: 14px;
             letter-spacing: 0.025em;
         }
@@ -430,11 +424,11 @@
             width: 100%;
             padding: 14px 16px;
             box-sizing: border-box;
-            border: 2px solid #e5e7eb;
+            border: 2px solid var(--border);
             border-radius: 12px;
             font-size: 16px;
             transition: all 0.2s ease;
-            background-color: white;
+            background-color: var(--surface);
             font-family: inherit;
         }
 
@@ -459,22 +453,22 @@
         }
 
         input:focus, select:focus, textarea:focus {
-            border-color: #429046;
+            border-color: var(--brand);
             outline: none;
-            box-shadow: 0 0 0 3px rgba(66, 144, 70, 0.1);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 10%, transparent);
             transform: translateY(-1px);
         }
 
         .form-help-text {
-            color: #6b7280;
+            color: var(--text-muted);
             font-size: 12px;
             margin-top: 6px;
             line-height: 1.4;
         }
 
         button {
-            background: linear-gradient(135deg, #429046 0%, #16a34a 100%);
-            color: white;
+            background: var(--brand);
+            color: var(--surface);
             padding: 16px 28px;
             border: none;
             border-radius: 12px;
@@ -483,7 +477,7 @@
             font-weight: 600;
             width: 100%;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
+            box-shadow: 0 4px 16px color-mix(in srgb, var(--brand) 30%, transparent);
             margin-top: 20px;
             position: relative;
             overflow: hidden;
@@ -496,14 +490,14 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: var(--surface);
             transition: left 0.5s;
         }
 
         button:hover {
-            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            background: var(--brand);
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(66, 144, 70, 0.4);
+            box-shadow: 0 8px 25px color-mix(in srgb, var(--brand) 40%, transparent);
         }
 
         button:hover::before {
@@ -512,18 +506,18 @@
 
         button:active {
             transform: translateY(0);
-            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.3);
+            box-shadow: 0 4px 16px color-mix(in srgb, var(--brand) 30%, transparent);
         }
 
         /* SMS info styling */
         .sms-info {
-    background: linear-gradient(135deg, #fed7aa 0%, #eeb77c 100%);
-    border: 1px solid #ea580c;
+    background: var(--warning-soft);
+    border: 1px solid var(--warning);
     padding: 14px;
     border-radius: 10px;
     margin-top: 10px;
     font-size: 13px;
-    color: #9a3412;
+    color: var(--warning);
     line-height: 1.4;
 }
 
@@ -533,18 +527,18 @@
     align-items: flex-start;
     gap: 12px;
     padding: 16px;
-    background: #f8fafc;
+    background: var(--canvas);
     border-radius: 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     transition: all 0.2s ease;
     cursor: pointer;
 }
 
 .checkbox-inline:hover {
-    border-color: #cbd5e1;
-    background: #f1f5f9;
+    border-color: var(--border);
+    background: var(--canvas);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 5%, transparent);
 }
 
 .checkbox-inline input[type="checkbox"] {
@@ -554,7 +548,7 @@
     padding: 0;
     flex-shrink: 0;
     cursor: pointer;
-    accent-color: #3b82f6;
+    accent-color: var(--brand);
 }
 
 .checkbox-inline label {
@@ -563,7 +557,7 @@
     cursor: pointer;
     flex: 1;
     font-size: 14px;
-    color: #4b5563;
+    color: var(--ink);
     line-height: 1.4;
 }
 
@@ -577,38 +571,38 @@
         }
 
         .success {
-            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-            border: 1px solid #16a34a;
-            color: #166534;
+            background: var(--brand-soft);
+            border: 1px solid var(--brand);
+            color: var(--brand);
         }
 
         .error {
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-            border: 1px solid #ef4444;
-            color: #991b1b;
+            background: var(--danger-soft);
+            border: 1px solid var(--danger);
+            color: var(--danger);
         }
 
         .info {
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            border: 1px solid #3b82f6;
-            color: #1e40af;
+            background: var(--brand-soft);
+            border: 1px solid var(--brand);
+            color: var(--brand);
         }
 
         .warning {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 1px solid #f59e0b;
-            color: #92400e;
+            background: var(--warning-soft);
+            border: 1px solid var(--warning);
+            color: var(--warning);
         }
 
         /* Share section styling */
         .share-section {
             padding: 32px;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border-top: 1px solid #e5e7eb;
+            background: var(--canvas);
+            border-top: 1px solid var(--border);
         }
 
         .share-title {
-            color: #1f2937;
+            color: var(--ink);
             font-size: 22px;
             font-weight: 700;
             margin: 0 0 20px 0;
@@ -617,7 +611,7 @@
 
         .save-suggestion {
             font-style: italic;
-            color: #666;
+            color: var(--text-muted);
             margin-top: 10px;
             font-size: 14px;
         }
@@ -628,7 +622,7 @@
         }
 
         .center-copy-section p {
-            color: #6b7280;
+            color: var(--text-muted);
             margin: 14px 0;
             font-size: 14px;
             line-height: 1.5;
@@ -636,15 +630,15 @@
 
         .save-suggestion {
             font-style: italic;
-            color: #666;
+            color: var(--text-muted);
             margin-top: 15px;
             font-size: 14px;
         }
 
         /* Updated CSS for the copy button */
         .copy-btn {
-            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-            color: white;
+            background: var(--brand);
+            color: var(--surface);
             padding: 14px 20px;
             border: none;
             border-radius: 10px;
@@ -655,19 +649,19 @@
             max-width: 260px;
             margin: 16px auto;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 16px rgba(30, 58, 138, 0.3);
+            box-shadow: 0 4px 16px color-mix(in srgb, var(--brand) 30%, transparent);
             display: block;
         }
 
         .copy-btn:hover {
-            background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+            background: var(--brand);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
+            box-shadow: 0 6px 20px color-mix(in srgb, var(--brand) 40%, transparent);
         }
 
         .copy-btn:active {
             transform: translateY(0);
-            box-shadow: 0 4px 16px rgba(30, 58, 138, 0.3);
+            box-shadow: 0 4px 16px color-mix(in srgb, var(--brand) 30%, transparent);
         }
 
         /* REPLACE your notifications CSS - MOVE this OUTSIDE the @media query and BEFORE the @media (max-width: 768px) section */
@@ -686,12 +680,12 @@
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
-            color: #495057; /* CHANGED: Match other form labels */
+            color: var(--ink); /* CHANGED: Match other form labels */
             font-size: 16px; /* CHANGED: Match other form labels */
         }
 
         .notifications-section small {
-            color: #666;
+            color: var(--text-muted);
             font-size: 12px;
             margin-top: 5px;
             margin-bottom: 20px;
@@ -705,24 +699,24 @@
             justify-content: space-between;
             padding: 18px 20px;
             margin-bottom: 10px;
-            background: white;
+            background: var(--surface);
             border-radius: 12px;
-            border: 2px solid #e5e7eb;
+            border: 2px solid var(--border);
             transition: all 0.3s ease;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px color-mix(in srgb, var(--ink) 5%, transparent);
         }
 
         .notification-option:hover {
-            border-color: #429046;
+            border-color: var(--brand);
             transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(66, 144, 70, 0.1);
+            box-shadow: 0 6px 20px color-mix(in srgb, var(--brand) 10%, transparent);
         }
 
         .notification-option.checked {
-            border-color: #429046;
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.15);
+            border-color: var(--brand);
+            background: var(--brand-soft);
+            box-shadow: 0 4px 16px color-mix(in srgb, var(--brand) 15%, transparent);
         }
 
         .notification-content {
@@ -745,24 +739,24 @@
         .notification-title {
             font-weight: 600;
             font-size: 14px;
-            color: #1f2937;
+            color: var(--ink);
             margin: 0 0 3px 0;
             line-height: 1.3;
         }
 
         .notification-description {
             font-size: 12px;
-            color: #6b7280;
+            color: var(--text-muted);
             margin: 0;
             line-height: 1.4;
         }
 
         .notification-option.checked .notification-title {
-            color: #166534;
+            color: var(--brand);
         }
 
         .notification-option.checked .notification-description {
-            color: #4b5563;
+            color: var(--ink);
         }
 
         /* Custom Toggle Switch */
@@ -770,7 +764,7 @@
             position: relative;
             width: 44px;
             height: 24px;
-            background-color: #d1d5db;
+            background-color: var(--border);
             border-radius: 12px;
             transition: background-color 0.3s ease;
             cursor: pointer;
@@ -783,14 +777,14 @@
             left: 2px;
             width: 20px;
             height: 20px;
-            background-color: white;
+            background-color: var(--surface);
             border-radius: 50%;
             transition: transform 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px color-mix(in srgb, var(--ink) 10%, transparent);
         }
 
         .notification-option.checked .toggle-switch {
-            background-color: #429046;
+            background-color: var(--brand);
         }
 
         .notification-option.checked .toggle-switch::before {
@@ -823,24 +817,24 @@
             justify-content: space-between;
             padding: 18px 20px;
             margin-bottom: 0;
-            background: white;
+            background: var(--surface);
             border-radius: 12px;
-            border: 2px solid #e5e7eb;
+            border: 2px solid var(--border);
             transition: all 0.3s ease;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px color-mix(in srgb, var(--ink) 5%, transparent);
         }
 
         .mode-option:hover {
-            border-color: #429046;
+            border-color: var(--brand);
             transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(66, 144, 70, 0.1);
+            box-shadow: 0 6px 20px color-mix(in srgb, var(--brand) 10%, transparent);
         }
 
         .mode-option.checked {
-            border-color: #429046;
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-            box-shadow: 0 4px 16px rgba(66, 144, 70, 0.15);
+            border-color: var(--brand);
+            background: var(--brand-soft);
+            box-shadow: 0 4px 16px color-mix(in srgb, var(--brand) 15%, transparent);
         }
 
         /* Hide the radio buttons */
@@ -869,14 +863,14 @@
         .mode-option .notification-title {
             font-weight: 600;
             font-size: 14px;
-            color: #1f2937;
+            color: var(--ink);
             margin: 0 0 3px 0;
             line-height: 1.3;
         }
 
         .mode-option .notification-description {
             font-size: 12px;
-            color: #6b7280;
+            color: var(--text-muted);
             margin: 0;
             line-height: 1.4;
         }
@@ -886,7 +880,7 @@
             position: relative;
             width: 44px;
             height: 24px;
-            background-color: #d1d5db;
+            background-color: var(--border);
             border-radius: 12px;
             transition: background-color 0.3s ease;
             cursor: pointer;
@@ -899,14 +893,14 @@
             left: 2px;
             width: 20px;
             height: 20px;
-            background-color: white;
+            background-color: var(--surface);
             border-radius: 50%;
             transition: transform 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px color-mix(in srgb, var(--ink) 10%, transparent);
         }
 
         .mode-option.checked .toggle-switch {
-            background-color: #429046;
+            background-color: var(--brand);
         }
 
         .mode-option.checked .toggle-switch::before {
@@ -914,11 +908,11 @@
         }
 
         .mode-option.checked .notification-title {
-            color: #166534;
+            color: var(--brand);
         }
 
         .mode-option.checked .notification-description {
-            color: #4a5568;
+            color: var(--ink);
         }
 
         @media (max-width: 768px) {

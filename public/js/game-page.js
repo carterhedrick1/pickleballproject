@@ -245,11 +245,11 @@
                     position: fixed;
                     top: 20px;
                     right: 20px;
-                    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-                    color: white;
+                    background: var(--brand);
+                    color: var(--surface);
                     padding: 12px 20px;
                     border-radius: 8px;
-                    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+                    box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 30%, transparent);
                     z-index: 1000;
                     font-size: 14px;
                     font-weight: bold;
@@ -339,7 +339,7 @@
                     // No players yet - show helpful hint
                     const li = document.createElement('li');
                     li.style.fontStyle = 'italic';
-                    li.style.color = '#999';
+                    li.style.color = 'var(--text-muted)';
                     li.style.fontSize = '14px';
                     li.textContent = 'None yet - be the first to join!';
                     playersList.appendChild(li);

@@ -71,23 +71,7 @@ const headerHTML = `
  <div class="header-container">
  <div class="header-brand">
  <a href="/">
- <svg viewBox="0 0 140 48" xmlns="http://www.w3.org/2000/svg" aria-label="In or Out">
- <defs>
- <linearGradient id="inGradient" x1="0%" y1="0%" x2="100%" y2="0%">
- <stop offset="0%" style="stop-color:#4CAF50"/>
- <stop offset="100%" style="stop-color:#45a049"/>
- </linearGradient>
- <linearGradient id="underlineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
- <stop offset="0%" style="stop-color:#4CAF50"/>
- <stop offset="70%" style="stop-color:#4CAF50;stop-opacity:0.3"/>
- <stop offset="100%" style="stop-color:#e0e0e0;stop-opacity:0.2"/>
- </linearGradient>
- </defs>
- <text x="15" y="35" font-family="Arial, sans-serif" font-size="30" font-weight="500" fill="url(#inGradient)">In</text>
- <text x="55" y="32" font-family="Arial, sans-serif" font-size="18" font-weight="300" fill="#95a5a6">or</text>
- <text x="80" y="35" font-family="Arial, sans-serif" font-size="22" font-weight="200" fill="#b8c6db" opacity="0.8">Out</text>
- <rect x="15" y="42" width="100" height="3" fill="url(#underlineGrad)" rx="1.5"/>
- </svg>
+ <span class="header-wordmark" aria-label="IN or OUT"><strong>IN</strong> or OUT</span>
  <span class="header-slogan"></span>
  </a>
  </div>

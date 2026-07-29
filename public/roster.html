@@ -7,8 +7,9 @@
     <link rel="stylesheet" href="/css/header.css">
     <link rel="stylesheet" href="/css/footer.css">
     <link rel="stylesheet" href="/css/host-pages.css">
+    <link rel="stylesheet" href="/css/design-system.css">
 </head>
-<body>
+<body class="page-host page-roster">
     <div class="container">
         <div class="page-header">
             <div class="header-content">
@@ -190,7 +191,7 @@
             row.append(nameLabel, idLabel, ratingLabel, phone, meta, actions, status);
 
             save.addEventListener('click', async () => {
-                status.style.color = '#64748b';
+                status.style.color = 'var(--text-muted)';
                 status.textContent = 'Saving...';
                 save.disabled = true;
 
@@ -207,11 +208,11 @@
                     const data = await response.json().catch(() => ({}));
                     if (!response.ok) throw new Error(data.error || `Server returned ${response.status}`);
 
-                    status.style.color = '#16a34a';
+                    status.style.color = 'var(--brand)';
                     status.textContent = 'Saved.';
                 } catch (error) {
                     console.error('Error saving roster entry:', error);
-                    status.style.color = '#b91c1c';
+                    status.style.color = 'var(--danger)';
                     status.textContent = error.message || 'Could not save that.';
                 } finally {
                     save.disabled = false;
