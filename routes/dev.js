@@ -27,8 +27,13 @@ const {
   pruneAppErrors,
   saveDevAsset,
   getDevAsset,
-  getDevAssetMeta
+  getDevAssetMeta,
+  getDeveloperRosterSources,
+  updateDeveloperPlayer,
+  deleteDeveloperPlayer
 } = require('../database');
+const { buildDeveloperRosters } = require('../utils/dev-rosters');
+const { formatPhoneNumber } = require('../utils/sms-format');
 const sloganModule = require('../public/js/slogans');
 const youreInMessages = require('../youre-in-messages');
 const {
@@ -471,6 +476,72 @@ module.exports = function mountDevRoutes(app) {
     }
 
     res.json(status);
+  });
+
+  // -------------------------------------------------------------------------
+  // Hosts and player rosters
+  // -------------------------------------------------------------------------
+
+  app.get('/api/dev/rosters', requireDevAuth, async (_req, res) => {
+    try {
+      res.json(buildDeveloperRosters(await getDeveloperRosterSources()));
+    } catch (err) {
+      console.error('Error loading developer rosters:', err);
+      res.status(500).json({ error: 'Could not load the host and player rosters.' });
+    }
+  });
+
+  app.put('/api/dev/players/:phone', requireDevAuth, async (req, res) => {
+    const oldPhone = formatPhoneNumber(req.params.phone);
+    const newPhone = formatPhoneNumber(req.body && req.body.phone);
+    const name = String((req.body && req.body.name) || '').trim();
+
+    if (oldPhone.length !== 10 || newPhone.length !== 10) {
+      return res.status(400).json({ error: 'Enter a 10-digit US phone number.' });
+    }
+    if (!name) return res.status(400).json({ error: 'Enter the player’s name.' });
+    if (name.length > 100) {
+      return res.status(400).json({ error: 'Player names can be up to 100 characters.' });
+    }
+
+    try {
+      const current = buildDeveloperRosters(await getDeveloperRosterSources());
+      if (!current.players.some((player) => player.phone === oldPhone)) {
+        return res.status(404).json({ error: 'That player is no longer in the master roster.' });
+      }
+      const updated = await updateDeveloperPlayer(oldPhone, newPhone, name);
+      res.json({
+        success: true,
+        player: { phone: newPhone, name },
+        updated
+      });
+    } catch (err) {
+      if (err.code === 'PLAYER_PHONE_EXISTS') {
+        return res.status(409).json({ error: err.message });
+      }
+      console.error('Error updating master player:', err);
+      res.status(500).json({ error: 'Could not update the player.' });
+    }
+  });
+
+  app.delete('/api/dev/players/:phone', requireDevAuth, async (req, res) => {
+    const phone = formatPhoneNumber(req.params.phone);
+    const confirmation = formatPhoneNumber(req.body && req.body.confirmPhone);
+    if (phone.length !== 10 || confirmation !== phone) {
+      return res.status(400).json({ error: 'Confirm the player’s phone number before deleting.' });
+    }
+
+    try {
+      const current = buildDeveloperRosters(await getDeveloperRosterSources());
+      if (!current.players.some((player) => player.phone === phone)) {
+        return res.status(404).json({ error: 'That player is no longer in the master roster.' });
+      }
+      const removed = await deleteDeveloperPlayer(phone);
+      res.json({ success: true, removed });
+    } catch (err) {
+      console.error('Error deleting master player:', err);
+      res.status(500).json({ error: 'Could not delete the player.' });
+    }
   });
 
   // -------------------------------------------------------------------------

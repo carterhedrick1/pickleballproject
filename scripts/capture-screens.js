@@ -103,6 +103,29 @@ const clearHostPhone = async (p) => {
   await cdp.sleep(2000);
 };
 
+const openDeveloperRosters = async (p) => {
+  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  await p.evaluate(`(async () => {
+    const response = await fetch('/api/dev/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: ${password} })
+    });
+    if (!response.ok) throw new Error('Developer sign-in failed');
+    showApp();
+    document.querySelector('[data-tab="rosters"]').click();
+  })()`);
+  await cdp.sleep(1400);
+  // The capture server shares the developer's local SQLite database. Keep unrelated local
+  // contacts out of the generated image and photograph only reserved fixture phone numbers.
+  await p.evaluate(`(() => {
+    const search = document.getElementById('rosterSearch');
+    search.value = '555555';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await cdp.sleep(300);
+};
+
 const GUIDE_SECTIONS = [
   ['game-modes', 'Game Modes Explained', 'First-come versus approval, side by side.'],
   ['creating-games', 'Creating Your First Game', 'Setup walkthrough for both modes.'],
@@ -188,6 +211,11 @@ function buildScreens(fx) {
       note: 'Worked out from the games actually hosted. The yellow notes are deliberate: where a number cannot yet be trusted, the page says so.',
       act: seedHostPhone(fx) },
 
+    { file: 'dev-hosts-and-players', of: '/dev.html', size: 'wide', url: '/dev.html',
+      title: 'Hosts And Players',
+      note: 'The password-protected master player roster and every host roster, with global edit and delete controls.',
+      act: openDeveloperRosters },
+
     { file: 'lookup-redirect', of: '/lookup.html', size: 'narrow', url: '/lookup.html',
       title: 'The retired lookup page',
       note: 'Find My Games was folded into My Games. Old texts and bookmarks still land here and are sent straight on, so nothing 404s.' },
@@ -218,6 +246,8 @@ const GROUPS = [
     blurb: 'Everyone who has ever signed up for one of this host’s games, built without anybody typing a list. The host can add names and DUPR details on top.' },
   { of: '/stats.html', who: 'Organizers', lane: 'Linked from My Games',
     blurb: 'The patterns behind the games: who turns up, who waits, who drops out, and where and when this group actually plays.' },
+  { of: '/dev.html', who: 'Developer', lane: 'Password protected',
+    blurb: 'Private operational controls, including the master player roster and every host roster.' },
   { of: '/lookup.html', who: 'Organizers', lane: 'Old links only',
     blurb: 'Retired. My Games does the phone lookup itself now, so this page just forwards — the file only exists so older texts and bookmarks keep working.' },
   { of: '/demo.html', who: 'Carrier reviewers', lane: 'Unlinked',
@@ -307,7 +337,7 @@ figcaption p{font-size:.9rem;color:var(--ink-2);max-width:68ch;}
   <div class="how"><p>Each group is headed by its file, so you can point at it: <code>@create.html</code> add a level field, <code>@game.html</code> move the OUT button. Where one file has several looks, the caption says which state you are seeing.</p></div>
 </header>
 <section>
-  <div class="eyebrow" style="margin-bottom:.75rem;">The nine pages</div>
+  <div class="eyebrow" style="margin-bottom:.75rem;">The Ten Pages</div>
   <nav class="index">
 ${nav}  </nav>
 </section>

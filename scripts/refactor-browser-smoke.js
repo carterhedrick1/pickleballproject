@@ -546,6 +546,69 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       'developer area opens and cancels inline slogan editing'
     );
 
+    const rosterDirectory = await desktop.evaluate(`(async () => {
+      document.querySelector('[data-tab="rosters"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      const player = document.querySelector(
+        '[data-player-phone="${fx.JOIN_PHONE}"]'
+      );
+      return {
+        visible: !document.getElementById('tab-rosters').classList.contains('hidden'),
+        hosts: document.querySelectorAll('#hostRosterList .host-roster').length,
+        players: document.querySelectorAll('#masterRosterList .master-player').length,
+        playerFound: Boolean(player),
+        editButton: player?.querySelector('[data-roster-action="edit"]')?.textContent.trim(),
+        deleteButton: player?.querySelector('[data-roster-action="delete"]')?.textContent.trim(),
+        phone: player?.querySelector('.roster-person-phone')?.textContent.trim()
+      };
+    })()`);
+    assert(
+      rosterDirectory.visible &&
+        rosterDirectory.hosts > 0 &&
+        rosterDirectory.players > 0 &&
+        rosterDirectory.playerFound &&
+        rosterDirectory.editButton === 'Edit' &&
+        rosterDirectory.deleteButton === 'Delete' &&
+        rosterDirectory.phone === '(555) 555-0777',
+      'developer area shows every host roster and a master player roster with edit and delete controls'
+    );
+
+    const rosterEdit = await desktop.evaluate(`(async () => {
+      const player = document.querySelector('[data-player-phone="${fx.JOIN_PHONE}"]');
+      player.querySelector('[data-roster-action="edit"]').click();
+      const form = player.querySelector('.player-edit-form');
+      form.elements.name.value = 'Sam Rivera Edited';
+      form.requestSubmit();
+      await new Promise((resolve) => setTimeout(resolve, 450));
+      const updated = document.querySelector('[data-player-phone="${fx.JOIN_PHONE}"]');
+      return {
+        masterName: updated?.querySelector('.roster-person-name')?.textContent.trim(),
+        hostHasName: document.getElementById('hostRosterList').textContent.includes('Sam Rivera Edited')
+      };
+    })()`);
+    assert(
+      rosterEdit.masterName === 'Sam Rivera Edited' && rosterEdit.hostHasName,
+      'editing a master player updates the master list and host roster'
+    );
+
+    const rosterDelete = await desktop.evaluate(`(async () => {
+      const player = document.querySelector('[data-player-phone="${fx.JOIN_PHONE}"]');
+      player.querySelector('[data-roster-action="delete"]').click();
+      const warning = player.querySelector('.player-delete-confirm');
+      const warned = !warning.classList.contains('hidden') &&
+        warning.textContent.includes('every host roster and every game roster');
+      warning.querySelector('[data-roster-action="confirm-delete"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 450));
+      return {
+        warned,
+        removed: !document.querySelector('[data-player-phone="${fx.JOIN_PHONE}"]')
+      };
+    })()`);
+    assert(
+      rosterDelete.warned && rosterDelete.removed,
+      'deleting a master player requires a specific warning and removes the player everywhere'
+    );
+
     const styleCommandCenter = await desktop.evaluate(`(() => {
       document.querySelector('[data-tab="style-command-center"]').click();
       const rootStyles = getComputedStyle(document.documentElement);
