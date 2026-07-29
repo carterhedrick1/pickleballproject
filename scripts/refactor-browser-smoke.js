@@ -539,6 +539,52 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       'developer area opens and cancels inline slogan editing'
     );
 
+    const styleCommandCenter = await desktop.evaluate(`(() => {
+      document.querySelector('[data-tab="style-command-center"]').click();
+      const rootStyles = getComputedStyle(document.documentElement);
+      const activePanel = document.getElementById('tab-style-command-center');
+      const compactButton = activePanel.querySelector('.style-button-compact');
+      const standardButton = activePanel.querySelector(
+        '.style-button:not(.style-button-compact):not(.style-button-large)'
+      );
+      const largeButton = activePanel.querySelector('.style-button-large');
+      return {
+        visible: !activePanel.classList.contains('hidden'),
+        active: document.querySelector('[data-tab="style-command-center"]').classList.contains('active'),
+        brand: rootStyles.getPropertyValue('--brand').trim(),
+        ink: rootStyles.getPropertyValue('--ink').trim(),
+        canvas: rootStyles.getPropertyValue('--canvas').trim(),
+        surface: rootStyles.getPropertyValue('--surface').trim(),
+        warning: rootStyles.getPropertyValue('--warning').trim(),
+        danger: rootStyles.getPropertyValue('--danger').trim(),
+        tokens: activePanel.querySelectorAll('.style-token').length,
+        rules: activePanel.querySelectorAll('.style-rule').length,
+        statuses: activePanel.querySelectorAll('.style-status').length,
+        compactHeight: getComputedStyle(compactButton).minHeight,
+        standardHeight: getComputedStyle(standardButton).minHeight,
+        largeHeight: getComputedStyle(largeButton).minHeight,
+        invalidField: activePanel.querySelector('[aria-invalid="true"]') !== null
+      };
+    })()`);
+    assert(
+      styleCommandCenter.visible &&
+        styleCommandCenter.active &&
+        styleCommandCenter.brand.toLowerCase() === '#166534' &&
+        styleCommandCenter.ink.toLowerCase() === '#172033' &&
+        styleCommandCenter.canvas.toLowerCase() === '#f4f6f3' &&
+        styleCommandCenter.surface.toLowerCase() === '#ffffff' &&
+        styleCommandCenter.warning.toLowerCase() === '#a85d00' &&
+        styleCommandCenter.danger.toLowerCase() === '#b42318' &&
+        styleCommandCenter.tokens === 6 &&
+        styleCommandCenter.rules === 4 &&
+        styleCommandCenter.statuses === 3 &&
+        styleCommandCenter.compactHeight === '36px' &&
+        styleCommandCenter.standardHeight === '44px' &&
+        styleCommandCenter.largeHeight === '52px' &&
+        styleCommandCenter.invalidField,
+      'developer area shows the Court Classic palette and every selected component rule'
+    );
+
     const replyOptionEditor = await desktop.evaluate(`(async () => {
       document.querySelector('[data-tab="reply-options"]').click();
       await new Promise((resolve) => setTimeout(resolve, 250));
