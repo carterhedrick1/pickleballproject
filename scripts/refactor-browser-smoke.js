@@ -518,6 +518,36 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       'developer area opens and cancels inline slogan editing'
     );
 
+    const replyOptionEditor = await desktop.evaluate(`(async () => {
+      document.querySelector('[data-tab="reply-options"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      const response = await fetch('/api/dev/reply-options');
+      const data = await response.json();
+      return {
+        responseOk: response.ok,
+        systemCards: document.querySelectorAll('#systemReplyOptions .reply-option').length,
+        commands: [...document.querySelectorAll('#systemReplyOptions .reply-command')]
+          .map((element) => element.textContent.trim()).join(','),
+        form: Boolean(document.getElementById('replyOptionForm')),
+        audienceChoices: document.getElementById('replyOptionAudience').options.length,
+        availableCommands: document.getElementById('replyOptionCommand').options.length,
+        tokens: document.getElementById('replyOptionTokens').textContent,
+        apiCommands: data.systemOptions.map((option) => option.command).join(',')
+      };
+    })()`);
+    assert(
+      replyOptionEditor.responseOk &&
+        replyOptionEditor.systemCards === 3 &&
+        replyOptionEditor.commands === '1,2,9' &&
+        replyOptionEditor.form &&
+        replyOptionEditor.audienceChoices === 3 &&
+        replyOptionEditor.availableCommands === 7 &&
+        replyOptionEditor.tokens.includes('{LOCATION}') &&
+        replyOptionEditor.tokens.includes('{MANAGEMENT_LINK}') &&
+        replyOptionEditor.apiCommands === '1,2,9',
+      'developer area inventories built-in SMS replies and can create role-specific options'
+    );
+
     const youreInEditor = await desktop.evaluate(`(async () => {
       const textMessagingTab = document.getElementById('textMessagingTab');
       textMessagingTab.click();

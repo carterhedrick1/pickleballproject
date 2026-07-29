@@ -39,6 +39,7 @@ const {
 } = require('../services/player-service');
 const { buildSelectedPlayerMessage } = require('../services/youre-in-rotation');
 const { resolveTextMessage } = require('../services/text-message-rotation');
+const { appendCustomReplyInstructions } = require('../sms-reply-options');
 
 module.exports = function mountPlayerRoutes(app) {
   // Quietly builds the host's roster as people sign up. A roster row is a nicety - a failure
@@ -220,6 +221,7 @@ module.exports = function mountPlayerRoutes(app) {
             }
           );
         }
+        message = await appendCustomReplyInstructions(message, 'player');
         
         // Retries once, and the result is reported to the client so the page can say the text
         // did not go out rather than silently promising one. The signup itself is already saved
@@ -326,6 +328,7 @@ module.exports = function mountPlayerRoutes(app) {
             }
           );
         }
+        message = await appendCustomReplyInstructions(message, 'player');
         
         smsResult = await sendSMS(playerData.phone, message, gameId);
       }

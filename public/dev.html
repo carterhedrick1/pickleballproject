@@ -206,6 +206,34 @@
   .empty-rotation {
     border: 1px dashed #cfd8dc; border-radius: 10px; padding: 22px; text-align: center;
   }
+  .reply-option-list { display: grid; gap: 10px; }
+  .reply-option {
+    border: 1px solid #e8ecf1; border-radius: 10px; padding: 15px 16px; background: #fff;
+  }
+  .reply-option.inactive { opacity: 0.68; background: #f8f9fa; }
+  .reply-option-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .reply-command {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px;
+    padding: 0 9px; border-radius: 9px; background: #e8f5e9; color: #2e7d32; font-weight: 700;
+  }
+  .reply-option-title { font-weight: 600; }
+  .reply-audience {
+    border-radius: 20px; background: #eef2f5; color: #52616b; padding: 3px 9px;
+    font-size: 12px; font-weight: 600;
+  }
+  .reply-option-description { margin: 9px 0 0; color: #495057; font-size: 14px; white-space: pre-wrap; }
+  .reply-option-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .reply-form-grid {
+    display: grid; grid-template-columns: minmax(130px, 180px) minmax(180px, 1fr); gap: 12px;
+  }
+  .reply-field { display: grid; gap: 5px; }
+  .reply-field label { font-size: 13px; font-weight: 600; color: #495057; }
+  .reply-field.full { grid-column: 1 / -1; }
+  .reply-form-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  @media (max-width: 600px) {
+    .reply-form-grid { grid-template-columns: 1fr; }
+    .reply-field.full { grid-column: auto; }
+  }
   @media (max-width: 680px) {
     .message-preview-layout { grid-template-columns: 1fr; }
     .message-preview-copy { order: -1; }
@@ -258,6 +286,7 @@
     <button data-tab="status" class="active">Status</button>
     <button data-tab="ideas">Ideas</button>
     <button data-tab="slogans">Slogans</button>
+    <button data-tab="reply-options">Reply Options</button>
     <div class="tab-dropdown">
       <button type="button" class="tab-dropdown-trigger" id="textMessagingTab"
         aria-haspopup="menu" aria-expanded="false" aria-controls="textMessagingMenu">
@@ -410,6 +439,65 @@
       </div>
     </section>
 
+    <!-- SMS Reply Options -->
+    <section id="tab-reply-options" class="hidden">
+      <div class="panel">
+        <h2>Built-In Reply Options</h2>
+        <p class="muted">These options run the core game workflows and cannot be changed or deleted.</p>
+        <div class="reply-option-list" id="systemReplyOptions" style="margin-top:16px">
+          <p class="muted">Loading…</p>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 id="replyOptionFormTitle">Create A Reply Option</h2>
+        <p class="muted">
+          Choose who can use the number and write the information they'll receive. Active custom
+          options are automatically added to relevant confirmation, reminder, and game-detail texts.
+        </p>
+        <form class="idea-form" id="replyOptionForm" style="margin-top:16px">
+          <div class="reply-form-grid">
+            <div class="reply-field">
+              <label for="replyOptionCommand">Reply Number</label>
+              <select id="replyOptionCommand" required></select>
+            </div>
+            <div class="reply-field">
+              <label for="replyOptionAudience">Available To</label>
+              <select id="replyOptionAudience" required>
+                <option value="host">Host</option>
+                <option value="player">Player</option>
+                <option value="host-and-player">Host And Player</option>
+              </select>
+            </div>
+            <div class="reply-field full">
+              <label for="replyOptionTitle">Option Title</label>
+              <input type="text" id="replyOptionTitle" maxlength="80"
+                placeholder="Parking Information" required>
+            </div>
+            <div class="reply-field full">
+              <label for="replyOptionMessage">Reply Message</label>
+              <textarea id="replyOptionMessage" rows="6" maxlength="1200"
+                placeholder="Parking is available in the north lot at {LOCATION}." required></textarea>
+            </div>
+          </div>
+          <div>
+            <p class="muted" style="margin:0">Optional game values:</p>
+            <div class="message-token-list" id="replyOptionTokens"></div>
+          </div>
+          <div class="reply-form-actions">
+            <button type="submit" class="primary" id="saveReplyOption">Create Option</button>
+            <button type="button" class="ghost hidden" id="cancelReplyOptionEdit">Cancel</button>
+          </div>
+        </form>
+        <p id="replyOptionStatus" class="muted" style="min-height:20px; margin:14px 0 0"></p>
+      </div>
+      <div class="panel">
+        <h2>Custom Reply Options</h2>
+        <div class="reply-option-list" id="customReplyOptions">
+          <p class="muted">Loading…</p>
+        </div>
+      </div>
+    </section>
+
     <!-- Errors -->
     <section id="tab-errors" class="hidden">
       <div class="panel">
@@ -483,7 +571,7 @@ const TEXT_MESSAGE_TAB_IDS = [
   'game-details',
   'cancellation-help'
 ];
-const STANDARD_TAB_IDS = ['status', 'ideas', 'slogans', 'errors', 'courts', 'screens'];
+const STANDARD_TAB_IDS = ['status', 'ideas', 'slogans', 'reply-options', 'errors', 'courts', 'screens'];
 
 function el(id) { return document.getElementById(id); }
 function escapeHtml(s) {
@@ -568,6 +656,7 @@ function activateTab(tab) {
   if (tab === 'status') loadStatus();
   if (tab === 'ideas') loadNotes();
   if (tab === 'slogans') loadSlogans();
+  if (tab === 'reply-options') loadReplyOptions();
   if (isTextMessaging) loadTextMessageCategory(tab);
   if (tab === 'errors') loadErrors();
   if (tab === 'courts') loadCourts();
@@ -926,6 +1015,202 @@ el('sloganNameList').addEventListener('click', async (e) => {
     { slogans: sloganConfig.slogans, names: sloganConfig.names.filter((_name, i) => i !== index) },
     'Name removed.'
   );
+});
+
+// ---------------------------------------------------------------------------
+// SMS Reply Options
+// ---------------------------------------------------------------------------
+
+let replyOptionConfig = {
+  systemOptions: [],
+  customOptions: [],
+  availableCommands: [],
+  tokens: []
+};
+let editingReplyCommand = null;
+
+function replyAudienceLabel(audience) {
+  if (audience === 'host') return 'Host';
+  if (audience === 'player') return 'Player';
+  return 'Host And Player';
+}
+
+function setReplyOptionStatus(message, isError) {
+  const status = el('replyOptionStatus');
+  status.textContent = message || '';
+  status.style.color = isError ? '#e74c3c' : '#2e7d32';
+}
+
+function renderReplyCommandChoices(selected = '') {
+  const used = new Set(
+    replyOptionConfig.customOptions
+      .filter((option) => option.command !== editingReplyCommand)
+      .map((option) => option.command)
+  );
+  const choices = replyOptionConfig.availableCommands.filter((command) => !used.has(command));
+  el('replyOptionCommand').innerHTML = choices
+    .map((command) => (
+      `<option value="${command}"${command === selected ? ' selected' : ''}>Reply ${command}</option>`
+    ))
+    .join('');
+}
+
+function renderReplyOptions() {
+  el('systemReplyOptions').innerHTML = replyOptionConfig.systemOptions.map((option) => `
+    <div class="reply-option">
+      <div class="reply-option-head">
+        <span class="reply-command">${escapeHtml(option.command)}</span>
+        <span class="reply-option-title">${escapeHtml(option.title)}</span>
+        <span class="reply-audience">${escapeHtml(replyAudienceLabel(option.audience))}</span>
+        <span class="badge client">Built-In</span>
+      </div>
+      <p class="reply-option-description">${escapeHtml(option.description)}</p>
+    </div>`).join('');
+
+  if (!replyOptionConfig.customOptions.length) {
+    el('customReplyOptions').innerHTML =
+      '<p class="muted">No custom reply options yet. Create the first one above.</p>';
+  } else {
+    el('customReplyOptions').innerHTML = replyOptionConfig.customOptions.map((option) => `
+      <div class="reply-option${option.enabled ? '' : ' inactive'}" data-command="${option.command}">
+        <div class="reply-option-head">
+          <span class="reply-command">${escapeHtml(option.command)}</span>
+          <span class="reply-option-title">${escapeHtml(option.title)}</span>
+          <span class="reply-audience">${escapeHtml(replyAudienceLabel(option.audience))}</span>
+          ${option.enabled ? '' : '<span class="badge server">Inactive</span>'}
+        </div>
+        <p class="reply-option-description">${escapeHtml(option.message)}</p>
+        <div class="reply-option-actions">
+          <button type="button" class="ghost" data-action="edit-reply-option">Edit</button>
+          <button type="button" class="ghost" data-action="toggle-reply-option">
+            ${option.enabled ? 'Disable' : 'Enable'}
+          </button>
+          <button type="button" class="ghost" data-action="delete-reply-option">Delete</button>
+        </div>
+      </div>`).join('');
+  }
+
+  el('replyOptionTokens').innerHTML = replyOptionConfig.tokens
+    .map((token) => `<code>{${escapeHtml(token)}}</code>`)
+    .join('');
+  renderReplyCommandChoices(editingReplyCommand || '');
+}
+
+function resetReplyOptionForm() {
+  editingReplyCommand = null;
+  el('replyOptionForm').reset();
+  el('replyOptionAudience').value = 'host';
+  el('replyOptionFormTitle').textContent = 'Create A Reply Option';
+  el('saveReplyOption').textContent = 'Create Option';
+  el('cancelReplyOptionEdit').classList.add('hidden');
+  renderReplyCommandChoices();
+}
+
+async function loadReplyOptions() {
+  try {
+    const res = await fetch('/api/dev/reply-options');
+    if (res.status === 401) {
+      el('appView').classList.add('hidden');
+      el('loginView').classList.remove('hidden');
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Could not load reply options.');
+    replyOptionConfig = data;
+    renderReplyOptions();
+  } catch (err) {
+    el('systemReplyOptions').innerHTML = '<p class="muted">Could not load reply options.</p>';
+    el('customReplyOptions').innerHTML = '';
+    setReplyOptionStatus(err.message, true);
+  }
+}
+
+async function saveReplyOptions(customOptions, successMessage) {
+  setReplyOptionStatus('Saving…');
+  try {
+    const res = await fetch('/api/dev/reply-options', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customOptions })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Could not save the reply options.');
+    replyOptionConfig.customOptions = data.customOptions || [];
+    resetReplyOptionForm();
+    renderReplyOptions();
+    setReplyOptionStatus(successMessage);
+    return true;
+  } catch (err) {
+    setReplyOptionStatus(err.message, true);
+    return false;
+  }
+}
+
+el('replyOptionForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const option = {
+    command: el('replyOptionCommand').value,
+    audience: el('replyOptionAudience').value,
+    title: el('replyOptionTitle').value.trim(),
+    message: el('replyOptionMessage').value.trim(),
+    enabled: editingReplyCommand
+      ? replyOptionConfig.customOptions.find((item) => item.command === editingReplyCommand)?.enabled !== false
+      : true
+  };
+  const nextOptions = editingReplyCommand
+    ? replyOptionConfig.customOptions.map((item) => (
+        item.command === editingReplyCommand ? option : item
+      ))
+    : replyOptionConfig.customOptions.concat(option);
+  await saveReplyOptions(
+    nextOptions,
+    editingReplyCommand ? 'Reply option updated and live.' : 'Reply option created and live.'
+  );
+});
+
+el('cancelReplyOptionEdit').addEventListener('click', () => {
+  resetReplyOptionForm();
+  setReplyOptionStatus('');
+});
+
+el('customReplyOptions').addEventListener('click', async (event) => {
+  const action = event.target.dataset.action;
+  if (!action) return;
+  const command = event.target.closest('.reply-option').dataset.command;
+  const option = replyOptionConfig.customOptions.find((item) => item.command === command);
+  if (!option) return;
+
+  if (action === 'edit-reply-option') {
+    editingReplyCommand = command;
+    renderReplyCommandChoices(command);
+    el('replyOptionCommand').value = command;
+    el('replyOptionAudience').value = option.audience;
+    el('replyOptionTitle').value = option.title;
+    el('replyOptionMessage').value = option.message;
+    el('replyOptionFormTitle').textContent = 'Edit Reply Option';
+    el('saveReplyOption').textContent = 'Save Changes';
+    el('cancelReplyOptionEdit').classList.remove('hidden');
+    el('replyOptionFormTitle').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  if (action === 'toggle-reply-option') {
+    await saveReplyOptions(
+      replyOptionConfig.customOptions.map((item) => (
+        item.command === command ? { ...item, enabled: !item.enabled } : item
+      )),
+      option.enabled ? 'Reply option disabled.' : 'Reply option enabled and live.'
+    );
+    return;
+  }
+
+  if (action === 'delete-reply-option') {
+    if (!confirm(`Delete Reply ${command}: ${option.title}?`)) return;
+    await saveReplyOptions(
+      replyOptionConfig.customOptions.filter((item) => item.command !== command),
+      'Reply option deleted.'
+    );
+  }
 });
 
 // ---------------------------------------------------------------------------

@@ -44,6 +44,15 @@ const {
   normalizeDraftConfig
 } = require('../text-message-categories');
 const { clearTextMessageConfigCache } = require('../services/text-message-rotation');
+const {
+  REPLY_OPTIONS_ASSET_NAME,
+  CUSTOM_COMMANDS,
+  ALLOWED_TOKENS: REPLY_OPTION_TOKENS,
+  SYSTEM_REPLY_OPTIONS,
+  validateReplyOptionsConfig,
+  loadReplyOptionsConfig,
+  clearReplyOptionsCache
+} = require('../sms-reply-options');
 
 const DEV_PASSWORD = process.env.DEV_PASSWORD || 'vibe123';
 const COOKIE_NAME = 'dev_auth';
@@ -375,6 +384,39 @@ module.exports = function mountDevRoutes(app) {
     } catch (err) {
       console.error(`Error saving ${category.title} texts:`, err);
       res.status(500).json({ error: `Could not save the ${category.title} texts.` });
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // SMS reply options
+  // -------------------------------------------------------------------------
+
+  app.get('/api/dev/reply-options', requireDevAuth, async (_req, res) => {
+    try {
+      const config = await loadReplyOptionsConfig();
+      res.json({
+        systemOptions: SYSTEM_REPLY_OPTIONS,
+        customOptions: config.options,
+        availableCommands: CUSTOM_COMMANDS,
+        tokens: REPLY_OPTION_TOKENS
+      });
+    } catch (err) {
+      console.error('Error loading SMS reply options:', err);
+      res.status(500).json({ error: 'Could not load the reply options.' });
+    }
+  });
+
+  app.put('/api/dev/reply-options', requireDevAuth, async (req, res) => {
+    const result = validateReplyOptionsConfig({ options: req.body?.customOptions });
+    if (result.error) return res.status(400).json({ error: result.error });
+
+    try {
+      await saveDevAsset(REPLY_OPTIONS_ASSET_NAME, JSON.stringify(result.config));
+      clearReplyOptionsCache();
+      res.json({ success: true, customOptions: result.config.options });
+    } catch (err) {
+      console.error('Error saving SMS reply options:', err);
+      res.status(500).json({ error: 'Could not save the reply options.' });
     }
   });
 

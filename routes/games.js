@@ -37,6 +37,7 @@ const { routeFailed } = require('../utils/route-error');
 const { isHost } = require('../utils/host-auth');
 const { applyGameUpdate } = require('../utils/game-update');
 const { resolveTextMessage } = require('../services/text-message-rotation');
+const { appendCustomReplyInstructions } = require('../sms-reply-options');
 
 module.exports = function mountGameRoutes(app) {
   app.post('/api/games', async (req, res) => {
@@ -91,11 +92,12 @@ module.exports = function mountGameRoutes(app) {
         const gameTime = formatTimeForSMS(gameData.time);
         const locationText = formatLocationForSMS(gameData);
         const defaultHostMessage = `Your pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been created! Reply "1" for management link or "2" for game details.`;
-        const hostMessage = await resolveTextMessage(
+        let hostMessage = await resolveTextMessage(
           'game-created',
           defaultHostMessage,
           { LOCATION: locationText, DATE: gameDate, TIME: gameTime }
         );
+        hostMessage = await appendCustomReplyInstructions(hostMessage, 'host');
         smsResult = await sendSMS(formattedHostPhone, hostMessage, gameId);
       }
       

@@ -14,6 +14,11 @@ const { sendSMS, sendSMSWithRetry } = require('./sms-client');
 const { buildSelectedPlayerMessage } = require('./youre-in-rotation');
 const { resolveTextMessage } = require('./text-message-rotation');
 const {
+  findActiveReplyOption,
+  renderReplyOptionMessage,
+  appendCustomReplyInstructions
+} = require('../sms-reply-options');
+const {
   formatPhoneNumber,
   formatDateForSMS,
   formatTimeForSMS,
@@ -157,13 +162,17 @@ async function handleIncomingSMS(req, res) {
       await clearLastCommand(cleanedFromNumber);
       await handleCancellationRequest(fromNumber, cleanedFromNumber);
     } 
-    // Default response for unrecognized commands
     else {
-      await sendCategorySMS(
-        'cancellation-help',
-        fromNumber,
-        `Reply 1 for host management, 2 for your game details, or 9 to cancel a spot. If you need anything else, reach out to the organizer.`
-      );
+      const customOption = await findActiveReplyOption(messageText);
+      if (customOption) {
+        await handleCustomReplyOption(fromNumber, cleanedFromNumber, customOption);
+      } else {
+        await sendCategorySMS(
+          'cancellation-help',
+          fromNumber,
+          `Reply 1 for host management, 2 for your game details, or 9 to cancel a spot. If you need anything else, reach out to the organizer.`
+        );
+      }
       await clearLastCommand(cleanedFromNumber);
     }
     
@@ -172,6 +181,67 @@ async function handleIncomingSMS(req, res) {
   } catch (error) {
     console.error('Error handling incoming SMS:', error);
     res.json({ success: true, message: "Error processing webhook, please try again or contact support." });
+  }
+}
+
+function compareGameEntries(a, b) {
+  return `${a.game.date}T${a.game.time}`.localeCompare(`${b.game.date}T${b.game.time}`);
+}
+
+async function handleCustomReplyOption(fromNumber, cleanedFromNumber, option) {
+  try {
+    const allGames = await getAllGames();
+    const [hostGames, playerGames] = await Promise.all([
+      option.audience === 'player'
+        ? Promise.resolve([])
+        : getUserHostGames(cleanedFromNumber, allGames),
+      option.audience === 'host'
+        ? Promise.resolve([])
+        : getPlayerGames(cleanedFromNumber, allGames)
+    ]);
+    const selected = hostGames.concat(playerGames).sort(compareGameEntries)[0];
+    if (!selected) {
+      const audience = option.audience === 'host'
+        ? 'a Host'
+        : option.audience === 'player'
+          ? 'a Player'
+          : 'a Host or Player';
+      await sendSMS(
+        fromNumber,
+        `Reply "${option.command}" is available when this phone number is registered as ${audience} in an upcoming game.`
+      );
+      return;
+    }
+
+    const isHost = Boolean(selected.hostInfo);
+    const { id: gameId, game } = selected;
+    const baseUrl = process.env.BASE_URL || 'https://inorout.club';
+    const role = isHost
+      ? 'Host/Organizer'
+      : selected.status === 'confirmed'
+        ? 'Confirmed Player'
+        : game.registrationMode === 'waitlist'
+          ? 'Applicant'
+          : 'Waitlisted Player';
+    const managementLink = isHost
+      ? `${baseUrl}/manage.html?id=${gameId}&token=${selected.hostInfo.hostToken}`
+      : '';
+    const responseMessage = renderReplyOptionMessage(option, {
+      LOCATION: formatLocationForSMS(game),
+      DATE: formatDateForSMS(game.date),
+      TIME: formatTimeForSMS(game.time),
+      DURATION: game.duration,
+      ROLE: role,
+      GAME_LINK: `${baseUrl}/game.html?id=${gameId}`,
+      MANAGEMENT_LINK: managementLink
+    });
+    await sendSMS(fromNumber, responseMessage, gameId);
+  } catch (error) {
+    console.error(`Error handling custom SMS reply ${option.command}:`, error);
+    await sendSMS(
+      fromNumber,
+      `Sorry, there was an error retrieving ${option.title.toLowerCase()}. Please try again.`
+    );
   }
 }
 
@@ -625,8 +695,11 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
       responseMessage += `\nYou are: Waitlist #${waitlistPosition}\nReply "9" to cancel`;
     }
   }
-  
-  return responseMessage;
+
+  return appendCustomReplyInstructions(
+    responseMessage,
+    role === 'host' ? 'host' : 'player'
+  );
 }
 
 // Helper function to build game list message

@@ -5,6 +5,7 @@ const {
   formatTimeForSMS,
   formatLocationForSMS
 } = require('../utils/sms-format');
+const { appendCustomReplyInstructions } = require('../sms-reply-options');
 
 const ASSET_NAME = 'youre-in-config';
 
@@ -28,7 +29,7 @@ async function buildSelectedPlayerMessage(game, position, random) {
   const date = formatDateForSMS(game.date);
   const time = formatTimeForSMS(game.time);
   const details = `Pickleball at ${location} on ${date} at ${time}! You are Player ${position} of ${game.totalPlayers}. Reply 2 for who is playing and game details or 9 to cancel.`;
-  return buildYoureInMessage(
+  const message = await buildYoureInMessage(
     details,
     {
       LOCATION: location,
@@ -39,6 +40,7 @@ async function buildSelectedPlayerMessage(game, position, random) {
     },
     random
   );
+  return appendCustomReplyInstructions(message, 'player');
 }
 
 module.exports = {
