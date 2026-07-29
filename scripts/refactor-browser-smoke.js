@@ -661,6 +661,29 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
       'developer area shows the Court Classic palette and every selected component rule'
     );
 
+    const rulesTab = await desktop.evaluate(`(() => {
+      document.querySelector('[data-tab="rules"]').click();
+      const activePanel = document.getElementById('tab-rules');
+      const rules = [...activePanel.querySelectorAll('.build-rule')];
+      return {
+        visible: !activePanel.classList.contains('hidden'),
+        active: document.querySelector('[data-tab="rules"]').classList.contains('active'),
+        sections: activePanel.querySelectorAll('.rule-section').length,
+        rules: rules.length,
+        firstRule: rules[0]?.querySelector('strong')?.textContent.trim(),
+        lastRule: rules.at(-1)?.querySelector('strong')?.textContent.trim()
+      };
+    })()`);
+    assert(
+      rulesTab.visible &&
+        rulesTab.active &&
+        rulesTab.sections === 6 &&
+        rulesTab.rules === 41 &&
+        rulesTab.firstRule === 'Prove Every Change As A User' &&
+        rulesTab.lastRule === 'Trust Image Bytes, Not File Claims',
+      'developer area lists every current app-building rule in the Rules tab'
+    );
+
     const replyOptionEditor = await desktop.evaluate(`(async () => {
       document.querySelector('[data-tab="reply-options"]').click();
       await new Promise((resolve) => setTimeout(resolve, 250));

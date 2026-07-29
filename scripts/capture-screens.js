@@ -127,6 +127,21 @@ const openDeveloperRosters = async (p) => {
   await cdp.sleep(300);
 };
 
+const openDeveloperRules = async (p) => {
+  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  await p.evaluate(`(async () => {
+    const response = await fetch('/api/dev/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: ${password} })
+    });
+    if (!response.ok) throw new Error('Developer sign-in failed');
+    showApp();
+    document.querySelector('[data-tab="rules"]').click();
+  })()`);
+  await cdp.sleep(500);
+};
+
 const GUIDE_SECTIONS = [
   ['game-modes', 'Game Modes Explained', 'First-come versus approval, side by side.'],
   ['creating-games', 'Creating Your First Game', 'Setup walkthrough for both modes.'],
@@ -216,6 +231,10 @@ function buildScreens(fx) {
       title: 'Hosts And Players',
       note: 'The password-protected master player roster and every host roster, with guarded global edit and delete controls.',
       act: openDeveloperRosters },
+    { file: 'dev-rules', of: '/dev.html', size: 'tall', url: '/dev.html',
+      title: 'Rules',
+      note: 'The living reference for build, deployment, design, privacy, test-safety and core behavior guardrails.',
+      act: openDeveloperRules },
 
     { file: 'lookup-redirect', of: '/lookup.html', size: 'narrow', url: '/lookup.html',
       title: 'The retired lookup page',

@@ -396,6 +396,43 @@
   .doc-link .doc-open { margin-left: auto; }
   code { background: var(--brand-soft); padding: 2px 7px; border-radius: 5px; font-size: 13px; }
 
+  /* Rules */
+  .rules-intro {
+    align-items: start; display: flex; gap: 20px; justify-content: space-between;
+  }
+  .rules-intro p { margin: 0; max-width: 700px; }
+  .rules-count {
+    background: var(--brand-soft); border: 1px solid var(--brand-border); border-radius: 999px;
+    color: var(--brand); flex: 0 0 auto; font-size: 13px; font-weight: 800; padding: 7px 12px;
+  }
+  .rule-section + .rule-section { margin-top: 26px; }
+  .rule-section-head {
+    align-items: end; border-bottom: 1px solid var(--border); display: flex; gap: 16px;
+    justify-content: space-between; margin-bottom: 4px; padding-bottom: 10px;
+  }
+  .rule-section-head h2 { margin: 0; }
+  .rule-section-head span {
+    color: var(--subtle); font-size: 12px; font-weight: 750; letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .rule-list { list-style: none; margin: 0; padding: 0; }
+  .build-rule {
+    align-items: start; border-bottom: 1px solid var(--border); display: grid; gap: 14px;
+    grid-template-columns: 34px 1fr; padding: 15px 0;
+  }
+  .build-rule:last-child { border-bottom: 0; }
+  .build-rule-number {
+    align-items: center; background: var(--canvas); border: 1px solid var(--border);
+    border-radius: 50%; color: var(--muted); display: inline-flex; font-size: 11px;
+    font-weight: 850; height: 30px; justify-content: center; width: 30px;
+  }
+  .build-rule strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .build-rule p { color: var(--muted); font-size: 13px; margin: 0; }
+  .rules-note {
+    background: var(--canvas); border-left: 3px solid var(--brand); border-radius: 0 8px 8px 0;
+    color: var(--muted); font-size: 13px; margin-top: 18px; padding: 12px 14px;
+  }
+
   /* Style Command Center */
   .style-intro {
     align-items: start; display: flex; gap: 24px; justify-content: space-between;
@@ -487,7 +524,7 @@
 
   @media (max-width: 760px) {
     .style-token-grid, .style-rule-grid { grid-template-columns: 1fr; }
-    .style-intro { display: grid; }
+    .rules-intro, .style-intro { display: grid; }
     .style-button-compact { min-height: 44px; }
   }
   @media (max-width: 480px) {
@@ -549,6 +586,7 @@
     <button data-tab="rosters">Hosts And Players</button>
     <button data-tab="courts">Courts</button>
     <button data-tab="screens">Screens</button>
+    <button data-tab="rules">Rules</button>
     <button data-tab="style-command-center">Style Command Center</button>
   </div>
 
@@ -817,6 +855,245 @@
       </div>
     </section>
 
+    <!-- Rules -->
+    <section id="tab-rules" class="hidden">
+      <div class="panel">
+        <div class="rules-intro">
+          <div>
+            <h2>The Rules We Build By</h2>
+            <p class="muted">
+              The current guardrails established while building and operating IN or OUT.
+              These cover how changes ship, how the app should look, and the safety promises
+              future work must preserve.
+            </p>
+          </div>
+          <span class="rules-count">41 Current Rules</span>
+        </div>
+        <div class="rules-note">
+          This is a living reference. When a standing rule changes, update this tab and its
+          repository source together so the written rule and the actual workflow stay aligned.
+        </div>
+      </div>
+
+      <div class="panel rule-section">
+        <div class="rule-section-head">
+          <h2>Building And Shipping</h2>
+          <span>8 Rules</span>
+        </div>
+        <ol class="rule-list">
+          <li class="build-rule">
+            <span class="build-rule-number">01</span>
+            <div><strong>Prove Every Change As A User</strong><p>Run the app locally and exercise the affected page, control, or full flow. Passing unit tests alone is not enough for a user-facing change.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">02</span>
+            <div><strong>Run The Checks That Cover The Change</strong><p>Use the relevant verification scripts, and always pass <code>npm run verify:deploy</code> before a completed change is committed.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">03</span>
+            <div><strong>Use Port 3002 For The Local App</strong><p>Port 3001 belongs to another project. Resolve the listener on exactly 3002 and never stop an unidentified Node process.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">04</span>
+            <div><strong>Restart After A Completed App Update</strong><p>Stop only the IN or OUT process on port 3002, start <code>PORT=3002 npm start</code>, and confirm the local health endpoint and changed behavior.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">05</span>
+            <div><strong>Commit Completed Changes On Main</strong><p>Unless Scott says otherwise, a finished app change is committed. The post-commit workflow verifies it and pushes both repository remotes.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">06</span>
+            <div><strong>Treat The Upstream Push As The Deploy</strong><p>Production builds automatically from the upstream main branch. Never push unfinished or unverified work there.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">07</span>
+            <div><strong>Verify The New Production Process</strong><p>Wait for a new server start time, check production health, and exercise the affected behavior on inorout.club before calling the work complete.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">08</span>
+            <div><strong>Use The Manual Deploy Hook Only As A Fallback</strong><p>Use it only when the automatic deployment did not start, failed, stayed on the previous version, or Scott asks for an additional restart.</p></div>
+          </li>
+        </ol>
+      </div>
+
+      <div class="panel rule-section">
+        <div class="rule-section-head">
+          <h2>Documentation And The Developer Area</h2>
+          <span>5 Rules</span>
+        </div>
+        <ol class="rule-list">
+          <li class="build-rule">
+            <span class="build-rule-number">09</span>
+            <div><strong>Refresh Screens After Every Visible Change</strong><p>Run <code>npm run docs</code> whenever copy, styles, layout, controls, screens, or user flows change.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">10</span>
+            <div><strong>Photograph Every Changed State</strong><p>If the Screens gallery does not already cover the changed state, add it to <code>scripts/capture-screens.js</code>.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">11</span>
+            <div><strong>Publish And Check Screens Locally And Live</strong><p>Publish locally before the commit and verify through Developer Area → Screens. After deployment, publish production and confirm the new timestamp and gallery.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">12</span>
+            <div><strong>Leave The Old Artifact Copies Alone</strong><p>The Developer Area copies are the maintained reference. Do not republish the older external artifact pages unless Scott asks.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">13</span>
+            <div><strong>Keep The Developer Area Private And Useful</strong><p>Leave it unlisted and password protected. Keep shipped ideas current, and keep the global error reporter fail-silent so reporting can never break a player page.</p></div>
+          </li>
+        </ol>
+      </div>
+
+      <div class="panel rule-section">
+        <div class="rule-section-head">
+          <h2>Interface And Content</h2>
+          <span>9 Rules</span>
+        </div>
+        <ol class="rule-list">
+          <li class="build-rule">
+            <span class="build-rule-number">14</span>
+            <div><strong>Capitalize Every Word In Authored UI Titles</strong><p>Titles, headings, tabs, short labels, card titles, option titles, and button labels capitalize every word, including short words.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">15</span>
+            <div><strong>Preserve Intentional Product And Acronym Casing</strong><p>Keep SMS, DUPR, and API as acronyms, and preserve the product styling “IN or OUT” or “In or Out.”</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">16</span>
+            <div><strong>Keep Explanatory Copy In Normal Sentence Case</strong><p>Help text, full sentences, placeholders, and user-provided content should read naturally rather than use title capitalization.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">17</span>
+            <div><strong>Use Only The Six Court Classic Base Colors</strong><p>Brand, Ink, Canvas, Surface, Warning, and Danger are the base palette. Derive every other tone through opacity or color mixing.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">18</span>
+            <div><strong>Give Every Color One Job</strong><p>Brand means action, selection, focus, or success; Warning means attention; Danger is reserved for destructive actions and errors.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">19</span>
+            <div><strong>Keep A Clear Button Hierarchy</strong><p>Use one primary action per section. Secondary supports, Danger destroys, and Quiet goes back, cancels, or dismisses.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">20</span>
+            <div><strong>Use Only Three Button Sizes</strong><p>Compact is 36 px on dense desktop rows, Standard is 44 px, and Large is 52 px. Compact controls become at least 44 px on small screens.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">21</span>
+            <div><strong>Make Forms And Focus Consistent</strong><p>Controls share heights, radii, visible labels, error treatment, and an obvious keyboard focus state.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">22</span>
+            <div><strong>Keep Status Color Small And Meaningful</strong><p>Use concise messages, badges, icons, or borders. Large panels remain neutral instead of being filled with status color.</p></div>
+          </li>
+        </ol>
+      </div>
+
+      <div class="panel rule-section">
+        <div class="rule-section-head">
+          <h2>Architecture, Data, And Privacy</h2>
+          <span>6 Rules</span>
+        </div>
+        <ol class="rule-list">
+          <li class="build-rule">
+            <span class="build-rule-number">23</span>
+            <div><strong>Keep The App Login-Free For Players And Hosts</strong><p>IN or OUT is a lightweight tool for friends. Public game links and private host management links replace user accounts.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">24</span>
+            <div><strong>Keep Local And Production Data Separate</strong><p>Local development uses SQLite. Production uses PostgreSQL. Fixture scripts must refuse to create or delete data when that boundary is uncertain.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">25</span>
+            <div><strong>Never Expose The Host Token Publicly</strong><p>The public game endpoint and player pages must not reveal the private credential that controls a game.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">26</span>
+            <div><strong>Keep Host Notes And Roster Details Private</strong><p>Host notes, host-entered names, and DUPR details belong to the host and must not appear on player-facing pages.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">27</span>
+            <div><strong>Require Host Authorization For Destructive And Media Actions</strong><p>Uploading, selecting, clearing, or deleting images—and changing protected game data—requires the correct host credential.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">28</span>
+            <div><strong>Remember The Single-Process Lock Boundary</strong><p>The per-game lock is safe only while production runs one Node instance. Scaling out requires moving write ordering into the database first.</p></div>
+          </li>
+        </ol>
+      </div>
+
+      <div class="panel rule-section">
+        <div class="rule-section-head">
+          <h2>Automated Test Safety</h2>
+          <span>7 Rules</span>
+        </div>
+        <ol class="rule-list">
+          <li class="build-rule">
+            <span class="build-rule-number">29</span>
+            <div><strong>Never Send A Real Text From An Automated Test</strong><p>Use players without phone numbers whenever possible, and blank the Textbelt key for every test or capture that needs phone numbers.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">30</span>
+            <div><strong>Double-Guard SMS Failure Tests</strong><p>Use both simulated failure and a blank Textbelt key, and never point the SMS failure verification scripts at production.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">31</span>
+            <div><strong>Run Screenshot Fixtures Only On Local SQLite</strong><p>The documentation server must reject a production database, use a free port, use reserved 555 numbers, and keep SMS in development mode.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">32</span>
+            <div><strong>Clean Up Fixtures Even When A Capture Fails</strong><p>Fixture teardown must run after partial failures and match both a marker and reserved phone numbers so it cannot remove a real game.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">33</span>
+            <div><strong>Space Out Production Verification Runs</strong><p>Run production integration checks one at a time. Production rate limits can turn a safe burst into misleading 429 responses.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">34</span>
+            <div><strong>Make Production Cleanup Narrow And Reversible</strong><p>Start with a dry run, refuse candidates with phone numbers or reminder history, and write a timestamped backup before deleting anything.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">35</span>
+            <div><strong>Trust Verified Behavior Over Old Notes</strong><p>Historical project notes are context, not proof. Check the current code, tests, and live system before relying on a claim.</p></div>
+          </li>
+        </ol>
+      </div>
+
+      <div class="panel rule-section">
+        <div class="rule-section-head">
+          <h2>Core Behavior Safeguards</h2>
+          <span>6 Rules</span>
+        </div>
+        <ol class="rule-list">
+          <li class="build-rule">
+            <span class="build-rule-number">36</span>
+            <div><strong>Never Lose, Duplicate, Or Overbook A Player</strong><p>Concurrent actions must preserve every signup, keep the confirmed roster within capacity, and never place one person on both the roster and waitlist.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">37</span>
+            <div><strong>Keep Promotion Rules Consistent</strong><p>First-come games may automatically promote the next waitlisted player. Approval games leave that decision to the host.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">38</span>
+            <div><strong>Send Each Reminder Once, Including Catch-Ups</strong><p>Missed reminders can catch up before game time, late joiners still get theirs, and restarts or overlapping checks must not create duplicates.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">39</span>
+            <div><strong>Save The User Action Even If Its Text Fails</strong><p>A failed confirmation must not erase a signup or cancellation. Retry a transient failure once, do not retry permanent errors, and tell the user the truth.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">40</span>
+            <div><strong>Make Cancellation Idempotent</strong><p>A cancellation removes only the intended player. Repeating the same cancellation must not remove somebody else.</p></div>
+          </li>
+          <li class="build-rule">
+            <span class="build-rule-number">41</span>
+            <div><strong>Trust Image Bytes, Not File Claims</strong><p>Validate uploaded image types from their magic bytes, preserve exact bytes through storage, enforce limits, and keep upload and deletion host-only.</p></div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
     <!-- Style Command Center -->
     <section id="tab-style-command-center" class="hidden">
       <div class="panel">
@@ -1029,6 +1306,7 @@ const STANDARD_TAB_IDS = [
   'rosters',
   'courts',
   'screens',
+  'rules',
   'style-command-center'
 ];
 
