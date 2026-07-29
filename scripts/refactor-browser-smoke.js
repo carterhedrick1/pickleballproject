@@ -64,7 +64,9 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
           .map((element) => element.textContent.trim()),
         scriptExternal: [...document.scripts].some((s) => s.src.endsWith('/js/create.js')),
         headerSlogan: document.querySelector('.header-slogan')?.textContent.trim(),
-        footerSlogan: document.querySelector('.footer-slogan')?.textContent.trim()
+        footerSlogan: document.querySelector('.footer-slogan')?.textContent.trim(),
+        localNotice: document.querySelector('.local-preview-notice')?.textContent.trim(),
+        liveLink: document.querySelector('.local-preview-notice a')?.href
       };
     })()`);
     assert(createReady.form && createReady.selected, 'create form and extracted handlers work');
@@ -86,6 +88,11 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         createReady.headerSlogan === createReady.footerSlogan &&
         !createReady.headerSlogan.includes('{NAME}'),
       'one resolved slogan is shared by the header and footer'
+    );
+    assert(
+      createReady.localNotice?.includes('local test copy') &&
+        createReady.liveLink === 'https://inorout.club/create.html',
+      'local pages identify their test data and link to the matching live page'
     );
 
     await desktop.evaluate(`(() => {

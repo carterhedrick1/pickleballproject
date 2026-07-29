@@ -39,6 +39,35 @@ document.addEventListener('DOMContentLoaded', async function() {
 const slogan = window.InOrOutSlogans
     ? await window.InOrOutSlogans.getForPage()
     : 'Pickleball Organizer';
+
+async function showLocalPreviewNotice() {
+    try {
+        const response = await fetch('/api/health', { cache: 'no-store' });
+        if (!response.ok) return;
+
+        const health = await response.json();
+        if (health.environment !== 'local' && health.database !== 'SQLite') return;
+
+        const livePaths = new Set([
+            '/', '/create.html', '/my-games.html', '/roster.html', '/stats.html'
+        ]);
+        const livePath = livePaths.has(window.location.pathname) ? window.location.pathname : '/';
+        const notice = document.createElement('aside');
+        notice.className = 'local-preview-notice';
+        notice.setAttribute('role', 'status');
+        notice.innerHTML = `
+            <div>
+                <strong>Local Preview</strong>
+                <span>You’re viewing the local test copy. Its games and roster are separate from inorout.club.</span>
+            </div>
+            <a href="https://inorout.club${livePath}">Open Live Site</a>
+        `;
+        document.querySelector('.site-header').insertAdjacentElement('afterend', notice);
+    } catch (error) {
+        // The notice is helpful context, but a health-check failure must not break navigation.
+    }
+}
+
 // Determine the current page for navigation highlighting
 const currentPath = window.location.pathname;
 let currentPage = 'home';
@@ -86,6 +115,7 @@ const headerHTML = `
 // Insert header at the beginning of body
 document.body.insertAdjacentHTML('afterbegin', headerHTML);
 document.querySelector('.header-slogan').textContent = slogan;
+showLocalPreviewNotice();
 // Adjust body padding to account for header
 document.body.style.paddingTop = '0';
 });
