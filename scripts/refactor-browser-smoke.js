@@ -419,15 +419,36 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
     );
     await desktop.goto(`${local.baseUrl}/my-games.html`);
     await cdp.sleep(500);
-    const myGamesGrouping = await desktop.evaluate(`(() => ({
-      cancelledInUpcoming: document.querySelectorAll('#upcomingList .game-item.cancelled').length,
-      cancelledInPast: document.querySelectorAll('#pastList .game-item.cancelled').length,
-      cancelledPastLocation: document.querySelector('#pastList .game-item.cancelled .game-title')
-        ?.textContent.trim(),
-      cancelledHasDelete: Boolean(
-        document.querySelector('#pastList .game-item.cancelled [data-delete]')
-      )
-    }))()`);
+    const myGamesGrouping = await desktop.evaluate(`(() => {
+      const createGameButton = getComputedStyle(document.querySelector('.create-game-btn'));
+      const nativeButton = getComputedStyle(document.querySelector('#upcomingList button'));
+      return {
+        cancelledInUpcoming: document.querySelectorAll('#upcomingList .game-item.cancelled').length,
+        cancelledInPast: document.querySelectorAll('#pastList .game-item.cancelled').length,
+        cancelledPastLocation: document.querySelector('#pastList .game-item.cancelled .game-title')
+          ?.textContent.trim(),
+        cancelledHasDelete: Boolean(
+          document.querySelector('#pastList .game-item.cancelled [data-delete]')
+        ),
+        buttonAlignment: {
+          linkDisplay: createGameButton.display,
+          linkAlign: createGameButton.alignItems,
+          linkJustify: createGameButton.justifyContent,
+          nativeDisplay: nativeButton.display,
+          nativeAlign: nativeButton.alignItems,
+          nativeJustify: nativeButton.justifyContent
+        }
+      };
+    })()`);
+    assert(
+      ['flex', 'inline-flex'].includes(myGamesGrouping.buttonAlignment.linkDisplay) &&
+        myGamesGrouping.buttonAlignment.linkAlign === 'center' &&
+        myGamesGrouping.buttonAlignment.linkJustify === 'center' &&
+        ['flex', 'inline-flex'].includes(myGamesGrouping.buttonAlignment.nativeDisplay) &&
+        myGamesGrouping.buttonAlignment.nativeAlign === 'center' &&
+        myGamesGrouping.buttonAlignment.nativeJustify === 'center',
+      'native and link-style button labels are centered in both directions'
+    );
     assert(
       myGamesGrouping.cancelledInUpcoming === 0 &&
         myGamesGrouping.cancelledInPast === 1 &&

@@ -461,6 +461,32 @@ textarea {
 
 /* Buttons ---------------------------------------------------------------- */
 
+/*
+ * Older page styles give several button-like links a more specific
+ * `display: inline-block`. Keep the centering properties authoritative here
+ * so controls with a fixed/minimum height do not leave their label at the top.
+ */
+button,
+.btn,
+.copy-btn,
+.persistent-copy-btn,
+.create-game-btn,
+.back-btn,
+.section-nav-btn,
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.quick-action-btn,
+.back-to-game-btn,
+.court-image-upload-button,
+.mock-button {
+    align-items: center !important;
+    display: inline-flex !important;
+    justify-content: center !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+}
+
 :where(
     button[type="submit"],
     .copy-btn,
