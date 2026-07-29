@@ -177,6 +177,20 @@ async function initializeDatabase() {
           )
         `);
         await client.query('CREATE INDEX IF NOT EXISTS idx_app_errors_created ON app_errors (created_at)');
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS sms_events (
+            id TEXT PRIMARY KEY,
+            event_id TEXT NOT NULL,
+            game_id TEXT,
+            recipient_hash TEXT NOT NULL,
+            status TEXT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 1,
+            error TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query('CREATE INDEX IF NOT EXISTS idx_sms_events_created ON sms_events (created_at)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_sms_events_event ON sms_events (event_id)');
         // Same reason as photos: no persistent disk, so the generated doc pages live here.
         await client.query(`
           CREATE TABLE IF NOT EXISTS dev_assets (
@@ -321,6 +335,18 @@ async function initializeDatabase() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
       await sqliteRun('CREATE INDEX IF NOT EXISTS idx_app_errors_created ON app_errors (created_at)');
+      await sqliteRun(`CREATE TABLE IF NOT EXISTS sms_events (
+        id TEXT PRIMARY KEY,
+        event_id TEXT NOT NULL,
+        game_id TEXT,
+        recipient_hash TEXT NOT NULL,
+        status TEXT NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 1,
+        error TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      await sqliteRun('CREATE INDEX IF NOT EXISTS idx_sms_events_created ON sms_events (created_at)');
+      await sqliteRun('CREATE INDEX IF NOT EXISTS idx_sms_events_event ON sms_events (event_id)');
       // Same reason as photos: no persistent disk, so the generated doc pages live here.
       await sqliteRun(`CREATE TABLE IF NOT EXISTS dev_assets (
         name TEXT PRIMARY KEY,

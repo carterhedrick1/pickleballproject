@@ -27,6 +27,22 @@ const {
 
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 
+const EVENT_ID_BY_CATEGORY = Object.freeze({
+  'youre-in': 'player-confirmed',
+  'waitlist-confirmation': 'player-waitlisted',
+  'application-confirmation': 'application-submitted',
+  'roster-status-change': 'player-moved-to-waitlist',
+  'player-cancellation': 'player-cancelled',
+  'upcoming-reminder': 'upcoming-game-reminder',
+  'game-cancelled': 'entire-game-cancelled',
+  'organizer-announcement': 'organizer-announcement',
+  'game-created': 'game-created',
+  'host-alerts': 'host-player-joined',
+  'management-links': 'management-link-requested',
+  'game-details': 'game-details-requested',
+  'cancellation-help': 'cancellation-workflow'
+});
+
 async function sendCategorySMS(
   categoryId,
   to,
@@ -35,7 +51,9 @@ async function sendCategorySMS(
   gameId = null
 ) {
   const message = await resolveTextMessage(categoryId, defaultMessage, values);
-  return sendSMS(to, message, gameId);
+  return sendSMS(to, message, gameId, {
+    eventId: EVENT_ID_BY_CATEGORY[categoryId]
+  });
 }
 
 async function sendOrganizerNotification(gameId, game, eventType, playerName = null) {
@@ -122,7 +140,17 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
           TOTAL_PLAYERS: game.totalPlayers
         }
       );
-      const smsResult = await sendSMS(game.hostPhone, message, gameId);
+      const hostEventIds = {
+        playerJoins: 'host-player-joined',
+        playerCancels: 'host-player-cancelled',
+        gameFull: 'host-game-full',
+        oneSpotLeft: 'host-one-spot-left',
+        waitlistStarts: 'host-waitlist-started',
+        spotOpenedWaitlistMode: 'host-approval-spot-opened'
+      };
+      const smsResult = await sendSMS(game.hostPhone, message, gameId, {
+        eventId: hostEventIds[eventType]
+      });
       if (smsResult.success) {
         console.log(`[ORGANIZER NOTIFICATION] Sent ${eventType} to host for game ${gameId}`);
       } else {
@@ -208,7 +236,9 @@ async function handleCustomReplyOption(fromNumber, cleanedFromNumber, option) {
           : 'a Host or Player';
       await sendSMS(
         fromNumber,
-        `Reply "${option.command}" is available when this phone number is registered as ${audience} in an upcoming game.`
+        `Reply "${option.command}" is available when this phone number is registered as ${audience} in an upcoming game.`,
+        null,
+        { eventId: 'custom-reply-option' }
       );
       return;
     }
@@ -235,12 +265,16 @@ async function handleCustomReplyOption(fromNumber, cleanedFromNumber, option) {
       GAME_LINK: `${baseUrl}/game.html?id=${gameId}`,
       MANAGEMENT_LINK: managementLink
     });
-    await sendSMS(fromNumber, responseMessage, gameId);
+    await sendSMS(fromNumber, responseMessage, gameId, {
+      eventId: 'custom-reply-option'
+    });
   } catch (error) {
     console.error(`Error handling custom SMS reply ${option.command}:`, error);
     await sendSMS(
       fromNumber,
-      `Sorry, there was an error retrieving ${option.title.toLowerCase()}. Please try again.`
+      `Sorry, there was an error retrieving ${option.title.toLowerCase()}. Please try again.`,
+      null,
+      { eventId: 'custom-reply-option' }
     );
   }
 }
@@ -776,7 +810,9 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
       const promotionMessage = await buildSelectedPlayerMessage(game, game.players.length);
       // Retried: there is no screen behind this one. The promotion happened because someone
       // else texted 9, so if this text is lost the promoted player is never told at all.
-      const promoResult = await sendSMSWithRetry(promotedPlayer.phone, promotionMessage, gameId);
+      const promoResult = await sendSMSWithRetry(promotedPlayer.phone, promotionMessage, gameId, {
+        eventId: 'player-confirmed'
+      });
       if (!promoResult.success) {
         console.error(`[SMS] ${promotedPlayer.name} was promoted on game ${gameId} but could not be told:`, promoResult.error);
       }

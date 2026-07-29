@@ -24,6 +24,7 @@ const {
   logAppError,
   listAppErrors,
   countAppErrors,
+  getSmsEventMetrics,
   pruneAppErrors,
   saveDevAsset,
   getDevAsset,
@@ -520,6 +521,12 @@ module.exports = function mountDevRoutes(app) {
     }
 
     status.textbelt = await getTextbeltQuota();
+
+    try {
+      status.textMetrics = await getSmsEventMetrics();
+    } catch (err) {
+      status.textMetrics = { error: err.message };
+    }
 
     try {
       const meta = await getDevAssetMeta('screens');

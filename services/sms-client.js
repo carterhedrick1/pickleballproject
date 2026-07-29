@@ -5,7 +5,29 @@ const PERMANENT_SMS_ERRORS = [
   'message too long'
 ];
 
-async function sendSMS(to, message, gameId = null) {
+const { normalizeSmsEventId } = require('../sms-event-catalog');
+
+async function recordSmsResult(to, gameId, eventId, result, attempts = 1) {
+  if (process.env.SMS_DISABLE_EVENT_LOGGING === '1') return;
+  try {
+    // Load lazily so the SMS client stays usable in isolated safety tests and during startup.
+    const { logSmsEvent } = require('../database');
+    await logSmsEvent({
+      eventId: normalizeSmsEventId(eventId),
+      gameId,
+      phoneNumber: to,
+      status: result.success ? (result.dev ? 'simulated' : 'sent') : 'failed',
+      attempts,
+      error: result.error || null
+    });
+  } catch (error) {
+    // Telemetry must never turn a successful notification into an app failure.
+    if (String(error.message).includes('no such table: sms_events')) return;
+    console.error('[SMS METRICS] Could not record send event:', error.message);
+  }
+}
+
+async function performSendSMS(to, message, gameId = null) {
   try {
     if (process.env.SMS_SIMULATE_FAILURE === '1') {
       console.log(`[DEV MODE] Simulating SMS failure to ${to}`);
@@ -59,6 +81,12 @@ async function sendSMS(to, message, gameId = null) {
   }
 }
 
+async function sendSMS(to, message, gameId = null, { eventId } = {}) {
+  const result = await performSendSMS(to, message, gameId);
+  await recordSmsResult(to, gameId, eventId, result, 1);
+  return result;
+}
+
 function isPermanentSmsError(error) {
   if (!error) return false;
   const text = String(error).toLowerCase();
@@ -69,20 +97,26 @@ async function sendSMSWithRetry(
   to,
   message,
   gameId = null,
-  { retries = 1, delayMs = 600 } = {}
+  { retries = 1, delayMs = 600, eventId } = {}
 ) {
   let attempts = 0;
   let result;
 
   do {
     attempts++;
-    result = await sendSMS(to, message, gameId);
+    result = await performSendSMS(to, message, gameId);
 
-    if (result.success) return { ...result, attempts };
+    if (result.success) {
+      const finalResult = { ...result, attempts };
+      await recordSmsResult(to, gameId, eventId, finalResult, attempts);
+      return finalResult;
+    }
 
     if (isPermanentSmsError(result.error)) {
       console.error(`[SMS] Permanent failure to ${to}, not retrying: ${result.error}`);
-      return { ...result, attempts, permanent: true };
+      const finalResult = { ...result, attempts, permanent: true };
+      await recordSmsResult(to, gameId, eventId, finalResult, attempts);
+      return finalResult;
     }
 
     if (attempts <= retries) {
@@ -92,7 +126,9 @@ async function sendSMSWithRetry(
   } while (attempts <= retries);
 
   console.error(`[SMS] Giving up on ${to} after ${attempts} attempt(s): ${result.error}`);
-  return { ...result, attempts };
+  const finalResult = { ...result, attempts };
+  await recordSmsResult(to, gameId, eventId, finalResult, attempts);
+  return finalResult;
 }
 
 module.exports = {

@@ -127,6 +127,21 @@ const openDeveloperRosters = async (p) => {
   await cdp.sleep(300);
 };
 
+const openDeveloperStatus = async (p) => {
+  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  await p.evaluate(`(async () => {
+    const response = await fetch('/api/dev/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: ${password} })
+    });
+    if (!response.ok) throw new Error('Developer sign-in failed');
+    showApp();
+    document.querySelector('[data-tab="status"]').click();
+  })()`);
+  await cdp.sleep(900);
+};
+
 const openDeveloperRules = async (p) => {
   const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
   await p.evaluate(`(async () => {
@@ -263,6 +278,10 @@ function buildScreens(fx) {
       title: 'Hosts And Players',
       note: 'The password-protected master player roster and every host roster, with guarded global edit and delete controls.',
       act: openDeveloperRosters },
+    { file: 'dev-status-text-events', of: '/dev.html', size: 'tall', url: '/dev.html',
+      title: 'Status And Text Events',
+      note: 'Live operational health plus every outbound text trigger, with totals, recent counts, failures, retries and unique recipients.',
+      act: openDeveloperStatus },
     { file: 'dev-images', of: '/dev.html', size: 'wide', url: '/dev.html',
       title: 'Images',
       note: 'Every uploaded court image and game photo, with the uploader’s name and a developer-only delete control.',

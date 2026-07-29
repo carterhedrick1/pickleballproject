@@ -54,6 +54,8 @@ async function start() {
       PORT: String(port),
       BASE_URL: baseUrl,
       TEXTBELT_API_KEY: '', // rule 1 above - keeps every send in dev mode
+      // Fixture sends prove the UI behavior but are not real operational events.
+      SMS_DISABLE_EVENT_LOGGING: '1',
       // Browser tests and screenshots must stay on their seeded SQLite rows. Without these,
       // local Developer tools default to live production data for day-to-day operational use.
       DEV_ROSTER_SOURCE: 'local',

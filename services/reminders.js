@@ -125,7 +125,9 @@ async function checkAndSendReminders() {
             count: priorAttempts + 1,
             at: Date.now()
           });
-          const smsResult = await smsHandler.sendSMS(player.phone, message, gameId);
+          const smsResult = await smsHandler.sendSMS(player.phone, message, gameId, {
+            eventId: 'upcoming-game-reminder'
+          });
 
           if (smsResult.success) {
             remindedPlayersCache.set(playerKey, Date.now());

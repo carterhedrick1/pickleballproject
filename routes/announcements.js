@@ -58,7 +58,9 @@ module.exports = function mountAnnouncementRoutes(app) {
       if (includeConfirmed) {
         for (const player of game.players) {
           if (player.phone && !player.isOrganizer) {
-            const result = await sendSMS(player.phone, configuredMessage, gameId);
+            const result = await sendSMS(player.phone, configuredMessage, gameId, {
+              eventId: 'organizer-announcement'
+            });
             results.push({ player: player.name, type: 'confirmed', result });
             if (result.success) recipientCount++;
           }
@@ -68,7 +70,9 @@ module.exports = function mountAnnouncementRoutes(app) {
       if (includeWaitlist) {
         for (const player of game.waitlist || []) {
           if (player.phone) {
-            const result = await sendSMS(player.phone, configuredMessage);
+            const result = await sendSMS(player.phone, configuredMessage, gameId, {
+              eventId: 'organizer-announcement'
+            });
             results.push({ player: player.name, type: 'waitlist', result });
             if (result.success) recipientCount++;
           }
@@ -124,7 +128,9 @@ module.exports = function mountAnnouncementRoutes(app) {
       // Send to each selected recipient
       for (const recipient of recipients) {
         if (recipient.phone) {
-          const result = await sendSMS(recipient.phone, configuredMessage, gameId);
+          const result = await sendSMS(recipient.phone, configuredMessage, gameId, {
+            eventId: 'organizer-announcement'
+          });
           results.push({ 
             player: recipient.name, 
             type: recipient.type, 

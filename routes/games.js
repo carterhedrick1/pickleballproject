@@ -98,7 +98,9 @@ module.exports = function mountGameRoutes(app) {
           { LOCATION: locationText, DATE: gameDate, TIME: gameTime }
         );
         hostMessage = await appendCustomReplyInstructions(hostMessage, 'host');
-        smsResult = await sendSMS(formattedHostPhone, hostMessage, gameId);
+        smsResult = await sendSMS(formattedHostPhone, hostMessage, gameId, {
+          eventId: 'game-created'
+        });
       }
       
       response.hostSms = smsResult;
@@ -260,7 +262,9 @@ module.exports = function mountGameRoutes(app) {
       
       for (const player of game.players) {
         if (player.phone && !player.isOrganizer) {
-          const result = await sendSMS(player.phone, cancellationMessage);
+          const result = await sendSMS(player.phone, cancellationMessage, gameId, {
+            eventId: 'entire-game-cancelled'
+          });
           results.push({ player: player.name, type: 'confirmed', result });
           if (result.success) notificationCount++;
         }
@@ -268,7 +272,9 @@ module.exports = function mountGameRoutes(app) {
       
       for (const player of game.waitlist || []) {
         if (player.phone) {
-          const result = await sendSMS(player.phone, cancellationMessage);
+          const result = await sendSMS(player.phone, cancellationMessage, gameId, {
+            eventId: 'entire-game-cancelled'
+          });
           results.push({ player: player.name, type: 'waitlist', result });
           if (result.success) notificationCount++;
         }
@@ -478,7 +484,9 @@ module.exports = function mountGameRoutes(app) {
             GAME_COUNT: recentGames.length
           }
         );
-        smsResult = await sendSMS(phoneNumber, message);
+        smsResult = await sendSMS(phoneNumber, message, templateGame.gameId || null, {
+          eventId: 'management-link-requested'
+        });
       }
       
       res.json({

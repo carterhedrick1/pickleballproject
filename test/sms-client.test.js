@@ -1,4 +1,4 @@
-const { describe, it, afterEach } = require('node:test');
+const { describe, it, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { sendSMS } = require('../services/sms-client');
 
@@ -7,6 +7,7 @@ const ORIGINAL_ENV = {
   TEXTBELT_API_KEY: process.env.TEXTBELT_API_KEY,
   ALLOW_LOCAL_SMS: process.env.ALLOW_LOCAL_SMS,
   SMS_SIMULATE_FAILURE: process.env.SMS_SIMULATE_FAILURE,
+  SMS_DISABLE_EVENT_LOGGING: process.env.SMS_DISABLE_EVENT_LOGGING,
   BASE_URL: process.env.BASE_URL
 };
 const ORIGINAL_FETCH = global.fetch;
@@ -18,6 +19,10 @@ function setEnv(name, value) {
     process.env[name] = value;
   }
 }
+
+beforeEach(() => {
+  process.env.SMS_DISABLE_EVENT_LOGGING = '1';
+});
 
 afterEach(() => {
   Object.entries(ORIGINAL_ENV).forEach(([name, value]) => setEnv(name, value));

@@ -144,13 +144,17 @@ module.exports = function mountPlayerRoutes(app) {
               STATUS: result.previousStatus || 'out'
             }
           );
-          smsResult = await sendSMSWithRetry(playerData.phone, message, gameId);
+          smsResult = await sendSMSWithRetry(playerData.phone, message, gameId, {
+            eventId: 'player-cancelled'
+          });
         }
 
         if (result.promotedPlayer?.phone) {
           const promoted = result.promotedPlayer;
           const promoMessage = await buildSelectedPlayerMessage(game, game.players.length);
-          const promoResult = await sendSMSWithRetry(promoted.phone, promoMessage, gameId);
+          const promoResult = await sendSMSWithRetry(promoted.phone, promoMessage, gameId, {
+            eventId: 'player-confirmed'
+          });
           if (!promoResult.success) {
             console.error(`[SERVER] ${promoted.name} was promoted on game ${gameId} but could not be told:`, promoResult.error);
           }
@@ -226,7 +230,13 @@ module.exports = function mountPlayerRoutes(app) {
         // Retries once, and the result is reported to the client so the page can say the text
         // did not go out rather than silently promising one. The signup itself is already saved
         // and stays valid either way.
-        smsResult = await sendSMSWithRetry(playerData.phone, message, gameId);
+        smsResult = await sendSMSWithRetry(playerData.phone, message, gameId, {
+          eventId: result.status === 'confirmed'
+            ? 'player-confirmed'
+            : game.registrationMode === 'waitlist'
+              ? 'application-submitted'
+              : 'player-waitlisted'
+        });
         if (!smsResult.success) {
           console.error(`[SERVER] ${playerData.name} joined game ${gameId} but the confirmation text to ${playerData.phone} failed:`, smsResult.error);
         }
@@ -330,7 +340,13 @@ module.exports = function mountPlayerRoutes(app) {
         }
         message = await appendCustomReplyInstructions(message, 'player');
         
-        smsResult = await sendSMS(playerData.phone, message, gameId);
+        smsResult = await sendSMS(playerData.phone, message, gameId, {
+          eventId: result.status === 'confirmed'
+            ? 'player-confirmed'
+            : game.registrationMode === 'waitlist'
+              ? 'application-submitted'
+              : 'player-waitlisted'
+        });
       }
       
       const statusText = result.status === 'confirmed' ? 'game' : 'waitlist';
@@ -388,7 +404,9 @@ module.exports = function mountPlayerRoutes(app) {
             STATUS: 'waitlist'
           }
         );
-        smsResult = await sendSMS(player.phone, message, gameId);
+        smsResult = await sendSMS(player.phone, message, gameId, {
+          eventId: 'player-moved-to-waitlist'
+        });
       }
       
       res.json({
@@ -429,7 +447,9 @@ module.exports = function mountPlayerRoutes(app) {
         const message = await buildSelectedPlayerMessage(game, game.players.length);
         // Retried for the same reason as the promotion above: a promotion the player never hears
         // about looks identical to still being on the waitlist.
-        smsResult = await sendSMSWithRetry(player.phone, message, gameId);
+        smsResult = await sendSMSWithRetry(player.phone, message, gameId, {
+          eventId: 'player-confirmed'
+        });
         if (!smsResult.success) {
           console.error(`[SERVER] ${player.name} was promoted on game ${gameId} but could not be told:`, smsResult.error);
         }
@@ -484,7 +504,9 @@ module.exports = function mountPlayerRoutes(app) {
             STATUS: removalType
           }
         );
-        removalSmsResult = await sendSMS(removedPlayer.phone, message);
+        removalSmsResult = await sendSMS(removedPlayer.phone, message, gameId, {
+          eventId: 'player-removed-by-organizer'
+        });
       }
       
       // Send promotion SMS if someone was promoted from waitlist (this already exists in the logic)
@@ -494,7 +516,9 @@ module.exports = function mountPlayerRoutes(app) {
         // Retried: this is the one text nobody can recover from missing. The player has been
         // moved onto the roster in the database either way, so if it never arrives they believe
         // they are still on the waitlist and simply do not turn up.
-        promotionSmsResult = await sendSMSWithRetry(result.promotedPlayer.phone, message, gameId);
+        promotionSmsResult = await sendSMSWithRetry(result.promotedPlayer.phone, message, gameId, {
+          eventId: 'player-confirmed'
+        });
         if (!promotionSmsResult.success) {
           console.error(`[SERVER] ${result.promotedPlayer.name} was promoted on game ${gameId} but could not be told:`, promotionSmsResult.error);
         }

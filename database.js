@@ -5,6 +5,7 @@ const locationsMedia = require('./database/locations-media');
 const roster = require('./database/roster');
 const devRosters = require('./database/dev-rosters');
 const messagingReminders = require('./database/messaging-reminders');
+const smsEvents = require('./database/sms-events');
 const dev = require('./database/dev');
 const { closeDatabaseConnection, isProduction } = require('./database/context');
 
@@ -15,6 +16,7 @@ module.exports = {
   ...roster,
   ...devRosters,
   ...messagingReminders,
+  ...smsEvents,
   ...dev,
   closeDatabaseConnection,
   isProduction
