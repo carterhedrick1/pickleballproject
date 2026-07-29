@@ -142,6 +142,38 @@ const openDeveloperRules = async (p) => {
   await cdp.sleep(500);
 };
 
+const openDeveloperImages = (fx) => async (p) => {
+  // Reuse a real app screenshot as the fixture image so the gallery photographs recognisable
+  // thumbnails without keeping a second decorative image asset in the repository.
+  const fixturePath = path.join(ROOT, 'docs', 'screens', 'game-open.webp');
+  const imageBase64 = fs.readFileSync(fixturePath).toString('base64');
+  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  await p.evaluate(`(async () => {
+    const signIn = await fetch('/api/dev/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: ${password} })
+    });
+    if (!signIn.ok) throw new Error('Developer sign-in failed');
+    const bytes = Uint8Array.from(
+      atob(${JSON.stringify(imageBase64)}),
+      (character) => character.charCodeAt(0)
+    );
+    const courtUpload = await fetch(
+      '/api/games/${fx.open.gameId}/court-images?token=${fx.open.hostToken}',
+      { method: 'POST', headers: { 'Content-Type': 'image/webp' }, body: bytes }
+    );
+    const gameUpload = await fetch(
+      '/api/games/${fx.open.gameId}/photos?token=${fx.open.hostToken}&caption=After-game%20group%20photo',
+      { method: 'POST', headers: { 'Content-Type': 'image/webp' }, body: bytes }
+    );
+    if (!courtUpload.ok || !gameUpload.ok) throw new Error('Image fixture upload failed');
+    showApp();
+    document.querySelector('[data-tab="images"]').click();
+  })()`);
+  await cdp.sleep(900);
+};
+
 const GUIDE_SECTIONS = [
   ['game-modes', 'Game Modes Explained', 'First-come versus approval, side by side.'],
   ['creating-games', 'Creating Your First Game', 'Setup walkthrough for both modes.'],
@@ -231,6 +263,10 @@ function buildScreens(fx) {
       title: 'Hosts And Players',
       note: 'The password-protected master player roster and every host roster, with guarded global edit and delete controls.',
       act: openDeveloperRosters },
+    { file: 'dev-images', of: '/dev.html', size: 'wide', url: '/dev.html',
+      title: 'Images',
+      note: 'Every uploaded court image and game photo, with the uploader’s name and a developer-only delete control.',
+      act: openDeveloperImages(fx) },
     { file: 'dev-rules', of: '/dev.html', size: 'tall', url: '/dev.html',
       title: 'Rules',
       note: 'The living reference for build, deployment, design, privacy, test-safety and core behavior guardrails.',
@@ -267,7 +303,7 @@ const GROUPS = [
   { of: '/stats.html', who: 'Organizers', lane: 'Linked from My Games',
     blurb: 'The patterns behind the games: who turns up, who waits, who drops out, and where and when this group actually plays.' },
   { of: '/dev.html', who: 'Developer', lane: 'Password protected',
-    blurb: 'Private operational controls, including the master player roster and every host roster.' },
+    blurb: 'Private operational controls, including the image inventory, master player roster and every host roster.' },
   { of: '/lookup.html', who: 'Organizers', lane: 'Old links only',
     blurb: 'Retired. My Games does the phone lookup itself now, so this page just forwards — the file only exists so older texts and bookmarks keep working.' },
   { of: '/demo.html', who: 'Carrier reviewers', lane: 'Unlinked',

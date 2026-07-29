@@ -26,6 +26,19 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
   if (!response.ok) {
     throw new Error(`court image fixture upload failed: HTTP ${response.status}`);
   }
+  return response.json();
+}
+
+async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
+  const query = new URLSearchParams({ token: game.hostToken, caption });
+  const response = await fetch(
+    `${baseUrl}/api/games/${game.gameId}/photos?${query}`,
+    { method: 'POST', headers: { 'Content-Type': contentType }, body: bytes }
+  );
+  if (!response.ok) {
+    throw new Error(`game photo fixture upload failed: HTTP ${response.status}`);
+  }
+  return response.json();
 }
 
 (async () => {
@@ -35,8 +48,18 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
   try {
     const fx = await fixtures.seed(local.baseUrl);
     seeded = true;
-    await uploadCourtImage(local.baseUrl, fx.open, PNG_1PX, 'image/png');
-    await uploadCourtImage(local.baseUrl, fx.open, JPEG_BYTES, 'image/jpeg');
+    const firstCourtImage = await uploadCourtImage(
+      local.baseUrl, fx.open, PNG_1PX, 'image/png'
+    );
+    const secondCourtImage = await uploadCourtImage(
+      local.baseUrl, fx.open, JPEG_BYTES, 'image/jpeg'
+    );
+    const firstGamePhoto = await uploadGamePhoto(
+      local.baseUrl, fx.open, PNG_1PX, 'image/png', 'Doubles at sunset'
+    );
+    const secondGamePhoto = await uploadGamePhoto(
+      local.baseUrl, fx.open, JPEG_BYTES, 'image/jpeg', 'The winning court'
+    );
 
     await fetch(`${local.baseUrl}/api/games/${fx.open.gameId}/players`, {
       method: 'POST',
@@ -522,6 +545,80 @@ async function uploadCourtImage(baseUrl, game, bytes, contentType) {
         sloganEditor.editButtons === sloganEditor.slogans,
       'developer area can manage the slogan and name rotations'
     );
+
+    const imageInventory = await desktop.evaluate(`(async () => {
+      document.querySelector('[data-tab="images"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 450));
+      const apiResponse = await fetch('/api/dev/images');
+      const apiData = await apiResponse.json();
+      const wantedIds = ${JSON.stringify([
+        firstCourtImage.imageId,
+        secondCourtImage.imageId,
+        firstGamePhoto.id,
+        secondGamePhoto.id
+      ])};
+      const wanted = apiData.images.filter((image) => wantedIds.includes(image.id));
+      const cards = wantedIds.map((id) =>
+        document.querySelector('[data-image-id="' + id + '"]')
+      );
+      return {
+        responseOk: apiResponse.ok,
+        tabLabel: document.querySelector('[data-tab="images"]').textContent.trim(),
+        visible: !document.getElementById('tab-images').classList.contains('hidden'),
+        wanted: wanted.length,
+        courtImages: wanted.filter((image) => image.type === 'court').length,
+        gamePhotos: wanted.filter((image) => image.type === 'game').length,
+        uploaderNames: [...new Set(wanted.map((image) => image.uploaderName))],
+        cards: cards.filter(Boolean).length,
+        cardUploaders: cards.map((card) =>
+          [...(card?.querySelectorAll('.image-card-details dd') || [])][0]?.textContent.trim()
+        ),
+        deleteLabels: cards.map((card) =>
+          card?.querySelector('[data-action="delete-image"]')?.textContent.trim()
+        )
+      };
+    })()`);
+    assert(
+      imageInventory.responseOk &&
+        imageInventory.tabLabel === 'Images' &&
+        imageInventory.visible &&
+        imageInventory.wanted === 4 &&
+        imageInventory.courtImages === 2 &&
+        imageInventory.gamePhotos === 2 &&
+        imageInventory.uploaderNames.length === 1 &&
+        imageInventory.uploaderNames[0] === 'Scott H.' &&
+        imageInventory.cards === 4 &&
+        imageInventory.cardUploaders.every((name) => name === 'Scott H.') &&
+        imageInventory.deleteLabels.every((label) => label === 'Delete Image'),
+      'developer Images tab shows every image type, uploader names, and delete controls'
+    );
+
+    const developerImageDelete = await desktop.evaluate(`(async () => {
+      const originalConfirm = window.confirm;
+      window.confirm = () => true;
+      document.querySelector(
+        '[data-image-id="${firstGamePhoto.id}"] [data-action="delete-image"]'
+      ).click();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      window.confirm = originalConfirm;
+      return {
+        removed: !document.querySelector('[data-image-id="${firstGamePhoto.id}"]'),
+        remainingGamePhoto: Boolean(
+          document.querySelector('[data-image-id="${secondGamePhoto.id}"]')
+        )
+      };
+    })()`);
+    const deletedPhotoResponse = await fetch(`${local.baseUrl}${firstGamePhoto.url}`);
+    assert(
+      developerImageDelete.removed &&
+        developerImageDelete.remainingGamePhoto &&
+        deletedPhotoResponse.status === 404,
+      'a developer can permanently delete any uploaded image from the Images tab'
+    );
+    await desktop.evaluate(
+      `document.querySelector('[data-tab="slogans"]').click()`
+    );
+    await cdp.sleep(250);
     const sloganEditControls = await desktop.evaluate(`(() => {
       const original = document.querySelector('#sloganList .copy').textContent;
       document.querySelector('[data-action="edit-slogan"]').click();

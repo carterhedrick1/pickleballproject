@@ -118,6 +118,7 @@ async function initializeDatabase() {
             mime_type TEXT NOT NULL,
             data BYTEA NOT NULL,
             caption TEXT,
+            uploader_name TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
@@ -129,10 +130,20 @@ async function initializeDatabase() {
             court_name_key TEXT NOT NULL,
             mime_type TEXT NOT NULL,
             image_data BYTEA NOT NULL,
+            uploader_name TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
         await client.query('CREATE INDEX IF NOT EXISTS idx_court_images_court ON court_images (court_name_key)');
+        for (const table of ['game_photos', 'court_images']) {
+          try {
+            await client.query(`ALTER TABLE ${table} ADD COLUMN uploader_name TEXT`);
+          } catch (err) {
+            if (!err.message.includes('already exists')) {
+              throw err;
+            }
+          }
+        }
 
         // Add column to games table for selected court image (if it doesn't exist)
         try {
@@ -254,6 +265,7 @@ async function initializeDatabase() {
         mime_type TEXT NOT NULL,
         data BLOB NOT NULL,
         caption TEXT,
+        uploader_name TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
       await sqliteRun('CREATE INDEX IF NOT EXISTS idx_game_photos_game ON game_photos (game_id)');
@@ -264,10 +276,20 @@ async function initializeDatabase() {
         court_name_key TEXT NOT NULL,
         mime_type TEXT NOT NULL,
         image_data BLOB NOT NULL,
+        uploader_name TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
       await sqliteRun('CREATE INDEX IF NOT EXISTS idx_court_images_court ON court_images (court_name_key)');
       console.log('SQLite court_images table initialized');
+      for (const table of ['game_photos', 'court_images']) {
+        try {
+          await sqliteRun(`ALTER TABLE ${table} ADD COLUMN uploader_name TEXT`);
+        } catch (err) {
+          if (!err.message.includes('duplicate column')) {
+            throw err;
+          }
+        }
+      }
 
       // Add column to games table for selected court image
       try {

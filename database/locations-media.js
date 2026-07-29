@@ -119,7 +119,7 @@ async function getAllCourtImages() {
   }
 }
 
-async function saveCourtImageToLibrary(courtName, mimeType, imageData) {
+async function saveCourtImageToLibrary(courtName, mimeType, imageData, uploaderName = '') {
   const trimmed = String(courtName == null ? '' : courtName).trim().replace(/\s+/g, ' ');
   if (!trimmed) return null;
   const key = locationKey(trimmed);
@@ -128,14 +128,18 @@ async function saveCourtImageToLibrary(courtName, mimeType, imageData) {
     if (isProduction) {
       await withPgClient(async (client) => {
         await client.query(
-          'INSERT INTO court_images (id, court_name_key, mime_type, image_data) VALUES ($1, $2, $3, $4)',
-          [imageId, key, mimeType, imageData]
+          `INSERT INTO court_images
+             (id, court_name_key, mime_type, image_data, uploader_name)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [imageId, key, mimeType, imageData, String(uploaderName || '').trim() || null]
         );
       });
     } else {
       await sqlitePrepareRun(
-        'INSERT INTO court_images (id, court_name_key, mime_type, image_data) VALUES (?, ?, ?, ?)',
-        [imageId, key, mimeType, imageData]
+        `INSERT INTO court_images
+           (id, court_name_key, mime_type, image_data, uploader_name)
+         VALUES (?, ?, ?, ?, ?)`,
+        [imageId, key, mimeType, imageData, String(uploaderName || '').trim() || null]
       );
     }
     return imageId;
@@ -245,23 +249,223 @@ async function getGameCourtImageId(gameId) {
 // the data column out, so listing a game's photos does not drag megabytes through memory.
 // ---------------------------------------------------------------------------
 
-async function savePhoto(photoId, gameId, mimeType, dataBuffer, caption) {
+async function savePhoto(photoId, gameId, mimeType, dataBuffer, caption, uploaderName = '') {
   try {
     if (isProduction) {
       await withPgClient(async (client) => {
         await client.query(
-          'INSERT INTO game_photos (id, game_id, mime_type, data, caption) VALUES ($1, $2, $3, $4, $5)',
-          [photoId, gameId, mimeType, dataBuffer, caption || null]
+          `INSERT INTO game_photos
+             (id, game_id, mime_type, data, caption, uploader_name)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [
+            photoId, gameId, mimeType, dataBuffer, caption || null,
+            String(uploaderName || '').trim() || null
+          ]
         );
       });
     } else {
       await sqlitePrepareRun(
-        'INSERT INTO game_photos (id, game_id, mime_type, data, caption) VALUES (?, ?, ?, ?, ?)',
-        [photoId, gameId, mimeType, dataBuffer, caption || null]
+        `INSERT INTO game_photos
+           (id, game_id, mime_type, data, caption, uploader_name)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          photoId, gameId, mimeType, dataBuffer, caption || null,
+          String(uploaderName || '').trim() || null
+        ]
       );
     }
   } catch (err) {
     console.error('Error saving photo:', err);
+    throw err;
+  }
+}
+
+// Metadata for the Developer Area's complete image inventory. The byte columns stay out of
+// these queries so opening the tab does not copy every stored image through application memory.
+// Legacy location images are included only when their bytes are not already represented by the
+// newer court library, which keeps old uploads visible without showing current uploads twice.
+async function getAllUploadedImages() {
+  const normalizeGameData = (data) => {
+    if (!data) return {};
+    if (typeof data === 'object') return data;
+    try {
+      return JSON.parse(data);
+    } catch {
+      return {};
+    }
+  };
+  const makeRows = (courtRows, photoRows, legacyRows) => [
+    ...courtRows.map((row) => ({
+      type: 'court',
+      id: row.id,
+      mimeType: row.mime_type,
+      bytes: Number(row.bytes),
+      createdAt: row.created_at,
+      uploaderName: row.uploader_name || '',
+      location: row.display_name || row.court_name_key,
+      caption: '',
+      gameId: null
+    })),
+    ...photoRows.map((row) => {
+      const game = normalizeGameData(row.game_data);
+      return {
+        type: 'game',
+        id: row.id,
+        mimeType: row.mime_type,
+        bytes: Number(row.bytes),
+        createdAt: row.created_at,
+        uploaderName: row.uploader_name || game.organizerName || '',
+        location: game.location || '',
+        caption: row.caption || '',
+        gameId: row.game_id
+      };
+    }),
+    ...legacyRows.map((row) => ({
+      type: 'legacy-court',
+      id: row.name_key,
+      mimeType: row.image_mime_type,
+      bytes: Number(row.bytes),
+      createdAt: row.created_at,
+      uploaderName: '',
+      location: row.display_name,
+      caption: '',
+      gameId: null
+    }))
+  ].sort((a, b) => {
+    const timeDifference = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    return timeDifference || String(b.id).localeCompare(String(a.id));
+  });
+
+  try {
+    if (isProduction) {
+      return await withPgClient(async (client) => {
+        const [courtResult, photoResult, legacyResult] = await Promise.all([
+          client.query(`
+            SELECT ci.id, ci.court_name_key, ci.mime_type, ci.created_at, ci.uploader_name,
+                   LENGTH(ci.image_data) AS bytes, l.display_name
+              FROM court_images ci
+              LEFT JOIN locations l ON l.name_key = ci.court_name_key
+             ORDER BY ci.created_at DESC, ci.id DESC
+          `),
+          client.query(`
+            SELECT gp.id, gp.game_id, gp.mime_type, gp.caption, gp.created_at,
+                   gp.uploader_name, LENGTH(gp.data) AS bytes, g.data AS game_data
+              FROM game_photos gp
+              LEFT JOIN games g ON g.id = gp.game_id
+             ORDER BY gp.created_at DESC, gp.id DESC
+          `),
+          client.query(`
+            SELECT l.name_key, l.display_name, l.image_mime_type, l.created_at,
+                   LENGTH(l.image_data) AS bytes
+              FROM locations l
+             WHERE l.image_data IS NOT NULL
+               AND NOT EXISTS (
+                 SELECT 1 FROM court_images ci
+                  WHERE ci.court_name_key = l.name_key
+                    AND ci.image_data = l.image_data
+               )
+             ORDER BY l.created_at DESC, l.name_key DESC
+          `)
+        ]);
+        return makeRows(courtResult.rows, photoResult.rows, legacyResult.rows);
+      });
+    }
+
+    const [courtRows, photoRows, legacyRows] = await Promise.all([
+      sqliteAll(`
+        SELECT ci.id, ci.court_name_key, ci.mime_type, ci.created_at, ci.uploader_name,
+               LENGTH(ci.image_data) AS bytes, l.display_name
+          FROM court_images ci
+          LEFT JOIN locations l ON l.name_key = ci.court_name_key
+         ORDER BY ci.created_at DESC, ci.id DESC
+      `),
+      sqliteAll(`
+        SELECT gp.id, gp.game_id, gp.mime_type, gp.caption, gp.created_at,
+               gp.uploader_name, LENGTH(gp.data) AS bytes, g.data AS game_data
+          FROM game_photos gp
+          LEFT JOIN games g ON g.id = gp.game_id
+         ORDER BY gp.created_at DESC, gp.id DESC
+      `),
+      sqliteAll(`
+        SELECT l.name_key, l.display_name, l.image_mime_type, l.created_at,
+               LENGTH(l.image_data) AS bytes
+          FROM locations l
+         WHERE l.image_data IS NOT NULL
+           AND NOT EXISTS (
+             SELECT 1 FROM court_images ci
+              WHERE ci.court_name_key = l.name_key
+                AND ci.image_data = l.image_data
+           )
+         ORDER BY l.created_at DESC, l.name_key DESC
+      `)
+    ]);
+    return makeRows(courtRows, photoRows, legacyRows);
+  } catch (err) {
+    console.error('Error listing all uploaded images:', err);
+    throw err;
+  }
+}
+
+async function deleteUploadedImage(type, imageId) {
+  try {
+    if (isProduction) {
+      return await withPgClient(async (client) => {
+        if (type === 'court') {
+          try {
+            await client.query('BEGIN');
+            await client.query(
+              'UPDATE games SET court_image_id = NULL WHERE court_image_id = $1',
+              [imageId]
+            );
+            const result = await client.query('DELETE FROM court_images WHERE id = $1', [imageId]);
+            await client.query('COMMIT');
+            return result.rowCount;
+          } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+          }
+        }
+        if (type === 'game') {
+          const result = await client.query('DELETE FROM game_photos WHERE id = $1', [imageId]);
+          return result.rowCount;
+        }
+        if (type === 'legacy-court') {
+          const result = await client.query(
+            `UPDATE locations
+                SET image_mime_type = NULL, image_data = NULL
+              WHERE name_key = $1 AND image_data IS NOT NULL`,
+            [imageId]
+          );
+          return result.rowCount;
+        }
+        return 0;
+      });
+    }
+
+    if (type === 'court') {
+      await sqlitePrepareRun(
+        'UPDATE games SET court_image_id = NULL WHERE court_image_id = ?',
+        [imageId]
+      );
+      const result = await sqlitePrepareRun('DELETE FROM court_images WHERE id = ?', [imageId]);
+      return result.changes;
+    }
+    if (type === 'game') {
+      const result = await sqlitePrepareRun('DELETE FROM game_photos WHERE id = ?', [imageId]);
+      return result.changes;
+    }
+    if (type === 'legacy-court') {
+      const result = await sqlitePrepareRun(
+        `UPDATE locations
+            SET image_mime_type = NULL, image_data = NULL
+          WHERE name_key = ? AND image_data IS NOT NULL`,
+        [imageId]
+      );
+      return result.changes;
+    }
+    return 0;
+  } catch (err) {
+    console.error('Error deleting an uploaded image:', err);
     throw err;
   }
 }
@@ -406,5 +610,7 @@ module.exports = {
   getPhoto,
   deletePhoto,
   countPhotosForGame,
-  getAllPhotoCounts
+  getAllPhotoCounts,
+  getAllUploadedImages,
+  deleteUploadedImage
 };

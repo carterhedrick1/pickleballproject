@@ -388,6 +388,49 @@
   }
   .err summary { cursor: pointer; font-size: 13px; color: var(--brand); margin-top: 8px; }
 
+  /* Images */
+  .image-summary {
+    align-items: center; display: flex; gap: 12px; justify-content: space-between;
+    margin: -4px 0 18px;
+  }
+  .image-count {
+    background: var(--brand-soft); border: 1px solid var(--brand-border); border-radius: 999px;
+    color: var(--brand); flex: 0 0 auto; font-size: 12px; font-weight: 800; padding: 5px 10px;
+  }
+  .image-grid {
+    display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+  .image-card {
+    border: 1px solid var(--border); border-radius: 12px; display: flex;
+    flex-direction: column; min-width: 0; overflow: hidden;
+  }
+  .image-card-preview {
+    background: var(--canvas); display: block; height: 180px; overflow: hidden; width: 100%;
+  }
+  .image-card-preview img { display: block; height: 100%; object-fit: cover; width: 100%; }
+  .image-card-body { display: grid; flex: 1; gap: 10px; padding: 14px; }
+  .image-card-kind {
+    color: var(--brand); font-size: 11px; font-weight: 800; letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .image-card-title { font-size: 15px; font-weight: 750; overflow-wrap: anywhere; }
+  .image-card-caption {
+    color: var(--muted); font-size: 13px; margin: -5px 0 0; overflow-wrap: anywhere;
+  }
+  .image-card-details { display: grid; gap: 5px; margin: 0; }
+  .image-card-details div {
+    display: grid; font-size: 12px; gap: 8px; grid-template-columns: 76px minmax(0, 1fr);
+  }
+  .image-card-details dt { color: var(--subtle); }
+  .image-card-details dd { margin: 0; overflow-wrap: anywhere; }
+  .image-card .danger-button {
+    align-self: end; min-height: 40px; padding: 0 14px; width: 100%;
+  }
+  @media (max-width: 520px) {
+    .image-summary { align-items: start; flex-direction: column; }
+    .image-grid { grid-template-columns: 1fr; }
+  }
+
   /* Screens */
   .doc-link { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
   .doc-link:last-child { border-bottom: none; }
@@ -584,7 +627,7 @@
     </div>
     <button data-tab="errors">Errors</button>
     <button data-tab="rosters">Hosts And Players</button>
-    <button data-tab="courts">Courts</button>
+    <button data-tab="images">Images</button>
     <button data-tab="screens">Screens</button>
     <button data-tab="rules">Rules</button>
     <button data-tab="style-command-center">Style Command Center</button>
@@ -820,15 +863,23 @@
       </div>
     </section>
 
-    <!-- Courts -->
-    <section id="tab-courts" class="hidden">
+    <!-- Images -->
+    <section id="tab-images" class="hidden">
       <div class="panel">
-        <h2>Court Images</h2>
-        <p class="muted">Upload images that'll show when hosts pick these courts for games.</p>
-        <div id="courtList" style="margin-top:16px"><p class="muted">Loading…</p></div>
+        <h2>All Uploaded Images</h2>
+        <div class="image-summary">
+          <p class="muted" style="margin:0">
+            Every court image and game photo uploaded by any user. Deleting an image removes it
+            everywhere it appears.
+          </p>
+          <span class="image-count" id="imageCount">Loading…</span>
+        </div>
+        <p id="imageStatus" class="muted" aria-live="polite" style="min-height:20px; margin:0 0 14px"></p>
+        <div id="imageList"><p class="muted">Loading…</p></div>
       </div>
       <div class="panel">
         <h2>Upload A Court Image</h2>
+        <p class="muted">Add a reusable image to a court’s image library.</p>
         <form class="idea-form" id="courtImageForm">
           <select id="courtSelect"><option>Loading courts…</option></select>
           <input type="file" id="courtImageFile" accept="image/jpeg,image/png,image/webp" style="margin-top:10px">
@@ -1304,7 +1355,7 @@ const STANDARD_TAB_IDS = [
   'reply-options',
   'errors',
   'rosters',
-  'courts',
+  'images',
   'screens',
   'rules',
   'style-command-center'
@@ -1397,7 +1448,7 @@ function activateTab(tab) {
   if (isTextMessaging) loadTextMessageCategory(tab);
   if (tab === 'errors') loadErrors();
   if (tab === 'rosters') loadRosters();
-  if (tab === 'courts') loadCourts();
+  if (tab === 'images') loadImages();
 }
 
 document.querySelectorAll('.tabs > button[data-tab]').forEach((button) => {
@@ -2666,40 +2717,102 @@ async function loadErrors() {
     </div>`).join('');
 }
 
-async function loadCourts() {
-  let courtsWithImages;
+function formatImageBytes(bytes) {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value < 0) return 'Size Not Available';
+  if (value < 1024) return value + ' B';
+  if (value < 1024 * 1024) return (value / 1024).toFixed(value < 10240 ? 1 : 0) + ' KB';
+  return (value / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function imageTypeLabel(type) {
+  return type === 'game' ? 'Game Photo' : 'Court Image';
+}
+
+async function loadImages() {
+  let images;
+  el('imageStatus').textContent = '';
   try {
-    const res = await fetch('/api/courts/images/list');
+    const res = await fetch('/api/dev/images');
     if (res.status === 401) { el('appView').classList.add('hidden'); el('loginView').classList.remove('hidden'); return; }
     const data = await res.json();
-    courtsWithImages = data.courts || [];
+    if (!res.ok) throw new Error(data.error || 'Could not load images.');
+    images = data.images || [];
   } catch (err) {
-    el('courtList').innerHTML = '<p class="muted">Could not load court images.</p>';
+    el('imageCount').textContent = 'Unavailable';
+    el('imageList').innerHTML = `<p class="muted">${escapeHtml(err.message || 'Could not load images.')}</p>`;
     return;
   }
 
-  if (!courtsWithImages.length) {
-    el('courtList').innerHTML = '<p class="muted">No court images uploaded yet.</p>';
+  el('imageCount').textContent = `${images.length} Image${images.length === 1 ? '' : 's'}`;
+  if (!images.length) {
+    el('imageList').innerHTML = '<p class="muted">No images have been uploaded yet.</p>';
   } else {
-    el('courtList').innerHTML = courtsWithImages.map((court) => `
-      <div style="border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
-        <div>
-          <div style="font-weight: 600;">${escapeHtml(court.display_name)}</div>
-          <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">${escapeHtml(court.image_mime_type)}</div>
+    el('imageList').innerHTML = `<div class="image-grid">${images.map((image) => `
+      <article class="image-card" data-image-type="${escapeHtml(image.type)}" data-image-id="${escapeHtml(image.id)}">
+        <a class="image-card-preview" href="${escapeHtml(image.url)}" target="_blank"
+          aria-label="Open full-size ${escapeHtml(imageTypeLabel(image.type).toLowerCase())}">
+          <img src="${escapeHtml(image.url)}" alt="${escapeHtml(
+            imageTypeLabel(image.type) + ' at ' + (image.location || 'Unknown Location')
+          )}" loading="lazy">
+        </a>
+        <div class="image-card-body">
+          <div>
+            <div class="image-card-kind">${escapeHtml(imageTypeLabel(image.type))}</div>
+            <div class="image-card-title">${escapeHtml(image.location || 'Location Not Available')}</div>
+          </div>
+          ${image.caption ? `<p class="image-card-caption">${escapeHtml(image.caption)}</p>` : ''}
+          <dl class="image-card-details">
+            <div><dt>Uploaded By</dt><dd>${escapeHtml(image.uploaderName)}</dd></div>
+            <div><dt>Uploaded</dt><dd>${escapeHtml(
+              image.createdAt ? new Date(image.createdAt).toLocaleString() : 'Date Not Available'
+            )}</dd></div>
+            <div><dt>File</dt><dd>${escapeHtml(image.mimeType)} · ${escapeHtml(formatImageBytes(image.bytes))}</dd></div>
+          </dl>
+          <button type="button" class="danger-button" data-action="delete-image">Delete Image</button>
         </div>
-        <img src="/api/courts/${encodeURIComponent(court.display_name)}/image" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;">
-      </div>`).join('');
+      </article>`).join('')}</div>`;
   }
 
   try {
     const res = await fetch('/api/games/locations');
     const data = await res.json();
     const courts = data.locations || [];
-    el('courtSelect').innerHTML = courts.map((court) => `<option value="${court}">${escapeHtml(court)}</option>`).join('');
+    el('courtSelect').innerHTML = courts.map((court) =>
+      `<option value="${escapeHtml(court)}">${escapeHtml(court)}</option>`
+    ).join('');
   } catch (err) {
     el('courtSelect').innerHTML = '<option>Could not load courts</option>';
   }
 }
+
+el('imageList').addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-action="delete-image"]');
+  if (!button) return;
+  const card = button.closest('[data-image-type][data-image-id]');
+  const type = card.dataset.imageType;
+  const imageId = card.dataset.imageId;
+  if (!confirm('Delete this image permanently? It will be removed everywhere it appears.')) return;
+
+  button.disabled = true;
+  button.textContent = 'Deleting…';
+  try {
+    const res = await fetch(
+      `/api/dev/images/${encodeURIComponent(type)}/${encodeURIComponent(imageId)}`,
+      { method: 'DELETE' }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Could not delete the image.');
+    await loadImages();
+    el('imageStatus').textContent = 'Image deleted.';
+    el('imageStatus').style.color = 'var(--brand)';
+  } catch (err) {
+    button.disabled = false;
+    button.textContent = 'Delete Image';
+    el('imageStatus').textContent = err.message || 'Could not delete the image.';
+    el('imageStatus').style.color = 'var(--danger)';
+  }
+});
 
 el('courtImageForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -2731,7 +2844,7 @@ el('courtImageForm').addEventListener('submit', async (e) => {
       status.textContent = `✓ Image uploaded for ${escapeHtml(court)}`;
       status.style.color = 'var(--brand)';
       el('courtImageFile').value = '';
-      await loadCourts();
+      await loadImages();
     } else {
       const error = await res.json();
       status.textContent = error.error || 'Upload failed';

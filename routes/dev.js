@@ -31,7 +31,9 @@ const {
   getDeveloperRosterSources,
   updateDeveloperPlayer,
   deleteDeveloperPlayer,
-  deleteDeveloperHost
+  deleteDeveloperHost,
+  getAllUploadedImages,
+  deleteUploadedImage
 } = require('../database');
 const {
   buildDeveloperRosters,
@@ -507,6 +509,46 @@ module.exports = function mountDevRoutes(app) {
     }
 
     res.json(status);
+  });
+
+  // -------------------------------------------------------------------------
+  // Images
+  // -------------------------------------------------------------------------
+
+  app.get('/api/dev/images', requireDevAuth, async (_req, res) => {
+    try {
+      const images = await getAllUploadedImages();
+      res.json({
+        images: images.map((image) => ({
+          ...image,
+          uploaderName: image.uploaderName || 'Uploader Not Recorded',
+          url: image.type === 'game'
+            ? `/api/games/${encodeURIComponent(image.gameId)}/photos/${encodeURIComponent(image.id)}`
+            : image.type === 'legacy-court'
+              ? `/api/courts/${encodeURIComponent(image.location)}/image`
+              : `/api/court-images/${encodeURIComponent(image.id)}`
+        }))
+      });
+    } catch (err) {
+      console.error('Error loading developer images:', err);
+      res.status(500).json({ error: 'Could not load the uploaded images.' });
+    }
+  });
+
+  app.delete('/api/dev/images/:type/:imageId', requireDevAuth, async (req, res) => {
+    const type = String(req.params.type || '');
+    if (!['court', 'game', 'legacy-court'].includes(type)) {
+      return res.status(400).json({ error: 'Unknown image type.' });
+    }
+
+    try {
+      const removed = await deleteUploadedImage(type, req.params.imageId);
+      if (!removed) return res.status(404).json({ error: 'Image not found.' });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Error deleting developer image:', err);
+      res.status(500).json({ error: 'Could not delete the image.' });
+    }
   });
 
   // -------------------------------------------------------------------------

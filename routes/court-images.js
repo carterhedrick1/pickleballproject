@@ -49,7 +49,12 @@ module.exports = function mountCourtImageRoutes(app) {
         // look successful in /dev.html while remaining invisible everywhere hosts choose
         // a court image.
         await saveCourtImage(courtName, mimeType, req.body);
-        const imageId = await saveCourtImageToLibrary(courtName, mimeType, req.body);
+        const imageId = await saveCourtImageToLibrary(
+          courtName,
+          mimeType,
+          req.body,
+          'Developer Area'
+        );
         res.status(201).json({ success: true, courtName, imageId });
       } catch (error) {
         routeFailed(req, res, error, 'Failed to save court image');
@@ -135,7 +140,12 @@ module.exports = function mountCourtImageRoutes(app) {
           });
         }
 
-        const imageId = await saveCourtImageToLibrary(game.location, mimeType, req.body);
+        const imageId = await saveCourtImageToLibrary(
+          game.location,
+          mimeType,
+          req.body,
+          game.organizerName
+        );
         res.status(201).json({ success: true, imageId });
       } catch (error) {
         routeFailed(req, res, error, 'Failed to upload court image');
