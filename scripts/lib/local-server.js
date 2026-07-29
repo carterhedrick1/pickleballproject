@@ -54,9 +54,10 @@ async function start() {
       PORT: String(port),
       BASE_URL: baseUrl,
       TEXTBELT_API_KEY: '', // rule 1 above - keeps every send in dev mode
-      // Browser tests and screenshots must stay on their seeded SQLite rows. Without this,
-      // the local Developer roster defaults to live production data for day-to-day use.
+      // Browser tests and screenshots must stay on their seeded SQLite rows. Without these,
+      // local Developer tools default to live production data for day-to-day operational use.
       DEV_ROSTER_SOURCE: 'local',
+      DEV_IMAGE_SOURCE: 'local',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

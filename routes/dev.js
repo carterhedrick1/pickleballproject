@@ -33,13 +33,17 @@ const {
   deleteDeveloperPlayer,
   deleteDeveloperHost,
   getAllUploadedImages,
-  deleteUploadedImage
+  deleteUploadedImage,
+  getLocations,
+  saveCourtImage,
+  saveCourtImageToLibrary
 } = require('../database');
 const {
   buildDeveloperRosters,
   chooseDeveloperRosterSource
 } = require('../utils/dev-rosters');
 const { formatPhoneNumber } = require('../utils/sms-format');
+const { PHOTO_TYPES, sniffImageType } = require('../utils/image-type');
 const sloganModule = require('../public/js/slogans');
 const youreInMessages = require('../youre-in-messages');
 const {
@@ -132,14 +136,30 @@ function selectedDeveloperRosterSource(req) {
   });
 }
 
-async function requestProductionRoster(pathname, { method = 'GET', body } = {}) {
+function selectedDeveloperImageSource(req) {
+  return chooseDeveloperRosterSource({
+    production: isProduction,
+    configuredSource: process.env.DEV_IMAGE_SOURCE,
+    requestedSource: req.query && req.query.source
+  });
+}
+
+async function requestProductionDeveloperApi(
+  pathname,
+  { method = 'GET', body, rawBody, contentType } = {}
+) {
+  const requestBody = rawBody !== undefined
+    ? rawBody
+    : body === undefined ? undefined : JSON.stringify(body);
   const response = await fetch(`${PRODUCTION_ROSTER_BASE_URL}${pathname}`, {
     method,
     headers: {
       'X-Dev-Password': DEV_PASSWORD,
-      ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
+      ...(requestBody === undefined
+        ? {}
+        : { 'Content-Type': contentType || 'application/json' })
     },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    ...(requestBody === undefined ? {} : { body: requestBody }),
     signal: AbortSignal.timeout(15000)
   });
   const data = await response.json().catch(() => ({
@@ -515,8 +535,26 @@ module.exports = function mountDevRoutes(app) {
   // Images
   // -------------------------------------------------------------------------
 
-  app.get('/api/dev/images', requireDevAuth, async (_req, res) => {
+  app.get('/api/dev/images', requireDevAuth, async (req, res) => {
+    const source = selectedDeveloperImageSource(req);
     try {
+      if (!isProduction && source === 'production') {
+        const live = await requestProductionDeveloperApi('/api/dev/images');
+        const liveImages = Array.isArray(live.data.images)
+          ? live.data.images.map((image) => ({
+              ...image,
+              url: image.url && image.url.startsWith('/')
+                ? `${PRODUCTION_ROSTER_BASE_URL}${image.url}`
+                : image.url
+            }))
+          : live.data.images;
+        return res.status(live.status).json({
+          ...live.data,
+          images: liveImages,
+          source: 'production',
+          showSourceNotice: true
+        });
+      }
       const images = await getAllUploadedImages();
       res.json({
         images: images.map((image) => ({
@@ -527,11 +565,17 @@ module.exports = function mountDevRoutes(app) {
             : image.type === 'legacy-court'
               ? `/api/courts/${encodeURIComponent(image.location)}/image`
               : `/api/court-images/${encodeURIComponent(image.id)}`
-        }))
+        })),
+        source: isProduction ? 'production' : 'local',
+        showSourceNotice: !isProduction
       });
     } catch (err) {
       console.error('Error loading developer images:', err);
-      res.status(500).json({ error: 'Could not load the uploaded images.' });
+      res.status(source === 'production' && !isProduction ? 502 : 500).json({
+        error: source === 'production' && !isProduction
+          ? 'Could not load the live production images.'
+          : 'Could not load the uploaded images.'
+      });
     }
   });
 
@@ -542,6 +586,14 @@ module.exports = function mountDevRoutes(app) {
     }
 
     try {
+      const source = selectedDeveloperImageSource(req);
+      if (!isProduction && source === 'production') {
+        const live = await requestProductionDeveloperApi(
+          `/api/dev/images/${encodeURIComponent(type)}/${encodeURIComponent(req.params.imageId)}`,
+          { method: 'DELETE' }
+        );
+        return res.status(live.status).json(live.data);
+      }
       const removed = await deleteUploadedImage(type, req.params.imageId);
       if (!removed) return res.status(404).json({ error: 'Image not found.' });
       res.json({ success: true });
@@ -551,6 +603,69 @@ module.exports = function mountDevRoutes(app) {
     }
   });
 
+  app.get('/api/dev/image-locations', requireDevAuth, async (req, res) => {
+    const source = selectedDeveloperImageSource(req);
+    try {
+      if (!isProduction && source === 'production') {
+        const live = await requestProductionDeveloperApi('/api/locations');
+        return res.status(live.status).json(live.data);
+      }
+      res.json({ locations: await getLocations() });
+    } catch (err) {
+      console.error('Error loading developer image locations:', err);
+      res.status(source === 'production' && !isProduction ? 502 : 500).json({
+        error: source === 'production' && !isProduction
+          ? 'Could not load the live production locations.'
+          : 'Could not load the court list.'
+      });
+    }
+  });
+
+  app.post(
+    '/api/dev/courts/:courtName/image',
+    requireDevAuth,
+    express.raw({ type: PHOTO_TYPES, limit: '5mb' }),
+    async (req, res) => {
+      const source = selectedDeveloperImageSource(req);
+      const courtName = decodeURIComponent(req.params.courtName);
+      try {
+        if (!isProduction && source === 'production') {
+          const live = await requestProductionDeveloperApi(
+            `/api/courts/${encodeURIComponent(courtName)}/image`,
+            {
+              method: 'POST',
+              rawBody: req.body,
+              contentType: req.headers['content-type'] || 'application/octet-stream'
+            }
+          );
+          return res.status(live.status).json(live.data);
+        }
+
+        const mimeType = sniffImageType(req.body);
+        if (!mimeType) {
+          return res.status(400).json({
+            error: 'That does not look like a JPEG, PNG or WebP image. Please pick a photo.'
+          });
+        }
+        await saveCourtImage(courtName, mimeType, req.body);
+        const imageId = await saveCourtImageToLibrary(
+          courtName,
+          mimeType,
+          req.body,
+          'Developer Area'
+        );
+        res.status(201).json({ success: true, courtName, imageId });
+      } catch (err) {
+        console.error('Error uploading developer court image:', err);
+        res.status(source === 'production' && !isProduction ? 502 : 500).json({
+          error: source === 'production' && !isProduction
+            ? 'Could not upload the image to live production.'
+            : 'Could not upload the court image.'
+        });
+      }
+    }
+  );
+
   // -------------------------------------------------------------------------
   // Hosts and player rosters
   // -------------------------------------------------------------------------
@@ -559,7 +674,7 @@ module.exports = function mountDevRoutes(app) {
     const source = selectedDeveloperRosterSource(_req);
     try {
       if (!isProduction && source === 'production') {
-        const live = await requestProductionRoster('/api/dev/rosters');
+        const live = await requestProductionDeveloperApi('/api/dev/rosters');
         return res.status(live.status).json({
           ...live.data,
           source: 'production',
@@ -599,7 +714,7 @@ module.exports = function mountDevRoutes(app) {
     try {
       const source = selectedDeveloperRosterSource(req);
       if (!isProduction && source === 'production') {
-        const live = await requestProductionRoster(
+        const live = await requestProductionDeveloperApi(
           `/api/dev/players/${encodeURIComponent(oldPhone)}`,
           { method: 'PUT', body: { phone: newPhone, name } }
         );
@@ -634,7 +749,7 @@ module.exports = function mountDevRoutes(app) {
     try {
       const source = selectedDeveloperRosterSource(req);
       if (!isProduction && source === 'production') {
-        const live = await requestProductionRoster(
+        const live = await requestProductionDeveloperApi(
           `/api/dev/players/${encodeURIComponent(phone)}`,
           { method: 'DELETE', body: { confirmPhone: phone } }
         );
@@ -662,7 +777,7 @@ module.exports = function mountDevRoutes(app) {
     try {
       const source = selectedDeveloperRosterSource(req);
       if (!isProduction && source === 'production') {
-        const live = await requestProductionRoster(
+        const live = await requestProductionDeveloperApi(
           `/api/dev/hosts/${encodeURIComponent(phone)}`,
           { method: 'DELETE', body: { confirmPhone: phone } }
         );

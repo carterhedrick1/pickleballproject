@@ -865,6 +865,12 @@
 
     <!-- Images -->
     <section id="tab-images" class="hidden">
+      <div class="roster-source hidden" id="imageSourceNotice">
+        <div>
+          <div class="roster-source-title" id="imageSourceTitle"></div>
+          <div class="roster-source-detail" id="imageSourceDetail"></div>
+        </div>
+      </div>
       <div class="panel">
         <h2>All Uploaded Images</h2>
         <div class="image-summary">
@@ -2731,6 +2737,7 @@ function imageTypeLabel(type) {
 
 async function loadImages() {
   let images;
+  let source;
   el('imageStatus').textContent = '';
   try {
     const res = await fetch('/api/dev/images');
@@ -2738,6 +2745,16 @@ async function loadImages() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Could not load images.');
     images = data.images || [];
+    source = data.source || 'production';
+    const sourceNotice = el('imageSourceNotice');
+    sourceNotice.classList.toggle('hidden', !data.showSourceNotice);
+    sourceNotice.classList.toggle('local', source === 'local');
+    el('imageSourceTitle').textContent = source === 'local'
+      ? 'Showing Local Test Images'
+      : 'Showing Live Production Images';
+    el('imageSourceDetail').textContent = source === 'local'
+      ? 'Uploads and deletions stay in the automated local fixture database.'
+      : 'Uploads and deletions here apply to the images users see on inorout.club.';
   } catch (err) {
     el('imageCount').textContent = 'Unavailable';
     el('imageList').innerHTML = `<p class="muted">${escapeHtml(err.message || 'Could not load images.')}</p>`;
@@ -2775,7 +2792,7 @@ async function loadImages() {
   }
 
   try {
-    const res = await fetch('/api/games/locations');
+    const res = await fetch('/api/dev/image-locations');
     const data = await res.json();
     const courts = data.locations || [];
     el('courtSelect').innerHTML = courts.map((court) =>
@@ -2834,7 +2851,7 @@ el('courtImageForm').addEventListener('submit', async (e) => {
     // The sign-in cookie authenticates this, same as every other /api/dev call. It used to
     // put a `devPassword` variable in the query string - a variable that was never defined
     // anywhere on this page, so this upload threw before it sent anything.
-    const res = await fetch(`/api/courts/${encodeURIComponent(court)}/image`, {
+    const res = await fetch(`/api/dev/courts/${encodeURIComponent(court)}/image`, {
       method: 'POST',
       body: buffer,
       headers: { 'Content-Type': file.type }

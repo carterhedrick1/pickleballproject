@@ -548,7 +548,17 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
 
     const imageInventory = await desktop.evaluate(`(async () => {
       document.querySelector('[data-tab="images"]').click();
-      await new Promise((resolve) => setTimeout(resolve, 450));
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      const developerUploadResponse = await fetch(
+        '/api/dev/courts/${encodeURIComponent('Oak Park Courts')}/image',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'image/png' },
+          body: new Uint8Array(${JSON.stringify([...PNG_1PX])})
+        }
+      );
+      const developerUpload = await developerUploadResponse.json();
+      await loadImages();
       const apiResponse = await fetch('/api/dev/images');
       const apiData = await apiResponse.json();
       const wantedIds = ${JSON.stringify([
@@ -556,15 +566,18 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         secondCourtImage.imageId,
         firstGamePhoto.id,
         secondGamePhoto.id
-      ])};
+      ])}.concat(developerUpload.imageId);
       const wanted = apiData.images.filter((image) => wantedIds.includes(image.id));
       const cards = wantedIds.map((id) =>
         document.querySelector('[data-image-id="' + id + '"]')
       );
       return {
-        responseOk: apiResponse.ok,
+        responseOk: apiResponse.ok && developerUploadResponse.ok,
+        developerImageId: developerUpload.imageId,
+        developerUploader: wanted.find((image) => image.id === developerUpload.imageId)?.uploaderName,
         tabLabel: document.querySelector('[data-tab="images"]').textContent.trim(),
         visible: !document.getElementById('tab-images').classList.contains('hidden'),
+        sourceTitle: document.getElementById('imageSourceTitle').textContent.trim(),
         wanted: wanted.length,
         courtImages: wanted.filter((image) => image.type === 'court').length,
         gamePhotos: wanted.filter((image) => image.type === 'game').length,
@@ -582,15 +595,43 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       imageInventory.responseOk &&
         imageInventory.tabLabel === 'Images' &&
         imageInventory.visible &&
-        imageInventory.wanted === 4 &&
-        imageInventory.courtImages === 2 &&
+        imageInventory.sourceTitle === 'Showing Local Test Images' &&
+        imageInventory.wanted === 5 &&
+        imageInventory.courtImages === 3 &&
         imageInventory.gamePhotos === 2 &&
-        imageInventory.uploaderNames.length === 1 &&
-        imageInventory.uploaderNames[0] === 'Scott H.' &&
-        imageInventory.cards === 4 &&
-        imageInventory.cardUploaders.every((name) => name === 'Scott H.') &&
+        imageInventory.uploaderNames.includes('Scott H.') &&
+        imageInventory.uploaderNames.includes('Developer Area') &&
+        imageInventory.developerUploader === 'Developer Area' &&
+        imageInventory.cards === 5 &&
         imageInventory.deleteLabels.every((label) => label === 'Delete Image'),
       'developer Images tab shows every image type, uploader names, and delete controls'
+    );
+
+    const linkedCourtImageDelete = await desktop.evaluate(`(async () => {
+      const originalConfirm = window.confirm;
+      window.confirm = () => true;
+      document.querySelector(
+        '[data-image-id="${imageInventory.developerImageId}"] [data-action="delete-image"]'
+      ).click();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      window.confirm = originalConfirm;
+      return !document.querySelector('[data-image-id="${imageInventory.developerImageId}"]');
+    })()`);
+    const [deletedCourtLibraryImage, deletedLegacyCourtImage, libraryAfterDeveloperDelete] =
+      await Promise.all([
+        fetch(`${local.baseUrl}/api/court-images/${imageInventory.developerImageId}`),
+        fetch(`${local.baseUrl}/api/courts/${encodeURIComponent('Oak Park Courts')}/image`),
+        fetch(`${local.baseUrl}/api/courts/${encodeURIComponent('Oak Park Courts')}/library`)
+          .then((response) => response.json())
+      ]);
+    assert(
+      linkedCourtImageDelete &&
+        deletedCourtLibraryImage.status === 404 &&
+        deletedLegacyCourtImage.status === 404 &&
+        !libraryAfterDeveloperDelete.images.some(
+          (image) => image.id === imageInventory.developerImageId
+        ),
+      'deleting a developer court image removes its library and legacy copies together'
     );
 
     const developerImageDelete = await desktop.evaluate(`(async () => {

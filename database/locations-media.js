@@ -196,18 +196,7 @@ async function getCourtImageFromLibrary(imageId) {
 }
 
 async function deleteCourtImageFromLibrary(imageId) {
-  try {
-    if (isProduction) {
-      await withPgClient(async (client) => {
-        await client.query('DELETE FROM court_images WHERE id = $1', [imageId]);
-      });
-    } else {
-      await sqlitePrepareRun('DELETE FROM court_images WHERE id = ?', [imageId]);
-    }
-  } catch (err) {
-    console.error('Error deleting court image from library:', err);
-    throw err;
-  }
+  return deleteUploadedImage('court', imageId);
 }
 
 async function setGameCourtImage(gameId, imageId) {
@@ -427,6 +416,18 @@ async function deleteUploadedImage(type, imageId) {
               'UPDATE games SET court_image_id = NULL WHERE court_image_id = $1',
               [imageId]
             );
+            // Developer uploads historically wrote the same bytes to the legacy
+            // one-image-per-location field and the newer shared library. Treat those as one
+            // logical image so deleting the library copy cannot leave a ghost behind.
+            await client.query(
+              `UPDATE locations l
+                  SET image_mime_type = NULL, image_data = NULL
+                 FROM court_images ci
+                WHERE ci.id = $1
+                  AND l.name_key = ci.court_name_key
+                  AND l.image_data = ci.image_data`,
+              [imageId]
+            );
             const result = await client.query('DELETE FROM court_images WHERE id = $1', [imageId]);
             await client.query('COMMIT');
             return result.rowCount;
@@ -455,6 +456,18 @@ async function deleteUploadedImage(type, imageId) {
     if (type === 'court') {
       await sqlitePrepareRun(
         'UPDATE games SET court_image_id = NULL WHERE court_image_id = ?',
+        [imageId]
+      );
+      await sqlitePrepareRun(
+        `UPDATE locations
+            SET image_mime_type = NULL, image_data = NULL
+          WHERE EXISTS (
+            SELECT 1
+              FROM court_images ci
+             WHERE ci.id = ?
+               AND ci.court_name_key = locations.name_key
+               AND ci.image_data = locations.image_data
+          )`,
         [imageId]
       );
       const result = await sqlitePrepareRun('DELETE FROM court_images WHERE id = ?', [imageId]);
