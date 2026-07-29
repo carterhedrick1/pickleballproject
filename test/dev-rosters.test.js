@@ -79,8 +79,21 @@ describe('developer roster directory', () => {
       ]
     });
     assert.deepEqual(result.players, [
-      { phone: '2222222222', name: 'Host Saved Name', hostCount: 2 },
-      { phone: '3333333333', name: 'Waiting Player', hostCount: 1 }
+      {
+        phone: '2222222222',
+        name: 'Host Saved Name',
+        hostCount: 2,
+        hostRosters: [
+          { phone: '1111111111', name: 'Host One' },
+          { phone: '4444444444', name: 'Host Two' }
+        ]
+      },
+      {
+        phone: '3333333333',
+        name: 'Waiting Player',
+        hostCount: 1,
+        hostRosters: [{ phone: '1111111111', name: 'Host One' }]
+      }
     ]);
   });
 

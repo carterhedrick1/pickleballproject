@@ -148,7 +148,13 @@ function buildDeveloperRosters({ games = [], rosterRows = [] } = {}) {
     .map((player) => ({
       phone: player.phone,
       name: player.name,
-      hostCount: player.hostPhones.size
+      hostCount: player.hostPhones.size,
+      hostRosters: [...player.hostPhones]
+        .map((phone) => {
+          const host = hostsByPhone.get(phone);
+          return { phone, name: host ? host.name : '' };
+        })
+        .sort(byNameThenPhone)
     }))
     .sort(byNameThenPhone);
 

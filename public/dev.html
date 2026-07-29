@@ -2068,7 +2068,11 @@ function formatDisplayPhone(phone) {
 }
 
 function rosterPlayerCard(player) {
-  const hostLabel = `${player.hostCount} host roster${player.hostCount === 1 ? '' : 's'}`;
+  const hostRosters = Array.isArray(player.hostRosters) ? player.hostRosters : [];
+  const hostNames = hostRosters.map((host) => host.name || formatDisplayPhone(host.phone));
+  const hostLabel = hostNames.length === 1
+    ? `Host Roster: ${hostNames[0]}`
+    : `Host Rosters: ${hostNames.join(', ')}`;
   return `
     <article class="master-player" data-player-phone="${escapeHtml(player.phone)}">
       <div class="master-player-main">
