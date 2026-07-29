@@ -19,6 +19,27 @@ const TITLE_CLASSES = new Set([
   'stat-label'
 ]);
 
+// Non-button elements that are intentionally presented as button controls.
+const BUTTON_CLASSES = new Set([
+  'back-btn',
+  'back-to-game-btn',
+  'btn',
+  'copy-btn',
+  'court-image-upload-button',
+  'create-game-btn',
+  'lab-button',
+  'mock-button',
+  'section-nav-btn',
+  'ui-button'
+]);
+const BUTTON_CLASS_PATTERN = new RegExp(
+  `<([a-z][\\w-]*)\\b(` +
+    `[^>]*\\bclass=["'](?:[^"']*\\s)?(?:${[...BUTTON_CLASSES].join('|')})` +
+    `(?=\\s|["'])[^"']*["'][^>]*` +
+  `)>([\\s\\S]*?)<\\/\\1>`,
+  'gi'
+);
+
 function filesUnder(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = path.join(directory, entry.name);
@@ -89,6 +110,10 @@ function checkFile(filePath) {
 
   checkPattern(/<(title|h[1-6])\b([^>]*)>([\s\S]*?)<\/\1>/gi);
   checkPattern(/<(summary)\b([^>]*)>([\s\S]*?)<\/\1>/gi);
+  checkPattern(
+    /<(button)\b([^>]*)>([\s\S]*?)<\/\1>/gi,
+    (_tag, _attributes, innerHtml) => !/<(?:p|small)\b/i.test(innerHtml)
+  );
 
   // Short labels are field/action titles. Longer prose labels (SMS consent and the
   // organizer-playing sentence) remain sentence case.
@@ -118,6 +143,12 @@ function checkFile(filePath) {
     }
   );
 
+  checkPattern(
+    BUTTON_CLASS_PATTERN,
+    (tag, _attributes, innerHtml) =>
+      tag.toLowerCase() !== 'button' && !/<(?:p|small)\b/i.test(innerHtml)
+  );
+
   if (FIX && source !== original) fs.writeFileSync(filePath, source);
   return failures;
 }
@@ -127,9 +158,9 @@ const failures = filesUnder(PUBLIC).flatMap(checkFile);
 if (FIX) {
   console.log('Title case applied to authored UI titles.');
 } else if (failures.length) {
-  console.error('Authored UI titles must capitalize every word:');
+  console.error('Authored UI titles and button labels must capitalize every word:');
   failures.forEach((failure) => console.error(`  ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log('  PASS  authored UI titles capitalize every word');
+  console.log('  PASS  authored UI titles and button labels capitalize every word');
 }

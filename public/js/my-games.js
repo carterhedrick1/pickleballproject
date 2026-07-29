@@ -150,15 +150,15 @@ function gameCard(game) {
         </div>
         <div class="notes-panel" style="display: none;">
             <textarea placeholder="e.g. 'Gate code 4417'">${esc(game.hostNotes || '')}</textarea>
-            <button type="button" class="btn" data-notes-save>Save note</button>
+            <button type="button" class="btn" data-notes-save>Save Note</button>
             <div class="notes-status"></div>
         </div>
         ${canDelete ? `
         <div class="delete-panel" style="display: none;">
             <p>Delete this game for good? Its photos and its place in your stats go too,
                and there is no undo.</p>
-            <button type="button" class="btn btn-danger" data-delete-confirm>Yes, delete it</button>
-            <button type="button" class="btn" data-delete-cancel>Keep it</button>
+            <button type="button" class="btn btn-danger" data-delete-confirm>Yes, Delete It</button>
+            <button type="button" class="btn" data-delete-cancel>Keep It</button>
             <div class="delete-status"></div>
         </div>` : ''}
     `;

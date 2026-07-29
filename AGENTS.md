@@ -59,4 +59,11 @@ and "to". Preserve intentional acronym casing such as SMS, DUPR, and API. Keep e
 sentences, help text, placeholders, and user-provided content in normal sentence case. Preserve
 the product-name styling "IN or OUT" (or "In or Out" where that form is used).
 
+### Button labels use every-word title capitalization
+
+Capitalize the first letter of every word in authored button labels, including native buttons
+and links or labels styled as buttons. This includes short words such as "a", "and", "for",
+"of", "or", "the", and "to". Preserve intentional acronym casing such as SMS, DUPR, and API,
+and do not apply capitalization with CSS because that can corrupt intentional casing.
+
 `npm run verify:frontend` enforces this convention for authored titles in the public UI.
