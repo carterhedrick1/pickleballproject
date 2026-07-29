@@ -5,6 +5,19 @@
 Run the checks that cover the changed behavior and exercise user-facing changes locally.
 `npm run verify:deploy` is the minimum deployment gate.
 
+## Keep the developer Screens tab current
+
+After every completed change that alters anything a user sees—including copy, styles, layout,
+controls, or an added, removed, or changed screen or flow—run `npm run docs` to regenerate the
+current app views. If the changed state is not already covered, update
+`scripts/capture-screens.js` so the gallery photographs it.
+
+Publish the regenerated pages locally with `npm run docs:publish -- --local` and verify them
+through `/dev.html` → Screens. After the production deployment is live, run
+`npm run docs:publish` and confirm the Screens tab reports the new publication time and opens
+the refreshed Actual Screens gallery. Treat this refresh as part of completing every
+user-visible change; server-only changes with no visible surface are exempt.
+
 ## Restart local and production after completed app updates
 
 Use this sequence after every completed app change:

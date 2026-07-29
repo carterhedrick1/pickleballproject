@@ -21,7 +21,7 @@ open docs/screens.html docs/containers.html docs/copy-deck.html
 
 | File | What it is | Point at things by |
 | --- | --- | --- |
-| `screens.html` | 26 screenshots of the running app, grouped under the page file that produced each | the file — "`@create.html` add a level field" |
+| `screens.html` | 27 screenshots of the running app, grouped under the page file that produced each | the file — "`@create.html` add a level field" |
 | `containers.html` | Every panel on every page, shown whole with its copy | `page.container` — `4.11` is the Game Actions panel |
 | `copy-deck.html` | Every individual line of fixed text | `page.line` — `4.83` is one exact sentence |
 
