@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="court">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Compare complete visual directions for the IN or OUT app.">
+    <title>IN or OUT Design Lab</title>
+    <link rel="stylesheet" href="/css/design-lab.css">
+</head>
+<body>
+    <header class="lab-header">
+        <a class="lab-brand" href="#top" aria-label="IN or OUT Design Lab home">
+            <span class="lab-brand-mark" aria-hidden="true">IO</span>
+            <span>
+                <strong>IN or OUT</strong>
+                <small>Design Lab</small>
+            </span>
+        </a>
+        <div class="favorite-summary" id="favoriteSummary" hidden>
+            <span>Current Favorite</span>
+            <strong id="favoriteName"></strong>
+        </div>
+    </header>
+
+    <main id="top">
+        <section class="lab-hero">
+            <div class="lab-hero-copy">
+                <p class="eyebrow">Whole-App Style Preview</p>
+                <h1>Choose One Consistent Look For The Entire App</h1>
+                <p>
+                    Every direction below uses exactly six base colors and the same component
+                    rules. Switch between them to compare real screens, buttons, forms, cards,
+                    statuses, and mobile behavior.
+                </p>
+            </div>
+            <div class="six-color-rule" aria-label="Six color system">
+                <span style="--chip: var(--brand)"></span>
+                <span style="--chip: var(--ink)"></span>
+                <span style="--chip: var(--canvas)"></span>
+                <span style="--chip: var(--surface)"></span>
+                <span style="--chip: var(--warning)"></span>
+                <span style="--chip: var(--danger)"></span>
+            </div>
+        </section>
+
+        <section class="lab-section theme-section" aria-labelledby="themeTitle">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Step One</p>
+                    <h2 id="themeTitle">Choose A Color Direction</h2>
+                </div>
+                <p>Changing the direction updates every sample on this page.</p>
+            </div>
+
+            <div class="theme-grid" role="group" aria-label="Color direction">
+                <button class="theme-card is-active" type="button" data-theme-choice="court" aria-pressed="true">
+                    <span class="theme-card-top">
+                        <span>
+                            <strong>Court Classic</strong>
+                            <small>Familiar, calm, and clear</small>
+                        </span>
+                        <span class="theme-check" aria-hidden="true">✓</span>
+                    </span>
+                    <span class="mini-palette" aria-hidden="true">
+                        <i style="--swatch: #166534"></i>
+                        <i style="--swatch: #172033"></i>
+                        <i style="--swatch: #f4f6f3"></i>
+                        <i style="--swatch: #ffffff"></i>
+                        <i style="--swatch: #a85d00"></i>
+                        <i style="--swatch: #b42318"></i>
+                    </span>
+                    <span class="theme-description">
+                        A confident court green with crisp, cool neutrals. This is the closest
+                        evolution of the current IN or OUT identity.
+                    </span>
+                </button>
+
+                <button class="theme-card" type="button" data-theme-choice="rally" aria-pressed="false">
+                    <span class="theme-card-top">
+                        <span>
+                            <strong>Fresh Rally</strong>
+                            <small>Modern, bright, and energetic</small>
+                        </span>
+                        <span class="theme-check" aria-hidden="true">✓</span>
+                    </span>
+                    <span class="mini-palette" aria-hidden="true">
+                        <i style="--swatch: #0f766e"></i>
+                        <i style="--swatch: #17202e"></i>
+                        <i style="--swatch: #f2f7f6"></i>
+                        <i style="--swatch: #ffffff"></i>
+                        <i style="--swatch: #a15c00"></i>
+                        <i style="--swatch: #b42318"></i>
+                    </span>
+                    <span class="theme-description">
+                        A teal-green direction that feels digital and fresh while still
+                        belonging naturally to a recreational sports app.
+                    </span>
+                </button>
+
+                <button class="theme-card" type="button" data-theme-choice="club" aria-pressed="false">
+                    <span class="theme-card-top">
+                        <span>
+                            <strong>Clubhouse</strong>
+                            <small>Warm, grounded, and premium</small>
+                        </span>
+                        <span class="theme-check" aria-hidden="true">✓</span>
+                    </span>
+                    <span class="mini-palette" aria-hidden="true">
+                        <i style="--swatch: #24513d"></i>
+                        <i style="--swatch: #2b2925"></i>
+                        <i style="--swatch: #f4f0e8"></i>
+                        <i style="--swatch: #fffdf8"></i>
+                        <i style="--swatch: #9a6700"></i>
+                        <i style="--swatch: #a63a2b"></i>
+                    </span>
+                    <span class="theme-description">
+                        Deep green and warm paper-like neutrals create a more established,
+                        community-club character.
+                    </span>
+                </button>
+            </div>
+
+            <div class="favorite-actions">
+                <button class="lab-button lab-button-primary lab-button-large" id="chooseFavorite" type="button">
+                    Choose Court Classic
+                </button>
+                <p id="favoriteMessage" role="status" aria-live="polite">
+                    Your choice will be saved in this browser and added to the page link.
+                </p>
+            </div>
+        </section>
+
+        <section class="lab-section" aria-labelledby="paletteTitle">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">The Constraint</p>
+                    <h2 id="paletteTitle">Six Base Colors, Each With One Job</h2>
+                </div>
+                <p>Everything else is derived through opacity or mixing—not another named color.</p>
+            </div>
+
+            <div class="token-grid">
+                <article class="token-card">
+                    <span class="token-swatch" style="--token: var(--brand)"></span>
+                    <span><strong>Brand</strong><small id="brandHex">#166534</small></span>
+                    <p>Primary actions, links, selection, focus, and success.</p>
+                </article>
+                <article class="token-card">
+                    <span class="token-swatch" style="--token: var(--ink)"></span>
+                    <span><strong>Ink</strong><small id="inkHex">#172033</small></span>
+                    <p>Headings, body text, secondary buttons, and derived borders.</p>
+                </article>
+                <article class="token-card">
+                    <span class="token-swatch token-swatch-bordered" style="--token: var(--canvas)"></span>
+                    <span><strong>Canvas</strong><small id="canvasHex">#F4F6F3</small></span>
+                    <p>The quiet background behind every page and major section.</p>
+                </article>
+                <article class="token-card">
+                    <span class="token-swatch token-swatch-bordered" style="--token: var(--surface)"></span>
+                    <span><strong>Surface</strong><small id="surfaceHex">#FFFFFF</small></span>
+                    <p>Cards, forms, navigation, menus, and dialogs.</p>
+                </article>
+                <article class="token-card">
+                    <span class="token-swatch" style="--token: var(--warning)"></span>
+                    <span><strong>Warning</strong><small id="warningHex">#A85D00</small></span>
+                    <p>Waitlists, cautions, and items that need attention.</p>
+                </article>
+                <article class="token-card">
+                    <span class="token-swatch" style="--token: var(--danger)"></span>
+                    <span><strong>Danger</strong><small id="dangerHex">#B42318</small></span>
+                    <p>Removal, cancellation, destructive actions, and errors.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="lab-section" aria-labelledby="rulesTitle">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Step Two</p>
+                    <h2 id="rulesTitle">Review The Component Rules</h2>
+                </div>
+                <p>The same rules apply on every page and at every screen size.</p>
+            </div>
+
+            <div class="rules-layout">
+                <article class="showcase-card button-showcase">
+                    <div class="showcase-heading">
+                        <div>
+                            <h3>Button Hierarchy</h3>
+                            <p>Color communicates purpose, not decoration.</p>
+                        </div>
+                        <span class="rule-number">01</span>
+                    </div>
+                    <div class="button-examples">
+                        <div>
+                            <button class="ui-button ui-button-primary" type="button">Save Changes</button>
+                            <span><strong>Primary</strong> One main action per section</span>
+                        </div>
+                        <div>
+                            <button class="ui-button ui-button-secondary" type="button">To Waitlist</button>
+                            <span><strong>Secondary</strong> Alternative or supporting action</span>
+                        </div>
+                        <div>
+                            <button class="ui-button ui-button-danger" type="button">Remove</button>
+                            <span><strong>Danger</strong> Destructive action only</span>
+                        </div>
+                        <div>
+                            <button class="ui-button ui-button-quiet" type="button">Cancel</button>
+                            <span><strong>Quiet</strong> Back, cancel, or dismiss</span>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="showcase-card">
+                    <div class="showcase-heading">
+                        <div>
+                            <h3>Button Sizes</h3>
+                            <p>Only three sizes, with a safe mobile touch target.</p>
+                        </div>
+                        <span class="rule-number">02</span>
+                    </div>
+                    <div class="size-examples">
+                        <div>
+                            <button class="ui-button ui-button-secondary ui-button-compact" type="button">Compact</button>
+                            <span><strong>36 px</strong> Dense desktop rows</span>
+                        </div>
+                        <div>
+                            <button class="ui-button ui-button-primary" type="button">Standard</button>
+                            <span><strong>44 px</strong> Default everywhere</span>
+                        </div>
+                        <div>
+                            <button class="ui-button ui-button-primary ui-button-large" type="button">Large Action</button>
+                            <span><strong>52 px</strong> Page-level action</span>
+                        </div>
+                    </div>
+                    <div class="rule-note">
+                        Compact buttons become 44 px tall on small screens. Paired actions use
+                        equal widths, and major mobile actions span the available width.
+                    </div>
+                </article>
+
+                <article class="showcase-card form-showcase">
+                    <div class="showcase-heading">
+                        <div>
+                            <h3>Forms And Focus</h3>
+                            <p>All controls share height, radius, labels, and focus treatment.</p>
+                        </div>
+                        <span class="rule-number">03</span>
+                    </div>
+                    <div class="form-preview">
+                        <div class="field-wrap">
+                            <label>
+                                Player Name
+                                <input type="text" value="Maria Alvarez">
+                            </label>
+                            <small>Use a first and last name.</small>
+                        </div>
+                        <label>
+                            Location
+                            <select>
+                                <option>Westside Pickleball Center</option>
+                            </select>
+                        </label>
+                        <div class="field-wrap field-error">
+                            <label>
+                                Phone Number
+                                <input type="tel" value="555">
+                            </label>
+                            <small>Enter a complete mobile number.</small>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="showcase-card">
+                    <div class="showcase-heading">
+                        <div>
+                            <h3>Status Language</h3>
+                            <p>Status colors stay small, meaningful, and readable.</p>
+                        </div>
+                        <span class="rule-number">04</span>
+                    </div>
+                    <div class="status-examples">
+                        <div class="status-banner status-success">
+                            <span class="status-icon">✓</span>
+                            <span><strong>Game Saved</strong>Your changes are live.</span>
+                        </div>
+                        <div class="status-banner status-warning">
+                            <span class="status-icon">!</span>
+                            <span><strong>Waitlist Started</strong>One player is waiting.</span>
+                        </div>
+                        <div class="status-banner status-danger">
+                            <span class="status-icon">×</span>
+                            <span><strong>Message Failed</strong>Try sending it again.</span>
+                        </div>
+                    </div>
+                    <div class="rule-note">
+                        Large panels remain neutral. Status appears through a badge, icon, border,
+                        or concise message instead of filling the whole interface with color.
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="lab-section screen-section" aria-labelledby="screensTitle">
+            <div class="section-heading screen-heading">
+                <div>
+                    <p class="eyebrow">Step Three</p>
+                    <h2 id="screensTitle">See The Style Across The App</h2>
+                </div>
+                <div class="viewport-switcher" role="group" aria-label="Preview width">
+                    <button class="is-active" type="button" data-viewport="desktop" aria-pressed="true">Desktop</button>
+                    <button type="button" data-viewport="mobile" aria-pressed="false">Mobile</button>
+                </div>
+            </div>
+
+            <div class="app-previews" id="appPreviews">
+                <article class="browser-frame create-preview">
+                    <div class="browser-bar">
+                        <span class="browser-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                        <strong>Create Game</strong>
+                        <span class="browser-spacer"></span>
+                    </div>
+                    <div class="app-page">
+                        <div class="app-topbar">
+                            <span class="app-wordmark">IN or OUT</span>
+                            <span class="app-nav"><b>Create Game</b><i>My Games</i><i>Guide</i></span>
+                            <span class="app-avatar">SH</span>
+                        </div>
+                        <div class="app-content">
+                            <div class="app-title-row">
+                                <div>
+                                    <span class="app-kicker">Host A New Game</span>
+                                    <h3>Create Your Pickleball Game</h3>
+                                    <p>Set the details and invite your group in a few quick steps.</p>
+                                </div>
+                                <span class="step-progress">Step 1 Of 3</span>
+                            </div>
+                            <div class="create-layout">
+                                <div class="app-card">
+                                    <div class="step-title">
+                                        <span>1</span>
+                                        <div><strong>Game Details</strong><small>Tell players where and when to meet.</small></div>
+                                    </div>
+                                    <div class="sample-form-grid">
+                                        <label>Location<input value="Westside Pickleball Center"></label>
+                                        <label>Date<input value="Saturday, August 8"></label>
+                                        <label>Start Time<input value="9:00 AM"></label>
+                                        <label>Players<select><option>6 Players</option></select></label>
+                                    </div>
+                                    <div class="mode-choice">
+                                        <button class="is-selected" type="button">
+                                            <span class="choice-dot"></span>
+                                            <span><strong>First Come</strong><small>Players join open spots instantly.</small></span>
+                                        </button>
+                                        <button type="button">
+                                            <span class="choice-dot"></span>
+                                            <span><strong>Host Approval</strong><small>You choose from the waitlist.</small></span>
+                                        </button>
+                                    </div>
+                                    <div class="form-actions">
+                                        <button class="ui-button ui-button-quiet" type="button">Cancel</button>
+                                        <button class="ui-button ui-button-primary" type="button">Continue</button>
+                                    </div>
+                                </div>
+                                <aside class="summary-card">
+                                    <span class="summary-label">Game Preview</span>
+                                    <div class="court-illustration" aria-hidden="true">
+                                        <span></span>
+                                    </div>
+                                    <h4>Saturday Morning Pickleball</h4>
+                                    <p>Westside Pickleball Center</p>
+                                    <dl>
+                                        <div><dt>Date</dt><dd>Aug 8</dd></div>
+                                        <div><dt>Time</dt><dd>9:00 AM</dd></div>
+                                        <div><dt>Players</dt><dd>6</dd></div>
+                                    </dl>
+                                </aside>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="browser-frame game-preview">
+                    <div class="browser-bar">
+                        <span class="browser-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                        <strong>Join Game</strong>
+                        <span class="browser-spacer"></span>
+                    </div>
+                    <div class="app-page">
+                        <div class="app-topbar">
+                            <span class="app-wordmark">IN or OUT</span>
+                            <span class="app-nav"><i>How It Works</i></span>
+                            <span class="app-avatar">?</span>
+                        </div>
+                        <div class="join-shell">
+                            <div class="join-heading">
+                                <span class="app-kicker">You Are Invited</span>
+                                <h3>Saturday Morning Pickleball</h3>
+                                <p>Hosted by Scott H.</p>
+                            </div>
+                            <div class="join-grid">
+                                <div class="app-card detail-card">
+                                    <div class="detail-icon">08</div>
+                                    <div><small>Saturday, August 8</small><strong>9:00 AM–10:30 AM</strong></div>
+                                    <div class="detail-divider"></div>
+                                    <div class="location-pin">●</div>
+                                    <div><small>Westside Pickleball Center</small><strong>Court 4</strong></div>
+                                </div>
+                                <div class="app-card roster-card">
+                                    <div class="roster-heading">
+                                        <span><strong>Players</strong><small>5 of 6 spots filled</small></span>
+                                        <span class="status-pill status-pill-success">1 Spot Open</span>
+                                    </div>
+                                    <div class="avatar-row">
+                                        <span>SH</span><span>MA</span><span>DP</span><span>TW</span><span>PR</span><span class="avatar-open">+</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="app-card join-form">
+                                <div>
+                                    <h4>Are You In or Out?</h4>
+                                    <p>Enter your details and let the group know.</p>
+                                </div>
+                                <div class="join-fields">
+                                    <label>Your Name<input placeholder="First and last name"></label>
+                                    <label>Mobile Number<input placeholder="(555) 123-4567"></label>
+                                </div>
+                                <div class="join-actions">
+                                    <button class="ui-button ui-button-primary ui-button-large" type="button">I’m In</button>
+                                    <button class="ui-button ui-button-secondary ui-button-large" type="button">I’m Out</button>
+                                </div>
+                                <small class="privacy-note">We’ll only text you about this game.</small>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="browser-frame manage-preview">
+                    <div class="browser-bar">
+                        <span class="browser-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                        <strong>Manage Players</strong>
+                        <span class="browser-spacer"></span>
+                    </div>
+                    <div class="app-page">
+                        <div class="app-topbar">
+                            <span class="app-wordmark">IN or OUT</span>
+                            <span class="app-nav"><i>Game Details</i><b>Players</b><i>Messages</i></span>
+                            <span class="app-avatar">SH</span>
+                        </div>
+                        <div class="app-content">
+                            <div class="app-title-row">
+                                <div>
+                                    <span class="app-kicker">Saturday Morning Pickleball</span>
+                                    <h3>Player Management</h3>
+                                    <p>Six spots total · Saturday at 9:00 AM</p>
+                                </div>
+                                <button class="ui-button ui-button-secondary" type="button">Add Players</button>
+                            </div>
+                            <div class="management-grid">
+                                <section class="player-panel">
+                                    <div class="panel-heading">
+                                        <span><strong>Confirmed Players</strong><small>Ready to play</small></span>
+                                        <span class="status-pill status-pill-success">5 Of 6</span>
+                                    </div>
+                                    <div class="capacity-track"><span style="width: 83%"></span></div>
+                                    <div class="player-row">
+                                        <span class="player-avatar">SH</span>
+                                        <span class="player-data"><strong>Scott H.</strong><small>Organizer · ••• 0101</small></span>
+                                        <span class="player-buttons"><button class="ui-button ui-button-secondary ui-button-compact" type="button">To Waitlist</button><button class="ui-button ui-button-danger ui-button-compact" type="button">Remove</button></span>
+                                    </div>
+                                    <div class="player-row">
+                                        <span class="player-avatar">MA</span>
+                                        <span class="player-data"><strong>Maria Alvarez</strong><small>Confirmed · ••• 0188</small></span>
+                                        <span class="player-buttons"><button class="ui-button ui-button-secondary ui-button-compact" type="button">To Waitlist</button><button class="ui-button ui-button-danger ui-button-compact" type="button">Remove</button></span>
+                                    </div>
+                                    <div class="player-row">
+                                        <span class="player-avatar">DP</span>
+                                        <span class="player-data"><strong>Dev Patel</strong><small>Confirmed · ••• 0142</small></span>
+                                        <span class="player-buttons"><button class="ui-button ui-button-secondary ui-button-compact" type="button">To Waitlist</button><button class="ui-button ui-button-danger ui-button-compact" type="button">Remove</button></span>
+                                    </div>
+                                </section>
+                                <section class="player-panel">
+                                    <div class="panel-heading">
+                                        <span><strong>Waitlist</strong><small>Waiting for a spot</small></span>
+                                        <span class="status-pill status-pill-warning">1 Waiting</span>
+                                    </div>
+                                    <div class="player-row">
+                                        <span class="player-avatar player-avatar-warning">JL</span>
+                                        <span class="player-data"><strong>Jamie Lee</strong><small>Joined 12 minutes ago</small></span>
+                                        <span class="player-buttons"><button class="ui-button ui-button-primary ui-button-compact" type="button">Promote</button><button class="ui-button ui-button-quiet ui-button-compact" type="button">Remove</button></span>
+                                    </div>
+                                    <div class="out-heading">
+                                        <span><strong>Players Who Are Out</strong><small>Not attending</small></span>
+                                        <span class="status-pill status-pill-danger">1 Out</span>
+                                    </div>
+                                    <div class="player-row player-row-muted">
+                                        <span class="player-avatar">PR</span>
+                                        <span class="player-data"><strong>Priya Raman</strong><small>Marked out yesterday</small></span>
+                                        <span class="player-buttons"><button class="ui-button ui-button-quiet ui-button-compact" type="button">Restore</button></span>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="browser-frame games-preview">
+                    <div class="browser-bar">
+                        <span class="browser-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                        <strong>My Games And Roster</strong>
+                        <span class="browser-spacer"></span>
+                    </div>
+                    <div class="app-page">
+                        <div class="app-topbar">
+                            <span class="app-wordmark">IN or OUT</span>
+                            <span class="app-nav"><i>Create Game</i><b>My Games</b><i>Roster</i></span>
+                            <span class="app-avatar">SH</span>
+                        </div>
+                        <div class="app-content">
+                            <div class="app-title-row">
+                                <div>
+                                    <span class="app-kicker">Welcome Back, Scott</span>
+                                    <h3>Your Games</h3>
+                                    <p>Manage upcoming games and recent players.</p>
+                                </div>
+                                <button class="ui-button ui-button-primary" type="button">Create Game</button>
+                            </div>
+                            <div class="dashboard-grid">
+                                <div class="dashboard-main">
+                                    <div class="dashboard-tabs">
+                                        <button class="is-active" type="button">Upcoming <span>2</span></button>
+                                        <button type="button">Past Games</button>
+                                    </div>
+                                    <article class="game-list-card">
+                                        <div class="date-tile"><strong>08</strong><span>Aug</span></div>
+                                        <div class="game-list-copy">
+                                            <strong>Saturday Morning Pickleball</strong>
+                                            <small>9:00 AM · Westside Pickleball Center</small>
+                                            <span><i class="status-dot"></i>5 of 6 players confirmed</span>
+                                        </div>
+                                        <button class="ui-button ui-button-secondary ui-button-compact" type="button">Manage</button>
+                                    </article>
+                                    <article class="game-list-card">
+                                        <div class="date-tile"><strong>12</strong><span>Aug</span></div>
+                                        <div class="game-list-copy">
+                                            <strong>Wednesday Evening Doubles</strong>
+                                            <small>6:30 PM · Riverside Courts</small>
+                                            <span><i class="status-dot status-dot-warning"></i>4 confirmed · 2 waiting</span>
+                                        </div>
+                                        <button class="ui-button ui-button-secondary ui-button-compact" type="button">Manage</button>
+                                    </article>
+                                </div>
+                                <aside class="roster-summary">
+                                    <div class="roster-summary-head">
+                                        <span><strong>Your Roster</strong><small>18 saved players</small></span>
+                                        <button class="text-button" type="button">View All</button>
+                                    </div>
+                                    <div class="roster-person"><span>MA</span><div><strong>Maria Alvarez</strong><small>5 games</small></div></div>
+                                    <div class="roster-person"><span>DP</span><div><strong>Dev Patel</strong><small>4 games</small></div></div>
+                                    <div class="roster-person"><span>TW</span><div><strong>Tom Whitfield</strong><small>4 games</small></div></div>
+                                </aside>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="lab-section decision-section" aria-labelledby="decisionTitle">
+            <span class="decision-mark" aria-hidden="true">✓</span>
+            <div>
+                <p class="eyebrow">Ready When You Are</p>
+                <h2 id="decisionTitle">Choose Your Favorite Direction</h2>
+                <p>
+                    Save the direction you prefer, then send the selected name or this page link.
+                    The next step will be applying the chosen system across the real app.
+                </p>
+            </div>
+            <button class="lab-button lab-button-primary lab-button-large" id="chooseFavoriteBottom" type="button">
+                Choose Court Classic
+            </button>
+        </section>
+    </main>
+
+    <footer class="lab-footer">
+        <span>IN or OUT Design Lab</span>
+        <span>Six colors · One system · Every screen</span>
+    </footer>
+
+    <script src="/js/design-lab.js"></script>
+</body>
+</html>
