@@ -198,6 +198,19 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         field.value = value;
         field.dispatchEvent(new Event('input', { bubbles: true }));
       };
+      const originalFetch = window.fetch.bind(window);
+      window.__createPostKeys = [];
+      window.fetch = async (url, options = {}) => {
+        if (url === '/api/games' && options.method === 'POST') {
+          window.__createPostKeys.push(options.headers?.['Idempotency-Key']);
+          const response = await originalFetch(url, options);
+          if (window.__createPostKeys.length === 1) {
+            throw new TypeError('Load failed');
+          }
+          return response;
+        }
+        return originalFetch(url, options);
+      };
       set('organizerName', 'Upload Test Host');
       set('organizerPhone', '${fx.FORM_PHONE}');
       set('date', '${fx.date}');
@@ -219,7 +232,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         selectedImageId: library.selectedImageId,
         totalPlayers: game.totalPlayers,
         confirmedPlayers: game.players.length,
-        waitlistNotificationSaved: game.notificationPreferences?.waitlistStarts === true
+        waitlistNotificationSaved: game.notificationPreferences?.waitlistStarts === true,
+        createPostKeys: window.__createPostKeys
       };
     })()`);
     assert(
@@ -231,6 +245,11 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     assert(
       noImageResult.totalPlayers === 4 && noImageResult.confirmedPlayers === 1,
       'three additional players plus the playing organizer creates a four-player game'
+    );
+    assert(
+      noImageResult.createPostKeys.length === 2 &&
+      noImageResult.createPostKeys[0] === noImageResult.createPostKeys[1],
+      'a dropped creation response retries safely with the same idempotency key'
     );
     const createSuccessView = await desktop.evaluate(`(() => ({
       formHidden: document.querySelector('.form-section').hidden,

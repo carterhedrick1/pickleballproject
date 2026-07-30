@@ -43,12 +43,61 @@ const { resolveTextMessage } = require('../services/text-message-rotation');
 const { appendCustomReplyInstructions } = require('../sms-reply-options');
 const { buildRandomizedInvitation } = require('../services/invitation-message');
 
+function creationRequestId(req) {
+  const value = String(req.get('Idempotency-Key') || '').trim();
+  if (!value) return null;
+  return /^[A-Za-z0-9_-]{16,128}$/.test(value) ? value : false;
+}
+
+function gameIdForCreation(requestId) {
+  if (!requestId) {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+  }
+  return `g${crypto.createHash('sha256').update(requestId).digest('hex').slice(0, 32)}`;
+}
+
+function createGameResponse(gameId, gameData, hostToken, hostSms = null, replayed = false) {
+  return {
+    gameId,
+    hostToken,
+    totalPlayers: gameData.totalPlayers,
+    playersNeeded: gameData.totalPlayers - (gameData.organizerPlaying ? 1 : 0),
+    playerLink: `/game.html?id=${gameId}`,
+    hostLink: `/manage.html?id=${gameId}&token=${hostToken}`,
+    hostSms,
+    ...(replayed ? { replayed: true } : {})
+  };
+}
+
 module.exports = function mountGameRoutes(app) {
   app.post('/api/games', async (req, res) => {
+    const requestId = creationRequestId(req);
+    if (requestId === false) {
+      return res.status(400).json({ error: 'Invalid game creation request ID' });
+    }
+
+    const gameId = gameIdForCreation(requestId);
+    let releaseCreateLock = () => {};
     try {
       console.log('[SERVER] Received create game request:', req.body);
-      
-      const gameId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+
+      // A deployment or brief network interruption can drop the response after the game was
+      // saved. The browser retries with the same unpredictable key, which maps to the same game
+      // id. Serialize that check/save pair so two overlapping attempts cannot send two texts.
+      if (requestId) {
+        releaseCreateLock = await acquireGameLock(`create:${gameId}`);
+        const existingGame = await getGame(gameId);
+        if (existingGame) {
+          return res.status(200).json(createGameResponse(
+            gameId,
+            existingGame,
+            existingGame.hostToken,
+            null,
+            true
+          ));
+        }
+      }
+
       const hostToken = crypto.randomBytes(32).toString('hex');
 
       // Create game data using our game logic
@@ -77,6 +126,7 @@ module.exports = function mountGameRoutes(app) {
       console.log('  - notificationPreferences:', gameData.notificationPreferences);
       
       await saveGame(gameId, gameData, hostToken, formattedHostPhone);
+      releaseCreateLock();
 
       // Remember the court for the next host's picker. Never fail a game save over it.
       try {
@@ -85,15 +135,6 @@ module.exports = function mountGameRoutes(app) {
         console.error('[SERVER] Could not save location for reuse:', locationError);
       }
 
-      const response = {
-        gameId,
-        hostToken,
-        totalPlayers: gameData.totalPlayers,
-        playersNeeded: gameData.totalPlayers - (gameData.organizerPlaying ? 1 : 0),
-        playerLink: `/game.html?id=${gameId}`,
-        hostLink: `/manage.html?id=${gameId}&token=${hostToken}`
-      };
-      
       // Send confirmation SMS to host
       let smsResult = null;
       if (hostPhone) {
@@ -117,11 +158,17 @@ module.exports = function mountGameRoutes(app) {
         });
       }
       
-      response.hostSms = smsResult;
       console.log('[SERVER] Game created successfully:', gameId);
-      res.status(201).json(response);
+      res.status(201).json(createGameResponse(
+        gameId,
+        gameData,
+        hostToken,
+        smsResult
+      ));
     } catch (error) {
       routeFailed(req, res, error, 'Failed to create game');
+    } finally {
+      releaseCreateLock();
     }
   });
 

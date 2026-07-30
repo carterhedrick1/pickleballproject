@@ -73,15 +73,29 @@ async function req(method, path, body, extraHeaders) {
   }
 
   console.log('\n3. Host creates a game (no phone -> no SMS)');
-  const create = await req('POST', '/api/games', {
+  const createRequestId = 'verify-create-request-00000001';
+  const createBody = {
     location: 'Homoly Home Court', organizerName: 'Scott',
     organizerPlaying: true, date: '2026-08-15', time: '18:00', duration: 90,
     totalPlayers: 4, message: 'Deploy verification game', registrationMode: 'fcfs',
+  };
+  const create = await req('POST', '/api/games', createBody, {
+    'Idempotency-Key': createRequestId
   });
   if (create.status !== 201) return bad(`create failed HTTP ${create.status}: ${create.text.slice(0, 200)}`);
   const { gameId, hostToken } = create.json;
   ok(`game created: ${gameId}`);
   create.json.hostSms === null ? ok('no SMS sent (hostSms null)') : bad(`SMS was sent: ${JSON.stringify(create.json.hostSms)}`);
+
+  const replay = await req('POST', '/api/games', createBody, {
+    'Idempotency-Key': createRequestId
+  });
+  replay.status === 200 &&
+    replay.json?.replayed === true &&
+    replay.json?.gameId === gameId &&
+    replay.json?.hostToken === hostToken
+    ? ok('an interrupted create safely replays the original game and host link')
+    : bad(`create replay was not idempotent: HTTP ${replay.status} ${replay.text.slice(0, 160)}`);
 
   console.log('\n4. SECURITY: hostToken exposure');
   const pub = await req('GET', `/api/games/${gameId}`);

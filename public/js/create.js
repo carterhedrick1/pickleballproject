@@ -87,6 +87,54 @@
         let courtImageRequestSerial = 0;
         let courtImageLookupTimer = null;
         let courtImageLoadPromise = Promise.resolve();
+        let pendingGameCreation = null;
+
+        function newCreationRequestId() {
+            const bytes = new Uint8Array(16);
+            crypto.getRandomValues(bytes);
+            return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+        }
+
+        function creationRequestFor(gameData) {
+            const fingerprint = JSON.stringify(gameData);
+            if (!pendingGameCreation || pendingGameCreation.fingerprint !== fingerprint) {
+                pendingGameCreation = {
+                    fingerprint,
+                    requestId: newCreationRequestId()
+                };
+            }
+            return pendingGameCreation.requestId;
+        }
+
+        async function postGameWithRetry(gameData, requestId) {
+            const retryDelays = [500, 2000, 5000];
+            let lastError;
+
+            for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
+                try {
+                    const response = await fetch('/api/games', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Idempotency-Key': requestId
+                        },
+                        body: JSON.stringify(gameData)
+                    });
+
+                    const retryableStatus = [500, 502, 503, 504].includes(response.status);
+                    if (!retryableStatus || attempt === retryDelays.length) {
+                        return response;
+                    }
+                } catch (error) {
+                    lastError = error;
+                    if (attempt === retryDelays.length) throw error;
+                }
+
+                await new Promise((resolve) => setTimeout(resolve, retryDelays[attempt]));
+            }
+
+            throw lastError || new Error('Failed to create game');
+        }
 
         function setCourtImageStatus(message, isError = false) {
             const status = document.getElementById('courtImageStatus');
@@ -378,14 +426,11 @@ async function createGame(e) {
     
     try {
         showStatus('Creating game...', 'info');
-        
-        const response = await fetch('/api/games', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(gameData)
-        });
+
+        const response = await postGameWithRetry(
+            gameData,
+            creationRequestFor(gameData)
+        );
         
         if (!response.ok) {
             const errorData = await response.json();
@@ -393,6 +438,7 @@ async function createGame(e) {
         }
         
         const data = await response.json();
+        pendingGameCreation = null;
         const courtImageWarning = await saveCourtImageChoice(
             data.gameId,
             data.hostToken,
