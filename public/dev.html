@@ -250,6 +250,11 @@
     white-space: pre-wrap; padding: 14px; border-radius: 10px; background: var(--canvas);
     min-height: 78px; overflow-wrap: anywhere;
   }
+  .randomizer-prompt {
+    min-height: 390px; resize: vertical; background: var(--canvas);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px; line-height: 1.55;
+  }
   @media (max-width: 760px) {
     .randomizer-grid { grid-template-columns: 1fr; }
     .randomizer-grid .full { grid-column: auto; }
@@ -836,6 +841,25 @@
           </label>
         </div>
         <p id="randomizerGenerationStatus" class="muted" style="min-height:20px"></p>
+      </div>
+
+      <div class="panel">
+        <div class="text-metrics-heading">
+          <div>
+            <h2>Build Messages With Codex</h2>
+            <p class="muted">Choose a category, copy the complete prompt, and paste it into Codex. It covers brainstorming, shortlisting, draft creation, testing, documentation, and deployment.</p>
+          </div>
+          <button type="button" class="primary" id="randomizerCopyPrompt">Copy Prompt</button>
+        </div>
+        <div class="randomizer-grid">
+          <label>Message Category
+            <select id="randomizerPromptSurface"></select>
+          </label>
+          <label class="full">Reusable Prompt
+            <textarea id="randomizerReusablePrompt" class="randomizer-prompt" rows="18" readonly spellcheck="false"></textarea>
+          </label>
+        </div>
+        <p id="randomizerPromptStatus" class="muted" style="min-height:20px"></p>
       </div>
 
       <div class="panel">

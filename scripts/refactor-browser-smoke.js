@@ -576,6 +576,15 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         favoriteLabels: document.getElementById('randomizerMessageList')
           .textContent.includes('Locked Favorite') &&
           document.getElementById('randomizerMessageList').textContent.includes('Vetted'),
+        reusablePrompt:
+          document.getElementById('randomizerReusablePrompt').value.includes(
+            'Generate 50 distinct candidate messages'
+          ) &&
+          document.getElementById('randomizerReusablePrompt').value.includes(
+            'Do not change the app until I explicitly say'
+          ) &&
+          document.getElementById('randomizerPromptSurface').options.length === 15 &&
+          Boolean(document.getElementById('randomizerCopyPrompt')),
         targetPlayers: document.getElementById('randomizerRulePlayer').options.length,
         preview: document.querySelector('#randomizerPreviewOutput .randomizer-preview')
           ?.textContent.trim(),
@@ -592,10 +601,11 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         messageRandomizer.slogans === 19 &&
         messageRandomizer.youreIn === 22 &&
         messageRandomizer.favoriteLabels &&
+        messageRandomizer.reusablePrompt &&
         messageRandomizer.targetPlayers > 1 &&
         messageRandomizer.preview &&
         messageRandomizer.externalScript,
-      'developer Message Randomizer shows all 41 vetted favorites, surfaces, targeting, and previews'
+      'developer Message Randomizer shows vetted favorites, reusable Codex prompt, targeting, and previews'
     );
 
     const imageInventory = await desktop.evaluate(`(async () => {
