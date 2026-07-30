@@ -105,6 +105,12 @@ const SMS_EVENT_DEFINITIONS = Object.freeze([
     description: 'An organizer replies 1 or requests a management link from My Games.'
   },
   {
+    id: 'host-verification-code',
+    title: 'Host Verification Code',
+    recipient: 'Organizer',
+    description: 'An organizer verifies their phone before opening private host pages.'
+  },
+  {
     id: 'game-details-requested',
     title: 'Game Details Requested',
     recipient: 'Organizer Or Player',

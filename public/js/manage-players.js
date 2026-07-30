@@ -97,7 +97,12 @@ async function loadHostRoster() {
     renderHostRoster();
 
     try {
-        const response = await fetch(`/api/roster/${encodeURIComponent(gameData.hostPhone)}`);
+        const response = await fetch(`/api/roster/${encodeURIComponent(gameData.hostPhone)}`, {
+            headers: {
+                'X-Game-Id': gameId,
+                'X-Host-Token': hostToken
+            }
+        });
         if (!response.ok) throw new Error(`Server returned ${response.status}`);
         const data = await response.json();
         hostRoster = Array.isArray(data.roster) ? data.roster : [];

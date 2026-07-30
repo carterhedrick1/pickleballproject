@@ -29,11 +29,22 @@
         <div class="content-section">
             <!-- Shown until we know whose stats to load. -->
             <div id="phoneGate" class="phone-gate" style="display: none;">
-                <h3>Which Number Do You Host With?</h3>
-                <p>Enter the phone number you use when you create games.</p>
-                <input type="tel" id="phoneInput" placeholder="(555) 123-4567" autocomplete="tel">
-                <br>
-                <button type="button" class="btn btn-primary" id="showStatsBtn">Show My Stats</button>
+                <div id="phoneStep">
+                    <h3>Verify Your Host Number</h3>
+                    <p>Enter the phone number you use when you create games. We’ll text you a verification code.</p>
+                    <input type="tel" id="phoneInput" placeholder="(555) 123-4567" autocomplete="tel">
+                    <br>
+                    <button type="button" class="btn btn-primary" id="sendCodeBtn">Send Verification Code</button>
+                </div>
+                <div id="codeStep" style="display: none;">
+                    <h3>Enter Your Verification Code</h3>
+                    <p id="codeHelp"></p>
+                    <input type="text" id="codeInput" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+                    <br>
+                    <button type="button" class="btn btn-primary" id="verifyCodeBtn">Verify And Continue</button>
+                    <button type="button" class="switch-number" id="resendCodeBtn">Send A New Code</button>
+                    <button type="button" class="switch-number" id="changeNumberBtn">Use A Different Number</button>
+                </div>
             </div>
 
             <div id="statsBody" style="display: none;">
@@ -65,43 +76,21 @@
         </div>
     </div>
 
+    <script src="/js/host-verification.js"></script>
     <script>
-        // The host's number is remembered per device, the same way My Games and Roster do it.
-        const STORAGE_KEY = 'hostPhone';
         let hostPhone = '';
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('showStatsBtn').addEventListener('click', submitPhone);
-            document.getElementById('phoneInput').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') submitPhone();
+            HostVerification.init({
+                contentId: 'statsBody',
+                switchButtonId: 'switchNumber',
+                showStatus,
+                onVerified: (phone) => {
+                    hostPhone = phone;
+                    return loadStats();
+                }
             });
-            document.getElementById('switchNumber').addEventListener('click', () => {
-                localStorage.removeItem(STORAGE_KEY);
-                location.reload();
-            });
-
-            hostPhone = localStorage.getItem(STORAGE_KEY) || '';
-            if (hostPhone) {
-                loadStats();
-            } else {
-                document.getElementById('phoneGate').style.display = 'block';
-            }
         });
-
-        function submitPhone() {
-            const digits = (document.getElementById('phoneInput').value || '').replace(/\D/g, '');
-            const tenDigits = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
-
-            if (tenDigits.length !== 10) {
-                showStatus('Please enter a 10-digit phone number.', 'error');
-                return;
-            }
-
-            hostPhone = tenDigits;
-            localStorage.setItem(STORAGE_KEY, tenDigits);
-            document.getElementById('phoneGate').style.display = 'none';
-            loadStats();
-        }
 
         function showStatus(message, type) {
             const el = document.getElementById('status');
@@ -110,8 +99,7 @@
             el.style.display = message ? 'block' : 'none';
         }
 
-        const prettyPhone = (p) =>
-            p && p.length === 10 ? `(${p.slice(0, 3)}) ${p.slice(3, 6)}-${p.slice(6)}` : p;
+        const prettyPhone = HostVerification.prettyPhone;
 
         const percent = (value) => value === null ? '--' : Math.round(value * 100) + '%';
 
@@ -146,7 +134,13 @@
             showStatus('Loading your stats...', 'info');
 
             try {
-                const response = await fetch(`/api/stats/${hostPhone}`);
+                const response = await fetch(`/api/stats/${hostPhone}`, {
+                    headers: HostVerification.authHeaders()
+                });
+                if (response.status === 401) {
+                    HostVerification.expireSession();
+                    return;
+                }
                 if (!response.ok) throw new Error(`Server returned ${response.status}`);
                 const stats = await response.json();
 

@@ -36,11 +36,14 @@ async function hit(method, path, { body, raw, headers = {} } = {}) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       location: 'Test Court', organizerName: 'Host', organizerPlaying: false,
+      organizerPhone: '5555559001',
       date: '2026-09-19', time: '18:00', duration: 90, totalPlayers: 4,
       message: 'smoke', registrationMode: 'fcfs',
     }),
   }).then((r) => r.json());
   const { gameId: id, hostToken: tok } = created;
+  const { getLocalHostAuthHeaders } = require('./_host-verification');
+  const hostAuth = await getLocalHostAuthHeaders(BASE, '5555559001');
   const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
   await hit('POST', `/api/games/${id}/players`, { body: { name: 'Alice' } });
@@ -62,14 +65,20 @@ async function hit(method, path, { body, raw, headers = {} } = {}) {
   await hit('GET', `/api/games/${id}?token=${tok}`);
   await hit('PUT', `/api/games/${id}`, { body: { token: tok, message: 'edited' } });
   await hit('PUT', `/api/games/${id}/notes`, { body: { token: tok, hostNotes: 'gate 4417' } });
-  await hit('GET', '/api/games/by-phone/5555559001');
-  await hit('GET', '/api/games/by-phone/5555559001?all=1');
-  await hit('POST', '/api/games/lookup-and-notify', { body: { phone: '5555559001' } });
+  await hit('GET', '/api/games/by-phone/5555559001', { headers: hostAuth });
+  await hit('GET', '/api/games/by-phone/5555559001?all=1', { headers: hostAuth });
+  await hit('POST', '/api/games/lookup-and-notify', {
+    body: { phone: '5555559001' },
+    headers: hostAuth
+  });
 
   // roster + stats
-  await hit('GET', '/api/roster/5555559001');
-  await hit('PUT', '/api/roster/5555559001/5555559002', { body: { name: 'Bob', duprId: '', duprRating: '' } });
-  await hit('GET', '/api/stats/5555559001');
+  await hit('GET', '/api/roster/5555559001', { headers: hostAuth });
+  await hit('PUT', '/api/roster/5555559001/5555559002', {
+    body: { name: 'Bob', duprId: '', duprRating: '' },
+    headers: hostAuth
+  });
+  await hit('GET', '/api/stats/5555559001', { headers: hostAuth });
 
   // players
   await hit('POST', `/api/games/${id}/manual-player`, { body: { token: tok, name: 'Manual' } });

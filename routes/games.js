@@ -37,7 +37,7 @@ const {
 const { acquireGameLock } = require('../utils/game-lock');
 const { isGameUpcoming } = require('../utils/central-time');
 const { routeFailed } = require('../utils/route-error');
-const { isHost } = require('../utils/host-auth');
+const { isHost, requireVerifiedHostPhone } = require('../utils/host-auth');
 const { applyGameUpdate } = require('../utils/game-update');
 const { resolveTextMessage } = require('../services/text-message-rotation');
 const { appendCustomReplyInstructions } = require('../sms-reply-options');
@@ -429,7 +429,10 @@ module.exports = function mountGameRoutes(app) {
   // Add these endpoints to your server.js file, around line 400-500 where your other API endpoints are
 
   // Get management links for a specific phone number
-  app.get('/api/games/by-phone/:phone', async (req, res) => {
+  app.get(
+    '/api/games/by-phone/:phone',
+    requireVerifiedHostPhone(),
+    async (req, res) => {
     console.log(`[PHONE LOOKUP] Looking up games for phone: ${req.params.phone}`);
     
     try {
@@ -493,21 +496,14 @@ module.exports = function mountGameRoutes(app) {
     } catch (error) {
       routeFailed(req, res, error, 'Failed to lookup games');
     }
-  });
-
-  // ---------------------------------------------------------------------------
-  // Host roster
-  //
-  // Auth is the host's phone number and nothing more. That matches the existing
-  // /api/games/by-phone route, which already hands out management links (and therefore full
-  // control of a game) to anyone who knows the number. This is a private app for one friend
-  // group, so the accepted risk is the same one already taken there; if that ever changes,
-  // both routes need a real token together.
-  // ---------------------------------------------------------------------------
-
+    }
+  );
 
   // Send management links via SMS
-  app.post('/api/games/lookup-and-notify', async (req, res) => {
+  app.post(
+    '/api/games/lookup-and-notify',
+    requireVerifiedHostPhone(),
+    async (req, res) => {
     console.log(`[PHONE LOOKUP SMS] Looking up and notifying phone: ${req.body.phone}`);
     
     try {
@@ -596,6 +592,7 @@ module.exports = function mountGameRoutes(app) {
     } catch (error) {
       routeFailed(req, res, error, 'Failed to lookup and notify');
     }
-  });
+    }
+  );
 
 };

@@ -1,10 +1,8 @@
 // The host's roster - everyone they have ever played with - and the stats built from it.
 //
-// Auth is the host's phone number and nothing more. That matches the existing
-// /api/games/by-phone route, which already hands out management links (and therefore full
-// control of a game) to anyone who knows the number. This is a private app for one friend
-// group, so the accepted risk is the same one already taken there; if that ever changes,
-// both routes need a real token together.
+// Phone-number access requires the shared SMS verification session used by My Games and Stats.
+// A valid per-game host token may read the roster from that game's management page, but roster
+// edits always require the verified phone session.
 
 const {
   getGamesByHostPhone,
@@ -15,11 +13,15 @@ const {
 const { formatPhoneNumber } = require('../sms-handler');
 const { computeHostStats } = require('../stats');
 const { routeFailed } = require('../utils/route-error');
+const { requireVerifiedHostPhone } = require('../utils/host-auth');
 
 module.exports = function mountRosterRoutes(app) {
   // Everyone this host has ever played with: their saved roster rows, plus anyone who has
   // appeared in one of their games. Roster values win over whatever a player typed at signup.
-  app.get('/api/roster/:phone', async (req, res) => {
+  app.get(
+    '/api/roster/:phone',
+    requireVerifiedHostPhone({ allowGameToken: true }),
+    async (req, res) => {
     try {
       const hostPhone = formatPhoneNumber(req.params.phone);
 
@@ -98,10 +100,14 @@ module.exports = function mountRosterRoutes(app) {
     } catch (error) {
       routeFailed(req, res, error, 'Failed to load roster');
     }
-  });
+    }
+  );
 
   // Host edits one player's details.
-  app.put('/api/roster/:phone/:playerPhone', async (req, res) => {
+  app.put(
+    '/api/roster/:phone/:playerPhone',
+    requireVerifiedHostPhone(),
+    async (req, res) => {
     try {
       const hostPhone = formatPhoneNumber(req.params.phone);
       const playerPhone = formatPhoneNumber(req.params.playerPhone);
@@ -132,10 +138,11 @@ module.exports = function mountRosterRoutes(app) {
     } catch (error) {
       routeFailed(req, res, error, 'Failed to save roster entry');
     }
-  });
+    }
+  );
 
-  // A host's numbers. Same phone-only access as the roster and by-phone routes above.
-  app.get('/api/stats/:phone', async (req, res) => {
+  // A host's numbers. This uses the same verified phone session as the roster.
+  app.get('/api/stats/:phone', requireVerifiedHostPhone(), async (req, res) => {
     try {
       const hostPhone = formatPhoneNumber(req.params.phone);
 

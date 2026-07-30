@@ -48,6 +48,17 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
   try {
     const fx = await fixtures.seed(local.baseUrl);
     seeded = true;
+    const verificationRequest = await fetch(`${local.baseUrl}/api/host-verification/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: fx.HOST_PHONE })
+    }).then((response) => response.json());
+    const hostSession = await fetch(`${local.baseUrl}/api/host-verification/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: fx.HOST_PHONE, code: verificationRequest.devCode })
+    }).then((response) => response.json());
+    assert(Boolean(hostSession.token), 'host phone verification issues a private browser session');
     const [privateRandomizer, publicPersonalities] = await Promise.all([
       fetch(`${local.baseUrl}/api/dev/message-randomizer`),
       fetch(`${local.baseUrl}/api/message-personalities`).then((response) => response.json())
@@ -244,7 +255,10 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         `${local.baseUrl}/api/roster/${fx.HOST_PHONE}/${player.phone}`,
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${hostSession.token}`
+          },
           body: JSON.stringify(player)
         }
       );
@@ -449,9 +463,10 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     );
     assert(cancelResponse.ok, 'future fixture can be cancelled for My Games coverage');
 
-    await desktop.evaluate(
-      `localStorage.setItem('hostPhone', '${fx.HOST_PHONE}')`
-    );
+    await desktop.evaluate(`(() => {
+      localStorage.setItem('hostPhone', '${fx.HOST_PHONE}');
+      localStorage.setItem('hostVerificationToken', '${hostSession.token}');
+    })()`);
     await desktop.goto(`${local.baseUrl}/my-games.html`);
     await cdp.sleep(500);
     const myGamesGrouping = await desktop.evaluate(`(() => {

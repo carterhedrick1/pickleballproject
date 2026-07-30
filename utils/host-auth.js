@@ -17,8 +17,49 @@
  * @param {string|undefined} token - the token the caller supplied
  * @returns {boolean} true only when the caller proved they are the host
  */
+const { getGameHostInfo } = require('../database');
+const { verifySessionToken } = require('../services/host-verification');
+
+function formatPhoneNumber(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+}
+
 function isHost(game, token) {
   return Boolean(token) && Boolean(game) && game.hostToken === token;
 }
 
-module.exports = { isHost };
+function bearerToken(req) {
+  const match = String(req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
+  return match ? match[1] : '';
+}
+
+function requireVerifiedHostPhone({ allowGameToken = false } = {}) {
+  return async function verifyHostPhoneRequest(req, res, next) {
+    const phone = formatPhoneNumber(req.params.phone || req.body?.phone);
+    if (verifySessionToken(bearerToken(req), phone)) {
+      req.verifiedHostPhone = phone;
+      return next();
+    }
+
+    if (allowGameToken) {
+      try {
+        const gameId = req.headers['x-game-id'];
+        const gameToken = req.headers['x-host-token'];
+        const game = gameId ? await getGameHostInfo(gameId) : null;
+        if (isHost(game, gameToken) && formatPhoneNumber(game.phone) === phone) {
+          req.verifiedHostPhone = phone;
+          return next();
+        }
+      } catch (error) {
+        return next(error);
+      }
+    }
+
+    return res.status(401).json({
+      error: 'Verify this host phone number before viewing private organizer information.'
+    });
+  };
+}
+
+module.exports = { isHost, requireVerifiedHostPhone };

@@ -29,11 +29,22 @@
         <div class="content-section">
             <!-- Shown until we know whose games to load. -->
             <div id="phoneGate" class="phone-gate" style="display: none;">
-                <h3>Which Number Do You Host With?</h3>
-                <p>Enter the phone number you use when you create games and we'll find them all &mdash; including ones you created on another device.</p>
-                <input type="tel" id="phoneInput" placeholder="(555) 123-4567" autocomplete="tel">
-                <br>
-                <button type="button" class="btn btn-primary" id="showGamesBtn">Show My Games</button>
+                <div id="phoneStep">
+                    <h3>Verify Your Host Number</h3>
+                    <p>Enter the phone number you use when you create games. We’ll text you a verification code.</p>
+                    <input type="tel" id="phoneInput" placeholder="(555) 123-4567" autocomplete="tel">
+                    <br>
+                    <button type="button" class="btn btn-primary" id="sendCodeBtn">Send Verification Code</button>
+                </div>
+                <div id="codeStep" style="display: none;">
+                    <h3>Enter Your Verification Code</h3>
+                    <p id="codeHelp"></p>
+                    <input type="text" id="codeInput" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+                    <br>
+                    <button type="button" class="btn btn-primary" id="verifyCodeBtn">Verify And Continue</button>
+                    <button type="button" class="switch-number" id="resendCodeBtn">Send A New Code</button>
+                    <button type="button" class="switch-number" id="changeNumberBtn">Use A Different Number</button>
+                </div>
             </div>
 
             <div id="gamesBody" style="display: none;">
@@ -63,13 +74,14 @@
         </div>
 
         <div class="footer-note">
-            Your games are looked up by phone number, so they follow you to any device.
+            Verify your host number to securely open your games on any device.
         </div>
     </div>
 
     <script src="/js/page-utils.js"></script>
     <script src="/js/player-capacity.js"></script>
     <script src="/js/invitation-generator.js"></script>
+    <script src="/js/host-verification.js"></script>
     <script src="/js/my-games.js"></script>
     <script src="/js/slogans.js"></script>
     <script src="/js/header.js"></script>

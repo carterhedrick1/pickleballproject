@@ -171,11 +171,11 @@ async function req(method, path, body, extraHeaders) {
   const asPlayer = await req('GET', `/api/games/${gameId}`);
   'hostNotes' in (asPlayer.json || {}) ? bad('PRIVACY: hostNotes visible on the public game page') : ok('players never see the note');
 
-  console.log('\n9b. The roster endpoint answers');
-  const emptyRoster = await req('GET', '/api/roster/5555559009');
-  emptyRoster.status === 200 && Array.isArray(emptyRoster.json?.roster)
-    ? ok(`a host with no games gets an empty roster (${emptyRoster.json.roster.length})`)
-    : bad(`/api/roster -> HTTP ${emptyRoster.status}: ${emptyRoster.text.slice(0, 150)}`);
+  console.log('\n9b. Private host pages reject an unverified phone number');
+  const unverifiedRoster = await req('GET', '/api/roster/5555559009');
+  unverifiedRoster.status === 401
+    ? ok('an unverified phone cannot read a roster')
+    : bad(`/api/roster -> HTTP ${unverifiedRoster.status}, expected 401`);
 
   const localGameIds = [];
   if (!IS_LOCAL) {
@@ -205,8 +205,10 @@ async function req(method, path, body, extraHeaders) {
     await req('POST', `/api/games/${live.json?.gameId}/players`,
       { name: 'Signup Typed Name', phone: PLAYER_PHONE }, { 'User-Agent': ANDROID_UA });
 
-    const dflt = await req('GET', `/api/games/by-phone/${HOST_PHONE}`);
-    const all = await req('GET', `/api/games/by-phone/${HOST_PHONE}?all=1`);
+    const { getLocalHostAuthHeaders } = require('./_host-verification');
+    const hostAuth = await getLocalHostAuthHeaders(BASE, HOST_PHONE);
+    const dflt = await req('GET', `/api/games/by-phone/${HOST_PHONE}`, null, hostAuth);
+    const all = await req('GET', `/api/games/by-phone/${HOST_PHONE}?all=1`, null, hostAuth);
     const dfltIds = (dflt.json?.games || []).map((g) => g.gameId);
     const allIds = (all.json?.games || []).map((g) => g.gameId);
     dfltIds.every((id) => allIds.includes(id))
@@ -222,11 +224,11 @@ async function req(method, path, body, extraHeaders) {
       : bad(`registrationMode=${oldCard?.registrationMode} duration=${oldCard?.duration}`);
 
     await req('PUT', `/api/games/${live.json?.gameId}/notes`, { token: live.json?.hostToken, hostNotes: 'Bring cones' });
-    const allAgain = await req('GET', `/api/games/by-phone/${HOST_PHONE}?all=1`);
+    const allAgain = await req('GET', `/api/games/by-phone/${HOST_PHONE}?all=1`, null, hostAuth);
     const liveCard = (allAgain.json?.games || []).find((g) => g.gameId === live.json?.gameId);
     liveCard?.hostNotes === 'Bring cones' ? ok('notes show up in the host history') : bad(`hostNotes in history = ${JSON.stringify(liveCard?.hostNotes)}`);
 
-    const r1 = await req('GET', `/api/roster/${HOST_PHONE}`);
+    const r1 = await req('GET', `/api/roster/${HOST_PHONE}`, null, hostAuth);
     const player = (r1.json?.roster || []).find((p) => p.phone === PLAYER_PHONE);
     player ? ok('somebody who joined a game is on the roster') : bad(`roster: ${JSON.stringify(r1.json?.roster)}`);
     player?.isAndroid === 1 ? ok('their Android signup was captured') : bad(`roster isAndroid = ${player?.isAndroid}`);
@@ -234,16 +236,21 @@ async function req(method, path, body, extraHeaders) {
     !(r1.json?.roster || []).some((p) => p.phone === HOST_PHONE) ? ok('the host is not on their own roster') : bad('the host appears on their own roster');
 
     const put = await req('PUT', `/api/roster/${HOST_PHONE}/${PLAYER_PHONE}`,
-      { name: 'Host Typed Name', duprId: 'DUPR-4417', duprRating: '3.75' });
+      { name: 'Host Typed Name', duprId: 'DUPR-4417', duprRating: '3.75' }, hostAuth);
     put.status === 200 ? ok('the host can edit a roster entry') : bad(`roster PUT -> HTTP ${put.status}: ${put.text.slice(0, 150)}`);
 
-    const r2 = await req('GET', `/api/roster/${HOST_PHONE}`);
+    const r2 = await req('GET', `/api/roster/${HOST_PHONE}`, null, hostAuth);
     const edited = (r2.json?.roster || []).find((p) => p.phone === PLAYER_PHONE);
     edited?.name === 'Host Typed Name' ? ok('the host-typed name wins over the signup name') : bad(`name = ${JSON.stringify(edited?.name)}`);
     edited?.duprId === 'DUPR-4417' && edited?.duprRating === 3.75 ? ok('DUPR id and rating persist') : bad(`duprId=${edited?.duprId} duprRating=${edited?.duprRating}`);
     edited?.isAndroid === 1 ? ok('the edit did not wipe the Android flag') : bad(`isAndroid after edit = ${edited?.isAndroid}`);
 
-    const badRating = await req('PUT', `/api/roster/${HOST_PHONE}/${PLAYER_PHONE}`, { name: 'x', duprRating: 'abc' });
+    const badRating = await req(
+      'PUT',
+      `/api/roster/${HOST_PHONE}/${PLAYER_PHONE}`,
+      { name: 'x', duprRating: 'abc' },
+      hostAuth
+    );
     badRating.status === 400 ? ok('a nonsense DUPR rating is rejected') : bad(`bad rating -> HTTP ${badRating.status}, expected 400`);
   }
 

@@ -9,8 +9,8 @@ const {
 } = require('../sms-event-catalog');
 
 test('defines every outbound text trigger with stable dashboard copy', () => {
-  assert.equal(SMS_EVENT_DEFINITIONS.length, 20);
-  assert.equal(new Set(SMS_EVENT_DEFINITIONS.map((event) => event.id)).size, 20);
+  assert.equal(SMS_EVENT_DEFINITIONS.length, 21);
+  assert.equal(new Set(SMS_EVENT_DEFINITIONS.map((event) => event.id)).size, 21);
   SMS_EVENT_DEFINITIONS.forEach((event) => {
     assert.ok(event.id);
     assert.ok(event.title);
@@ -28,6 +28,7 @@ test('wires every dashboard event into an outgoing SMS path', () => {
     'routes/games.js',
     'routes/players.js',
     'services/reminders.js',
+    'services/host-verification.js',
     'services/sms-webhook.js'
   ].map((file) => fs.readFileSync(path.join(root, file), 'utf8')).join('\n');
 

@@ -1,40 +1,18 @@
-const STORAGE_KEY = 'hostPhone';
 let hostPhone = '';
 let loadedGames = [];
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('showGamesBtn').addEventListener('click', submitPhone);
-    document.getElementById('phoneInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') submitPhone();
-    });
-    document.getElementById('switchNumber').addEventListener('click', () => {
-        localStorage.removeItem(STORAGE_KEY);
-        location.reload();
-    });
     document.getElementById('textMeLinks').addEventListener('click', textMeMyLinks);
-
-    hostPhone = localStorage.getItem(STORAGE_KEY) || '';
-    if (hostPhone) {
-        loadGames();
-    } else {
-        document.getElementById('phoneGate').style.display = 'block';
-    }
+    HostVerification.init({
+        contentId: 'gamesBody',
+        switchButtonId: 'switchNumber',
+        showStatus,
+        onVerified: (phone) => {
+            hostPhone = phone;
+            return loadGames();
+        }
+    });
 });
-
-function submitPhone() {
-    const digits = (document.getElementById('phoneInput').value || '').replace(/\D/g, '');
-    const tenDigits = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
-
-    if (tenDigits.length !== 10) {
-        showStatus('Please enter a 10-digit phone number.', 'error');
-        return;
-    }
-
-    hostPhone = tenDigits;
-    localStorage.setItem(STORAGE_KEY, tenDigits);
-    document.getElementById('phoneGate').style.display = 'none';
-    loadGames();
-}
 
 function showStatus(message, type) {
     const el = document.getElementById('status');
@@ -43,8 +21,7 @@ function showStatus(message, type) {
     el.style.display = message ? 'block' : 'none';
 }
 
-const prettyPhone = (p) =>
-    p && p.length === 10 ? `(${p.slice(0, 3)}) ${p.slice(3, 6)}-${p.slice(6)}` : p;
+const prettyPhone = HostVerification.prettyPhone;
 
 /** Field-by-field parse: new Date('YYYY-MM-DD') is UTC and shows the day before here. */
 function formatDateForDisplay(dateStr) {
@@ -68,7 +45,13 @@ async function loadGames() {
 
     try {
         // ?all=1 is the full history - without it, cancelled games disappear after a week.
-        const response = await fetch(`/api/games/by-phone/${hostPhone}?all=1`);
+        const response = await fetch(`/api/games/by-phone/${hostPhone}?all=1`, {
+            headers: HostVerification.authHeaders()
+        });
+        if (response.status === 401) {
+            HostVerification.expireSession();
+            return;
+        }
         if (!response.ok) throw new Error(`Server returned ${response.status}`);
         const data = await response.json();
 
@@ -270,7 +253,7 @@ async function textMeMyLinks() {
     try {
         const response = await fetch('/api/games/lookup-and-notify', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: HostVerification.authHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ phone: hostPhone, sendSms: true })
         });
         const data = await response.json();

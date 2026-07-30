@@ -26,6 +26,7 @@ const mountLocationRoutes = require('./routes/locations');
 const mountCourtImageRoutes = require('./routes/court-images');
 const mountPhotoRoutes = require('./routes/photos');
 const mountRosterRoutes = require('./routes/roster');
+const mountHostVerificationRoutes = require('./routes/host-verification');
 const mountAnnouncementRoutes = require('./routes/announcements');
 const mountPlayerRoutes = require('./routes/players');
 const { mountPublicRandomizerRoutes } = require('./routes/message-randomizer');
@@ -124,6 +125,7 @@ app.post('/api/test-reminders', (req, res, next) => {
 });
 
 mountGameRoutes(app);
+mountHostVerificationRoutes(app);
 mountLocationRoutes(app);
 mountCourtImageRoutes(app);
 mountPhotoRoutes(app);

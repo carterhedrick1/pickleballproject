@@ -89,17 +89,38 @@ const clickTab = (i) => async (p) => {
   await cdp.sleep(1000);
 };
 
-// My Games, Roster and Stats all load from the server for whichever number is remembered on
-// the device, so priming them means storing the fixture host's phone - exactly what the phone
-// gate writes when a real host types it in. The fixtures then load through the real API.
+// My Games, Roster and Stats share a verified host session. The local SMS client returns its
+// simulated code only in local development, so the gallery can exercise the real request and
+// confirmation endpoints without sending a text.
 const seedHostPhone = (fx) => async (p) => {
-  await p.evaluate(
-    `localStorage.setItem('hostPhone', ${JSON.stringify(fx.HOST_PHONE)}); location.reload()`);
+  await p.evaluate(`(async () => {
+    const phone = ${JSON.stringify(fx.HOST_PHONE)};
+    if (localStorage.getItem('hostVerificationToken') &&
+        localStorage.getItem('hostPhone') === phone) {
+      location.reload();
+      return;
+    }
+    const requested = await fetch('/api/host-verification/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    }).then((response) => response.json());
+    const verified = await fetch('/api/host-verification/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code: requested.devCode })
+    }).then((response) => response.json());
+    if (!verified.token) throw new Error('Host verification fixture failed');
+    localStorage.setItem('hostPhone', phone);
+    localStorage.setItem('hostVerificationToken', verified.token);
+    location.reload();
+  })()`);
   await cdp.sleep(2600);
 };
 
 const clearHostPhone = async (p) => {
-  await p.evaluate(`localStorage.removeItem('hostPhone'); location.reload()`);
+  await p.evaluate(`localStorage.removeItem('hostPhone');
+    localStorage.removeItem('hostVerificationToken'); location.reload()`);
   await cdp.sleep(2000);
 };
 
@@ -287,12 +308,12 @@ function buildScreens(fx) {
       title: 'Wrong or missing token', note: 'What anyone without the host link sees.' },
 
     { file: 'my-games-gate', of: '/my-games.html', size: 'narrow', url: '/my-games.html',
-      title: 'Asking which number you host with',
-      note: 'What a host sees on a device that has not been used before. One number, once, and the games follow them anywhere.',
+      title: 'Verifying the host number',
+      note: 'What a host sees on a new device. A texted code confirms that the organizer actually controls the phone number.',
       act: clearHostPhone },
     { file: 'my-games-list', of: '/my-games.html', size: 'narrow', url: '/my-games.html',
       title: 'The host history',
-      note: 'Loaded from the server by phone number, split into upcoming and past. Each card has Manage, Copy Invitation and a private note.',
+      note: 'Loaded after phone verification, split into upcoming and past. Each card has Manage, Copy Invitation and a private note.',
       act: seedHostPhone(fx) },
 
     { file: 'roster-list', of: '/roster.html', size: 'narrow', url: '/roster.html',

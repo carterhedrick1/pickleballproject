@@ -339,6 +339,10 @@ body {
     padding: 0;
 }
 
+.phone-gate .switch-number {
+    margin: 14px 8px 0;
+}
+
 /* Empty state ------------------------------------------------------------- */
 
 .no-games {

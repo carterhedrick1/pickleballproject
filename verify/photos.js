@@ -14,10 +14,10 @@ const ok = (m) => console.log(`  PASS  ${m}`);
 const bad = (m) => { console.log(`  FAIL  ${m}`); failures++; };
 const check = (c, m) => (c ? ok(m) : bad(m));
 
-async function req(method, path, body) {
+async function req(method, path, body, extraHeaders = {}) {
   const res = await fetch(BASE + path, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...extraHeaders },
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
@@ -61,6 +61,7 @@ async function upload(gameId, token, bytes, { contentType = 'image/png', caption
 
   const created = await req('POST', '/api/games', {
     location: 'Test Court', organizerName: 'Host',
+    organizerPhone: '5555559001',
     organizerPlaying: false, date: '2026-09-19', time: '18:00', duration: 90,
     totalPlayers: 4, message: 'photo verification', registrationMode: 'fcfs',
   });
@@ -69,6 +70,8 @@ async function upload(gameId, token, bytes, { contentType = 'image/png', caption
     process.exit(1);
   }
   const { gameId, hostToken } = created.json;
+  const { getLocalHostAuthHeaders } = require('./_host-verification');
+  const hostAuth = await getLocalHostAuthHeaders(BASE, '5555559001');
   console.log(`test game: ${gameId}\n`);
 
   console.log('1. Only the host can upload');
@@ -134,7 +137,7 @@ async function upload(gameId, token, bytes, { contentType = 'image/png', caption
   check(thirteenth.status === 400, `a 13th -> HTTP ${thirteenth.status} (expected 400)`);
 
   console.log('\n9. My Games shows the count');
-  const byPhone = await req('GET', `/api/games/by-phone/5555559001?all=1`);
+  const byPhone = await req('GET', `/api/games/by-phone/5555559001?all=1`, null, hostAuth);
   check(byPhone.status === 200, 'the host history still answers');
   check(byPhone.json?.games?.every((g) => typeof g.photoCount === 'number'),
     'every card carries a photoCount');
