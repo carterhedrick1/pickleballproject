@@ -199,6 +199,110 @@ async function initializeDatabase() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS message_personalities (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            generation_guidance TEXT NOT NULL DEFAULT '',
+            enabled BOOLEAN NOT NULL DEFAULT FALSE,
+            is_default BOOLEAN NOT NULL DEFAULT FALSE,
+            locked_percent INTEGER NOT NULL DEFAULT 40 CHECK (locked_percent BETWEEN 0 AND 100),
+            fresh_pool_minimum INTEGER NOT NULL DEFAULT 10 CHECK (fresh_pool_minimum >= 0),
+            generation_batch_size INTEGER NOT NULL DEFAULT 10 CHECK (generation_batch_size > 0),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_message_personalities_one_default
+          ON message_personalities ((is_default))
+          WHERE is_default = TRUE
+        `);
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS personality_surface_settings (
+            personality_id TEXT NOT NULL REFERENCES message_personalities(id),
+            surface_id TEXT NOT NULL,
+            enabled BOOLEAN NOT NULL DEFAULT FALSE,
+            locked_percent_override INTEGER CHECK (
+              locked_percent_override IS NULL OR locked_percent_override BETWEEN 0 AND 100
+            ),
+            fresh_pool_minimum_override INTEGER CHECK (
+              fresh_pool_minimum_override IS NULL OR fresh_pool_minimum_override >= 0
+            ),
+            auto_publish_generated BOOLEAN NOT NULL DEFAULT FALSE,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (personality_id, surface_id)
+          )
+        `);
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS message_target_rules (
+            id TEXT PRIMARY KEY,
+            personality_id TEXT NOT NULL REFERENCES message_personalities(id),
+            target_phone TEXT NOT NULL,
+            target_display_name TEXT NOT NULL DEFAULT '',
+            game_id TEXT,
+            trigger_status TEXT NOT NULL CHECK (
+              trigger_status IN ('confirmed', 'waitlisted', 'applicant', 'out', 'any-known')
+            ),
+            surface_id TEXT NOT NULL,
+            audience TEXT NOT NULL CHECK (
+              audience IN ('target-only', 'confirmed', 'known-game-audience', 'invitation-copy')
+            ),
+            mode TEXT NOT NULL CHECK (mode IN ('exact', 'direction')),
+            exact_text TEXT,
+            generation_direction TEXT,
+            enabled BOOLEAN NOT NULL DEFAULT FALSE,
+            starts_at TIMESTAMP,
+            ends_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS randomizer_messages (
+            id TEXT PRIMARY KEY,
+            personality_id TEXT NOT NULL REFERENCES message_personalities(id),
+            surface_id TEXT NOT NULL,
+            text TEXT NOT NULL,
+            normalized_text TEXT NOT NULL,
+            source TEXT NOT NULL CHECK (source IN ('migrated', 'manual', 'generated')),
+            status TEXT NOT NULL CHECK (status IN ('draft', 'active', 'archived')),
+            locked BOOLEAN NOT NULL DEFAULT FALSE,
+            vetted BOOLEAN NOT NULL DEFAULT FALSE,
+            target_rule_id TEXT REFERENCES message_target_rules(id) ON DELETE SET NULL,
+            generation_direction TEXT,
+            generator_name TEXT,
+            generator_version TEXT,
+            prompt_version TEXT,
+            usage_count INTEGER NOT NULL DEFAULT 0,
+            last_used_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (personality_id, surface_id, normalized_text)
+          )
+        `);
+        await client.query(
+          'CREATE INDEX IF NOT EXISTS idx_randomizer_messages_pool ON randomizer_messages (personality_id, surface_id, status, locked)'
+        );
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS message_selection_events (
+            id TEXT PRIMARY KEY,
+            message_id TEXT REFERENCES randomizer_messages(id) ON DELETE SET NULL,
+            personality_id TEXT NOT NULL REFERENCES message_personalities(id),
+            surface_id TEXT NOT NULL,
+            game_id TEXT,
+            recipient_hash TEXT,
+            target_rule_id TEXT REFERENCES message_target_rules(id) ON DELETE SET NULL,
+            source_bucket TEXT NOT NULL CHECK (
+              source_bucket IN ('exact-target', 'directed-target', 'locked', 'fresh', 'fallback')
+            ),
+            selected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query(
+          'CREATE INDEX IF NOT EXISTS idx_message_selections_scope ON message_selection_events (personality_id, surface_id, selected_at DESC)'
+        );
         console.log('PostgreSQL tables initialized');
       } finally {
         client.release();
@@ -353,8 +457,102 @@ async function initializeDatabase() {
         content TEXT NOT NULL,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
+      await sqliteRun(`CREATE TABLE IF NOT EXISTS message_personalities (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        generation_guidance TEXT NOT NULL DEFAULT '',
+        enabled INTEGER NOT NULL DEFAULT 0,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        locked_percent INTEGER NOT NULL DEFAULT 40 CHECK (locked_percent BETWEEN 0 AND 100),
+        fresh_pool_minimum INTEGER NOT NULL DEFAULT 10 CHECK (fresh_pool_minimum >= 0),
+        generation_batch_size INTEGER NOT NULL DEFAULT 10 CHECK (generation_batch_size > 0),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      await sqliteRun(`CREATE UNIQUE INDEX IF NOT EXISTS idx_message_personalities_one_default
+        ON message_personalities (is_default) WHERE is_default = 1`);
+      await sqliteRun(`CREATE TABLE IF NOT EXISTS personality_surface_settings (
+        personality_id TEXT NOT NULL REFERENCES message_personalities(id),
+        surface_id TEXT NOT NULL,
+        enabled INTEGER NOT NULL DEFAULT 0,
+        locked_percent_override INTEGER CHECK (
+          locked_percent_override IS NULL OR locked_percent_override BETWEEN 0 AND 100
+        ),
+        fresh_pool_minimum_override INTEGER CHECK (
+          fresh_pool_minimum_override IS NULL OR fresh_pool_minimum_override >= 0
+        ),
+        auto_publish_generated INTEGER NOT NULL DEFAULT 0,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (personality_id, surface_id)
+      )`);
+      await sqliteRun(`CREATE TABLE IF NOT EXISTS message_target_rules (
+        id TEXT PRIMARY KEY,
+        personality_id TEXT NOT NULL REFERENCES message_personalities(id),
+        target_phone TEXT NOT NULL,
+        target_display_name TEXT NOT NULL DEFAULT '',
+        game_id TEXT,
+        trigger_status TEXT NOT NULL CHECK (
+          trigger_status IN ('confirmed', 'waitlisted', 'applicant', 'out', 'any-known')
+        ),
+        surface_id TEXT NOT NULL,
+        audience TEXT NOT NULL CHECK (
+          audience IN ('target-only', 'confirmed', 'known-game-audience', 'invitation-copy')
+        ),
+        mode TEXT NOT NULL CHECK (mode IN ('exact', 'direction')),
+        exact_text TEXT,
+        generation_direction TEXT,
+        enabled INTEGER NOT NULL DEFAULT 0,
+        starts_at DATETIME,
+        ends_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      await sqliteRun(`CREATE TABLE IF NOT EXISTS randomizer_messages (
+        id TEXT PRIMARY KEY,
+        personality_id TEXT NOT NULL REFERENCES message_personalities(id),
+        surface_id TEXT NOT NULL,
+        text TEXT NOT NULL,
+        normalized_text TEXT NOT NULL,
+        source TEXT NOT NULL CHECK (source IN ('migrated', 'manual', 'generated')),
+        status TEXT NOT NULL CHECK (status IN ('draft', 'active', 'archived')),
+        locked INTEGER NOT NULL DEFAULT 0,
+        vetted INTEGER NOT NULL DEFAULT 0,
+        target_rule_id TEXT REFERENCES message_target_rules(id) ON DELETE SET NULL,
+        generation_direction TEXT,
+        generator_name TEXT,
+        generator_version TEXT,
+        prompt_version TEXT,
+        usage_count INTEGER NOT NULL DEFAULT 0,
+        last_used_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (personality_id, surface_id, normalized_text)
+      )`);
+      await sqliteRun(
+        'CREATE INDEX IF NOT EXISTS idx_randomizer_messages_pool ON randomizer_messages (personality_id, surface_id, status, locked)'
+      );
+      await sqliteRun(`CREATE TABLE IF NOT EXISTS message_selection_events (
+        id TEXT PRIMARY KEY,
+        message_id TEXT REFERENCES randomizer_messages(id) ON DELETE SET NULL,
+        personality_id TEXT NOT NULL REFERENCES message_personalities(id),
+        surface_id TEXT NOT NULL,
+        game_id TEXT,
+        recipient_hash TEXT,
+        target_rule_id TEXT REFERENCES message_target_rules(id) ON DELETE SET NULL,
+        source_bucket TEXT NOT NULL CHECK (
+          source_bucket IN ('exact-target', 'directed-target', 'locked', 'fresh', 'fallback')
+        ),
+        selected_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      await sqliteRun(
+        'CREATE INDEX IF NOT EXISTS idx_message_selections_scope ON message_selection_events (personality_id, surface_id, selected_at DESC)'
+      );
       console.log('SQLite dev tables initialized');
     }
+    const { seedRealistAndMigrateSavedMessages } = require('./message-randomizer');
+    const migration = await seedRealistAndMigrateSavedMessages();
+    console.log(`Message Randomizer migration ready (${migration.total} vetted messages)`);
   } catch (err) {
     console.error('Database initialization error:', err);
     throw err;

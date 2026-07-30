@@ -61,6 +61,32 @@
     return slogan.replace(/\{NAME\}/g, name);
   }
 
+  function rememberMessageId(id) {
+    if (!id || typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      const key = 'inorout:site-slogan-recent';
+      const saved = JSON.parse(window.localStorage.getItem(key) || '[]');
+      const recent = [id, ...(Array.isArray(saved) ? saved : []).filter(function(item) {
+        return item !== id;
+      })].slice(0, 5);
+      window.localStorage.setItem(key, JSON.stringify(recent));
+    } catch (_error) {
+      // Storage is only a no-repeat hint. Selection still works when it is unavailable.
+    }
+  }
+
+  function recentMessageIds() {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
+    try {
+      const saved = JSON.parse(
+        window.localStorage.getItem('inorout:site-slogan-recent') || '[]'
+      );
+      return Array.isArray(saved) ? saved.filter(Boolean).slice(0, 5) : [];
+    } catch (_error) {
+      return [];
+    }
+  }
+
   let pageSloganPromise;
 
   function getForPage() {
@@ -75,6 +101,37 @@
         } catch (_err) {
           // The built-in list keeps the brand visible if the API is temporarily unavailable.
         }
+        const fallback = choose(config);
+        try {
+          const name = randomItem(config.names);
+          const params = new URLSearchParams({
+            surface: 'site-slogan',
+            fallback: fallback,
+            name: name
+          });
+          const pageParams = new URLSearchParams(window.location.search);
+          if (
+            /\/game\.html$/.test(window.location.pathname) &&
+            pageParams.get('id')
+          ) {
+            params.set('gameId', pageParams.get('id'));
+          }
+          const exclude = recentMessageIds();
+          if (exclude.length) params.set('exclude', exclude.join(','));
+          const response = await window.fetch(`/api/random-message?${params}`, {
+            headers: { Accept: 'application/json' }
+          });
+          if (response.ok) {
+            const result = await response.json();
+            if (result && result.text) {
+              rememberMessageId(result.id);
+              return result.text;
+            }
+          }
+        } catch (_err) {
+          // The legacy saved rotation remains the page-level fallback.
+        }
+        return fallback;
       }
       return choose(config);
     })();
@@ -87,6 +144,8 @@
     DEFAULT_NAMES: DEFAULT_NAMES,
     normalizeConfig: normalizeConfig,
     choose: choose,
+    recentMessageIds: recentMessageIds,
+    rememberMessageId: rememberMessageId,
     getForPage: getForPage
   };
 });

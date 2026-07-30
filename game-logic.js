@@ -107,6 +107,8 @@ function createGameData(formData) {
     totalPlayers,
     message: formData.message,
     registrationMode: formData.registrationMode || 'fcfs',
+    personalityId: String(formData.personalityId || '').trim() || 'realist',
+    invitedPlayers: [],
     waitlist: [],
     notificationPreferences: {
       gameFull: formData.notificationPreferences?.gameFull ?? true,

@@ -142,6 +142,21 @@ const openDeveloperStatus = async (p) => {
   await cdp.sleep(900);
 };
 
+const openDeveloperMessageRandomizer = async (p) => {
+  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  await p.evaluate(`(async () => {
+    const response = await fetch('/api/dev/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: ${password} })
+    });
+    if (!response.ok) throw new Error('Developer sign-in failed');
+    showApp();
+    document.querySelector('[data-tab="message-randomizer"]').click();
+  })()`);
+  await cdp.sleep(1000);
+};
+
 const openDeveloperRules = async (p) => {
   const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
   await p.evaluate(`(async () => {
@@ -282,6 +297,10 @@ function buildScreens(fx) {
       title: 'Status And Text Events',
       note: 'Live operational health plus every outbound text trigger, with totals, recent counts, failures, retries and unique recipients.',
       act: openDeveloperStatus },
+    { file: 'dev-message-randomizer', of: '/dev.html', size: 'tall', url: '/dev.html',
+      title: 'Message Randomizer',
+      note: 'The Realist personality, per-surface rollout controls, all 41 locked vetted favorites, generation review, phone-backed target rules and no-usage preview.',
+      act: openDeveloperMessageRandomizer },
     { file: 'dev-images', of: '/dev.html', size: 'wide', url: '/dev.html',
       title: 'Images',
       note: 'Every uploaded court image and game photo, with the uploader’s name and a developer-only delete control.',

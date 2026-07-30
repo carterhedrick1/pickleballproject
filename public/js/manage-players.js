@@ -76,6 +76,7 @@ function renderHostRoster() {
     });
     actions.hidden = false;
     updateRosterSelectionState();
+    renderIntendedInvitees();
 }
 
 async function loadHostRoster() {
@@ -107,6 +108,71 @@ async function loadHostRoster() {
     }
 
     renderHostRoster();
+}
+
+function renderIntendedInvitees() {
+    const list = document.getElementById('intendedInviteeList');
+    const status = document.getElementById('intendedInviteeStatus');
+    const button = document.getElementById('saveIntendedInvitees');
+    if (!list || !status || !button) return;
+    list.innerHTML = '';
+    if (hostRosterState === 'loading' || hostRosterState === 'idle') {
+        status.textContent = 'Loading your roster...';
+        button.disabled = true;
+        return;
+    }
+    if (hostRosterState === 'error') {
+        status.textContent = 'Could not load your roster.';
+        button.disabled = true;
+        return;
+    }
+    const selectedPhones = new Set(
+        (gameData?.invitedPlayers || []).map((player) => normalizedPlayerPhone(player.phone))
+    );
+    if (!hostRoster.length) {
+        status.textContent = 'Your roster is empty.';
+        button.disabled = true;
+        return;
+    }
+    hostRoster.forEach((player) => {
+        const label = document.createElement('label');
+        label.className = 'roster-picker-option';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.className = 'intended-invitee-checkbox';
+        input.dataset.phone = player.phone;
+        input.checked = selectedPhones.has(normalizedPlayerPhone(player.phone));
+        const name = document.createElement('span');
+        name.textContent = player.name || player.phone;
+        label.append(input, name);
+        list.appendChild(label);
+    });
+    status.textContent = `${selectedPhones.size} intended invitee${selectedPhones.size === 1 ? '' : 's'} saved. Copying an invitation does not confirm delivery.`;
+    button.disabled = false;
+}
+
+async function saveIntendedInvitees() {
+    const button = document.getElementById('saveIntendedInvitees');
+    const status = document.getElementById('intendedInviteeStatus');
+    const playerPhones = Array.from(document.querySelectorAll(
+        '.intended-invitee-checkbox:checked'
+    )).map((input) => input.dataset.phone);
+    button.disabled = true;
+    status.textContent = 'Saving intended invitees...';
+    try {
+        const response = await fetch(`/api/games/${gameId}/invitees`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: hostToken, playerPhones })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Could not save intended invitees');
+        gameData.invitedPlayers = data.intendedInvitees || [];
+        renderIntendedInvitees();
+    } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+    }
 }
 
 async function postHostPlayer(player, addTo) {

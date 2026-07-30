@@ -142,6 +142,11 @@ module.exports = function mountPlayerRoutes(app) {
               DATE: gameDate,
               TIME: gameTime,
               STATUS: result.previousStatus || 'out'
+            },
+            {
+              game,
+              gameId,
+              recipientPhone: playerData.phone
             }
           );
           smsResult = await sendSMSWithRetry(playerData.phone, message, gameId, {
@@ -151,7 +156,12 @@ module.exports = function mountPlayerRoutes(app) {
 
         if (result.promotedPlayer?.phone) {
           const promoted = result.promotedPlayer;
-          const promoMessage = await buildSelectedPlayerMessage(game, game.players.length);
+          const promoMessage = await buildSelectedPlayerMessage(
+            game,
+            game.players.length,
+            promoted.phone,
+            gameId
+          );
           const promoResult = await sendSMSWithRetry(promoted.phone, promoMessage, gameId, {
             eventId: 'player-confirmed'
           });
@@ -202,7 +212,12 @@ module.exports = function mountPlayerRoutes(app) {
 
         let message;
         if (result.status === 'confirmed') {
-          message = await buildSelectedPlayerMessage(game, result.position);
+          message = await buildSelectedPlayerMessage(
+            game,
+            result.position,
+            playerData.phone,
+            gameId
+          );
         } else {
           // Handle waitlist mode vs regular waitlist
           if (result.hidePosition || game.registrationMode === 'waitlist') {
@@ -222,6 +237,11 @@ module.exports = function mountPlayerRoutes(app) {
               DATE: gameDate,
               TIME: gameTime,
               POSITION: result.position
+            },
+            {
+              game,
+              gameId,
+              recipientPhone: playerData.phone
             }
           );
         }
@@ -322,7 +342,12 @@ module.exports = function mountPlayerRoutes(app) {
 
         let message;
         if (result.status === 'confirmed') {
-          message = await buildSelectedPlayerMessage(game, result.position);
+          message = await buildSelectedPlayerMessage(
+            game,
+            result.position,
+            playerData.phone,
+            gameId
+          );
         } else {
           message = `You've been added to the waitlist for the pickleball game at ${locationText}. You are #${result.position} on the waitlist. You'll be notified if a spot opens up! Reply 2 for details or 9 to cancel.`;
           message = await resolveTextMessage(
@@ -335,6 +360,11 @@ module.exports = function mountPlayerRoutes(app) {
               DATE: gameDate,
               TIME: gameTime,
               POSITION: result.position
+            },
+            {
+              game,
+              gameId,
+              recipientPhone: playerData.phone
             }
           );
         }
@@ -402,6 +432,11 @@ module.exports = function mountPlayerRoutes(app) {
             TIME: gameTime,
             POSITION: game.waitlist.length,
             STATUS: 'waitlist'
+          },
+          {
+            game,
+            gameId,
+            recipientPhone: player.phone
           }
         );
         smsResult = await sendSMS(player.phone, message, gameId, {
@@ -444,7 +479,12 @@ module.exports = function mountPlayerRoutes(app) {
       const player = result.player;
       let smsResult = null;
       if (player.phone) {
-        const message = await buildSelectedPlayerMessage(game, game.players.length);
+        const message = await buildSelectedPlayerMessage(
+          game,
+          game.players.length,
+          player.phone,
+          gameId
+        );
         // Retried for the same reason as the promotion above: a promotion the player never hears
         // about looks identical to still being on the waitlist.
         smsResult = await sendSMSWithRetry(player.phone, message, gameId, {
@@ -502,6 +542,11 @@ module.exports = function mountPlayerRoutes(app) {
             DATE: gameDate,
             TIME: gameTime,
             STATUS: removalType
+          },
+          {
+            game,
+            gameId,
+            recipientPhone: removedPlayer.phone
           }
         );
         removalSmsResult = await sendSMS(removedPlayer.phone, message, gameId, {
@@ -512,7 +557,12 @@ module.exports = function mountPlayerRoutes(app) {
       // Send promotion SMS if someone was promoted from waitlist (this already exists in the logic)
       let promotionSmsResult = null;
       if (result.promotedPlayer?.phone) {
-        const message = await buildSelectedPlayerMessage(game, game.players.length);
+        const message = await buildSelectedPlayerMessage(
+          game,
+          game.players.length,
+          result.promotedPlayer.phone,
+          gameId
+        );
         // Retried: this is the one text nobody can recover from missing. The player has been
         // moved onto the roster in the database either way, so if it never arrives they believe
         // they are still on the waitlist and simply do not turn up.

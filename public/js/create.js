@@ -21,6 +21,7 @@
             const organizerPlaying = document.getElementById('organizerPlaying');
             organizerPlaying.addEventListener('change', updatePlayersHelp);
             updatePlayersHelp();
+            loadMessagePersonalities();
             setupLocationPicker();
             document.querySelectorAll('[data-checkbox-id]').forEach((element) => {
                 element.addEventListener('click', (event) => {
@@ -33,6 +34,36 @@
                 });
             });
         });
+
+        async function loadMessagePersonalities() {
+            const select = document.getElementById('personalityId');
+            const help = document.getElementById('personalityHelp');
+            try {
+                const response = await fetch('/api/message-personalities');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                const personalities = Array.isArray(data.personalities) ? data.personalities : [];
+                if (!personalities.length) throw new Error('No enabled personalities');
+                select.innerHTML = '';
+                personalities.forEach((personality) => {
+                    const option = document.createElement('option');
+                    option.value = personality.id;
+                    option.textContent = personality.name;
+                    option.dataset.description = personality.description || '';
+                    option.selected = personality.isDefault === true;
+                    select.appendChild(option);
+                });
+                const updateHelp = () => {
+                    help.textContent = select.selectedOptions[0]?.dataset.description ||
+                        'This personality shapes future randomized copy for the game.';
+                };
+                select.addEventListener('change', updateHelp);
+                updateHelp();
+            } catch (error) {
+                // The built-in Realist option keeps game creation available during an API failure.
+                console.warn('Could not load message personalities:', error);
+            }
+        }
 
         function updatePlayersHelp() {
             const organizerPlaying = document.getElementById('organizerPlaying').checked;
@@ -340,6 +371,7 @@ async function createGame(e) {
         playersNeeded,
         message: formData.get('message'),
         registrationMode: formData.get('registrationMode'),
+        personalityId: formData.get('personalityId') || 'realist',
         notificationPreferences: notificationPreferences,
         hostPhone: formData.get('organizerPhone')
     };
@@ -381,6 +413,7 @@ async function createGame(e) {
                 PlayerCapacity.totalFromAdditional(playersNeeded, organizerPlaying),
             organizerPlaying: gameData.organizerPlaying,
             registrationMode: gameData.registrationMode,
+            personalityId: gameData.personalityId,
             message: gameData.message,
             created: new Date().toISOString(),
             cancelled: false
@@ -457,7 +490,9 @@ async function createGame(e) {
             InvitationGenerator.copyInvitationToClipboard(
                 currentGameData,
                 window.currentGameId,
-                'copyLink'
+                'copyLink',
+                null,
+                currentGameData.hostToken
             );
         }
 

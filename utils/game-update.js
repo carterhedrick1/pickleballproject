@@ -13,7 +13,8 @@ const EDITABLE_FIELDS = [
   'duration',
   'totalPlayers',
   'message',
-  'registrationMode'
+  'registrationMode',
+  'personalityId'
 ];
 
 const NOTIFICATION_FIELDS = [

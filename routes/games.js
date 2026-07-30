@@ -15,7 +15,10 @@ const {
   getGamesByHostPhone,
   deleteGamePermanently,
   addLocation,
-  getAllPhotoCounts
+  getAllPhotoCounts,
+  getPersonality,
+  getDefaultPersonality,
+  getRosterForHost
 } = require('../database');
 
 const {
@@ -38,6 +41,7 @@ const { isHost } = require('../utils/host-auth');
 const { applyGameUpdate } = require('../utils/game-update');
 const { resolveTextMessage } = require('../services/text-message-rotation');
 const { appendCustomReplyInstructions } = require('../sms-reply-options');
+const { buildRandomizedInvitation } = require('../services/invitation-message');
 
 module.exports = function mountGameRoutes(app) {
   app.post('/api/games', async (req, res) => {
@@ -50,6 +54,11 @@ module.exports = function mountGameRoutes(app) {
       // Create game data using our game logic
       const gameData = createGameData(req.body);
       gameData.hostToken = hostToken;
+      const requestedPersonality = await getPersonality(gameData.personalityId);
+      if (!requestedPersonality?.enabled) {
+        const defaultPersonality = await getDefaultPersonality();
+        gameData.personalityId = defaultPersonality?.id || 'realist';
+      }
       
       const hostPhone = req.body.hostPhone || req.body.organizerPhone;
 
@@ -95,7 +104,12 @@ module.exports = function mountGameRoutes(app) {
         let hostMessage = await resolveTextMessage(
           'game-created',
           defaultHostMessage,
-          { LOCATION: locationText, DATE: gameDate, TIME: gameTime }
+          { LOCATION: locationText, DATE: gameDate, TIME: gameTime },
+          {
+            game: gameData,
+            gameId,
+            recipientPhone: formattedHostPhone
+          }
         );
         hostMessage = await appendCustomReplyInstructions(hostMessage, 'host');
         smsResult = await sendSMS(formattedHostPhone, hostMessage, gameId, {
@@ -134,7 +148,7 @@ module.exports = function mountGameRoutes(app) {
       }
 
       // hostNotes are the host's private reminders ("gate code 4417") - never public.
-      const { hostToken, hostNotes, ...publicGame } = game;
+      const { hostToken, hostNotes, invitedPlayers, ...publicGame } = game;
       res.json(publicGame);
     } catch (error) {
       routeFailed(req, res, error, 'Failed to fetch game');
@@ -159,6 +173,12 @@ module.exports = function mountGameRoutes(app) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
       
+      if (Object.prototype.hasOwnProperty.call(updateData, 'personalityId')) {
+        const personality = await getPersonality(updateData.personalityId);
+        if (!personality?.enabled) {
+          return res.status(400).json({ error: 'Choose an enabled personality.' });
+        }
+      }
       applyGameUpdate(game, updateData);
       
       console.log('[SERVER] Saving game with notification preferences:', game.notificationPreferences);
@@ -184,6 +204,73 @@ module.exports = function mountGameRoutes(app) {
       });
     } catch (error) {
       routeFailed(req, res, error, 'Failed to update game');
+    } finally {
+      releaseLock();
+    }
+  });
+
+  app.post('/api/games/:id/invitation-message', async (req, res) => {
+    try {
+      const gameId = req.params.id;
+      const game = await getGame(gameId);
+      if (!game) return res.status(404).json({ error: 'Game not found' });
+      if (!isHost(game, req.body && req.body.token)) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+      if (game.cancelled) {
+        return res.status(400).json({ error: 'Invitations cannot be copied for a cancelled game.' });
+      }
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const result = await buildRandomizedInvitation(game, gameId, baseUrl);
+      res.json({
+        message: result.text,
+        messageId: result.messageId,
+        personalityId: result.personalityId,
+        sourceBucket: result.sourceBucket,
+        targetRuleId: result.targetRuleId
+      });
+    } catch (error) {
+      routeFailed(req, res, error, 'Failed to build invitation');
+    }
+  });
+
+  app.put('/api/games/:id/invitees', async (req, res) => {
+    const gameId = req.params.id;
+    const releaseLock = await acquireGameLock(gameId);
+    try {
+      const game = await getGame(gameId);
+      if (!game) return res.status(404).json({ error: 'Game not found' });
+      if (!isHost(game, req.body && req.body.token)) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+      const requestedPhones = Array.isArray(req.body && req.body.playerPhones)
+        ? req.body.playerPhones.map(formatPhoneNumber).filter((phone) => phone.length === 10)
+        : [];
+      if (requestedPhones.length > 200) {
+        return res.status(400).json({ error: 'Choose up to 200 intended invitees.' });
+      }
+      const roster = await getRosterForHost(game.hostPhone);
+      const rosterByPhone = new Map(roster.map((player) => [player.playerPhone, player]));
+      const uniquePhones = [...new Set(requestedPhones)];
+      const unknown = uniquePhones.filter((phone) => !rosterByPhone.has(phone));
+      if (unknown.length) {
+        return res.status(400).json({
+          error: 'Every intended invitee must come from the organizer’s saved roster.'
+        });
+      }
+      game.invitedPlayers = uniquePhones.map((phone) => ({
+        phone,
+        name: rosterByPhone.get(phone).name || ''
+      }));
+      await saveGame(gameId, game, game.hostToken, game.hostPhone);
+      releaseLock();
+      res.json({
+        success: true,
+        intendedInvitees: game.invitedPlayers,
+        note: 'These people were selected as intended invitees. Copying does not confirm delivery.'
+      });
+    } catch (error) {
+      routeFailed(req, res, error, 'Failed to save intended invitees');
     } finally {
       releaseLock();
     }
@@ -254,6 +341,11 @@ module.exports = function mountGameRoutes(app) {
           DATE: gameDate,
           TIME: gameTime,
           REASON: cancellationReason
+        },
+        {
+          game,
+          gameId,
+          audience: 'known-game-audience'
         }
       );
       
@@ -482,6 +574,11 @@ module.exports = function mountGameRoutes(app) {
             TIME: formatTimeForSMS(templateGame.time),
             MANAGEMENT_LINK: templateGame.managementLink,
             GAME_COUNT: recentGames.length
+          },
+          {
+            game: templateGame,
+            gameId: templateGame.gameId || null,
+            recipientPhone: phoneNumber
           }
         );
         smsResult = await sendSMS(phoneNumber, message, templateGame.gameId || null, {

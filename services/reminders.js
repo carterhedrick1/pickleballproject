@@ -117,6 +117,11 @@ async function checkAndSendReminders() {
               DATE: formatDateForSMS(game.date),
               TIME: formatTimeForSMS(game.time),
               DAY: gameDay
+            },
+            {
+              game,
+              gameId,
+              recipientPhone: player.phone
             }
           );
           message = await appendCustomReplyInstructions(message, 'player');

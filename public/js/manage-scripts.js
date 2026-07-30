@@ -289,6 +289,7 @@ async function fetchGameData() {
         }
         
         // Populate game details (this will set notification preferences)
+        await loadManagePersonalities();
         populateGameDetails();
         
         // Populate player lists
@@ -315,6 +316,38 @@ async function fetchGameData() {
         console.error('Error:', error);
         showStatus('Error loading game: ' + error.message, 'error');
         document.getElementById('loading').style.display = 'none';
+    }
+}
+
+async function loadManagePersonalities() {
+    const select = document.getElementById('personalityId');
+    const help = document.getElementById('personalityHelp');
+    if (!select) return;
+    try {
+        const response = await fetch('/api/message-personalities');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        const personalities = Array.isArray(data.personalities) ? data.personalities : [];
+        if (!personalities.length) throw new Error('No enabled personalities');
+        select.innerHTML = '';
+        personalities.forEach((personality) => {
+            const option = document.createElement('option');
+            option.value = personality.id;
+            option.textContent = personality.name;
+            option.dataset.description = personality.description || '';
+            select.appendChild(option);
+        });
+        select.value = gameData.personalityId || personalities.find(
+            (personality) => personality.isDefault
+        )?.id || personalities[0].id;
+        const updateHelp = () => {
+            help.textContent = `${select.selectedOptions[0]?.dataset.description || ''} Changing this affects future copy only.`;
+        };
+        select.addEventListener('change', updateHelp);
+        updateHelp();
+    } catch (error) {
+        select.value = gameData.personalityId || 'realist';
+        help.textContent = 'Changing this affects future copy only.';
     }
 }
 
@@ -376,6 +409,11 @@ function setupEventListeners() {
     const addRosterPlayersBtn = document.getElementById('addRosterPlayersBtn');
     if (addRosterPlayersBtn) {
         addRosterPlayersBtn.addEventListener('click', addPlayersFromRoster);
+    }
+
+    const saveIntendedInviteesBtn = document.getElementById('saveIntendedInvitees');
+    if (saveIntendedInviteesBtn) {
+        saveIntendedInviteesBtn.addEventListener('click', saveIntendedInvitees);
     }
     
     // Announcement form
@@ -460,6 +498,7 @@ function populateGameDetails() {
         ? 'You are Player 1. Enter only the number of other players needed.'
         : 'Enter the total number of players needed. No organizer is included.';
     document.getElementById('message').value = gameData.message || '';
+    document.getElementById('personalityId').value = gameData.personalityId || 'realist';
     
     // Set notification preferences with explicit error handling
     console.log('[CLIENT] Setting notification preferences...');
@@ -557,6 +596,7 @@ async function updateGameDetails() {
             duration: document.getElementById('duration').value,
             playersNeeded: document.getElementById('players').value,
             message: document.getElementById('message').value,
+            personalityId: document.getElementById('personalityId').value,
             notificationPreferences: formattedPreferences,
             token: hostToken
         };
@@ -607,6 +647,7 @@ async function updateGameDetails() {
                 gameData.organizerPlaying === true
             ),
             message: document.getElementById('message').value,
+            personalityId: document.getElementById('personalityId').value,
             // Keep other existing properties like id, hostToken, created, etc.
         };
         
@@ -779,7 +820,7 @@ function populateShareLinks() {
 }
 
 
-function copyPlayerInvitation(buttonId) {
+async function copyPlayerInvitation(buttonId) {
     // Check if game is expired or cancelled
     if (!GameUtils.getGameStatus(gameData).canEdit) {
         showStatus('Cannot share invitations for expired games', 'error');
@@ -803,10 +844,12 @@ function copyPlayerInvitation(buttonId) {
     console.log('[COPY] Game data prepared for invitation:', gameDataForInvitation);
     console.log('[COPY] Registration mode being passed:', gameDataForInvitation.registrationMode);
     
-    InvitationGenerator.copyInvitationToClipboard(
+    await InvitationGenerator.copyInvitationToClipboard(
         gameDataForInvitation,
         gameId,
-        buttonId || 'copyPlayerLink'
+        buttonId || 'copyPlayerLink',
+        null,
+        hostToken
     );
 }
 

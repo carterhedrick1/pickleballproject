@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 
 const {
   renderTemplate,
-  selectCategoryMessage
+  selectCategoryMessage,
+  resolveTextMessageWithConfig
 } = require('../services/text-message-rotation');
 const { TEXT_MESSAGE_CATEGORIES } = require('../text-message-categories');
 
@@ -159,4 +160,52 @@ test('builds both sections for every toggle-controlled category', () => {
         `${category.id} should resolve every supported value`
       );
     });
+});
+
+test('shared resolver adds one stored opening while preserving deterministic SMS details', async () => {
+  const database = {
+    async getPersonality() {
+      return { id: 'realist', enabled: true, lockedPercent: 100 };
+    },
+    async getDefaultPersonality() {
+      return { id: 'realist', enabled: true, lockedPercent: 100 };
+    },
+    async getSurfaceSetting() {
+      return { enabled: true, lockedPercentOverride: null };
+    },
+    async getSelectionHistory() {
+      return [];
+    },
+    async listTargetRules() {
+      return [];
+    },
+    async listRandomizerMessages() {
+      return [{
+        id: 'reminder-opening',
+        text: 'The calendar has entered the chat.',
+        locked: true,
+        targetRuleId: null
+      }];
+    },
+    async recordSelection() {}
+  };
+  const deterministic =
+    'Reminder: Your game is tomorrow at 9:00 AM at Oak Park. Reply 9 to cancel.';
+  const message = await resolveTextMessageWithConfig(
+    { categories: { 'upcoming-reminder': { enabled: false, messages: [] } } },
+    'upcoming-reminder',
+    deterministic,
+    {},
+    () => 0,
+    {
+      database,
+      game: { personalityId: 'realist', players: [{ phone: '8165550101' }] },
+      gameId: 'game-1',
+      recipientPhone: '8165550101'
+    }
+  );
+  assert.equal(
+    message,
+    `The calendar has entered the chat.\n\n${deterministic}`
+  );
 });

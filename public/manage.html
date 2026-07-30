@@ -101,6 +101,14 @@
                             <textarea id="message" name="message" rows="3" placeholder="Any additional info for players..."></textarea>
                         </div>
 
+                        <div class="form-group">
+                            <label for="personalityId">Personality:</label>
+                            <select id="personalityId" name="personalityId" required>
+                                <option value="realist">Realist</option>
+                            </select>
+                            <div id="personalityHelp" class="form-help-text">Changing this affects future copy only.</div>
+                        </div>
+
                         <div class="form-group notifications-section">
                             <label>Organizer Notifications:</label>
                             <div class="form-help-text">Get SMS alerts when these events happen (optional)</div>
@@ -170,6 +178,14 @@
                         
                         <button type="submit">Update Game Details</button>
                     </form>
+
+                    <section class="roster-picker" aria-labelledby="intendedInviteesTitle" style="margin-top:24px">
+                        <h3 id="intendedInviteesTitle">Intended Invitees</h3>
+                        <p class="form-help-text">Select people you intend to include when you copy the invitation. IN or OUT records intent only; it does not know who receives a message copied into another app.</p>
+                        <div id="intendedInviteeStatus" class="roster-picker-status" aria-live="polite">Loading your roster...</div>
+                        <div id="intendedInviteeList" class="roster-picker-list"></div>
+                        <button type="button" id="saveIntendedInvitees">Save Intended Invitees</button>
+                    </section>
                 </div>
                         
                 <div class="share-section">
@@ -345,6 +361,12 @@
                             <label for="announcementText">Message:</label>
                             <textarea id="announcementText" name="announcementText" rows="4" placeholder="Type your message to players..." required></textarea>
                         </div>
+
+                        <div class="checkbox-option">
+                            <input type="checkbox" id="announcementPersonalityWrapper" name="announcementPersonalityWrapper">
+                            <label for="announcementPersonalityWrapper">Add The Game Personality Opening</label>
+                        </div>
+                        <p class="form-help-text">Off by default. Your authored announcement is always kept unchanged.</p>
                         
                         <div class="form-group">
                             <label>Send To:</label>

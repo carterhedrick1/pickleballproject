@@ -39,6 +39,7 @@ describe('applyGameUpdate', () => {
       totalPlayers: '8',
       message: 'New message',
       registrationMode: 'waitlist',
+      personalityId: 'realist',
       notificationPreferences: {
         gameFull: false,
         playerJoins: false,
@@ -55,6 +56,7 @@ describe('applyGameUpdate', () => {
     assert.equal(game.totalPlayers, '8');
     assert.equal(game.message, 'New message');
     assert.equal(game.registrationMode, 'waitlist');
+    assert.equal(game.personalityId, 'realist');
     assert.deepEqual(game.notificationPreferences, {
       gameFull: false,
       playerJoins: false,

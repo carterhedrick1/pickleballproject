@@ -1,6 +1,6 @@
 const { formatPhoneNumber } = require('./sms-format');
 
-const PLAYER_LIST_FIELDS = ['players', 'waitlist', 'outPlayers'];
+const PLAYER_LIST_FIELDS = ['players', 'waitlist', 'outPlayers', 'invitedPlayers'];
 
 function chooseDeveloperRosterSource({
   production = false,

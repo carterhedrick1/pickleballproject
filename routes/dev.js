@@ -37,7 +37,8 @@ const {
   deleteUploadedImage,
   getLocations,
   saveCourtImage,
-  saveCourtImageToLibrary
+  saveCourtImageToLibrary,
+  syncLegacySurfaceMessages
 } = require('../database');
 const {
   buildDeveloperRosters,
@@ -363,6 +364,8 @@ module.exports = function mountDevRoutes(app) {
     message: { error: 'Too many error reports.' }
   });
 
+  require('./message-randomizer').mountDevRandomizerRoutes(app, requireDevAuth);
+
   // -------------------------------------------------------------------------
   // Sign in / sign out
   // -------------------------------------------------------------------------
@@ -405,6 +408,7 @@ module.exports = function mountDevRoutes(app) {
     if (result.error) return res.status(400).json({ error: result.error });
     try {
       await saveDevAsset(SLOGAN_ASSET_NAME, JSON.stringify(result.config));
+      await syncLegacySurfaceMessages('realist', 'site-slogan', result.config.slogans);
       res.json({ success: true, ...result.config });
     } catch (err) {
       console.error('Error saving slogans:', err);
@@ -426,6 +430,7 @@ module.exports = function mountDevRoutes(app) {
         detailsTemplate: current.detailsTemplate
       });
       await saveDevAsset(YOURE_IN_ASSET_NAME, JSON.stringify(config));
+      await syncLegacySurfaceMessages('realist', 'youre-in', config.messages);
       res.json({ success: true, ...config });
     } catch (err) {
       console.error('Error saving You\'re In texts:', err);
@@ -473,6 +478,7 @@ module.exports = function mountDevRoutes(app) {
           detailsTemplate: result.detailsTemplate
         });
         await saveDevAsset(YOURE_IN_ASSET_NAME, JSON.stringify(config));
+        await syncLegacySurfaceMessages('realist', 'youre-in', config.messages);
         return res.json({
           success: true,
           messages: config.messages,

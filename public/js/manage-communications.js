@@ -31,6 +31,9 @@ async function sendAnnouncement() {
             body: JSON.stringify({
                 message,
                 recipients: recipients,
+                personalityWrapper: document.getElementById(
+                    'announcementPersonalityWrapper'
+                ).checked,
                 token: hostToken
             })
         });
@@ -45,6 +48,7 @@ async function sendAnnouncement() {
         
         // Reset form
         document.getElementById('announcementText').value = '';
+        document.getElementById('announcementPersonalityWrapper').checked = false;
         clearAllRecipientSelections();
         
         showStatus(`Announcement sent to ${data.recipientCount} players`, 'success');
@@ -455,4 +459,3 @@ window.ManageApp.communications = {
     updatePlayerCheckboxes
 
 };
-

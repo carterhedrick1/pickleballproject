@@ -214,6 +214,47 @@
   .name-chip button { padding: 1px 6px; border-radius: 50%; background: transparent; color: var(--brand); }
   .name-chip button:hover { background: var(--brand-soft); }
 
+  /* Message Randomizer */
+  .randomizer-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;
+  }
+  .randomizer-grid .full { grid-column: 1 / -1; }
+  .randomizer-toggle {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted);
+  }
+  .randomizer-surface-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .randomizer-surface-table th, .randomizer-surface-table td {
+    border-bottom: 1px solid var(--border); padding: 10px 8px; text-align: left;
+    vertical-align: middle;
+  }
+  .randomizer-surface-table th { color: var(--muted); font-size: 12px; }
+  .randomizer-surface-table input[type="number"] { min-width: 78px; padding: 7px 8px; }
+  .randomizer-scroll { overflow-x: auto; }
+  .randomizer-library-row {
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+    margin-bottom: 9px; background: var(--surface);
+  }
+  .randomizer-library-copy { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+  .randomizer-meta {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 9px;
+    color: var(--muted); font-size: 12px;
+  }
+  .randomizer-badge {
+    display: inline-flex; border-radius: 999px; padding: 3px 8px;
+    background: var(--canvas); border: 1px solid var(--border);
+  }
+  .randomizer-badge.favorite { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
+  .randomizer-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+  .randomizer-actions button { font-size: 12px; padding: 6px 9px; }
+  .randomizer-preview {
+    white-space: pre-wrap; padding: 14px; border-radius: 10px; background: var(--canvas);
+    min-height: 78px; overflow-wrap: anywhere;
+  }
+  @media (max-width: 760px) {
+    .randomizer-grid { grid-template-columns: 1fr; }
+    .randomizer-grid .full { grid-column: auto; }
+  }
+
   /* Text message editors */
   .message-preview-layout {
     display: grid; grid-template-columns: minmax(230px, 320px) 1fr; gap: 24px;
@@ -631,6 +672,7 @@
   <div class="tabs">
     <button data-tab="status" class="active">Status</button>
     <button data-tab="ideas">Ideas</button>
+    <button data-tab="message-randomizer">Message Randomizer</button>
     <button data-tab="slogans">Slogans</button>
     <button data-tab="reply-options">Reply Options</button>
     <div class="tab-dropdown">
@@ -709,6 +751,228 @@
       <div class="panel">
         <h2>The Board</h2>
         <div id="ideaList"><p class="muted">Loading…</p></div>
+      </div>
+    </section>
+
+    <!-- Message Randomizer -->
+    <section id="tab-message-randomizer" class="hidden">
+      <div class="panel">
+        <div class="text-metrics-heading">
+          <div>
+            <h2>Realist Personality</h2>
+            <p class="muted">Configure the voice and its stored inventory. Player-facing requests only select saved messages; they never wait for generation.</p>
+          </div>
+          <select id="randomizerPersonality" aria-label="Personality"></select>
+        </div>
+        <form id="randomizerPersonalityForm" class="idea-form" style="margin-top:16px">
+          <div class="randomizer-grid">
+            <label class="randomizer-toggle">
+              <input type="checkbox" id="randomizerEnabled"> Enabled
+            </label>
+            <label class="randomizer-toggle">
+              <input type="checkbox" id="randomizerDefault"> Default
+            </label>
+            <label class="full">Description
+              <textarea id="randomizerDescription" rows="3" maxlength="2000" required></textarea>
+            </label>
+            <label class="full">Generation Guidance
+              <textarea id="randomizerGuidance" rows="4" maxlength="5000" required></textarea>
+            </label>
+            <label class="full">Locked/Fresh Ratio
+              <input type="range" id="randomizerLockedRange" min="0" max="100" step="1">
+              <input type="number" id="randomizerLockedPercent" min="0" max="100" required aria-label="Locked Favorite Percent">
+              <span class="muted" id="randomizerRatioSummary"></span>
+            </label>
+            <label>Fresh Pool Minimum
+              <input type="number" id="randomizerFreshMinimum" min="0" max="500" required>
+            </label>
+            <label>Generation Batch Size
+              <input type="number" id="randomizerBatchSize" min="1" max="500" required>
+            </label>
+          </div>
+          <button type="submit" class="primary">Save Personality</button>
+        </form>
+        <p id="randomizerPersonalityStatus" class="muted" style="min-height:20px"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Surface Matrix</h2>
+        <p class="muted">Each surface can be rolled back independently. A blank ratio uses the personality-wide setting.</p>
+        <div class="randomizer-scroll">
+          <table class="randomizer-surface-table">
+            <thead>
+              <tr>
+                <th>Surface</th>
+                <th>On</th>
+                <th>Locked</th>
+                <th>Fresh</th>
+                <th>Draft</th>
+                <th>Locked %</th>
+                <th>Fresh Minimum</th>
+                <th>Auto-Publish</th>
+                <th>Last Activity</th>
+                <th>Preview</th>
+              </tr>
+            </thead>
+            <tbody id="randomizerSurfaceRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="text-metrics-heading">
+          <div>
+            <h2>Generate Fresh Messages</h2>
+            <p class="muted">Generated candidates enter Draft until reviewed. Locked vetted favorites from both source surfaces are supplied as voice examples.</p>
+          </div>
+          <button type="button" class="primary" id="randomizerGenerate">Generate Fresh Messages</button>
+        </div>
+        <div class="randomizer-grid" style="margin-top:16px">
+          <label>Surface
+            <select id="randomizerGenerationSurface"></select>
+          </label>
+          <label>Candidate Count
+            <input type="number" id="randomizerGenerationCount" min="1" max="50" value="10">
+          </label>
+        </div>
+        <p id="randomizerGenerationStatus" class="muted" style="min-height:20px"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Message Library</h2>
+        <div class="randomizer-grid">
+          <label>Surface
+            <select id="randomizerLibrarySurface"></select>
+          </label>
+          <label>Source
+            <select id="randomizerLibrarySource">
+              <option value="">All Sources</option>
+              <option value="migrated">Migrated</option>
+              <option value="manual">Manual</option>
+              <option value="generated">Generated</option>
+            </select>
+          </label>
+          <label>Status
+            <select id="randomizerLibraryStatus">
+              <option value="">All Statuses</option>
+              <option value="draft">Draft</option>
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+            </select>
+          </label>
+          <label>Locked State
+            <select id="randomizerLibraryLocked">
+              <option value="">All Messages</option>
+              <option value="true">Locked Favorites</option>
+              <option value="false">Fresh Or Unlocked</option>
+            </select>
+          </label>
+        </div>
+        <div class="randomizer-actions" style="margin:14px 0">
+          <button type="button" class="ghost" id="randomizerActivateSelected">Activate Selected</button>
+          <button type="button" class="ghost" id="randomizerArchiveSelected">Archive Selected</button>
+          <button type="button" class="ghost" id="randomizerAddMessage">Add Manual Message</button>
+        </div>
+        <div id="randomizerMessageList"><p class="muted">Loading…</p></div>
+      </div>
+
+      <div class="panel">
+        <h2>Targeted Rules</h2>
+        <p class="muted">Rules match the player’s normalized phone-backed identity. Invitation-copy rules only apply when the target is already known to the game or deliberately selected as an intended invitee.</p>
+        <form id="randomizerRuleForm" class="idea-form" style="margin-top:16px">
+          <input type="hidden" id="randomizerRuleId">
+          <div class="randomizer-grid">
+            <label>Target Player
+              <select id="randomizerRulePlayer" required></select>
+            </label>
+            <label>Game Scope
+              <select id="randomizerRuleGame">
+                <option value="">All Games</option>
+              </select>
+            </label>
+            <label>Trigger Status
+              <select id="randomizerRuleStatus">
+                <option value="any-known">Any Known State</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="waitlisted">Waitlisted</option>
+                <option value="applicant">Applicant</option>
+                <option value="out">Out</option>
+              </select>
+            </label>
+            <label>Surface
+              <select id="randomizerRuleSurface"></select>
+            </label>
+            <label>Audience
+              <select id="randomizerRuleAudience">
+                <option value="target-only">Target Only</option>
+                <option value="confirmed">Confirmed Players</option>
+                <option value="known-game-audience">Known Game Audience</option>
+                <option value="invitation-copy">Invitation Copy</option>
+              </select>
+            </label>
+            <label>Mode
+              <select id="randomizerRuleMode">
+                <option value="exact">Exact Copy</option>
+                <option value="direction">Generation Direction</option>
+              </select>
+            </label>
+            <label class="full" id="randomizerExactWrap">Exact Copy
+              <textarea id="randomizerRuleExact" rows="2" maxlength="240"></textarea>
+            </label>
+            <label class="full hidden" id="randomizerDirectionWrap">Bounded Generation Direction
+              <textarea id="randomizerRuleDirection" rows="3" maxlength="1000"></textarea>
+            </label>
+            <label>Starts At (Optional)
+              <input type="datetime-local" id="randomizerRuleStartsAt">
+            </label>
+            <label>Ends At (Optional)
+              <input type="datetime-local" id="randomizerRuleEndsAt">
+            </label>
+            <label class="randomizer-toggle">
+              <input type="checkbox" id="randomizerRuleEnabled"> Activate Rule
+            </label>
+          </div>
+          <p id="randomizerRuleAudienceSummary" class="muted"></p>
+          <div id="randomizerRulePreview" class="randomizer-preview">Choose a player and enter the rule copy.</div>
+          <div class="randomizer-actions">
+            <button type="submit" class="primary">Save Target Rule</button>
+            <button type="button" class="ghost" id="randomizerRuleReset">Clear Rule Form</button>
+          </div>
+        </form>
+        <p id="randomizerRuleStatusMessage" class="muted" style="min-height:20px"></p>
+        <div id="randomizerRuleList"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Preview And Test</h2>
+        <div class="randomizer-grid">
+          <label>Surface
+            <select id="randomizerPreviewSurface"></select>
+          </label>
+          <label>Example Game
+            <select id="randomizerPreviewGame">
+              <option value="">No Game Context</option>
+            </select>
+          </label>
+          <label>Example Recipient
+            <select id="randomizerPreviewRecipient">
+              <option value="">No Recipient</option>
+            </select>
+          </label>
+          <label class="randomizer-toggle">
+            <input type="checkbox" id="randomizerPreviewTargets" checked> Include Target Rules
+          </label>
+          <label class="full">Deterministic Details
+            <textarea id="randomizerPreviewDetails" rows="3" placeholder="Pickleball at Oak Park Courts on Sat, Aug 1 at 9:00 AM. Reply 9 to cancel."></textarea>
+          </label>
+          <label class="full">Deterministic Fallback
+            <textarea id="randomizerPreviewFallback" rows="2" placeholder="The current deterministic message remains available."></textarea>
+          </label>
+        </div>
+        <button type="button" class="primary" id="randomizerPreviewButton">Reroll Preview</button>
+        <div id="randomizerPreviewOutput" style="margin-top:16px">
+          <div class="randomizer-preview">Choose a surface and reroll.</div>
+        </div>
       </div>
     </section>
 
@@ -1404,6 +1668,7 @@ const TEXT_MESSAGE_TAB_IDS = [
 const STANDARD_TAB_IDS = [
   'status',
   'ideas',
+  'message-randomizer',
   'slogans',
   'reply-options',
   'errors',
@@ -1496,6 +1761,9 @@ function activateTab(tab) {
   el('tab-youre-in').classList.toggle('hidden', !isTextMessaging);
   if (tab === 'status') loadStatus();
   if (tab === 'ideas') loadNotes();
+  if (tab === 'message-randomizer' && window.MessageRandomizerAdmin) {
+    window.MessageRandomizerAdmin.load();
+  }
   if (tab === 'slogans') loadSlogans();
   if (tab === 'reply-options') loadReplyOptions();
   if (isTextMessaging) loadTextMessageCategory(tab);
@@ -2989,5 +3257,6 @@ el('courtImageForm').addEventListener('submit', async (e) => {
   } catch (err) { /* stay on the sign-in screen */ }
 })();
 </script>
+<script src="/js/message-randomizer-admin.js"></script>
 </body>
 </html>

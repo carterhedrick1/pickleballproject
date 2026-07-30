@@ -28,19 +28,24 @@ const mountPhotoRoutes = require('./routes/photos');
 const mountRosterRoutes = require('./routes/roster');
 const mountAnnouncementRoutes = require('./routes/announcements');
 const mountPlayerRoutes = require('./routes/players');
+const { mountPublicRandomizerRoutes } = require('./routes/message-randomizer');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const SERVER_STARTED_AT = new Date().toISOString();
 
 // Tell Express to trust proxy headers (for rate limiting on platforms like Render)
 app.set('trust proxy', 1);
 
 // Initialize database
-initializeDatabase();
+const databaseReady = initializeDatabase();
 
 // Middleware
 app.use(express.json());
 app.use(express.static('public'));
+app.use('/api', (req, res, next) => {
+  databaseReady.then(() => next()).catch(next);
+});
 
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
@@ -77,6 +82,7 @@ setTimeout(checkAndSendReminders, 10000); // Wait 10 seconds after startup
 
 // Password-protected developer area (/dev.html and /api/dev/*)
 mountDevRoutes(app);
+mountPublicRandomizerRoutes(app);
 
 // ============================================================================
 // API ROUTES
@@ -93,7 +99,8 @@ app.get('/api/health', (req, res) => {
     status: 'OK',
     message: 'Server is running',
     database: isProduction ? 'PostgreSQL' : 'SQLite',
-    environment: isProduction ? 'production' : 'local'
+    environment: isProduction ? 'production' : 'local',
+    startedAt: SERVER_STARTED_AT
   });
 });
 

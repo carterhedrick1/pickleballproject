@@ -50,7 +50,19 @@ async function sendCategorySMS(
   values = {},
   gameId = null
 ) {
-  const message = await resolveTextMessage(categoryId, defaultMessage, values);
+  let game = null;
+  if (gameId) {
+    try {
+      game = await getGame(gameId);
+    } catch (_error) {
+      // The current deterministic text remains the fallback if game context cannot be loaded.
+    }
+  }
+  const message = await resolveTextMessage(categoryId, defaultMessage, values, {
+    game,
+    gameId,
+    recipientPhone: to
+  });
   return sendSMS(to, message, gameId, {
     eventId: EVENT_ID_BY_CATEGORY[categoryId]
   });
@@ -138,6 +150,11 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
           SPOTS_LEFT: parseInt(game.totalPlayers) - game.players.length,
           WAITLIST_COUNT: (game.waitlist || []).length,
           TOTAL_PLAYERS: game.totalPlayers
+        },
+        {
+          game,
+          gameId,
+          recipientPhone: game.hostPhone
         }
       );
       const hostEventIds = {
@@ -807,7 +824,12 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
     if (promotedPlayer && promotedPlayer.phone) {
       // Only first-come games reach this point, so there is no approval-mode wording to pick
       // between any more - promoteNextFromWaitlist never promotes in approval mode.
-      const promotionMessage = await buildSelectedPlayerMessage(game, game.players.length);
+      const promotionMessage = await buildSelectedPlayerMessage(
+        game,
+        game.players.length,
+        promotedPlayer.phone,
+        gameId
+      );
       // Retried: there is no screen behind this one. The promotion happened because someone
       // else texted 9, so if this text is lost the promoted player is never told at all.
       const promoResult = await sendSMSWithRetry(promotedPlayer.phone, promotionMessage, gameId, {

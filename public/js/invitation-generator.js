@@ -110,10 +110,29 @@ function formatTime(timeStr) {
  * @param {string} buttonId - ID of the button to show feedback on
  * @param {string} baseUrl - Base URL (optional)
  */
-function copyInvitationToClipboard(gameData, gameId, buttonId, baseUrl = null) {
+async function copyInvitationToClipboard(
+    gameData,
+    gameId,
+    buttonId,
+    baseUrl = null,
+    hostToken = null
+) {
     console.log('[COPY] Copying invitation with game data:', gameData); // Debug log
     
-    const message = generateInvitationMessage(gameData, gameId, baseUrl);
+    let message = generateInvitationMessage(gameData, gameId, baseUrl);
+    if (hostToken && typeof fetch === 'function') {
+        try {
+            const response = await fetch(`/api/games/${encodeURIComponent(gameId)}/invitation-message`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: hostToken })
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok && data.message) message = data.message;
+        } catch (_error) {
+            // The deterministic client copy is the safe fallback when the endpoint is unavailable.
+        }
+    }
     
     try {
         // Try modern clipboard API first

@@ -82,15 +82,68 @@ function clearTextMessageConfigCache() {
   configCacheExpiresAt = 0;
 }
 
-async function resolveTextMessage(categoryId, defaultMessage, values = {}, random) {
-  try {
-    const config = await loadTextMessageConfig();
-    return selectCategoryMessage(
+async function resolveTextMessageWithConfig(
+  config,
+  categoryId,
+  defaultMessage,
+  values = {},
+  random,
+  context = {}
+) {
+  const legacyMessage = selectCategoryMessage(
       config,
       categoryId,
       defaultMessage,
       values,
       random
+  );
+  const category = getTextMessageCategory(categoryId);
+  if (!category || categoryId === 'youre-in') return legacyMessage;
+  const categoryConfig = config.categories[categoryId];
+  const deterministicDetails = categoryConfig?.enabled
+    ? renderTemplate(categoryConfig.detailsTemplate, {
+        ...values,
+        DEFAULT_TEXT: defaultMessage
+      })
+    : String(defaultMessage);
+  const { resolveRandomizedMessage } = require('./message-randomizer');
+  const result = await resolveRandomizedMessage({
+    database: context.database,
+    personalityId: context.personalityId || context.game?.personalityId,
+    surfaceId: categoryId,
+    game: context.game || null,
+    gameId: context.gameId || null,
+    recipientPhone: context.recipientPhone || null,
+    templateValues: values,
+    deterministicDetails,
+    fallbackText: legacyMessage,
+    audience: context.audience || 'target-only',
+    random
+  });
+  if (result.personalityId) {
+    require('./message-generation').queuePoolRefill({
+      personalityId: result.personalityId,
+      surfaceId: categoryId
+    });
+  }
+  return result.text;
+}
+
+async function resolveTextMessage(categoryId, defaultMessage, values = {}, random) {
+  let context = arguments.length > 4 ? arguments[4] : {};
+  if (random && typeof random === 'object') {
+    context = random;
+    random = undefined;
+  }
+  try {
+    const config = await loadTextMessageConfig();
+    return await resolveTextMessageWithConfig(
+      config,
+      categoryId,
+      defaultMessage,
+      values,
+      random,
+      context
     );
   } catch (error) {
     console.error(`Error resolving ${categoryId} text; using the current default:`, error.message);
@@ -104,5 +157,6 @@ module.exports = {
   selectCategoryMessage,
   loadTextMessageConfig,
   clearTextMessageConfigCache,
+  resolveTextMessageWithConfig,
   resolveTextMessage
 };

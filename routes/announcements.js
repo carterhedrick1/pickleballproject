@@ -27,7 +27,7 @@ module.exports = function mountAnnouncementRoutes(app) {
   app.post('/api/games/:id/announcement', async (req, res) => {
     try {
       const gameId = req.params.id;
-      const { token, message, includeConfirmed, includeWaitlist } = req.body;
+      const { token, message, includeConfirmed, includeWaitlist, personalityWrapper } = req.body;
       
       const game = await getGame(gameId);
       if (!game) {
@@ -44,20 +44,25 @@ module.exports = function mountAnnouncementRoutes(app) {
       
       let recipientCount = 0;
       const results = [];
-      const configuredMessage = await resolveTextMessage(
-        'organizer-announcement',
-        message,
-        {
-          ANNOUNCEMENT: message,
-          LOCATION: formatLocationForSMS(game),
-          DATE: formatDateForSMS(game.date),
-          TIME: formatTimeForSMS(game.time)
-        }
-      );
-      
       if (includeConfirmed) {
         for (const player of game.players) {
           if (player.phone && !player.isOrganizer) {
+            const configuredMessage = personalityWrapper === true ? await resolveTextMessage(
+              'organizer-announcement',
+              message,
+              {
+                ANNOUNCEMENT: message,
+                LOCATION: formatLocationForSMS(game),
+                DATE: formatDateForSMS(game.date),
+                TIME: formatTimeForSMS(game.time)
+              },
+              {
+                game,
+                gameId,
+                recipientPhone: player.phone,
+                audience: 'confirmed'
+              }
+            ) : message;
             const result = await sendSMS(player.phone, configuredMessage, gameId, {
               eventId: 'organizer-announcement'
             });
@@ -70,6 +75,22 @@ module.exports = function mountAnnouncementRoutes(app) {
       if (includeWaitlist) {
         for (const player of game.waitlist || []) {
           if (player.phone) {
+            const configuredMessage = personalityWrapper === true ? await resolveTextMessage(
+              'organizer-announcement',
+              message,
+              {
+                ANNOUNCEMENT: message,
+                LOCATION: formatLocationForSMS(game),
+                DATE: formatDateForSMS(game.date),
+                TIME: formatTimeForSMS(game.time)
+              },
+              {
+                game,
+                gameId,
+                recipientPhone: player.phone,
+                audience: 'known-game-audience'
+              }
+            ) : message;
             const result = await sendSMS(player.phone, configuredMessage, gameId, {
               eventId: 'organizer-announcement'
             });
@@ -93,7 +114,7 @@ module.exports = function mountAnnouncementRoutes(app) {
   app.post('/api/games/:id/announcement-individual', async (req, res) => {
     try {
       const gameId = req.params.id;
-      const { token, message, recipients } = req.body;
+      const { token, message, recipients, personalityWrapper } = req.body;
       
       const game = await getGame(gameId);
       if (!game) {
@@ -114,20 +135,24 @@ module.exports = function mountAnnouncementRoutes(app) {
       
       let recipientCount = 0;
       const results = [];
-      const configuredMessage = await resolveTextMessage(
-        'organizer-announcement',
-        message,
-        {
-          ANNOUNCEMENT: message,
-          LOCATION: formatLocationForSMS(game),
-          DATE: formatDateForSMS(game.date),
-          TIME: formatTimeForSMS(game.time)
-        }
-      );
-      
       // Send to each selected recipient
       for (const recipient of recipients) {
         if (recipient.phone) {
+          const configuredMessage = personalityWrapper === true ? await resolveTextMessage(
+            'organizer-announcement',
+            message,
+            {
+              ANNOUNCEMENT: message,
+              LOCATION: formatLocationForSMS(game),
+              DATE: formatDateForSMS(game.date),
+              TIME: formatTimeForSMS(game.time)
+            },
+            {
+              game,
+              gameId,
+              recipientPhone: recipient.phone
+            }
+          ) : message;
           const result = await sendSMS(recipient.phone, configuredMessage, gameId, {
             eventId: 'organizer-announcement'
           });

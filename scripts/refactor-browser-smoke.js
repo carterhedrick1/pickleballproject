@@ -48,6 +48,17 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
   try {
     const fx = await fixtures.seed(local.baseUrl);
     seeded = true;
+    const [privateRandomizer, publicPersonalities] = await Promise.all([
+      fetch(`${local.baseUrl}/api/dev/message-randomizer`),
+      fetch(`${local.baseUrl}/api/message-personalities`).then((response) => response.json())
+    ]);
+    assert(
+      privateRandomizer.status === 401 &&
+        publicPersonalities.personalities.length === 1 &&
+        Object.keys(publicPersonalities.personalities[0]).sort().join('|') ===
+          'description|id|isDefault|name',
+      'randomizer prompts, inventory, targeting, and phones stay behind Developer authentication'
+    );
     const firstCourtImage = await uploadCourtImage(
       local.baseUrl, fx.open, PNG_1PX, 'image/png'
     );
@@ -86,6 +97,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         notificationTitles: [...document.querySelectorAll('.notifications-section .notification-title')]
           .map((element) => element.textContent.trim()),
         scriptExternal: [...document.scripts].some((s) => s.src.endsWith('/js/create.js')),
+        personality: document.getElementById('personalityId')?.value,
+        personalityChoices: document.getElementById('personalityId')?.options.length,
         headerSlogan: document.querySelector('.header-slogan')?.textContent.trim(),
         footerSlogan: document.querySelector('.footer-slogan')?.textContent.trim(),
         localNotice: document.querySelector('.local-preview-notice')?.textContent.trim(),
@@ -106,6 +119,10 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       'organizer notification titles capitalize every word'
     );
     assert(createReady.scriptExternal, 'create page uses its external script');
+    assert(
+      createReady.personality === 'realist' && createReady.personalityChoices === 1,
+      'create form loads the enabled Realist personality'
+    );
     assert(
       createReady.headerSlogan &&
         createReady.headerSlogan === createReady.footerSlogan &&
@@ -257,6 +274,12 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
           !document.body.innerText.includes(['Court', 'Number'].join(' ')),
         additionalPlayers: document.getElementById('players').value,
         additionalPlayersHelp: document.getElementById('playersHelp').textContent,
+        personality: document.getElementById('personalityId').value,
+        intendedInviteeChoices: document.querySelectorAll(
+          '.intended-invitee-checkbox'
+        ).length,
+        inviteeCopyIsHonest: document.querySelector('#intendedInviteesTitle + p')
+          ?.textContent.includes('does not know who receives'),
         imageUpdateCopy: document.querySelector('.court-images-intro')?.textContent
           .includes('player link you already sent'),
         manualPlayerSamplesRemoved:
@@ -274,6 +297,12 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         manageReady.additionalPlayersHelp.includes('Player 1'),
       'management shows five additional players for a six-player game with the host playing'
     );
+    assert(
+      manageReady.personality === 'realist' &&
+        manageReady.intendedInviteeChoices === 2 &&
+        manageReady.inviteeCopyIsHonest,
+      'management edits Realist and tracks intended invitees without claiming delivery'
+    );
     assert(manageReady.imageUpdateCopy,
       'court image copy explains that the existing player link updates automatically');
     assert(
@@ -289,6 +318,42 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     assert(
       manageReady.playerText.startsWith('<img') && !manageReady.injectedElement,
       'HTML-like player names remain text in the live page'
+    );
+
+    const inviteeTracking = await desktop.evaluate(`(async () => {
+      const choices = [...document.querySelectorAll('.intended-invitee-checkbox')];
+      choices[0].checked = true;
+      document.getElementById('saveIntendedInvitees').click();
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      const hostGame = await fetch(
+        '/api/games/${fx.open.gameId}?token=${fx.open.hostToken}'
+      ).then((response) => response.json());
+      const publicGame = await fetch('/api/games/${fx.open.gameId}')
+        .then((response) => response.json());
+      const invitation = await fetch(
+        '/api/games/${fx.open.gameId}/invitation-message',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: '${fx.open.hostToken}' })
+        }
+      ).then((response) => response.json());
+      return {
+        intended: hostGame.invitedPlayers?.length,
+        publicLeak: Object.prototype.hasOwnProperty.call(publicGame, 'invitedPlayers'),
+        invitationHasLink: invitation.message?.includes(
+          '/game.html?id=${fx.open.gameId}'
+        ),
+        invitationHasDetails: invitation.message?.includes('Oak Park Courts') &&
+          invitation.message?.includes('do not reply to this text message')
+      };
+    })()`);
+    assert(
+      inviteeTracking.intended === 1 &&
+        !inviteeTracking.publicLeak &&
+        inviteeTracking.invitationHasLink &&
+        inviteeTracking.invitationHasDetails,
+      'intended invitees stay private and server-built invitations preserve every instruction'
     );
 
     const rosterPickerReady = await desktop.evaluate(`(() => {
@@ -484,6 +549,53 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         sloganEditor.nameForm &&
         sloganEditor.editButtons === sloganEditor.slogans,
       'developer area can manage the slogan and name rotations'
+    );
+
+    const messageRandomizer = await desktop.evaluate(`(async () => {
+      document.querySelector('[data-tab="message-randomizer"]').click();
+      await new Promise((resolve) => setTimeout(resolve, 650));
+      const inventoryResponse = await fetch(
+        '/api/dev/randomizer-messages?personalityId=realist'
+      );
+      const inventory = await inventoryResponse.json();
+      document.getElementById('randomizerPreviewButton').click();
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return {
+        visible: !document.getElementById('tab-message-randomizer').classList.contains('hidden'),
+        personality: document.getElementById('randomizerPersonality').value,
+        surfaces: document.querySelectorAll('#randomizerSurfaceRows tr').length,
+        messages: inventory.messages.length,
+        slogans: inventory.messages.filter(
+          (message) => message.surfaceId === 'site-slogan' &&
+            message.locked && message.vetted
+        ).length,
+        youreIn: inventory.messages.filter(
+          (message) => message.surfaceId === 'youre-in' &&
+            message.locked && message.vetted
+        ).length,
+        favoriteLabels: document.getElementById('randomizerMessageList')
+          .textContent.includes('Locked Favorite') &&
+          document.getElementById('randomizerMessageList').textContent.includes('Vetted'),
+        targetPlayers: document.getElementById('randomizerRulePlayer').options.length,
+        preview: document.querySelector('#randomizerPreviewOutput .randomizer-preview')
+          ?.textContent.trim(),
+        externalScript: [...document.scripts].some(
+          (script) => script.src.endsWith('/js/message-randomizer-admin.js')
+        )
+      };
+    })()`);
+    assert(
+      messageRandomizer.visible &&
+        messageRandomizer.personality === 'realist' &&
+        messageRandomizer.surfaces === 15 &&
+        messageRandomizer.messages >= 41 &&
+        messageRandomizer.slogans === 19 &&
+        messageRandomizer.youreIn === 22 &&
+        messageRandomizer.favoriteLabels &&
+        messageRandomizer.targetPlayers > 1 &&
+        messageRandomizer.preview &&
+        messageRandomizer.externalScript,
+      'developer Message Randomizer shows all 41 vetted favorites, surfaces, targeting, and previews'
     );
 
     const imageInventory = await desktop.evaluate(`(async () => {

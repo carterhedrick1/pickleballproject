@@ -7,6 +7,7 @@ const devRosters = require('./database/dev-rosters');
 const messagingReminders = require('./database/messaging-reminders');
 const smsEvents = require('./database/sms-events');
 const dev = require('./database/dev');
+const messageRandomizer = require('./database/message-randomizer');
 const { closeDatabaseConnection, isProduction } = require('./database/context');
 
 module.exports = {
@@ -18,6 +19,7 @@ module.exports = {
   ...messagingReminders,
   ...smsEvents,
   ...dev,
+  ...messageRandomizer,
   closeDatabaseConnection,
   isProduction
 };
