@@ -60,6 +60,7 @@ async function start() {
       // local Developer tools default to live production data for day-to-day operational use.
       DEV_ROSTER_SOURCE: 'local',
       DEV_IMAGE_SOURCE: 'local',
+      DEV_STATUS_SOURCE: 'local',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

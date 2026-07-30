@@ -145,6 +145,13 @@ function selectedDeveloperImageSource(req) {
   });
 }
 
+function selectedDeveloperStatusSource() {
+  return chooseDeveloperRosterSource({
+    production: isProduction,
+    configuredSource: process.env.DEV_STATUS_SOURCE
+  });
+}
+
 async function requestProductionDeveloperApi(
   pathname,
   { method = 'GET', body, rawBody, contentType } = {}
@@ -191,6 +198,53 @@ async function getTextbeltQuota() {
   } catch (err) {
     return { error: `Could not reach Textbelt: ${err.message}` };
   }
+}
+
+async function getLocalTextMetrics() {
+  try {
+    return await getSmsEventMetrics();
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+async function getDeveloperStatusTextData() {
+  const source = selectedDeveloperStatusSource();
+  if (!isProduction && source === 'production') {
+    try {
+      const live = await requestProductionDeveloperApi('/api/dev/status');
+      if (live.status >= 200 && live.status < 300 && live.data.textMetrics) {
+        return {
+          textbelt: { ...(live.data.textbelt || {}), source: 'production' },
+          textMetrics: { ...live.data.textMetrics, source: 'production' }
+        };
+      }
+      throw new Error(live.data.error || `Live production returned HTTP ${live.status}.`);
+    } catch (err) {
+      const [textbelt, textMetrics] = await Promise.all([
+        getTextbeltQuota(),
+        getLocalTextMetrics()
+      ]);
+      return {
+        textbelt: { ...textbelt, source: 'local' },
+        textMetrics: {
+          ...textMetrics,
+          source: 'local',
+          sourceError: `Could not load production text metrics: ${err.message}`
+        }
+      };
+    }
+  }
+
+  const [textbelt, textMetrics] = await Promise.all([
+    getTextbeltQuota(),
+    getLocalTextMetrics()
+  ]);
+  const resolvedSource = isProduction ? 'production' : 'local';
+  return {
+    textbelt: { ...textbelt, source: resolvedSource },
+    textMetrics: { ...textMetrics, source: resolvedSource }
+  };
 }
 
 async function loadSloganConfig() {
@@ -520,13 +574,9 @@ module.exports = function mountDevRoutes(app) {
       status.counts = { error: err.message };
     }
 
-    status.textbelt = await getTextbeltQuota();
-
-    try {
-      status.textMetrics = await getSmsEventMetrics();
-    } catch (err) {
-      status.textMetrics = { error: err.message };
-    }
+    const textData = await getDeveloperStatusTextData();
+    status.textbelt = textData.textbelt;
+    status.textMetrics = textData.textMetrics;
 
     try {
       const meta = await getDevAssetMeta('screens');
