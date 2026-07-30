@@ -13,6 +13,20 @@ const youreInMessages = require('../youre-in-messages');
 
 const REALIST_ID = 'realist';
 const MIGRATION_ASSET_NAME = 'message-randomizer-migration-v1';
+const VETTED_SLOGAN_REPAIR_ASSET_NAME = 'message-randomizer-vetted-slogans-v2';
+const LEGACY_V1_SLOGAN_REPLACEMENTS = new Map([
+  ['Fill the court, not the group chat.', 'Fill the court, not a group chat.'],
+  ['We don\'t care why. We care if.', 'No one cares why. We care if.'],
+  ['Ghost us and the app moves on without you.', 'Ghost us and we move on without you.'],
+  ['Life\'s too short to text six people twice.', 'Life\'s too short to text six people ten times.'],
+  ['"I\'m 90% in" means you\'re out.', '"I\'m 90% in" means you\'re Out.'],
+  ['Nobody is putting you down as a maybe.', 'Nobody is putting you down as a Maybe.'],
+  ['Quick responses improve your DUPR.', 'Quick responses will improve your DUPR Rating.'],
+  [
+    'You found time to read this. Find a second to respond.',
+    'You had time to read this. Find a second to respond.'
+  ]
+]);
 const DEFAULT_REALIST_DESCRIPTION =
   'Short, direct, dryly funny reality checks about committing, responding, and showing up.';
 const DEFAULT_REALIST_GUIDANCE =
@@ -879,13 +893,102 @@ async function syncLegacySurfaceMessages(personalityId, surfaceId, texts) {
   }
 }
 
+async function repairOwnerVettedSlogans() {
+  const marker = isProduction
+    ? await withPgClient(async (client) => (
+        await client.query(
+          'SELECT content FROM dev_assets WHERE name = $1',
+          [VETTED_SLOGAN_REPAIR_ASSET_NAME]
+        )
+      ).rows[0] || null)
+    : await sqliteGet(
+      'SELECT content FROM dev_assets WHERE name = ?',
+      [VETTED_SLOGAN_REPAIR_ASSET_NAME]
+    );
+  if (marker) return JSON.parse(marker.content);
+
+  // This is the exact 19-item owner-saved configuration captured for this release.
+  // The v1 production asset was one revision behind, so update those eight rows in
+  // place (preserving selection references) and insert the nineteenth row.
+  const messages = await listRandomizerMessages({
+    personalityId: REALIST_ID,
+    surfaceId: 'site-slogan'
+  });
+  let replacements = 0;
+  for (const message of messages) {
+    const replacement = LEGACY_V1_SLOGAN_REPLACEMENTS.get(message.text);
+    if (message.source === 'migrated' && replacement) {
+      await updateRandomizerMessage(message.id, { text: replacement });
+      replacements++;
+    }
+  }
+  for (const text of sloganModule.DEFAULT_SLOGANS) {
+    await insertMigratedMessage(REALIST_ID, 'site-slogan', text);
+  }
+
+  let savedConfig = {};
+  const savedAsset = isProduction
+    ? await withPgClient(async (client) => (
+        await client.query('SELECT content FROM dev_assets WHERE name = $1', ['slogan-config'])
+      ).rows[0] || null)
+    : await sqliteGet('SELECT content FROM dev_assets WHERE name = ?', ['slogan-config']);
+  try {
+    savedConfig = savedAsset ? JSON.parse(savedAsset.content) : {};
+  } catch (_error) {
+    savedConfig = {};
+  }
+  const repairedConfig = sloganModule.normalizeConfig({
+    ...savedConfig,
+    slogans: sloganModule.DEFAULT_SLOGANS
+  });
+  const repairedContent = JSON.stringify(repairedConfig);
+  const summary = {
+    version: 2,
+    slogans: repairedConfig.slogans.length,
+    replacements,
+    repairedAt: new Date().toISOString()
+  };
+  const markerContent = JSON.stringify(summary);
+
+  if (isProduction) {
+    await withPgClient(async (client) => {
+      await client.query(`
+        INSERT INTO dev_assets (name, content, updated_at)
+        VALUES ($1, $2, CURRENT_TIMESTAMP)
+        ON CONFLICT (name)
+        DO UPDATE SET content = EXCLUDED.content, updated_at = CURRENT_TIMESTAMP
+      `, ['slogan-config', repairedContent]);
+      await client.query(`
+        INSERT INTO dev_assets (name, content, updated_at)
+        VALUES ($1, $2, CURRENT_TIMESTAMP)
+        ON CONFLICT (name)
+        DO UPDATE SET content = EXCLUDED.content, updated_at = CURRENT_TIMESTAMP
+      `, [VETTED_SLOGAN_REPAIR_ASSET_NAME, markerContent]);
+    });
+  } else {
+    await sqliteRun(
+      'INSERT OR REPLACE INTO dev_assets (name, content, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
+      ['slogan-config', repairedContent]
+    );
+    await sqliteRun(
+      'INSERT OR REPLACE INTO dev_assets (name, content, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
+      [VETTED_SLOGAN_REPAIR_ASSET_NAME, markerContent]
+    );
+  }
+  return summary;
+}
+
 async function seedRealistAndMigrateSavedMessages() {
   const marker = isProduction
     ? await withPgClient(async (client) => (
         await client.query('SELECT content FROM dev_assets WHERE name = $1', [MIGRATION_ASSET_NAME])
       ).rows[0] || null)
     : await sqliteGet('SELECT content FROM dev_assets WHERE name = ?', [MIGRATION_ASSET_NAME]);
-  if (marker) return JSON.parse(marker.content);
+  if (marker) {
+    const summary = JSON.parse(marker.content);
+    summary.vettedSloganRepair = await repairOwnerVettedSlogans();
+    return summary;
+  }
 
   if (isProduction) {
     await withPgClient((client) => client.query(`
@@ -971,6 +1074,7 @@ async function seedRealistAndMigrateSavedMessages() {
       [MIGRATION_ASSET_NAME, content]
     );
   }
+  summary.vettedSloganRepair = await repairOwnerVettedSlogans();
   return summary;
 }
 

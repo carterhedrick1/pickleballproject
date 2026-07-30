@@ -7,23 +7,24 @@
 
   const DEFAULT_SLOGANS = Object.freeze([
     'Because "maybe" is not an answer, it\'s a personality flaw.',
-    'Fill the court, not the group chat.',
-    'We don\'t care why. We care if.',
+    'Fill the court, not a group chat.',
+    'No one cares why. We care if.',
     'Slow responders, meet your replacement.',
-    'Ghost us and the app moves on without you.',
-    'Life\'s too short to text six people twice.',
+    'Ghost us and we move on without you.',
+    'Life\'s too short to text six people ten times.',
     'Your spot is not guaranteed. Your replacement is.',
     'Your reply time is your reputation.',
     'Sign up. Show up. Shut up about the line call.',
-    '"I\'m 90% in" means you\'re out.',
-    'Nobody is putting you down as a maybe.',
+    '"I\'m 90% in" means you\'re Out.',
+    'Nobody is putting you down as a Maybe.',
     'Commitment issues are not a calendar problem.',
     'You\'re not busy. You\'re indecisive.',
     'Two buttons. Pick one.',
-    'Quick responses improve your DUPR.',
+    'Quick responses will improve your DUPR Rating.',
     'Availability beats ability. Ask {NAME}.',
     'You found time to research a $280 paddle. Find 4 seconds to respond.',
-    'You found time to read this. Find a second to respond.'
+    'You had time to read this. Find a second to respond.',
+    'Ignore this and you will be paddle stacking at The Y next time.'
   ]);
 
   const DEFAULT_NAMES = Object.freeze(['Scott', 'Mike', 'Brett', 'Zac']);
