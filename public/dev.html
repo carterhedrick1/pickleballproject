@@ -255,6 +255,27 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 13px; line-height: 1.55;
   }
+  .randomizer-section { padding: 0; overflow: hidden; }
+  .randomizer-section > summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 20px 22px; cursor: pointer; list-style: none;
+  }
+  .randomizer-section > summary::-webkit-details-marker { display: none; }
+  .randomizer-section > summary::after {
+    content: ""; width: 9px; height: 9px; flex: 0 0 9px;
+    border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+    transform: rotate(45deg) translate(-2px, 2px);
+    transition: transform 0.15s ease;
+  }
+  .randomizer-section[open] > summary {
+    border-bottom: 1px solid var(--border);
+  }
+  .randomizer-section[open] > summary::after {
+    transform: rotate(225deg) translate(-2px, 2px);
+  }
+  .randomizer-section > summary:hover { background: var(--quiet); }
+  .randomizer-section > summary h2 { margin: 0; }
+  .randomizer-section-body { padding: 22px; }
   @media (max-width: 760px) {
     .randomizer-grid { grid-template-columns: 1fr; }
     .randomizer-grid .full { grid-column: auto; }
@@ -761,10 +782,11 @@
 
     <!-- Message Randomizer -->
     <section id="tab-message-randomizer" class="hidden">
-      <div class="panel">
+      <details class="panel randomizer-section" data-randomizer-section>
+        <summary><h2>Realist Personality</h2></summary>
+        <div class="randomizer-section-body">
         <div class="text-metrics-heading">
           <div>
-            <h2>Realist Personality</h2>
             <p class="muted">Configure the voice and its stored inventory. Player-facing requests only select saved messages; they never wait for generation.</p>
           </div>
           <select id="randomizerPersonality" aria-label="Personality"></select>
@@ -798,10 +820,12 @@
           <button type="submit" class="primary">Save Personality</button>
         </form>
         <p id="randomizerPersonalityStatus" class="muted" style="min-height:20px"></p>
-      </div>
+        </div>
+      </details>
 
-      <div class="panel">
-        <h2>Surface Matrix</h2>
+      <details class="panel randomizer-section" data-randomizer-section>
+        <summary><h2>Surface Matrix</h2></summary>
+        <div class="randomizer-section-body">
         <p class="muted">Each surface can be rolled back independently. A blank ratio uses the personality-wide setting.</p>
         <div class="randomizer-scroll">
           <table class="randomizer-surface-table">
@@ -822,12 +846,14 @@
             <tbody id="randomizerSurfaceRows"></tbody>
           </table>
         </div>
-      </div>
+        </div>
+      </details>
 
-      <div class="panel">
+      <details class="panel randomizer-section" data-randomizer-section>
+        <summary><h2>Generate Fresh Messages</h2></summary>
+        <div class="randomizer-section-body">
         <div class="text-metrics-heading">
           <div>
-            <h2>Generate Fresh Messages</h2>
             <p class="muted">Generated candidates enter Draft until reviewed. Locked vetted favorites from both source surfaces are supplied as voice examples.</p>
           </div>
           <button type="button" class="primary" id="randomizerGenerate">Generate Fresh Messages</button>
@@ -841,12 +867,14 @@
           </label>
         </div>
         <p id="randomizerGenerationStatus" class="muted" style="min-height:20px"></p>
-      </div>
+        </div>
+      </details>
 
-      <div class="panel">
+      <details class="panel randomizer-section" data-randomizer-section>
+        <summary><h2>Build Messages With Codex</h2></summary>
+        <div class="randomizer-section-body">
         <div class="text-metrics-heading">
           <div>
-            <h2>Build Messages With Codex</h2>
             <p class="muted">Choose a category, copy the complete prompt, and paste it into Codex. It covers brainstorming, shortlisting, draft creation, testing, documentation, and deployment.</p>
           </div>
           <button type="button" class="primary" id="randomizerCopyPrompt">Copy Prompt</button>
@@ -860,10 +888,12 @@
           </label>
         </div>
         <p id="randomizerPromptStatus" class="muted" style="min-height:20px"></p>
-      </div>
+        </div>
+      </details>
 
-      <div class="panel">
-        <h2>Message Library</h2>
+      <details class="panel randomizer-section" data-randomizer-section>
+        <summary><h2>Message Library</h2></summary>
+        <div class="randomizer-section-body">
         <div class="randomizer-grid">
           <label>Surface
             <select id="randomizerLibrarySurface"></select>
@@ -898,10 +928,12 @@
           <button type="button" class="ghost" id="randomizerAddMessage">Add Manual Message</button>
         </div>
         <div id="randomizerMessageList"><p class="muted">Loading…</p></div>
-      </div>
+        </div>
+      </details>
 
-      <div class="panel">
-        <h2>Targeted Rules</h2>
+      <details class="panel randomizer-section" data-randomizer-section>
+        <summary><h2>Targeted Rules</h2></summary>
+        <div class="randomizer-section-body">
         <p class="muted">Rules match the player’s normalized phone-backed identity. Invitation-copy rules only apply when the target is already known to the game or deliberately selected as an intended invitee.</p>
         <form id="randomizerRuleForm" class="idea-form" style="margin-top:16px">
           <input type="hidden" id="randomizerRuleId">
@@ -965,10 +997,12 @@
         </form>
         <p id="randomizerRuleStatusMessage" class="muted" style="min-height:20px"></p>
         <div id="randomizerRuleList"></div>
-      </div>
+        </div>
+      </details>
 
-      <div class="panel" id="randomizerPreviewPanel">
-        <h2>Preview And Test</h2>
+      <details class="panel randomizer-section" id="randomizerPreviewPanel" data-randomizer-section>
+        <summary><h2>Preview And Test</h2></summary>
+        <div class="randomizer-section-body">
         <div class="randomizer-grid">
           <label>Surface
             <select id="randomizerPreviewSurface"></select>
@@ -997,7 +1031,8 @@
         <div id="randomizerPreviewOutput" style="margin-top:16px">
           <div class="randomizer-preview">Choose a surface and reroll.</div>
         </div>
-      </div>
+        </div>
+      </details>
     </section>
 
     <!-- Slogans -->

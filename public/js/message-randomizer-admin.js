@@ -544,7 +544,9 @@ During brainstorming, keep responses focused on the numbered candidates and runn
   async function preview(surfaceId = null) {
     if (surfaceId) {
       byId('randomizerPreviewSurface').value = surfaceId;
-      byId('randomizerPreviewPanel').scrollIntoView({ block: 'start' });
+      const previewPanel = byId('randomizerPreviewPanel');
+      previewPanel.open = true;
+      previewPanel.scrollIntoView({ block: 'start' });
     }
     const gameId = byId('randomizerPreviewGame').value;
     const game = state.config.exampleGames.find((candidate) => candidate.gameId === gameId) || null;

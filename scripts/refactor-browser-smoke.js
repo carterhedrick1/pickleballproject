@@ -564,8 +564,15 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       await new Promise((resolve) => setTimeout(resolve, 250));
       const previewPanel = document.getElementById('randomizerPreviewPanel');
       const previewRect = previewPanel.getBoundingClientRect();
+      const randomizerSections = [
+        ...document.querySelectorAll('#tab-message-randomizer [data-randomizer-section]')
+      ];
       return {
         visible: !document.getElementById('tab-message-randomizer').classList.contains('hidden'),
+        collapsibleSections: randomizerSections.length,
+        onlyPreviewExpanded:
+          randomizerSections.filter((section) => section.open).length === 1 &&
+          previewPanel.open,
         personality: document.getElementById('randomizerPersonality').value,
         surfaces: document.querySelectorAll('#randomizerSurfaceRows tr').length,
         messages: inventory.messages.length,
@@ -601,6 +608,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     })()`);
     assert(
       messageRandomizer.visible &&
+        messageRandomizer.collapsibleSections === 7 &&
+        messageRandomizer.onlyPreviewExpanded &&
         messageRandomizer.personality === 'realist' &&
         messageRandomizer.surfaces === 15 &&
         messageRandomizer.messages >= 41 &&

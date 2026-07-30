@@ -315,7 +315,7 @@ function buildScreens(fx) {
       act: openDeveloperStatus },
     { file: 'dev-message-randomizer', of: '/dev.html', size: 'tall', url: '/dev.html',
       title: 'Message Randomizer',
-      note: 'The Realist personality, reusable category-aware Codex prompt, per-surface rollout controls, 41 locked vetted favorites, nine inactive Game Details drafts, generation review, phone-backed target rules and no-usage preview.',
+      note: 'Seven collapsed sections keep the full Message Randomizer toolkit easy to scan and open on demand.',
       act: openDeveloperMessageRandomizer },
     { file: 'dev-message-randomizer-preview', of: '/dev.html', size: 'tall', url: '/dev.html',
       title: 'Message Randomizer Preview',
