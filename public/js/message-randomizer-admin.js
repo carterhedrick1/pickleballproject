@@ -163,7 +163,7 @@ During brainstorming, keep responses focused on the numbered candidates and runn
         <td><input type="number" data-field="freshPoolMinimumOverride" min="0" max="500" value="${setting.freshPoolMinimumOverride ?? ''}" placeholder="${state.personality.freshPoolMinimum}" aria-label="${escape(surface.name)} fresh minimum"></td>
         <td><input type="checkbox" data-field="autoPublishGenerated" ${setting.autoPublishGenerated ? 'checked' : ''} ${surface.autoPublishEligible ? '' : 'disabled'} aria-label="${escape(surface.name)} auto-publish"></td>
         <td><span class="muted">${metrics.lastSelectedAt ? `Selected ${escape(new Date(metrics.lastSelectedAt).toLocaleDateString())}` : 'Never selected'}<br>${metrics.lastGeneratedAt ? `Generated ${escape(new Date(metrics.lastGeneratedAt).toLocaleDateString())}` : 'Never generated'}${generationStatus.failureReason ? `<br><span class="error-text">${escape(generationStatus.failureReason)}</span>` : ''}</span></td>
-        <td><button type="button" class="ghost" data-action="surface-preview">Preview</button></td>
+        <td><button type="button" class="ghost" data-action="surface-preview" aria-controls="randomizerPreviewPanel">Preview</button></td>
       </tr>`;
     }).join('');
   }
@@ -542,7 +542,10 @@ During brainstorming, keep responses focused on the numbered candidates and runn
   }
 
   async function preview(surfaceId = null) {
-    if (surfaceId) byId('randomizerPreviewSurface').value = surfaceId;
+    if (surfaceId) {
+      byId('randomizerPreviewSurface').value = surfaceId;
+      byId('randomizerPreviewPanel').scrollIntoView({ block: 'start' });
+    }
     const gameId = byId('randomizerPreviewGame').value;
     const game = state.config.exampleGames.find((candidate) => candidate.gameId === gameId) || null;
     const recipientPhone = byId('randomizerPreviewRecipient').value || null;

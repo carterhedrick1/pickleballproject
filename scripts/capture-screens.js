@@ -165,6 +165,14 @@ const openDeveloperMessageRandomizer = async (p) => {
   await cdp.sleep(700);
 };
 
+const openDeveloperMessageRandomizerPreview = async (p) => {
+  await openDeveloperMessageRandomizer(p);
+  await p.evaluate(`document.querySelector(
+    '#randomizerSurfaceRows tr[data-surface-id="site-slogan"] [data-action="surface-preview"]'
+  ).click()`);
+  await cdp.sleep(700);
+};
+
 const openDeveloperRules = async (p) => {
   const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
   await p.evaluate(`(async () => {
@@ -309,6 +317,10 @@ function buildScreens(fx) {
       title: 'Message Randomizer',
       note: 'The Realist personality, reusable category-aware Codex prompt, per-surface rollout controls, 41 locked vetted favorites, 20 invitation-opening messages, generation review, phone-backed target rules and no-usage preview.',
       act: openDeveloperMessageRandomizer },
+    { file: 'dev-message-randomizer-preview', of: '/dev.html', size: 'tall', url: '/dev.html',
+      title: 'Message Randomizer Preview',
+      note: 'A Surface Matrix Preview button selects that category, reveals Preview And Test and resolves stored inventory without incrementing usage.',
+      act: openDeveloperMessageRandomizerPreview },
     { file: 'dev-images', of: '/dev.html', size: 'wide', url: '/dev.html',
       title: 'Images',
       note: 'Every uploaded court image and game photo, with the uploader’s name and a developer-only delete control.',

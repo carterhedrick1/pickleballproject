@@ -558,8 +558,12 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         '/api/dev/randomizer-messages?personalityId=realist'
       );
       const inventory = await inventoryResponse.json();
-      document.getElementById('randomizerPreviewButton').click();
+      document.querySelector(
+        '#randomizerSurfaceRows tr[data-surface-id="site-slogan"] [data-action="surface-preview"]'
+      ).click();
       await new Promise((resolve) => setTimeout(resolve, 250));
+      const previewPanel = document.getElementById('randomizerPreviewPanel');
+      const previewRect = previewPanel.getBoundingClientRect();
       return {
         visible: !document.getElementById('tab-message-randomizer').classList.contains('hidden'),
         personality: document.getElementById('randomizerPersonality').value,
@@ -588,6 +592,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         targetPlayers: document.getElementById('randomizerRulePlayer').options.length,
         preview: document.querySelector('#randomizerPreviewOutput .randomizer-preview')
           ?.textContent.trim(),
+        previewSurface: document.getElementById('randomizerPreviewSurface').value,
+        previewPanelVisible: previewRect.top >= 0 && previewRect.top < window.innerHeight,
         externalScript: [...document.scripts].some(
           (script) => script.src.endsWith('/js/message-randomizer-admin.js')
         )
@@ -604,8 +610,11 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         messageRandomizer.reusablePrompt &&
         messageRandomizer.targetPlayers > 1 &&
         messageRandomizer.preview &&
+        messageRandomizer.preview !== 'Resolving stored inventory…' &&
+        messageRandomizer.previewSurface === 'site-slogan' &&
+        messageRandomizer.previewPanelVisible &&
         messageRandomizer.externalScript,
-      'developer Message Randomizer shows vetted favorites, reusable Codex prompt, targeting, and previews'
+      'developer Message Randomizer shows vetted favorites, targeting, and a working surface preview'
     );
 
     const imageInventory = await desktop.evaluate(`(async () => {
