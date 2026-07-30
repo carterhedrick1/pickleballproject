@@ -4,9 +4,13 @@ const assert = require('node:assert/strict');
 const {
   normalizeMessageText,
   readMigrationCopy,
-  REALIST_INVITATION_OPENING_DRAFTS
+  REALIST_INVITATION_OPENING_DRAFTS,
+  REALIST_GAME_DETAILS_DRAFTS
 } = require('../database/message-randomizer');
-const { validateGeneratedCandidate } = require('../services/message-generation');
+const {
+  extractTokens,
+  validateGeneratedCandidate
+} = require('../services/message-generation');
 const {
   renderSupportedTokens,
   joinMessageSections,
@@ -57,6 +61,25 @@ test('keeps the 20 owner-approved Realist invitation openings valid and unique',
     const result = validateGeneratedCandidate(text, { surface });
     assert.equal(result.valid, true, `${text}: ${result.reason}`);
     assert.equal(normalized.has(result.normalized), false, `Duplicate opening: ${text}`);
+    normalized.add(result.normalized);
+  }
+});
+
+test('keeps the 9 owner-approved Realist game details drafts valid and unique', () => {
+  const surface = getMessageSurface('game-details');
+  const allowedTokens = new Set(surface.allowedTokens);
+  const normalized = new Set();
+  assert.equal(REALIST_GAME_DETAILS_DRAFTS.length, 9);
+  for (const text of REALIST_GAME_DETAILS_DRAFTS) {
+    const result = validateGeneratedCandidate(text, { surface });
+    assert.equal(result.valid, true, `${text}: ${result.reason}`);
+    assert.equal(text.length <= surface.maxLength, true, `Too long: ${text}`);
+    assert.equal(
+      extractTokens(text).every((token) => allowedTokens.has(token)),
+      true,
+      `Unsupported token: ${text}`
+    );
+    assert.equal(normalized.has(result.normalized), false, `Duplicate draft: ${text}`);
     normalized.add(result.normalized);
   }
 });

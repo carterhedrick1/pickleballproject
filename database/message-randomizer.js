@@ -15,6 +15,7 @@ const REALIST_ID = 'realist';
 const MIGRATION_ASSET_NAME = 'message-randomizer-migration-v1';
 const VETTED_SLOGAN_REPAIR_ASSET_NAME = 'message-randomizer-vetted-slogans-v2';
 const INVITATION_OPENING_DRAFT_ASSET_NAME = 'message-randomizer-invitation-openings-v1';
+const GAME_DETAILS_DRAFT_ASSET_NAME = 'message-randomizer-game-details-v1';
 const REALIST_INVITATION_OPENING_DRAFTS = Object.freeze([
   'A pickleball invitation has arrived. Your excuses may begin.',
   'A game is forming. Confidence remains optional.',
@@ -36,6 +37,17 @@ const REALIST_INVITATION_OPENING_DRAFTS = Object.freeze([
   'The details are below. The dramatic deliberation is optional.',
   'The court has requested your presence and waived the skill requirement.',
   'Your schedule is the only qualification under review.'
+]);
+const REALIST_GAME_DETAILS_DRAFTS = Object.freeze([
+  'Information has been organized. Try not to make it emotional.',
+  'Everything currently worth knowing is below. Adjust expectations accordingly.',
+  'Your request has produced details. Technology occasionally works.',
+  'Here is what the system knows. It has no opinions about your backhand.',
+  'Everything below is useful. A rare moment for your phone.',
+  'The details are below. Please pace your excitement.',
+  'Here is the plan, assuming everyone can read.',
+  'The details are here. No paddle upgrade was required.',
+  'The facts are ready. Your excuses were not consulted.'
 ]);
 const LEGACY_V1_SLOGAN_REPLACEMENTS = new Map([
   ['Fill the court, not the group chat.', 'Fill the court, not a group chat.'],
@@ -939,6 +951,67 @@ async function seedRealistInvitationOpeningDrafts() {
   return summary;
 }
 
+async function seedRealistGameDetailsDrafts() {
+  const marker = isProduction
+    ? await withPgClient(async (client) => (
+        await client.query(
+          'SELECT content FROM dev_assets WHERE name = $1',
+          [GAME_DETAILS_DRAFT_ASSET_NAME]
+        )
+      ).rows[0] || null)
+    : await sqliteGet(
+      'SELECT content FROM dev_assets WHERE name = ?',
+      [GAME_DETAILS_DRAFT_ASSET_NAME]
+    );
+  if (marker) return JSON.parse(marker.content);
+
+  for (const text of REALIST_GAME_DETAILS_DRAFTS) {
+    const params = [
+      crypto.randomUUID(),
+      REALIST_ID,
+      'game-details',
+      text,
+      normalizeMessageText(text)
+    ];
+    if (isProduction) {
+      await withPgClient((client) => client.query(`
+        INSERT INTO randomizer_messages
+          (id, personality_id, surface_id, text, normalized_text, source, status, locked, vetted)
+        VALUES ($1, $2, $3, $4, $5, 'manual', 'draft', FALSE, FALSE)
+        ON CONFLICT (personality_id, surface_id, normalized_text) DO NOTHING
+      `, params));
+    } else {
+      await sqliteRun(`
+        INSERT OR IGNORE INTO randomizer_messages
+          (id, personality_id, surface_id, text, normalized_text, source, status, locked, vetted)
+        VALUES (?, ?, ?, ?, ?, 'manual', 'draft', 0, 0)
+      `, params);
+    }
+  }
+
+  const summary = {
+    version: 1,
+    personalityId: REALIST_ID,
+    surfaceId: 'game-details',
+    drafts: REALIST_GAME_DETAILS_DRAFTS.length,
+    seededAt: new Date().toISOString()
+  };
+  const content = JSON.stringify(summary);
+  if (isProduction) {
+    await withPgClient((client) => client.query(`
+      INSERT INTO dev_assets (name, content, updated_at)
+      VALUES ($1, $2, CURRENT_TIMESTAMP)
+      ON CONFLICT (name) DO UPDATE SET content = EXCLUDED.content, updated_at = CURRENT_TIMESTAMP
+    `, [GAME_DETAILS_DRAFT_ASSET_NAME, content]));
+  } else {
+    await sqliteRun(
+      'INSERT OR REPLACE INTO dev_assets (name, content, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
+      [GAME_DETAILS_DRAFT_ASSET_NAME, content]
+    );
+  }
+  return summary;
+}
+
 async function syncLegacySurfaceMessages(personalityId, surfaceId, texts) {
   const normalized = [...new Set(texts.map(normalizeMessageText).filter(Boolean))];
   for (const text of texts) {
@@ -1072,6 +1145,7 @@ async function seedRealistAndMigrateSavedMessages() {
     const summary = JSON.parse(marker.content);
     summary.vettedSloganRepair = await repairOwnerVettedSlogans();
     summary.invitationOpeningDrafts = await seedRealistInvitationOpeningDrafts();
+    summary.gameDetailsDrafts = await seedRealistGameDetailsDrafts();
     return summary;
   }
 
@@ -1161,6 +1235,7 @@ async function seedRealistAndMigrateSavedMessages() {
   }
   summary.vettedSloganRepair = await repairOwnerVettedSlogans();
   summary.invitationOpeningDrafts = await seedRealistInvitationOpeningDrafts();
+  summary.gameDetailsDrafts = await seedRealistGameDetailsDrafts();
   return summary;
 }
 
@@ -1168,7 +1243,9 @@ module.exports = {
   REALIST_ID,
   MIGRATION_ASSET_NAME,
   INVITATION_OPENING_DRAFT_ASSET_NAME,
+  GAME_DETAILS_DRAFT_ASSET_NAME,
   REALIST_INVITATION_OPENING_DRAFTS,
+  REALIST_GAME_DETAILS_DRAFTS,
   DEFAULT_REALIST_DESCRIPTION,
   DEFAULT_REALIST_GUIDANCE,
   normalizeMessageText,
@@ -1194,5 +1271,6 @@ module.exports = {
   getSelectionMetrics,
   getRandomizerMetrics,
   syncLegacySurfaceMessages,
-  seedRealistAndMigrateSavedMessages
+  seedRealistAndMigrateSavedMessages,
+  seedRealistGameDetailsDrafts
 };
