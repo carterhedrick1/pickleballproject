@@ -14,6 +14,29 @@ const youreInMessages = require('../youre-in-messages');
 const REALIST_ID = 'realist';
 const MIGRATION_ASSET_NAME = 'message-randomizer-migration-v1';
 const VETTED_SLOGAN_REPAIR_ASSET_NAME = 'message-randomizer-vetted-slogans-v2';
+const INVITATION_OPENING_DRAFT_ASSET_NAME = 'message-randomizer-invitation-openings-v1';
+const REALIST_INVITATION_OPENING_DRAFTS = Object.freeze([
+  'A pickleball invitation has arrived. Your excuses may begin.',
+  'A game is forming. Confidence remains optional.',
+  'You were invited for your availability. Let’s not make this complicated.',
+  'Your athletic future has narrowed to two buttons.',
+  'Please consult your calendar, not your feelings.',
+  'We found a court. Now we are finding out who can make a decision.',
+  'Your presence is requested. Your scouting report was not.',
+  'Pickleball is available. Athletic excellence remains optional.',
+  'Here lies an opportunity to play pickleball and briefly feel athletic.',
+  'An invitation, a calendar, and two possible answers. Stay focused.',
+  'Pickleball wants a commitment. Nothing emotional, just scheduling.',
+  'This invitation has fewer choices than your paddle bag.',
+  'Your calendar is about to reveal how serious you are about pickleball.',
+  'A game is being arranged. Your excuses remain unrequested.',
+  'A game is forming. Your talent was not part of the calculation.',
+  'Please determine whether your schedule supports recreational overconfidence.',
+  'Your next athletic exaggeration starts with one decision.',
+  'The details are below. The dramatic deliberation is optional.',
+  'The court has requested your presence and waived the skill requirement.',
+  'Your schedule is the only qualification under review.'
+]);
 const LEGACY_V1_SLOGAN_REPLACEMENTS = new Map([
   ['Fill the court, not the group chat.', 'Fill the court, not a group chat.'],
   ['We don\'t care why. We care if.', 'No one cares why. We care if.'],
@@ -855,6 +878,67 @@ async function insertMigratedMessage(personalityId, surfaceId, text) {
   }
 }
 
+async function seedRealistInvitationOpeningDrafts() {
+  const marker = isProduction
+    ? await withPgClient(async (client) => (
+        await client.query(
+          'SELECT content FROM dev_assets WHERE name = $1',
+          [INVITATION_OPENING_DRAFT_ASSET_NAME]
+        )
+      ).rows[0] || null)
+    : await sqliteGet(
+      'SELECT content FROM dev_assets WHERE name = ?',
+      [INVITATION_OPENING_DRAFT_ASSET_NAME]
+    );
+  if (marker) return JSON.parse(marker.content);
+
+  for (const text of REALIST_INVITATION_OPENING_DRAFTS) {
+    const params = [
+      crypto.randomUUID(),
+      REALIST_ID,
+      'invitation-opening',
+      text,
+      normalizeMessageText(text)
+    ];
+    if (isProduction) {
+      await withPgClient((client) => client.query(`
+        INSERT INTO randomizer_messages
+          (id, personality_id, surface_id, text, normalized_text, source, status, locked, vetted)
+        VALUES ($1, $2, $3, $4, $5, 'manual', 'draft', FALSE, FALSE)
+        ON CONFLICT (personality_id, surface_id, normalized_text) DO NOTHING
+      `, params));
+    } else {
+      await sqliteRun(`
+        INSERT OR IGNORE INTO randomizer_messages
+          (id, personality_id, surface_id, text, normalized_text, source, status, locked, vetted)
+        VALUES (?, ?, ?, ?, ?, 'manual', 'draft', 0, 0)
+      `, params);
+    }
+  }
+
+  const summary = {
+    version: 1,
+    personalityId: REALIST_ID,
+    surfaceId: 'invitation-opening',
+    drafts: REALIST_INVITATION_OPENING_DRAFTS.length,
+    seededAt: new Date().toISOString()
+  };
+  const content = JSON.stringify(summary);
+  if (isProduction) {
+    await withPgClient((client) => client.query(`
+      INSERT INTO dev_assets (name, content, updated_at)
+      VALUES ($1, $2, CURRENT_TIMESTAMP)
+      ON CONFLICT (name) DO UPDATE SET content = EXCLUDED.content, updated_at = CURRENT_TIMESTAMP
+    `, [INVITATION_OPENING_DRAFT_ASSET_NAME, content]));
+  } else {
+    await sqliteRun(
+      'INSERT OR REPLACE INTO dev_assets (name, content, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
+      [INVITATION_OPENING_DRAFT_ASSET_NAME, content]
+    );
+  }
+  return summary;
+}
+
 async function syncLegacySurfaceMessages(personalityId, surfaceId, texts) {
   const normalized = [...new Set(texts.map(normalizeMessageText).filter(Boolean))];
   for (const text of texts) {
@@ -987,6 +1071,7 @@ async function seedRealistAndMigrateSavedMessages() {
   if (marker) {
     const summary = JSON.parse(marker.content);
     summary.vettedSloganRepair = await repairOwnerVettedSlogans();
+    summary.invitationOpeningDrafts = await seedRealistInvitationOpeningDrafts();
     return summary;
   }
 
@@ -1075,12 +1160,15 @@ async function seedRealistAndMigrateSavedMessages() {
     );
   }
   summary.vettedSloganRepair = await repairOwnerVettedSlogans();
+  summary.invitationOpeningDrafts = await seedRealistInvitationOpeningDrafts();
   return summary;
 }
 
 module.exports = {
   REALIST_ID,
   MIGRATION_ASSET_NAME,
+  INVITATION_OPENING_DRAFT_ASSET_NAME,
+  REALIST_INVITATION_OPENING_DRAFTS,
   DEFAULT_REALIST_DESCRIPTION,
   DEFAULT_REALIST_GUIDANCE,
   normalizeMessageText,

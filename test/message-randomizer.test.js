@@ -3,8 +3,10 @@ const assert = require('node:assert/strict');
 
 const {
   normalizeMessageText,
-  readMigrationCopy
+  readMigrationCopy,
+  REALIST_INVITATION_OPENING_DRAFTS
 } = require('../database/message-randomizer');
+const { validateGeneratedCandidate } = require('../services/message-generation');
 const {
   renderSupportedTokens,
   joinMessageSections,
@@ -45,6 +47,18 @@ test('preserves all 41 saved owner-vetted values and the deterministic details t
   assert.deepEqual(migrated.youreIn, youreIn);
   assert.equal(migrated.youreInDetailsTemplate, detailsTemplate);
   assert.equal(migrated.slogans.length + migrated.youreIn.length, 41);
+});
+
+test('keeps the 20 owner-approved Realist invitation openings valid and unique', () => {
+  const surface = getMessageSurface('invitation-opening');
+  const normalized = new Set();
+  assert.equal(REALIST_INVITATION_OPENING_DRAFTS.length, 20);
+  for (const text of REALIST_INVITATION_OPENING_DRAFTS) {
+    const result = validateGeneratedCandidate(text, { surface });
+    assert.equal(result.valid, true, `${text}: ${result.reason}`);
+    assert.equal(normalized.has(result.normalized), false, `Duplicate opening: ${text}`);
+    normalized.add(result.normalized);
+  }
 });
 
 test('renders only values allowed by the selected surface', () => {

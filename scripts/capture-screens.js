@@ -155,6 +155,14 @@ const openDeveloperMessageRandomizer = async (p) => {
     document.querySelector('[data-tab="message-randomizer"]').click();
   })()`);
   await cdp.sleep(1000);
+  await p.evaluate(`(() => {
+    const surface = document.getElementById('randomizerLibrarySurface');
+    const status = document.getElementById('randomizerLibraryStatus');
+    surface.value = 'invitation-opening';
+    status.value = 'draft';
+    surface.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  await cdp.sleep(700);
 };
 
 const openDeveloperRules = async (p) => {
@@ -299,7 +307,7 @@ function buildScreens(fx) {
       act: openDeveloperStatus },
     { file: 'dev-message-randomizer', of: '/dev.html', size: 'tall', url: '/dev.html',
       title: 'Message Randomizer',
-      note: 'The Realist personality, per-surface rollout controls, all 41 locked vetted favorites, generation review, phone-backed target rules and no-usage preview.',
+      note: 'The Realist personality, per-surface rollout controls, 41 locked vetted favorites, 20 invitation-opening drafts, generation review, phone-backed target rules and no-usage preview.',
       act: openDeveloperMessageRandomizer },
     { file: 'dev-images', of: '/dev.html', size: 'wide', url: '/dev.html',
       title: 'Images',
