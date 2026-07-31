@@ -975,6 +975,45 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       'developer area lists every current app-building rule in the Rules tab'
     );
 
+    const vibeCoder101 = await desktop.evaluate(`(() => {
+      document.querySelector('[data-tab="vibe-coder-101"]').click();
+      const activePanel = document.getElementById('tab-vibe-coder-101');
+      const categories = [...activePanel.querySelectorAll('.vibe-category')];
+      const route = [...activePanel.querySelectorAll('.vibe-route li strong')]
+        .map((element) => element.textContent.trim());
+      const tests = [...activePanel.querySelectorAll('.vibe-test strong')]
+        .map((element) => element.textContent.trim());
+      return {
+        visible: !activePanel.classList.contains('hidden'),
+        active: document.querySelector('[data-tab="vibe-coder-101"]').classList.contains('active'),
+        categories: categories.length,
+        firstOpen: categories[0]?.open,
+        route,
+        tests,
+        promptIngredients: activePanel.querySelectorAll('.prompt-ingredient').length,
+        hasParallelDevelopment: activePanel.textContent.includes('Parallel Development'),
+        hasFixedWorkExplanation: activePanel.textContent.includes(
+          'Why a tiny text change can still take time'
+        )
+      };
+    })()`);
+    assert(
+      vibeCoder101.visible &&
+        vibeCoder101.active &&
+        vibeCoder101.categories === 8 &&
+        vibeCoder101.firstOpen &&
+        vibeCoder101.route.join(',') ===
+          'Understand,Isolate,Investigate,Build,Test,Document,Deploy,Verify' &&
+        vibeCoder101.tests.length === 9 &&
+        vibeCoder101.tests.includes('Unit Tests') &&
+        vibeCoder101.tests.includes('Browser Tests') &&
+        vibeCoder101.tests.includes('Production Verification') &&
+        vibeCoder101.promptIngredients === 5 &&
+        vibeCoder101.hasParallelDevelopment &&
+        vibeCoder101.hasFixedWorkExplanation,
+      'developer area teaches the full prompt-to-production workflow in Vibe Coder 101'
+    );
+
     const replyOptionEditor = await desktop.evaluate(`(async () => {
       document.querySelector('[data-tab="reply-options"]').click();
       await new Promise((resolve) => setTimeout(resolve, 250));

@@ -231,6 +231,32 @@ const openDeveloperRules = async (p) => {
   await cdp.sleep(500);
 };
 
+const openDeveloperVibeCoder101 = async (p) => {
+  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  await p.evaluate(`(async () => {
+    const response = await fetch('/api/dev/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: ${password} })
+    });
+    if (!response.ok) throw new Error('Developer sign-in failed');
+    showApp();
+    document.querySelector('[data-tab="vibe-coder-101"]').click();
+  })()`);
+  await cdp.sleep(250);
+};
+
+const openDeveloperVibeCoder101Testing = async (p) => {
+  await openDeveloperVibeCoder101(p);
+  await p.evaluate(`(() => {
+    const categories = [...document.querySelectorAll('#tab-vibe-coder-101 .vibe-category')];
+    categories.forEach((category, index) => {
+      category.open = index === 4;
+    });
+  })()`);
+  await cdp.sleep(250);
+};
+
 const openDeveloperImages = (fx) => async (p) => {
   // Reuse a real app screenshot as the fixture image so the gallery photographs recognisable
   // thumbnails without keeping a second decorative image asset in the repository.
@@ -380,6 +406,14 @@ function buildScreens(fx) {
       title: 'Rules',
       note: 'The living reference for build, deployment, design, privacy, test-safety and core behavior guardrails.',
       act: openDeveloperRules },
+    { file: 'dev-vibe-coder-101', of: '/dev.html', size: 'tall', url: '/dev.html',
+      title: 'Vibe Coder 101',
+      note: 'A plain-English tour from prompt to production, with expandable workflow categories, a testing translator and a five-part prompt recipe.',
+      act: openDeveloperVibeCoder101 },
+    { file: 'dev-vibe-coder-101-testing', of: '/dev.html', size: 'tall', url: '/dev.html',
+      title: 'Vibe Coder 101 — Testing Explained',
+      note: 'Nine kinds of evidence explain what each testing layer proves, from fast static checks to live production verification and human review.',
+      act: openDeveloperVibeCoder101Testing },
 
     { file: 'lookup-redirect', of: '/lookup.html', size: 'narrow', url: '/lookup.html',
       title: 'The retired lookup page',
