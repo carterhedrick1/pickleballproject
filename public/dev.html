@@ -578,6 +578,126 @@
     color: var(--muted); font-size: 13px; margin-top: 18px; padding: 12px 14px;
   }
 
+  /* Vibe Coder 101 */
+  .vibe-hero {
+    background:
+      radial-gradient(circle at top right, var(--brand-soft), transparent 46%),
+      var(--surface);
+    overflow: hidden; padding: 30px;
+  }
+  .vibe-eyebrow {
+    color: var(--brand); font-size: 11px; font-weight: 850; letter-spacing: 0.11em;
+    margin-bottom: 9px; text-transform: uppercase;
+  }
+  .vibe-hero h2 { font-size: clamp(24px, 4vw, 36px); letter-spacing: -0.03em; line-height: 1.12; margin-bottom: 10px; }
+  .vibe-hero > p { color: var(--muted); font-size: 15px; margin: 0; max-width: 760px; }
+  .vibe-route {
+    align-items: start; display: grid; gap: 0; grid-template-columns: repeat(8, minmax(0, 1fr));
+    list-style: none; margin: 28px 0 0; padding: 0;
+  }
+  .vibe-route li { min-width: 0; position: relative; text-align: center; }
+  .vibe-route li:not(:last-child)::after {
+    background: var(--brand-border); content: ""; height: 2px; left: calc(50% + 14px);
+    position: absolute; top: 14px; width: calc(100% - 28px);
+  }
+  .vibe-route-number {
+    align-items: center; background: var(--surface); border: 2px solid var(--brand);
+    border-radius: 50%; color: var(--brand); display: inline-flex; font-size: 11px;
+    font-weight: 850; height: 30px; justify-content: center; position: relative; width: 30px;
+    z-index: 1;
+  }
+  .vibe-route strong { display: block; font-size: 11px; line-height: 1.25; margin: 8px auto 0; max-width: 82px; }
+  .vibe-context {
+    align-items: start; display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .vibe-context-card {
+    background: var(--canvas); border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+  }
+  .vibe-context-card strong { display: block; font-size: 14px; margin-bottom: 5px; }
+  .vibe-context-card p { color: var(--muted); font-size: 12px; margin: 0; }
+  .vibe-context-card.is-highlight {
+    background: var(--brand-soft); border-color: var(--brand-border);
+  }
+  .vibe-section-heading { margin-bottom: 16px; }
+  .vibe-section-heading h2 { margin-bottom: 4px; }
+  .vibe-section-heading p { margin: 0; }
+  .vibe-categories { display: grid; gap: 10px; }
+  .vibe-category {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden;
+  }
+  .vibe-category[open] { border-color: var(--brand-border); box-shadow: var(--shadow-small); }
+  .vibe-category summary {
+    align-items: center; cursor: pointer; display: grid; gap: 14px;
+    grid-template-columns: 36px minmax(0, 1fr) auto; list-style: none; padding: 17px 18px;
+  }
+  .vibe-category summary::-webkit-details-marker { display: none; }
+  .vibe-category summary::after {
+    color: var(--brand); content: "+"; font-size: 22px; font-weight: 500; line-height: 1;
+  }
+  .vibe-category[open] summary::after { content: "−"; }
+  .vibe-category-number {
+    align-items: center; background: var(--brand-soft); border: 1px solid var(--brand-border);
+    border-radius: 9px; color: var(--brand); display: inline-flex; font-size: 12px;
+    font-weight: 850; height: 36px; justify-content: center; width: 36px;
+  }
+  .vibe-category-title { display: block; font-size: 15px; }
+  .vibe-category-subtitle { color: var(--muted); display: block; font-size: 12px; font-weight: 400; margin-top: 2px; }
+  .vibe-category-body {
+    border-top: 1px solid var(--border); display: grid; gap: 18px;
+    grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 18px;
+  }
+  .vibe-category-column h3 {
+    color: var(--brand); font-size: 11px; letter-spacing: 0.06em; margin: 0 0 7px;
+    text-transform: uppercase;
+  }
+  .vibe-category-column p, .vibe-category-column ul {
+    color: var(--muted); font-size: 13px; margin: 0;
+  }
+  .vibe-category-column ul { padding-left: 17px; }
+  .vibe-category-column li + li { margin-top: 5px; }
+  .vibe-testing-grid {
+    display: grid; gap: 10px; grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .vibe-test {
+    background: var(--canvas); border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+  }
+  .vibe-test strong { display: block; font-size: 13px; margin-bottom: 4px; }
+  .vibe-test p { color: var(--muted); font-size: 12px; margin: 0; }
+  .vibe-test span {
+    color: var(--brand); display: block; font-size: 10px; font-weight: 850;
+    letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;
+  }
+  .vibe-fixed-work {
+    background: var(--warning-soft); border: 1px solid var(--warning-border); border-radius: 10px;
+    color: var(--muted); font-size: 13px; grid-column: 1 / -1; padding: 13px 15px;
+  }
+  .vibe-fixed-work strong { color: var(--ink); }
+  .prompt-recipe { display: grid; gap: 12px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .prompt-ingredient {
+    border: 1px solid var(--border); border-radius: 10px; min-width: 0; padding: 15px;
+  }
+  .prompt-ingredient span {
+    color: var(--brand); display: block; font-size: 11px; font-weight: 850; margin-bottom: 5px;
+  }
+  .prompt-ingredient strong { display: block; font-size: 13px; margin-bottom: 4px; }
+  .prompt-ingredient p { color: var(--muted); font-size: 12px; margin: 0; }
+  .prompt-example {
+    background: var(--ink); border-radius: 12px; color: var(--surface); margin-top: 16px; padding: 20px;
+  }
+  .prompt-example span {
+    color: color-mix(in srgb, var(--surface) 68%, transparent); display: block;
+    font-size: 10px; font-weight: 850; letter-spacing: 0.08em; margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .prompt-example p { font-size: 14px; margin: 0; }
+  .prompt-note {
+    border-left: 3px solid var(--brand); color: var(--muted); font-size: 13px;
+    margin-top: 16px; padding: 4px 0 4px 14px;
+  }
+  .prompt-note strong { color: var(--ink); }
+
   /* Style Command Center */
   .style-intro {
     align-items: start; display: flex; gap: 24px; justify-content: space-between;
@@ -671,6 +791,12 @@
     .style-token-grid, .style-rule-grid { grid-template-columns: 1fr; }
     .rules-intro, .style-intro { display: grid; }
     .style-button-compact { min-height: 44px; }
+    .vibe-route { gap: 16px 0; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .vibe-route li:nth-child(4)::after { display: none; }
+    .vibe-context, .vibe-category-body { grid-template-columns: 1fr; }
+    .vibe-testing-grid { grid-column: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .vibe-fixed-work { grid-column: auto; }
+    .prompt-recipe { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 480px) {
     .style-token-heading { align-items: start; flex-direction: column; gap: 2px; }
@@ -678,6 +804,11 @@
     .style-example-row .style-button { width: 100%; }
     .style-form { grid-template-columns: 1fr; }
     .style-field:first-child { grid-column: auto; }
+    .vibe-hero { padding: 22px; }
+    .vibe-route { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .vibe-route li:nth-child(2n)::after { display: none; }
+    .vibe-category summary { grid-template-columns: 34px minmax(0, 1fr) auto; padding: 15px; }
+    .vibe-testing-grid, .prompt-recipe { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -732,6 +863,7 @@
     <button data-tab="rosters">Hosts And Players</button>
     <button data-tab="images">Images</button>
     <button data-tab="screens">Screens</button>
+    <button data-tab="vibe-coder-101">Vibe Coder 101</button>
     <button data-tab="rules">Rules</button>
     <button data-tab="style-command-center">Style Command Center</button>
   </div>
@@ -1291,6 +1423,354 @@
       </div>
     </section>
 
+    <!-- Vibe Coder 101 -->
+    <section id="tab-vibe-coder-101" class="hidden">
+      <div class="panel vibe-hero">
+        <div class="vibe-eyebrow">From Your Idea To The Live App</div>
+        <h2>What Happens After You Press Send?</h2>
+        <p>
+          A prompt starts a chain of decisions, safeguards, building, and proof. The code change
+          may be small, but the job is not finished until the right behavior is safely live and
+          verified. Open any category below to see what happens, why it matters, and what you can
+          include in a prompt to help.
+        </p>
+        <ol class="vibe-route" aria-label="Prompt-to-production workflow">
+          <li><span class="vibe-route-number">1</span><strong>Understand</strong></li>
+          <li><span class="vibe-route-number">2</span><strong>Isolate</strong></li>
+          <li><span class="vibe-route-number">3</span><strong>Investigate</strong></li>
+          <li><span class="vibe-route-number">4</span><strong>Build</strong></li>
+          <li><span class="vibe-route-number">5</span><strong>Test</strong></li>
+          <li><span class="vibe-route-number">6</span><strong>Document</strong></li>
+          <li><span class="vibe-route-number">7</span><strong>Deploy</strong></li>
+          <li><span class="vibe-route-number">8</span><strong>Verify</strong></li>
+        </ol>
+      </div>
+
+      <div class="panel">
+        <div class="vibe-section-heading">
+          <h2>Not Every Prompt Takes The Same Route</h2>
+          <p class="muted">The workflow expands or contracts according to what could change or go wrong.</p>
+        </div>
+        <div class="vibe-context">
+          <article class="vibe-context-card">
+            <strong>A Question Or Explanation</strong>
+            <p>I investigate and answer. No repository change means no worktree, commit, or deployment.</p>
+          </article>
+          <article class="vibe-context-card is-highlight">
+            <strong>A Visible App Change</strong>
+            <p>I use the full route: isolate, build, test, photograph, deploy, and verify the live experience.</p>
+          </article>
+          <article class="vibe-context-card">
+            <strong>A Risky Or Foundational Change</strong>
+            <p>Data, privacy, text messaging, and shared architecture receive deeper investigation and more proof.</p>
+          </article>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="vibe-section-heading">
+          <h2>The Workflow By Category</h2>
+          <p class="muted">Open a category to translate the behind-the-scenes activity into plain English.</p>
+        </div>
+        <div class="vibe-categories">
+          <details class="vibe-category" open>
+            <summary>
+              <span class="vibe-category-number">01</span>
+              <span>
+                <strong class="vibe-category-title">Understand The Outcome</strong>
+                <span class="vibe-category-subtitle">From Prompt To A Clear Definition Of Done</span>
+              </span>
+            </summary>
+            <div class="vibe-category-body">
+              <div class="vibe-category-column">
+                <h3>What I Do</h3>
+                <p>I identify the desired result, audience, affected screen or behavior, boundaries, and whether you want an explanation, diagnosis, or completed change.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Why We Do It</h3>
+                <p>A technically correct answer to the wrong problem is still wrong. A concrete finish line keeps implementation choices aligned with your real goal.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Help Me By Saying</h3>
+                <p>What should be different, who should notice it, what must stay the same, and any wording or visual direction you already know you want.</p>
+              </div>
+            </div>
+          </details>
+
+          <details class="vibe-category">
+            <summary>
+              <span class="vibe-category-number">02</span>
+              <span>
+                <strong class="vibe-category-title">Protect And Isolate The Work</strong>
+                <span class="vibe-category-subtitle">A Safe Workspace For Every Change</span>
+              </span>
+            </summary>
+            <div class="vibe-category-body">
+              <div class="vibe-category-column">
+                <h3>What I Do</h3>
+                <p>I create a separate Git worktree and branch for the prompt. It has its own files, change history, and place in the completion queue.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Why We Do It</h3>
+                <p>Two ideas can be built at once without overwriting each other, sharing unfinished files, fighting over the Git index, or deploying the wrong work.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Parallel Development</h3>
+                <p>Separate work happens in parallel. Shared steps—integrating with the latest main branch, restarting port 3002, and deploying—wait in a serialized queue.</p>
+              </div>
+            </div>
+          </details>
+
+          <details class="vibe-category">
+            <summary>
+              <span class="vibe-category-number">03</span>
+              <span>
+                <strong class="vibe-category-title">Investigate The Current System</strong>
+                <span class="vibe-category-subtitle">How This Part Of IN or OUT Works Today</span>
+              </span>
+            </summary>
+            <div class="vibe-category-body">
+              <div class="vibe-category-column">
+                <h3>What I Do</h3>
+                <ul>
+                  <li>Read the project rules and related code.</li>
+                  <li>Trace connected screens, APIs, data, and tests.</li>
+                  <li>Check current behavior when memory or old notes are not proof.</li>
+                </ul>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Why We Do It</h3>
+                <p>A text message might also be randomized, stored in a database, shown in a preview, sent through an SMS provider, and counted in Developer Area metrics.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Help Me By Saying</h3>
+                <p>Where you saw the behavior, the steps that led to it, and whether the change should affect existing data or only things created in the future.</p>
+              </div>
+            </div>
+          </details>
+
+          <details class="vibe-category">
+            <summary>
+              <span class="vibe-category-number">04</span>
+              <span>
+                <strong class="vibe-category-title">Plan And Build The Change</strong>
+                <span class="vibe-category-subtitle">The Smallest Complete Change For The Whole Product</span>
+              </span>
+            </summary>
+            <div class="vibe-category-body">
+              <div class="vibe-category-column">
+                <h3>What I Do</h3>
+                <p>I choose the files and approach, preserve existing architecture, implement the behavior, and cover related states such as loading, empty, error, desktop, mobile, and keyboard use when relevant.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Why We Do It</h3>
+                <p>The goal is not merely to make one screenshot look right. The change must belong in the app, remain understandable, and avoid surprising another flow.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>What You May See</h3>
+                <p>I may revise the approach after discovering a dependency. That is the investigation doing its job, not the prompt being ignored.</p>
+              </div>
+            </div>
+          </details>
+
+          <details class="vibe-category">
+            <summary>
+              <span class="vibe-category-number">05</span>
+              <span>
+                <strong class="vibe-category-title">Test At The Right Layers</strong>
+                <span class="vibe-category-subtitle">Different Questions At Different Layers</span>
+              </span>
+            </summary>
+            <div class="vibe-category-body">
+              <div class="vibe-category-column">
+                <h3>What Testing Means</h3>
+                <p>Testing is controlled evidence. I give the software a known situation, observe what it does, and compare that result with the behavior we intended.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Why There Are Many Tests</h3>
+                <p>A spelling check cannot prove a button saves. A unit test cannot prove a page renders. A local browser cannot prove the new production server is live.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>How Much Testing</h3>
+                <p>I choose tests in proportion to the change. A copy edit needs less behavioral coverage than roster ordering, privacy, image deletion, or text-message delivery.</p>
+              </div>
+              <div class="vibe-testing-grid">
+                <article class="vibe-test">
+                  <span>Fastest Feedback</span>
+                  <strong>Static Checks</strong>
+                  <p>Is the code valid and consistent with formatting, capitalization, and project rules?</p>
+                </article>
+                <article class="vibe-test">
+                  <span>Small Logic</span>
+                  <strong>Unit Tests</strong>
+                  <p>Given specific inputs, does one function or rule return the exact expected result?</p>
+                </article>
+                <article class="vibe-test">
+                  <span>Connected Pieces</span>
+                  <strong>Integration Tests</strong>
+                  <p>Do the route, database, permissions, and outside-service boundaries work together?</p>
+                </article>
+                <article class="vibe-test">
+                  <span>Real Interaction</span>
+                  <strong>Browser Tests</strong>
+                  <p>Can a person open the page, click the control, complete the flow, and see the result?</p>
+                </article>
+                <article class="vibe-test">
+                  <span>Visual Evidence</span>
+                  <strong>Screenshot Checks</strong>
+                  <p>Does the changed screen appear correctly at its real size, including important states?</p>
+                </article>
+                <article class="vibe-test">
+                  <span>Ship Readiness</span>
+                  <strong>Deployment Gate</strong>
+                  <p>Does the complete required suite pass before this change is allowed to reach main?</p>
+                </article>
+                <article class="vibe-test">
+                  <span>Safety Boundaries</span>
+                  <strong>Fixture Protection</strong>
+                  <p>Are test data, fake 555 numbers, local SQLite, and disabled real SMS kept away from production?</p>
+                </article>
+                <article class="vibe-test">
+                  <span>Live Proof</span>
+                  <strong>Production Verification</strong>
+                  <p>Did a fresh server start, is it healthy, and does inorout.club now perform the changed behavior?</p>
+                </article>
+                <article class="vibe-test">
+                  <span>Human Judgment</span>
+                  <strong>Review</strong>
+                  <p>Even when checks pass, does the result make sense, read naturally, and solve your request?</p>
+                </article>
+              </div>
+            </div>
+          </details>
+
+          <details class="vibe-category">
+            <summary>
+              <span class="vibe-category-number">06</span>
+              <span>
+                <strong class="vibe-category-title">Document What Users Will See</strong>
+                <span class="vibe-category-subtitle">A Current Visual Record Of Screens And States</span>
+              </span>
+            </summary>
+            <div class="vibe-category-body">
+              <div class="vibe-category-column">
+                <h3>What I Do</h3>
+                <p>For visible changes, I update the automated Screens capture when needed, regenerate the gallery, and verify it through Developer Area → Screens.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Why We Do It</h3>
+                <p>The gallery is a visual map of the current product. It helps us review consistency, remember hidden flows, and see what the code actually produces.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>When It Is Skipped</h3>
+                <p>A truly server-only change with no visible surface does not need new screenshots, though it still needs relevant behavior and production checks.</p>
+              </div>
+            </div>
+          </details>
+
+          <details class="vibe-category">
+            <summary>
+              <span class="vibe-category-number">07</span>
+              <span>
+                <strong class="vibe-category-title">Integrate And Deploy Safely</strong>
+                <span class="vibe-category-subtitle">One Guarded Lane For Shared Completion Work</span>
+              </span>
+            </summary>
+            <div class="vibe-category-body">
+              <div class="vibe-category-column">
+                <h3>What I Do</h3>
+                <p>The completion workflow updates the isolated change with the latest main branch, runs the deployment gate, prepares the local app, merges, pushes both repositories, and triggers Render.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Why We Do It</h3>
+                <p>The codebase may have moved while this prompt was being built. Rechecking after integration prevents two individually good changes from becoming one broken release.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Why There Can Be A Wait</h3>
+                <p>Only one task can merge, restart the shared local server, publish Screens, and deploy at a time. Other tasks keep building while that shared lane is occupied.</p>
+              </div>
+              <div class="vibe-fixed-work">
+                <strong>Why a tiny text change can still take time:</strong> the edit is tiny, but isolation,
+                checks, current Screens, integration, deployment, a fresh production process, and live proof
+                are fixed completion work. The smaller code change does not make those safety promises disappear.
+              </div>
+            </div>
+          </details>
+
+          <details class="vibe-category">
+            <summary>
+              <span class="vibe-category-number">08</span>
+              <span>
+                <strong class="vibe-category-title">Verify Production And Report Back</strong>
+                <span class="vibe-category-subtitle">Proof Where You And Your Players Use The App</span>
+              </span>
+            </summary>
+            <div class="vibe-category-body">
+              <div class="vibe-category-column">
+                <h3>What I Do</h3>
+                <p>I wait for a new production start time, check health, exercise the affected live behavior, confirm the live Screens publication when visible, and inspect failures if anything disagrees.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>Why We Do It</h3>
+                <p>A successful push says code arrived at a repository. It does not prove the host deployed it, the process restarted, or the public app behaves correctly.</p>
+              </div>
+              <div class="vibe-category-column">
+                <h3>What I Tell You</h3>
+                <p>The outcome first: what changed, what important checks passed, whether it is live, and anything you should know or decide next.</p>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="vibe-section-heading">
+          <h2>A Better Prompt Has Five Useful Ingredients</h2>
+          <p class="muted">You do not need technical language. Product context is often more valuable than code instructions.</p>
+        </div>
+        <div class="prompt-recipe">
+          <article class="prompt-ingredient">
+            <span>01</span>
+            <strong>Outcome</strong>
+            <p>What should be true when the work is finished?</p>
+          </article>
+          <article class="prompt-ingredient">
+            <span>02</span>
+            <strong>Place And Audience</strong>
+            <p>Where does it happen, and who is using it?</p>
+          </article>
+          <article class="prompt-ingredient">
+            <span>03</span>
+            <strong>Behavior Or Copy</strong>
+            <p>What should the person see, do, or understand?</p>
+          </article>
+          <article class="prompt-ingredient">
+            <span>04</span>
+            <strong>Boundaries</strong>
+            <p>What should not change, or what is out of scope?</p>
+          </article>
+          <article class="prompt-ingredient">
+            <span>05</span>
+            <strong>Proof</strong>
+            <p>How would you personally know it works?</p>
+          </article>
+        </div>
+        <div class="prompt-example">
+          <span>Example Prompt</span>
+          <p>
+            “On the host’s Players tab, add a short note above the waitlist explaining that players
+            move up automatically when a spot opens. Keep the existing controls and text-message
+            behavior unchanged. It should read naturally on both phone and desktop.”
+          </p>
+        </div>
+        <div class="prompt-note">
+          <strong>You do not have to specify the implementation.</strong> Tell me the outcome and the
+          human reason behind it. I can investigate the safest way to build it. Exact copy, examples,
+          screenshots, priorities, and “please do not change” boundaries are welcome whenever you have them.
+        </div>
+      </div>
+    </section>
+
     <!-- Rules -->
     <section id="tab-rules" class="hidden">
       <div class="panel">
@@ -1743,6 +2223,7 @@ const STANDARD_TAB_IDS = [
   'rosters',
   'images',
   'screens',
+  'vibe-coder-101',
   'rules',
   'style-command-center'
 ];
