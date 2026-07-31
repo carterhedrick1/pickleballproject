@@ -628,6 +628,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
           'same for every category'
         ) &&
         document.querySelectorAll('#randomizerPromptParagraphs textarea').length === 9;
+      promptSurfaceSelect.value = 'site-slogan';
+      promptSurfaceSelect.dispatchEvent(new Event('change', { bubbles: true }));
       return {
         visible: !document.getElementById('tab-message-randomizer').classList.contains('hidden'),
         collapsibleSections: randomizerSections.length,
