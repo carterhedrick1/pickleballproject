@@ -194,6 +194,17 @@ const openDeveloperMessageRandomizerPreview = async (p) => {
   await cdp.sleep(700);
 };
 
+const openDeveloperMessageRandomizerGeneration = async (p) => {
+  await openDeveloperMessageRandomizer(p);
+  await p.evaluate(`(() => {
+    const section = [...document.querySelectorAll('[data-randomizer-section]')]
+      .find((candidate) => candidate.querySelector('summary h2')?.textContent.trim() === 'Generate Fresh Messages');
+    section.open = true;
+    section.scrollIntoView({ block: 'start' });
+  })()`);
+  await cdp.sleep(400);
+};
+
 const openDeveloperRules = async (p) => {
   const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
   await p.evaluate(`(async () => {
@@ -338,6 +349,10 @@ function buildScreens(fx) {
       title: 'Message Randomizer',
       note: 'Seven collapsed sections keep the full Message Randomizer toolkit easy to scan and open on demand.',
       act: openDeveloperMessageRandomizer },
+    { file: 'dev-message-randomizer-generation', of: '/dev.html', size: 'tall', url: '/dev.html',
+      title: 'Generate Fresh Messages',
+      note: 'Generated candidates can be configured by surface and count; the generation action is currently marked Under Construction.',
+      act: openDeveloperMessageRandomizerGeneration },
     { file: 'dev-message-randomizer-preview', of: '/dev.html', size: 'tall', url: '/dev.html',
       title: 'Message Randomizer Preview',
       note: 'A Surface Matrix Preview button selects that category, reveals Preview And Test and resolves stored inventory without incrementing usage.',

@@ -219,6 +219,12 @@
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;
   }
   .randomizer-grid .full { grid-column: 1 / -1; }
+  .randomizer-generate-actions {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  }
+  .randomizer-construction-note {
+    color: var(--muted); font-size: 14px; font-weight: 700;
+  }
   .randomizer-toggle {
     display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted);
   }
@@ -856,7 +862,10 @@
           <div>
             <p class="muted">Generated candidates enter Draft until reviewed. Locked vetted favorites from both source surfaces are supplied as voice examples.</p>
           </div>
-          <button type="button" class="primary" id="randomizerGenerate">Generate Fresh Messages</button>
+          <div class="randomizer-generate-actions">
+            <button type="button" class="primary" id="randomizerGenerate">Generate Fresh Messages</button>
+            <span class="randomizer-construction-note">Under Construction</span>
+          </div>
         </div>
         <div class="randomizer-grid" style="margin-top:16px">
           <label>Surface
