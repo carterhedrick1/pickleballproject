@@ -12,6 +12,10 @@ const { formatPhoneNumber } = require('../utils/sms-format');
 const {
   buildDeveloperRosters
 } = require('../utils/dev-rosters');
+const {
+  DEFAULT_CODEX_PROMPT_SECTIONS,
+  CODEX_PROMPT_PLACEHOLDERS
+} = require('../codex-message-prompts');
 
 const PERSONALITY_FIELDS = new Set([
   'name',
@@ -28,6 +32,9 @@ const MESSAGE_STATUSES = new Set(['draft', 'active', 'archived']);
 const TRIGGER_STATUSES = new Set(['confirmed', 'waitlisted', 'applicant', 'out', 'any-known']);
 const AUDIENCES = new Set(['target-only', 'confirmed', 'known-game-audience', 'invitation-copy']);
 const RULE_MODES = new Set(['exact', 'direction']);
+const ALL_MESSAGE_CATEGORIES = 'all';
+const MAX_CODEX_PROMPT_SECTION_LENGTH = 12000;
+const MAX_CODEX_PROMPT_TOTAL_LENGTH = 60000;
 
 function sendValidationError(res, error) {
   return res.status(400).json({ error });
@@ -131,6 +138,103 @@ function validateMessage(databaseMessage, body = {}, { creating = false } = {}) 
         : String(body.generationDirection || '').trim() || null
     }
   };
+}
+
+function effectiveCodexPrompts(savedPrompts) {
+  const savedBySurface = new Map(savedPrompts.map((prompt) => [prompt.surfaceId, prompt]));
+  return MESSAGE_SURFACES.map((surface) => {
+    const saved = savedBySurface.get(surface.id);
+    return {
+      surfaceId: surface.id,
+      sections: saved?.sections || [...DEFAULT_CODEX_PROMPT_SECTIONS],
+      customized: Boolean(saved?.sections),
+      updatedAt: saved?.updatedAt || null
+    };
+  });
+}
+
+function validateCodexPromptUpdate(body = {}) {
+  const personalityId = String(body.personalityId || '').trim();
+  const surfaceId = String(body.surfaceId || '').trim();
+  const isAll = surfaceId === ALL_MESSAGE_CATEGORIES;
+  if (!personalityId) return { error: 'Personality is required.' };
+  if (!isAll && !getMessageSurface(surfaceId)) {
+    return { error: 'Choose a known message category or all message categories.' };
+  }
+  if (!Array.isArray(body.sections) || body.sections.length !== DEFAULT_CODEX_PROMPT_SECTIONS.length) {
+    return { error: `The prompt must contain ${DEFAULT_CODEX_PROMPT_SECTIONS.length} numbered paragraphs.` };
+  }
+  const sections = body.sections.map((section) => {
+    if (isAll && section === null) return null;
+    return String(section == null ? '' : section).trim();
+  });
+  if (!isAll && sections.some((section) => !section)) {
+    return { error: 'Every numbered paragraph needs prompt text.' };
+  }
+  if (isAll && sections.some((section) => section !== null && !section)) {
+    return { error: 'A shared numbered paragraph cannot be blank.' };
+  }
+  if (isAll && sections.every((section) => section === null)) {
+    return { error: 'Change at least one paragraph before saving all message categories.' };
+  }
+  const oversized = sections.find(
+    (section) => section !== null && section.length > MAX_CODEX_PROMPT_SECTION_LENGTH
+  );
+  if (oversized) {
+    return { error: `Each prompt paragraph can contain up to ${MAX_CODEX_PROMPT_SECTION_LENGTH.toLocaleString()} characters.` };
+  }
+  const totalLength = sections.reduce(
+    (total, section) => total + (section === null ? 0 : section.length),
+    0
+  );
+  if (totalLength > MAX_CODEX_PROMPT_TOTAL_LENGTH) {
+    return { error: `Prompt text can contain up to ${MAX_CODEX_PROMPT_TOTAL_LENGTH.toLocaleString()} characters.` };
+  }
+  const sharedParagraphIndexes = [...new Set(
+    Array.isArray(body.sharedParagraphIndexes) ? body.sharedParagraphIndexes : []
+  )];
+  if (sharedParagraphIndexes.some(
+    (index) => !Number.isInteger(index) || index < 0 || index >= sections.length
+  )) {
+    return { error: 'Choose known numbered paragraphs to share across message categories.' };
+  }
+  return { personalityId, surfaceId, isAll, sections, sharedParagraphIndexes };
+}
+
+async function saveCodexPromptUpdate(database, validation) {
+  const saved = effectiveCodexPrompts(
+    await database.listCodexPrompts(validation.personalityId)
+  );
+  const bySurface = new Map(saved.map((prompt) => [prompt.surfaceId, prompt]));
+  const updates = new Map();
+
+  if (validation.isAll) {
+    for (const surface of MESSAGE_SURFACES) {
+      const current = bySurface.get(surface.id);
+      updates.set(surface.id, current.sections.map(
+        (section, index) => validation.sections[index] === null
+          ? section
+          : validation.sections[index]
+      ));
+    }
+  } else {
+    updates.set(validation.surfaceId, validation.sections);
+    for (const index of validation.sharedParagraphIndexes) {
+      for (const surface of MESSAGE_SURFACES) {
+        const current = updates.get(surface.id) || [...bySurface.get(surface.id).sections];
+        current[index] = validation.sections[index];
+        updates.set(surface.id, current);
+      }
+    }
+  }
+
+  await database.saveCodexPrompts(
+    validation.personalityId,
+    [...updates].map(([surfaceId, sections]) => ({ surfaceId, sections }))
+  );
+  return effectiveCodexPrompts(
+    await database.listCodexPrompts(validation.personalityId)
+  );
 }
 
 async function validateTargetRule(database, body = {}, existing = null) {
@@ -252,9 +356,10 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
       const rosterSources = await database.getDeveloperRosterSources();
       const payload = [];
       for (const personality of personalities) {
-        const [settings, metrics] = await Promise.all([
+        const [settings, metrics, savedCodexPrompts] = await Promise.all([
           database.listSurfaceSettings(personality.id),
-          database.getRandomizerMetrics(personality.id)
+          database.getRandomizerMetrics(personality.id),
+          database.listCodexPrompts(personality.id)
         ]);
         const generationStatuses = await Promise.all(
           MESSAGE_SURFACES.map((surface) => (
@@ -262,13 +367,17 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
           ))
         );
         const settingBySurface = new Map(settings.map((setting) => [setting.surfaceId, setting]));
+        const codexPromptBySurface = new Map(
+          effectiveCodexPrompts(savedCodexPrompts).map((prompt) => [prompt.surfaceId, prompt])
+        );
         payload.push({
           ...personality,
           surfaces: MESSAGE_SURFACES.map((surface, index) => ({
             ...surface,
             setting: settingBySurface.get(surface.id),
             metrics: metrics.surfaces[surface.id],
-            generationStatus: generationStatuses[index]
+            generationStatus: generationStatuses[index],
+            codexPrompt: codexPromptBySurface.get(surface.id)
           }))
         });
       }
@@ -292,11 +401,26 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
           randomizerEnabled: process.env.MESSAGE_RANDOMIZER_ENABLED !== '0',
           freshSelectionEnabled: process.env.MESSAGE_FRESH_SELECTION_ENABLED !== '0',
           autoGenerationEnabled: process.env.MESSAGE_AUTO_GENERATION_ENABLED === '1'
-        }
+        },
+        codexPromptPlaceholders: CODEX_PROMPT_PLACEHOLDERS
       });
     } catch (error) {
       console.error('Error loading Message Randomizer:', error);
       res.status(500).json({ error: 'Could not load the Message Randomizer.' });
+    }
+  });
+
+  app.put('/api/dev/message-codex-prompts', requireDevAuth, async (req, res) => {
+    const validation = validateCodexPromptUpdate(req.body);
+    if (validation.error) return sendValidationError(res, validation.error);
+    try {
+      const personality = await database.getPersonality(validation.personalityId);
+      if (!personality) return res.status(404).json({ error: 'Personality not found.' });
+      const prompts = await saveCodexPromptUpdate(database, validation);
+      res.json({ success: true, prompts });
+    } catch (error) {
+      console.error('Error saving Codex message prompts:', error);
+      res.status(500).json({ error: 'Could not save the Codex message prompts.' });
     }
   });
 
@@ -497,6 +621,9 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
 module.exports = {
   validatePersonalityUpdate,
   validateMessage,
+  validateCodexPromptUpdate,
+  effectiveCodexPrompts,
+  saveCodexPromptUpdate,
   validateTargetRule,
   mountPublicRandomizerRoutes,
   mountDevRandomizerRoutes

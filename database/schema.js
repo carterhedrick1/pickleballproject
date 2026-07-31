@@ -236,6 +236,15 @@ async function initializeDatabase() {
           )
         `);
         await client.query(`
+          CREATE TABLE IF NOT EXISTS message_codex_prompts (
+            personality_id TEXT NOT NULL REFERENCES message_personalities(id) ON DELETE CASCADE,
+            surface_id TEXT NOT NULL,
+            sections TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (personality_id, surface_id)
+          )
+        `);
+        await client.query(`
           CREATE TABLE IF NOT EXISTS message_target_rules (
             id TEXT PRIMARY KEY,
             personality_id TEXT NOT NULL REFERENCES message_personalities(id),
@@ -483,6 +492,13 @@ async function initializeDatabase() {
           fresh_pool_minimum_override IS NULL OR fresh_pool_minimum_override >= 0
         ),
         auto_publish_generated INTEGER NOT NULL DEFAULT 0,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (personality_id, surface_id)
+      )`);
+      await sqliteRun(`CREATE TABLE IF NOT EXISTS message_codex_prompts (
+        personality_id TEXT NOT NULL REFERENCES message_personalities(id) ON DELETE CASCADE,
+        surface_id TEXT NOT NULL,
+        sections TEXT NOT NULL,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (personality_id, surface_id)
       )`);

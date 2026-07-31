@@ -601,6 +601,33 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       const randomizerSections = [
         ...document.querySelectorAll('#tab-message-randomizer [data-randomizer-section]')
       ];
+      const promptSections = [
+        ...document.querySelectorAll('#randomizerPromptParagraphs textarea')
+      ].map((textarea) => textarea.value);
+      document.querySelector('[data-share-paragraph="8"]').checked = true;
+      document.getElementById('randomizerSavePrompt').click();
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const status = document.getElementById('randomizerPromptStatus').textContent;
+        if (status.includes('saved for all message categories') ||
+            (!status.includes('Saving') && status.trim())) break;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const savedPromptData = await fetch('/api/dev/message-randomizer')
+        .then((response) => response.json());
+      const savedPromptSections = savedPromptData.personalities[0].surfaces.map(
+        (surface) => surface.codexPrompt.sections
+      );
+      const promptSavedStatus = document.getElementById('randomizerPromptStatus')
+        .textContent.includes('also saved for all message categories');
+      const promptSurfaceSelect = document.getElementById('randomizerPromptSurface');
+      promptSurfaceSelect.value = 'all';
+      promptSurfaceSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      const allCategoryScope =
+        document.getElementById('randomizerCopyPrompt').disabled &&
+        document.getElementById('randomizerPromptScopeHelp').textContent.includes(
+          'same for every category'
+        ) &&
+        document.querySelectorAll('#randomizerPromptParagraphs textarea').length === 9;
       return {
         visible: !document.getElementById('tab-message-randomizer').classList.contains('hidden'),
         collapsibleSections: randomizerSections.length,
@@ -628,8 +655,18 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
           document.getElementById('randomizerReusablePrompt').value.includes(
             'Do not change the app until I explicitly say'
           ) &&
-          document.getElementById('randomizerPromptSurface').options.length === 15 &&
-          Boolean(document.getElementById('randomizerCopyPrompt')),
+          document.getElementById('randomizerReusablePrompt').value.includes('Paragraph 9:') &&
+          document.getElementById('randomizerPromptSurface').options.length === 16 &&
+          document.querySelectorAll('#randomizerPromptParagraphs textarea').length === 9 &&
+          document.querySelectorAll('[data-share-paragraph]').length === 9 &&
+          !document.querySelector('#randomizerPromptParagraphs textarea').readOnly &&
+          Boolean(document.getElementById('randomizerCopyPrompt')) &&
+          Boolean(document.getElementById('randomizerSavePrompt')),
+        savedPrompts:
+          promptSavedStatus &&
+          savedPromptSections.length === 15 &&
+          savedPromptSections.every((sections) => sections[8] === promptSections[8]),
+        allCategoryScope,
         targetPlayers: document.getElementById('randomizerRulePlayer').options.length,
         preview: document.querySelector('#randomizerPreviewOutput .randomizer-preview')
           ?.textContent.trim(),
@@ -651,6 +688,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         messageRandomizer.youreIn === 22 &&
         messageRandomizer.favoriteLabels &&
         messageRandomizer.reusablePrompt &&
+        messageRandomizer.savedPrompts &&
+        messageRandomizer.allCategoryScope &&
         messageRandomizer.targetPlayers > 1 &&
         messageRandomizer.preview &&
         messageRandomizer.preview !== 'Resolving stored inventory…' &&
