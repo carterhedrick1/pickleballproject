@@ -148,6 +148,22 @@ function mapSurfaceSetting(row) {
   };
 }
 
+function mapCodexPrompt(row) {
+  if (!row) return null;
+  let sections = null;
+  try {
+    sections = JSON.parse(row.sections);
+  } catch (_error) {
+    sections = null;
+  }
+  return {
+    personalityId: row.personality_id,
+    surfaceId: row.surface_id,
+    sections: Array.isArray(sections) ? sections : null,
+    updatedAt: toIso(row.updated_at)
+  };
+}
+
 function mapMessage(row) {
   if (!row) return null;
   return {
@@ -380,6 +396,67 @@ async function updateSurfaceSetting(personalityId, surfaceId, fields) {
     ]);
   }
   return getSurfaceSetting(personalityId, surfaceId);
+}
+
+async function listCodexPrompts(personalityId) {
+  const rows = isProduction
+    ? await withPgClient(async (client) => (
+        await client.query(
+          'SELECT * FROM message_codex_prompts WHERE personality_id = $1 ORDER BY surface_id',
+          [personalityId]
+        )
+      ).rows)
+    : await sqliteAll(
+      'SELECT * FROM message_codex_prompts WHERE personality_id = ? ORDER BY surface_id',
+      [personalityId]
+    );
+  return rows.map(mapCodexPrompt);
+}
+
+async function saveCodexPrompts(personalityId, prompts) {
+  const records = prompts.map((prompt) => [
+    personalityId,
+    prompt.surfaceId,
+    JSON.stringify(prompt.sections)
+  ]);
+  if (isProduction) {
+    await withPgClient(async (client) => {
+      await client.query('BEGIN');
+      try {
+        for (const params of records) {
+          await client.query(`
+            INSERT INTO message_codex_prompts
+              (personality_id, surface_id, sections, updated_at)
+            VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+            ON CONFLICT (personality_id, surface_id) DO UPDATE
+            SET sections = EXCLUDED.sections, updated_at = CURRENT_TIMESTAMP
+          `, params);
+        }
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      }
+    });
+  } else {
+    await sqliteRun('BEGIN IMMEDIATE');
+    try {
+      for (const params of records) {
+        await sqliteRun(`
+          INSERT INTO message_codex_prompts
+            (personality_id, surface_id, sections, updated_at)
+          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT (personality_id, surface_id) DO UPDATE
+          SET sections = excluded.sections, updated_at = CURRENT_TIMESTAMP
+        `, params);
+      }
+      await sqliteRun('COMMIT');
+    } catch (error) {
+      await sqliteRun('ROLLBACK');
+      throw error;
+    }
+  }
+  return listCodexPrompts(personalityId);
 }
 
 function buildMessageFilters(filters, postgres) {
@@ -1257,6 +1334,8 @@ module.exports = {
   listSurfaceSettings,
   getSurfaceSetting,
   updateSurfaceSetting,
+  listCodexPrompts,
+  saveCodexPrompts,
   listRandomizerMessages,
   getRandomizerMessage,
   createRandomizerMessage,

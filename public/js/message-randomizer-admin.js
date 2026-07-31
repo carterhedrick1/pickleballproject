@@ -7,8 +7,10 @@
     personality: null,
     messages: [],
     rules: [],
-    roster: []
+    roster: [],
+    promptDrafts: {}
   };
+  const ALL_MESSAGE_CATEGORIES = 'all';
 
   const byId = (id) => document.getElementById(id);
   const escape = (value) => String(value == null ? '' : value)
@@ -50,57 +52,150 @@
   function fillSurfaceSelectors() {
     byId('randomizerGenerationSurface').innerHTML = surfaceOptions();
     byId('randomizerLibrarySurface').innerHTML = surfaceOptions({ includeAll: true });
-    byId('randomizerPromptSurface').innerHTML = surfaceOptions();
+    byId('randomizerPromptSurface').innerHTML = [
+      '<option value="all">All Message Categories</option>',
+      surfaceOptions()
+    ].join('');
+    byId('randomizerPromptSurface').value = state.personality?.surfaces[0]?.id || '';
     byId('randomizerRuleSurface').innerHTML = surfaceOptions();
     byId('randomizerPreviewSurface').innerHTML = surfaceOptions();
     renderReusablePrompt();
   }
 
-  function buildReusablePrompt(surface) {
-    const name = surface?.name || 'Selected Message Category';
-    const id = surface?.id || 'selected-category';
-    const purpose = surface?.purpose || 'Use the selected category’s communication goal.';
-    const allowedTokens = surface?.allowedTokens?.length
-      ? surface.allowedTokens.map((token) => `{${token}}`).join(', ')
-      : 'None';
-    const maximumLength = surface?.maxLength || 240;
-    return `Help me build 20 new, owner-approved Realist messages for the "${name}" category (${id}) in IN or OUT's Message Randomizer.
+  function selectedPromptSurface() {
+    const surfaceId = byId('randomizerPromptSurface').value;
+    return state.personality?.surfaces.find((surface) => surface.id === surfaceId) || null;
+  }
 
-Category purpose: ${purpose}
-Allowed template tokens: ${allowedTokens}
-Maximum length: ${maximumLength} characters.
+  function expandPromptSection(section, surface) {
+    const values = {
+      CATEGORY_NAME: surface?.name || 'Selected Message Category',
+      CATEGORY_ID: surface?.id || 'selected-category',
+      CATEGORY_PURPOSE: surface?.purpose || 'Use the selected category’s communication goal.',
+      ALLOWED_TOKENS: surface?.allowedTokens?.length
+        ? surface.allowedTokens.map((token) => `{${token}}`).join(', ')
+        : 'None',
+      MAX_LENGTH: surface?.maxLength || 240
+    };
+    return String(section).replace(
+      /\{\{(CATEGORY_NAME|CATEGORY_ID|CATEGORY_PURPOSE|ALLOWED_TOKENS|MAX_LENGTH)\}\}/g,
+      (_match, key) => String(values[key])
+    );
+  }
 
-Use the existing Realist personality and the current vetted messages in the repository as the style source. Keep every idea short, direct, dryly funny, and appropriate for this category. Preserve all operational facts and instructions. Do not invent player facts, dates, times, locations, roster states, links, or reply commands.
+  function numberedPrompt(sections, surface, { expand = true } = {}) {
+    return sections.map((section, index) => {
+      const text = section === null
+        ? '[Multiple Saved Versions]'
+        : (expand ? expandPromptSection(section, surface) : section);
+      return `Paragraph ${index + 1}:\n${text}`;
+    }).join('\n\n');
+  }
 
-Work in two phases.
+  function renderPromptPlaceholders() {
+    byId('randomizerPromptPlaceholders').innerHTML = (
+      state.config?.codexPromptPlaceholders || []
+    ).map((placeholder) => (
+      `<code title="${escape(placeholder.description)}">${escape(placeholder.token)}</code>`
+    )).join('');
+  }
 
-Brainstorming And Selection:
-1. Inspect the repository's current Realist messages, this category's implementation, and its validation and safety rules. Do not change any files yet.
-2. Generate 50 distinct candidate messages themed around the "${name}" experience.
-3. Number them 1 through 50 so I can reply with the numbers I like.
-4. Wait for my selections. Keep an exact running shortlist and tell me how many of the 20 slots are filled.
-5. If fewer than 20 are selected, generate a smaller follow-up batch based on the tone and patterns I chose. Continue numbering at 51 so references never become ambiguous.
-6. Repeat the selection process until exactly 20 messages are approved.
-7. Do not change the app until I explicitly say, "Please add them."
+  function allCategorySections() {
+    const drafts = state.personality.surfaces.map(
+      (surface) => state.promptDrafts[surface.id]
+    );
+    return drafts[0].map((section, index) => {
+      const same = drafts.every((candidate) => candidate[index] === section);
+      return same ? section : null;
+    });
+  }
 
-Implementation After I Say "Please Add Them":
-1. Add exactly the 20 approved messages to the Realist "${name}" category as manual drafts. Preserve all existing messages.
-2. Do not activate, lock, vet, archive, replace, or delete messages unless I explicitly request it.
-3. Use an idempotent one-time migration so deployment adds the drafts once without duplicating them or recreating messages I later edit.
-4. Add automated coverage confirming the approved count, normalized uniqueness, category length limit, allowed tokens, and safety validation.
-5. Follow the repository's AGENTS.md workflow completely: run targeted checks and npm run verify:deploy; regenerate Screens with npm run docs; publish and verify Screens locally; restart only the confirmed IN or OUT server on port 3002; verify local health and the affected Developer UI; commit on main so the automatic push and Render deployment run; wait for a new production start time; verify production health and all approved drafts through the authenticated Developer API; publish Screens to production; and confirm the refreshed publication time and Actual Screens gallery.
-6. Preserve unrelated work and report the commit, test results, deployment result, production draft count, and whether the messages remain inactive.
-
-During brainstorming, keep responses focused on the numbered candidates and running shortlist. Begin with the 50 candidates now.`;
+  function updatePromptPreview() {
+    const allCategories = byId('randomizerPromptSurface').value === ALL_MESSAGE_CATEGORIES;
+    const sections = [...byId('randomizerPromptParagraphs').querySelectorAll('textarea')]
+      .map((textarea) => (
+        textarea.dataset.mixed === 'true' && !textarea.value.trim()
+          ? null
+          : textarea.value
+      ));
+    byId('randomizerReusablePrompt').value = numberedPrompt(
+      sections,
+      selectedPromptSurface(),
+      { expand: !allCategories }
+    );
   }
 
   function renderReusablePrompt() {
-    const surfaceId = byId('randomizerPromptSurface').value;
-    const surface = state.personality?.surfaces.find(
-      (candidate) => candidate.id === surfaceId
-    );
-    byId('randomizerReusablePrompt').value = buildReusablePrompt(surface);
+    const allCategories = byId('randomizerPromptSurface').value === ALL_MESSAGE_CATEGORIES;
+    const surface = selectedPromptSurface();
+    const sections = allCategories
+      ? allCategorySections()
+      : state.promptDrafts[surface.id];
+    byId('randomizerPromptScopeHelp').textContent = allCategories
+      ? 'Edit any paragraph you want to make the same for every category. Paragraphs with multiple saved versions stay unchanged until you replace them.'
+      : 'Save this category’s full prompt. Check any paragraph that should also replace the same numbered paragraph in every other category.';
+    byId('randomizerCopyPrompt').disabled = allCategories;
+    byId('randomizerCopyPrompt').title = allCategories
+      ? 'Choose one message category before copying a complete prompt.'
+      : '';
+    byId('randomizerPromptParagraphs').innerHTML = sections.map((section, index) => {
+      const mixed = section === null;
+      return `<div class="randomizer-prompt-section" data-prompt-paragraph="${index}">
+        <div class="randomizer-prompt-section-heading">
+          <strong>Paragraph ${index + 1}</strong>
+          ${allCategories ? '' : `<label class="randomizer-prompt-share">
+            <input type="checkbox" data-share-paragraph="${index}">
+            Use This Paragraph For All Message Categories
+          </label>`}
+        </div>
+        <textarea rows="${index === 5 || index === 6 ? 10 : 3}" data-mixed="${mixed}" spellcheck="false"
+          placeholder="${mixed ? 'Multiple saved versions. Enter replacement text to make this paragraph the same for every category.' : ''}">${escape(section || '')}</textarea>
+      </div>`;
+    }).join('');
+    renderPromptPlaceholders();
+    updatePromptPreview();
     byId('randomizerPromptStatus').textContent = '';
+  }
+
+  async function saveReusablePrompt() {
+    const status = byId('randomizerPromptStatus');
+    const allCategories = byId('randomizerPromptSurface').value === ALL_MESSAGE_CATEGORIES;
+    const textareas = [...byId('randomizerPromptParagraphs').querySelectorAll('textarea')];
+    const sections = textareas.map((textarea) => (
+      allCategories && textarea.dataset.mixed === 'true' && !textarea.value.trim()
+        ? null
+        : textarea.value
+    ));
+    const sharedParagraphIndexes = allCategories ? [] : [
+      ...byId('randomizerPromptParagraphs').querySelectorAll('[data-share-paragraph]:checked')
+    ].map((checkbox) => Number(checkbox.dataset.shareParagraph));
+    status.textContent = 'Saving…';
+    try {
+      const data = await request('/api/dev/message-codex-prompts', {
+        method: 'PUT',
+        body: JSON.stringify({
+          personalityId: state.personality.id,
+          surfaceId: allCategories ? ALL_MESSAGE_CATEGORIES : selectedPromptSurface().id,
+          sections,
+          sharedParagraphIndexes
+        })
+      });
+      for (const prompt of data.prompts) {
+        state.promptDrafts[prompt.surfaceId] = [...prompt.sections];
+        const surface = state.personality.surfaces.find(
+          (candidate) => candidate.id === prompt.surfaceId
+        );
+        if (surface) surface.codexPrompt = prompt;
+      }
+      renderReusablePrompt();
+      status.textContent = allCategories
+        ? 'Prompt paragraphs saved for all message categories.'
+        : sharedParagraphIndexes.length
+          ? `Prompt saved. ${sharedParagraphIndexes.length} numbered paragraph${sharedParagraphIndexes.length === 1 ? '' : 's'} also saved for all message categories.`
+          : 'Prompt saved for this message category.';
+    } catch (error) {
+      status.textContent = error.message;
+    }
   }
 
   async function copyReusablePrompt() {
@@ -126,6 +221,10 @@ During brainstorming, keep responses focused on the numbered candidates and runn
   function renderPersonality() {
     state.personality = selectedPersonality();
     if (!state.personality) return;
+    state.promptDrafts = Object.fromEntries(state.personality.surfaces.map((surface) => [
+      surface.id,
+      [...surface.codexPrompt.sections]
+    ]));
     byId('randomizerEnabled').checked = state.personality.enabled;
     byId('randomizerDefault').checked = state.personality.isDefault;
     byId('randomizerDescription').value = state.personality.description;
@@ -640,6 +739,13 @@ During brainstorming, keep responses focused on the numbered candidates and runn
   });
   byId('randomizerGenerate').addEventListener('click', () => runGeneration());
   byId('randomizerPromptSurface').addEventListener('change', renderReusablePrompt);
+  byId('randomizerPromptParagraphs').addEventListener('input', (event) => {
+    if (event.target.matches('textarea')) {
+      event.target.dataset.mixed = 'false';
+      updatePromptPreview();
+    }
+  });
+  byId('randomizerSavePrompt').addEventListener('click', saveReusablePrompt);
   byId('randomizerCopyPrompt').addEventListener('click', copyReusablePrompt);
   for (const id of [
     'randomizerLibrarySurface',

@@ -257,9 +257,40 @@
     min-height: 78px; overflow-wrap: anywhere;
   }
   .randomizer-prompt {
-    min-height: 390px; resize: vertical; background: var(--canvas);
+    min-height: 260px; resize: vertical; background: var(--canvas);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 13px; line-height: 1.55;
+  }
+  .randomizer-prompt-sections {
+    display: grid; gap: 12px; margin-top: 14px;
+  }
+  .randomizer-prompt-section {
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+    background: var(--surface);
+  }
+  .randomizer-prompt-section-heading {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    margin-bottom: 8px;
+  }
+  .randomizer-prompt-section-heading strong { font-size: 14px; }
+  .randomizer-prompt-section textarea {
+    width: 100%; min-height: 76px; resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px; line-height: 1.5;
+  }
+  .randomizer-prompt-share {
+    display: inline-flex; align-items: center; gap: 7px; color: var(--muted);
+    font-size: 12px; font-weight: 600;
+  }
+  .randomizer-prompt-share input {
+    width: 18px; height: 18px; min-height: 0; padding: 0; flex: 0 0 18px;
+  }
+  .randomizer-prompt-placeholders {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+  }
+  .randomizer-prompt-placeholders code {
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 7px;
+    background: var(--canvas); font-size: 11px;
   }
   .randomizer-section { padding: 0; overflow: hidden; }
   .randomizer-section > summary {
@@ -1016,16 +1047,24 @@
         <div class="randomizer-section-body">
         <div class="text-metrics-heading">
           <div>
-            <p class="muted">Choose a category, copy the complete prompt, and paste it into Codex. It covers brainstorming, shortlisting, draft creation, testing, documentation, and deployment.</p>
+            <p class="muted">Edit and save the numbered prompt paragraphs for one category or all categories, then copy the complete prompt into Codex.</p>
           </div>
-          <button type="button" class="primary" id="randomizerCopyPrompt">Copy Prompt</button>
+          <div class="randomizer-actions">
+            <button type="button" class="ghost" id="randomizerSavePrompt">Save Prompts</button>
+            <button type="button" class="primary" id="randomizerCopyPrompt">Copy Prompt</button>
+          </div>
         </div>
         <div class="randomizer-grid">
           <label>Message Category
             <select id="randomizerPromptSurface"></select>
           </label>
-          <label class="full">Reusable Prompt
-            <textarea id="randomizerReusablePrompt" class="randomizer-prompt" rows="18" readonly spellcheck="false"></textarea>
+          <div class="full">
+            <p id="randomizerPromptScopeHelp" class="muted"></p>
+            <div id="randomizerPromptPlaceholders" class="randomizer-prompt-placeholders"></div>
+            <div id="randomizerPromptParagraphs" class="randomizer-prompt-sections"></div>
+          </div>
+          <label class="full">Complete Prompt Preview
+            <textarea id="randomizerReusablePrompt" class="randomizer-prompt" rows="14" readonly spellcheck="false"></textarea>
           </label>
         </div>
         <p id="randomizerPromptStatus" class="muted" style="min-height:20px"></p>

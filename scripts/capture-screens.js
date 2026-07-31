@@ -205,6 +205,17 @@ const openDeveloperMessageRandomizerGeneration = async (p) => {
   await cdp.sleep(400);
 };
 
+const openDeveloperMessageRandomizerPrompts = async (p) => {
+  await openDeveloperMessageRandomizer(p);
+  await p.evaluate(`(() => {
+    const section = [...document.querySelectorAll('[data-randomizer-section]')]
+      .find((candidate) => candidate.querySelector('summary h2')?.textContent.trim() === 'Build Messages With Codex');
+    section.open = true;
+    section.scrollIntoView({ block: 'start' });
+  })()`);
+  await cdp.sleep(400);
+};
+
 const openDeveloperRules = async (p) => {
   const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
   await p.evaluate(`(async () => {
@@ -379,6 +390,10 @@ function buildScreens(fx) {
       title: 'Generate Fresh Messages',
       note: 'Generated candidates can be configured by surface and count; the generation action is currently marked Under Construction.',
       act: openDeveloperMessageRandomizerGeneration },
+    { file: 'dev-message-randomizer-prompts', of: '/dev.html', size: 'tall', url: '/dev.html',
+      title: 'Build Messages With Codex',
+      note: 'Nine editable prompt paragraphs can be saved by message category, copied as one numbered prompt, or shared selectively across every category.',
+      act: openDeveloperMessageRandomizerPrompts },
     { file: 'dev-message-randomizer-preview', of: '/dev.html', size: 'tall', url: '/dev.html',
       title: 'Message Randomizer Preview',
       note: 'A Surface Matrix Preview button selects that category, reveals Preview And Test and resolves stored inventory without incrementing usage.',
