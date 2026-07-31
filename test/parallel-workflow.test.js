@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const path = require('node:path');
 
 const {
@@ -64,4 +65,9 @@ test('server restart guard accepts only the main repo and its task worktrees', (
   );
   assert.equal(isInorOutWorkspace(context, path.resolve('/repo-other')), false);
   assert.equal(isInorOutWorkspace(context, path.resolve('/tmp/another-app')), false);
+});
+
+test('Claude Code imports the shared project workflow', () => {
+  const adapter = fs.readFileSync(path.resolve(__dirname, '..', 'CLAUDE.md'), 'utf8');
+  assert.match(adapter, /@AGENTS\.md/);
 });

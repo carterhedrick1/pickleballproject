@@ -269,7 +269,6 @@ async function startTask(name) {
     git(context.mainRoot, ['worktree', 'add', '-b', branch, taskPath, 'main'], { inherit: true });
 
     createOptionalSymlink(path.join(context.mainRoot, '.env'), path.join(taskPath, '.env'));
-    createOptionalSymlink(path.join(context.mainRoot, 'node_modules'), path.join(taskPath, 'node_modules'));
 
     const task = {
       id,
