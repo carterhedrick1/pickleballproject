@@ -260,6 +260,22 @@ async function addPlayersFromRoster() {
     showStatus(`${addedText} successfully${smsText}.`, smsFailures ? 'error' : 'success');
 }
 
+// joinedAt and promotedAt have always been stored; until now only the stats page read them.
+function confirmedPlayerMeta(player) {
+    const meta = [];
+    const signedUp = PageUtils.formatTimeAgo(player.joinedAt);
+    if (signedUp) {
+        meta.push(signedUp === 'just now' ? 'Signed up just now' : `Signed up ${signedUp}`);
+    }
+    const promoted = PageUtils.formatTimeAgo(player.promotedAt);
+    if (promoted) {
+        meta.push(promoted === 'just now'
+            ? 'Promoted from the waitlist just now'
+            : `Promoted from the waitlist ${promoted}`);
+    }
+    return meta;
+}
+
 function updatePlayerLists() {
     const confirmedPlayers = document.getElementById('confirmedPlayers');
     const waitlistPlayers = document.getElementById('waitlistPlayers');
@@ -325,7 +341,9 @@ function updatePlayerLists() {
                 }
             ];
             confirmedPlayers.appendChild(ManageRender.createPlayerItem(document, player, {
-                meta: player.isOrganizer ? ['You are hosting this game'] : [],
+                meta: player.isOrganizer
+                    ? ['You are hosting this game']
+                    : confirmedPlayerMeta(player),
                 actions
             }));
         });
@@ -336,8 +354,15 @@ function updatePlayerLists() {
         waitlistPlayers.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">Nobody waiting</p>';
     } else {
         gameData.waitlist.forEach((player, index) => {
+            const waiting = PageUtils.formatDuration(player.joinedAt);
             waitlistPlayers.appendChild(ManageRender.createPlayerItem(document, player, {
-                meta: [`Position: #${index + 1}`],
+                meta: [
+                    `Position: #${index + 1}`,
+                    // Who has been waiting longest is the whole reason a host reads this list.
+                    waiting && (waiting === 'just now'
+                        ? 'Joined the waitlist just now'
+                        : `Waiting ${waiting}`)
+                ].filter(Boolean),
                 actions: [
                     {
                         label: 'Promote',
@@ -380,6 +405,9 @@ function updatePlayerLists() {
     
     // Update player checkboxes for messaging
     updatePlayerCheckboxes();
+
+    // The header counts come from the same roster, so they refresh together.
+    updateGameSummary();
 }
 
 async function addPlayerManually() {

@@ -353,6 +353,40 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       'HTML-like player names remain text in the live page'
     );
 
+    const gameHeader = await desktop.evaluate(`(() => {
+      const summary = document.getElementById('gameSummary');
+      const tabs = document.querySelector('.tabs-container');
+      return {
+        visible: summary && !summary.hidden,
+        outsideTabPanes: !summary?.closest('.tabcontent'),
+        aboveTabs: Boolean(tabs && summary.compareDocumentPosition(tabs) &
+          Node.DOCUMENT_POSITION_FOLLOWING),
+        headline: document.getElementById('gameSummaryHeadline').textContent,
+        meta: document.getElementById('gameSummaryMeta').textContent,
+        playerLink: document.getElementById('playerLinkField')?.value,
+        copyLinkLabel: document.getElementById('copyPlayerLinkOnly')?.textContent.trim()
+      };
+    })()`);
+    assert(
+      gameHeader.visible && gameHeader.outsideTabPanes && gameHeader.aboveTabs,
+      'the game summary sits above the tabs so it shows on every tab'
+    );
+    assert(
+      gameHeader.headline.includes('Oak Park Courts') &&
+        /\d:\d\d (AM|PM)/.test(gameHeader.headline),
+      `the summary names the game being managed (${gameHeader.headline})`
+    );
+    assert(
+      /\d of \d in/.test(gameHeader.meta) &&
+        (gameHeader.meta.includes('starts in') || gameHeader.meta.includes('Game has started')),
+      `the summary counts the roster and the time until the game (${gameHeader.meta})`
+    );
+    assert(
+      gameHeader.playerLink === `${local.baseUrl}/game.html?id=${fx.open.gameId}` &&
+        gameHeader.copyLinkLabel === 'Copy Link',
+      'the bare player link is shown with its own copy button'
+    );
+
     const organizerRow = await desktop.evaluate(`(() => {
       const rows = [...document.querySelectorAll('#confirmedPlayers .player-item')];
       const organizer = rows.find(
@@ -522,6 +556,52 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     assert(
       manualWaitlistAdded,
       'the manual Waitlist choice sends the destination expected by the server'
+    );
+
+    const rosterTimestamps = await desktop.evaluate(`(() => {
+      const textOf = (selector) => [...document.querySelectorAll(selector)]
+        .map((node) => node.textContent);
+      return {
+        confirmed: textOf('#confirmedPlayers .player-item'),
+        waitlist: textOf('#waitlistPlayers .player-item')
+      };
+    })()`);
+    assert(
+      rosterTimestamps.confirmed.some((row) => /Signed up .* ago|Signed up just now/.test(row)),
+      'confirmed players show when they signed up'
+    );
+    assert(
+      rosterTimestamps.waitlist.some(
+        (row) => /Waiting \d|Joined the waitlist just now/.test(row)
+      ),
+      'waitlist entries show how long they have been waiting'
+    );
+
+    const quickMessage = await desktop.evaluate(`(async () => {
+      document.querySelector('[data-tab="Communication"]').click();
+      document.getElementById('sendReminder').click();
+      const modalText = document.getElementById('confirmMessage').textContent;
+      const modalOpen = getComputedStyle(document.getElementById('confirmModal')).display !== 'none';
+
+      // Nothing leaves until the host confirms the exact wording.
+      document.getElementById('confirmYes').click();
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      return {
+        modalOpen,
+        modalText,
+        status: document.getElementById('status').textContent,
+        modalClosed: getComputedStyle(document.getElementById('confirmModal')).display === 'none'
+      };
+    })()`);
+    assert(
+      quickMessage.modalOpen &&
+        quickMessage.modalText.includes('Reminder: Your pickleball game is on') &&
+        quickMessage.modalText.includes('confirmed player'),
+      'the game reminder shows its exact wording and audience before sending'
+    );
+    assert(
+      quickMessage.modalClosed && /Sent to \d+ player/.test(quickMessage.status),
+      `the confirmed quick message is actually sent (${quickMessage.status})`
     );
 
     const activeDeleteResponse = await fetch(
