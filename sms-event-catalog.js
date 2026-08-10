@@ -51,6 +51,12 @@ const SMS_EVENT_DEFINITIONS = Object.freeze([
     description: 'The organizer cancels a game and every eligible player is notified.'
   },
   {
+    id: 'game-details-changed',
+    title: 'Game Details Changed',
+    recipient: 'Confirmed And Waitlisted Players',
+    description: 'The organizer moves the court, date, time, or duration and tells everyone signed up.'
+  },
+  {
     id: 'organizer-announcement',
     title: 'Organizer Announcement',
     recipient: 'Organizer-Selected Players',

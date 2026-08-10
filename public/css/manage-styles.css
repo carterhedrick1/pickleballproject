@@ -1233,6 +1233,12 @@ button:disabled {
     pointer-events: none;
 }
 
+/* Photos stay live after a game ends - that is when hosts add them. */
+#gameManagement.expired .photos-section {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 #gameManagement.expired #Players .collapsible-section {
     opacity: 0.5;
     pointer-events: none;

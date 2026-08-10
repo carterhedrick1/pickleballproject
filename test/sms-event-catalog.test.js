@@ -9,8 +9,8 @@ const {
 } = require('../sms-event-catalog');
 
 test('defines every outbound text trigger with stable dashboard copy', () => {
-  assert.equal(SMS_EVENT_DEFINITIONS.length, 21);
-  assert.equal(new Set(SMS_EVENT_DEFINITIONS.map((event) => event.id)).size, 21);
+  assert.equal(SMS_EVENT_DEFINITIONS.length, 22);
+  assert.equal(new Set(SMS_EVENT_DEFINITIONS.map((event) => event.id)).size, 22);
   SMS_EVENT_DEFINITIONS.forEach((event) => {
     assert.ok(event.id);
     assert.ok(event.title);

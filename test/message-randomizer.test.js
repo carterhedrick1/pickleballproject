@@ -23,8 +23,8 @@ const {
 const { getMessageSurface, MESSAGE_SURFACES } = require('../message-surfaces');
 
 test('defines every stable surface once', () => {
-  assert.equal(MESSAGE_SURFACES.length, 15);
-  assert.equal(new Set(MESSAGE_SURFACES.map((surface) => surface.id)).size, 15);
+  assert.equal(MESSAGE_SURFACES.length, 16);
+  assert.equal(new Set(MESSAGE_SURFACES.map((surface) => surface.id)).size, 16);
   assert.equal(getMessageSurface('site-slogan').allowedTokens[0], 'NAME');
   assert.equal(getMessageSurface('youre-in').id, 'youre-in');
 });
