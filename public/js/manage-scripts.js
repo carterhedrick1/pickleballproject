@@ -466,9 +466,9 @@ function setupEventListeners() {
         addRosterPlayersBtn.addEventListener('click', addPlayersFromRoster);
     }
 
-    const saveIntendedInviteesBtn = document.getElementById('saveIntendedInvitees');
-    if (saveIntendedInviteesBtn) {
-        saveIntendedInviteesBtn.addEventListener('click', saveIntendedInvitees);
+    const addPersonBtn = document.getElementById('inviteAddPerson');
+    if (addPersonBtn) {
+        addPersonBtn.addEventListener('click', addPersonToRoster);
     }
 
     const textInvitationsBtn = document.getElementById('textInvitations');
@@ -833,15 +833,24 @@ function formatTime(timeStr) {
     return PageUtils.formatTime12Hour(timeStr);
 }
 
-function showConfirmModal(title, message, confirmAction) {
+// `destructive` decides the colour of the confirm button. Sending an invitation used to offer a
+// red "Confirm", which reads as a warning about the very thing the host came here to do.
+function showConfirmModal(
+    title,
+    message,
+    confirmAction,
+    { destructive = true, confirmLabel = 'Confirm' } = {}
+) {
     const modal = document.getElementById('confirmModal');
     const confirmTitle = document.getElementById('confirmTitle');
     const confirmMessage = document.getElementById('confirmMessage');
     const confirmYes = document.getElementById('confirmYes');
-    
+
     confirmTitle.textContent = title;
     confirmMessage.textContent = message;
-    
+    confirmYes.className = destructive ? 'btn-danger' : 'btn-primary';
+    confirmYes.textContent = confirmLabel;
+
     // Set up the confirm action
     confirmYes.onclick = () => {
         confirmAction();
@@ -957,25 +966,16 @@ function populateShareLinks() {
     }
     
     setButtonState(copyButton, shouldDisable);
-    
-    if (shouldDisable) {
-        // Update the description text in share section
-        const descriptionP = shareSection.querySelector('p');
-        if (descriptionP) {
-            descriptionP.textContent = gameData.cancelled
-                ? 'This game has been cancelled. Invitations can no longer be shared.'
-                : 'This game has ended. Invitations can no longer be shared.';
-        }
-        const saveSuggestion = shareSection.querySelector('.save-suggestion');
-        if (saveSuggestion) saveSuggestion.style.display = 'none';
-    } else {
-        const descriptionP = shareSection.querySelector('p');
-        if (descriptionP) {
-            descriptionP.textContent = 'Copy a complete invitation message with all the game details and the sign-up link.';
-        }
-        const saveSuggestion = shareSection.querySelector('.save-suggestion');
-        if (saveSuggestion) saveSuggestion.style.display = 'block';
-    }
+
+    // Only the line under the copy button changes. This used to write into the section's first
+    // paragraph by position, which silently overwrote whatever copy the page actually had.
+    const note = shareSection.querySelector('.center-copy-section .save-suggestion');
+    if (!note) return;
+    note.textContent = shouldDisable
+        ? (gameData.cancelled
+            ? 'This game has been cancelled. Invitations can no longer be shared.'
+            : 'This game has ended. Invitations can no longer be shared.')
+        : 'Anyone you tick above is recorded as invited when you copy.';
 }
 
 
@@ -1010,6 +1010,10 @@ async function copyPlayerInvitation(buttonId) {
         null,
         hostToken
     );
+
+    // Anyone ticked in the picker is being invited by this copy, so they join the invited list
+    // here rather than needing a second button press to say so.
+    await recordCopiedInvitees();
 }
 
 function fallbackCopyMessage(text) {

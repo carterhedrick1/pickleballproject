@@ -49,6 +49,7 @@ const { promoteIntoOpenSpot } = require('../utils/promotion');
 const { resolveTextMessage } = require('../services/text-message-rotation');
 const { appendCustomReplyInstructions } = require('../sms-reply-options');
 const { buildRandomizedInvitation } = require('../services/invitation-message');
+const { inviteStatus } = require('../public/js/invite-status');
 const { buildSelectedPlayerMessage } = require('../services/youre-in-rotation');
 
 function creationRequestId(req) {
@@ -603,6 +604,10 @@ module.exports = function mountGameRoutes(app) {
           if (fullGame.cancelled && daysSinceGame > 7) continue;
         }
 
+        // Who was asked and who never answered, so a host can triage the whole list of games
+        // without opening each one to find out.
+        const invites = inviteStatus(fullGame).counts;
+
         hostGames.push({
           gameId,
           location: fullGame.location,
@@ -617,6 +622,8 @@ module.exports = function mountGameRoutes(app) {
           totalPlayers: fullGame.totalPlayers,
           organizerPlaying: fullGame.organizerPlaying === true,
           waitlistCount: fullGame.waitlist ? fullGame.waitlist.length : 0,
+          invitedCount: invites.invited,
+          awaitingReplyCount: invites.noReply,
           photoCount: photoCounts[gameId] || 0,
           // Already inside managementLink; named separately so callers that need to authorize
           // a request (deleting a past game) don't have to pick it back out of the URL.

@@ -53,7 +53,6 @@
                     <option value="Players">Players</option>
                     <option value="Communication">Communication</option>
                     <option value="Details">Game Details</option>
-                    <option value="Actions">Game Actions</option>
                 </select>
             </div>
 
@@ -64,7 +63,6 @@
                     <button class="tab" data-tab="Players">Players</button>
                     <button class="tab" data-tab="Communication">Communication</button>
                     <button class="tab" data-tab="Details">Game Details</button>
-                    <button class="tab" data-tab="Actions">Game Actions</button>
                 </div>
             </div>
 
@@ -73,20 +71,30 @@
                 <div class="form-section">
                     <section class="roster-picker" aria-labelledby="intendedInviteesTitle">
                         <h2 class="section-title" id="intendedInviteesTitle">Text Your Invitations</h2>
-                        <p class="form-help-text">Tick the people you want for this game. Texting the invitation from here records exactly who it went to and when. Saving them as intended invitees only records who you meant to invite &mdash; IN or OUT cannot see who actually received a message you pasted into another app.</p>
                         <div id="intendedInviteeStatus" class="roster-picker-status" aria-live="polite">Loading your roster...</div>
                         <div id="intendedInviteeList" class="roster-picker-list"></div>
                         <div class="invite-actions">
-                            <button type="button" id="textInvitations">Text The Invitation</button>
-                            <button type="button" id="saveIntendedInvitees" class="btn-secondary">Save Intended Invitees</button>
+                            <button type="button" id="textInvitations" disabled>Text The Invitation</button>
+                        </div>
+
+                        <!-- Adding somebody new writes to the saved roster, which needs the
+                             verified phone session. Shown only when this browser already has
+                             one; otherwise the roster link below stands in for it. -->
+                        <div id="inviteAddNew" class="invite-add-new" hidden>
+                            <h4>Add Someone New</h4>
+                            <div class="invite-add-row">
+                                <input type="text" id="inviteNewName" placeholder="Name" autocomplete="off">
+                                <input type="tel" id="inviteNewPhone" placeholder="Phone number" autocomplete="off">
+                                <button type="button" id="inviteAddPerson" class="btn-secondary">Add</button>
+                            </div>
+                            <div id="inviteAddStatus" class="roster-picker-status" aria-live="polite"></div>
                         </div>
                     </section>
 
-                    <section class="roster-picker invite-tracking" aria-labelledby="awaitingReplyTitle" style="margin-top:24px">
-                        <h3 id="awaitingReplyTitle">Waiting On A Reply</h3>
-                        <p class="form-help-text">Everyone you invited who has not said IN or OUT yet.</p>
-                        <div id="awaitingReplyStatus" class="roster-picker-status" aria-live="polite">Nobody has been invited yet.</div>
-                        <div id="awaitingReplyList" class="invite-tracking-list"></div>
+                    <section class="invite-tracking" aria-labelledby="invitedTitle">
+                        <h3 id="invitedTitle">Who You Invited</h3>
+                        <div id="inviteSummary" class="invite-summary" aria-live="polite">Nobody has been invited yet.</div>
+                        <div id="invitedList" class="invite-tracking-list"></div>
                         <button type="button" id="nudgeNonResponders" hidden>Text Everyone Waiting</button>
                     </section>
                 </div>
@@ -94,9 +102,8 @@
                 <div class="share-section">
                     <h3 class="share-title">Or Share Your Game Yourself</h3>
                     <div class="center-copy-section">
-                        <p>Copy a complete invitation message with all the game details and the sign-up link.</p>
                         <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
-                        <p class="save-suggestion">Paste it into a text, an email, or a group chat.</p>
+                        <p class="save-suggestion">Anyone you tick above is recorded as invited when you copy.</p>
                     </div>
                     <div class="player-link-section">
                         <label for="playerLinkField">Player Link:</label>
@@ -104,7 +111,6 @@
                             <input type="text" id="playerLinkField" readonly>
                             <button id="copyPlayerLinkOnly" class="copy-btn">Copy Link</button>
                         </div>
-                        <p class="save-suggestion">Just the address on its own, for a QR code or a group chat description.</p>
                     </div>
                 </div>
             </div>
@@ -140,7 +146,7 @@
                                 <input type="checkbox" id="organizerPlaying" name="organizerPlaying">
                                 <label for="organizerPlaying">I am playing in this game (uncheck to give up your spot)</label>
                             </div>
-                            <div id="organizerPlayingHelp" class="form-help-text">Unticking this takes you off the roster and frees your spot. You keep the management link either way.</div>
+                            <div id="organizerPlayingHelp" class="form-help-text">You keep the management link either way.</div>
                         </div>
 
                         <div class="form-group">
@@ -167,15 +173,11 @@
                                 <input type="checkbox" id="notifyPlayersOfChange" checked>
                                 Text Players About This Change
                             </label>
-                            <div class="form-help-text">
-                                Only sent when you move the court, date, time, or duration. Changing
-                                the message or the personality never sends a text.
-                            </div>
+                            <div class="form-help-text">Only sent when you move the court, date, time, or duration.</div>
                         </div>
 
                         <div class="form-group notifications-section">
                             <label>Organizer Notifications:</label>
-                            <div class="form-help-text">Get SMS alerts when these events happen (optional)</div>
                             
                             <div class="notification-option" data-checkbox-id="notifyGameFull">
                                 <div class="notification-content">
@@ -244,10 +246,11 @@
                     </form>
                 </div>
 
+
                 <!-- Court Images: let host manage court image library -->
                 <div class="form-section court-images-section">
                     <h2 class="section-title">Court Image</h2>
-                    <p class="court-images-intro">Update the image shown on the player link you already sent, or choose "No Image". Players will see the change automatically.</p>
+                    <p class="court-images-intro">Players see the change on the link you already sent.</p>
 
                     <div id="courtImageGallery" class="court-image-gallery">
                         <div id="courtImageList" class="court-image-list"></div>
@@ -263,6 +266,18 @@
                         <button type="button" id="uploadCourtImageBtn" class="copy-btn">Upload</button>
                         <p id="courtImageStatus" style="margin-top: 10px; font-size: 14px; color: var(--text-muted); min-height: 20px;"></p>
                     </div>
+                </div>
+
+                <!-- Cancelling was a tab of its own for one button. It belongs with the rest of
+                     the settings for this game, at the bottom, marked as the end of the road. -->
+                <div class="form-section danger-section">
+                    <h2 class="section-title">Cancel Game</h2>
+                    <p class="danger-warning">Every player gets a text saying the game is off.</p>
+                    <div class="form-group">
+                        <label for="cancellationReason">Reason For Cancellation:</label>
+                        <textarea id="cancellationReason" rows="3" placeholder="e.g. Weather conditions, court unavailable..."></textarea>
+                    </div>
+                    <button id="cancelGameBtn" class="btn-danger">Cancel This Game</button>
                 </div>
 
             </div>
@@ -316,9 +331,6 @@
                             <div class="collapsible-inner">
                                 <section class="roster-picker" aria-labelledby="rosterPickerTitle">
                                     <h4 id="rosterPickerTitle">Select Players From Your Roster</h4>
-                                    <p class="form-help-text">
-                                        Choose one or more saved players to add to this game.
-                                    </p>
                                     <div id="rosterPickerStatus" class="roster-picker-status" aria-live="polite">
                                         Loading your roster...
                                     </div>
@@ -352,7 +364,6 @@
                                     <div class="form-group">
                                         <label for="playerPhone">Phone Number (Optional):</label>
                                         <input type="tel" id="playerPhone" name="playerPhone">
-                                        <div class="form-help-text">If provided, player will receive SMS notifications</div>
                                     </div>
                                     
                                     <div class="form-group">
@@ -381,7 +392,7 @@
                      exactly what a host wants to do then. -->
                 <div class="form-section photos-section">
                     <h2 class="section-title">Photos</h2>
-                    <p class="photos-intro">Add photos from the game. Anyone with your game link can see them.</p>
+                    <p class="photos-intro">Anyone with your game link can see these.</p>
 
                     <div id="photoGrid" class="photo-grid"></div>
                     <p id="photoEmpty" class="photos-empty">No photos yet.</p>
@@ -415,7 +426,6 @@
                             <input type="checkbox" id="announcementPersonalityWrapper" name="announcementPersonalityWrapper">
                             <label for="announcementPersonalityWrapper">Add The Game Personality Opening</label>
                         </div>
-                        <p class="form-help-text">Off by default. Your authored announcement is always kept unchanged.</p>
                         
                         <div class="form-group">
                             <label>Send To:</label>
@@ -439,7 +449,6 @@
                                     <label for="sendToOut">Players Who Are Out</label>
                                 </div>
                             </div>
-                            <p class="form-help-text">Someone dropped out? Text the out list to ask if anyone is free after all.</p>
                             
                             <!-- Individual Players Section -->
                             <div id="individualPlayersSection" class="individual-players-section">
@@ -455,14 +464,13 @@
                     
                     <section class="delivery-log" aria-labelledby="deliveryLogTitle">
                         <h3 class="subsection-title" id="deliveryLogTitle">Text Delivery Log</h3>
-                        <p class="form-help-text">Every text this game has sent, and whether it reached the phone. Read only.</p>
                         <div id="deliveryLogStatus" class="roster-picker-status" aria-live="polite">Loading the delivery log...</div>
                         <div id="deliveryLogList" class="delivery-log-list"></div>
                         <button type="button" id="refreshDeliveryLog" class="btn-secondary">Refresh The Log</button>
                     </section>
 
                     <h3 class="subsection-title">Quick Messages</h3>
-                    <p class="form-help-text">Both go to your confirmed players. You see the exact wording and confirm before anything is sent.</p>
+                    <p class="form-help-text">Both go to your confirmed players.</p>
                     <div class="quick-actions">
                         <button id="sendReminder" class="quick-action-btn btn-secondary">
                             Send Game Reminder
@@ -471,21 +479,6 @@
                             Send Location Details
                         </button>
                     </div>
-                </div>
-            </div>
-            
-            <!-- Game Actions Tab -->
-            <div id="Actions" class="tabcontent">
-                <div class="form-section">
-                    <h2 class="section-title">Game Actions</h2>
-                    
-                    <h3 class="subsection-title">Cancel Game</h3>
-                    <p class="danger-warning">This will notify all players that the game has been cancelled.</p>
-                    <div class="form-group">
-                        <label for="cancellationReason">Reason For Cancellation:</label>
-                        <textarea id="cancellationReason" rows="3" placeholder="e.g. Weather conditions, court unavailable..."></textarea>
-                    </div>
-                    <button id="cancelGameBtn" class="btn-danger">Cancel This Game</button>
                 </div>
             </div>
         </div>
@@ -517,6 +510,9 @@
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>
     <script src="/js/page-utils.js"></script>
+    <!-- Only for authHeaders(): adding to the saved roster needs the verified phone session,
+         and this keeps the storage keys for it in one place. init() is never called here. -->
+    <script src="/js/host-verification.js"></script>
     <script src="/js/invite-status.js"></script>
     <script src="/js/game-utils.js"></script>
     <script src="/js/manage-render.js"></script>

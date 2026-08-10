@@ -29,6 +29,17 @@ function updateRosterSelectionState() {
 }
 
 function renderHostRoster() {
+    // Both pickers read the same roster, and the invite one must be redrawn on every path
+    // through this function - an empty roster and a failed fetch are exactly the states where
+    // it would otherwise sit on "Loading your roster..." with live buttons underneath.
+    try {
+        renderRosterAddPicker();
+    } finally {
+        renderInvitePicker();
+    }
+}
+
+function renderRosterAddPicker() {
     const list = document.getElementById('rosterPlayerList');
     const status = document.getElementById('rosterPickerStatus');
     const actions = document.getElementById('rosterPickerActions');
@@ -76,7 +87,6 @@ function renderHostRoster() {
     });
     actions.hidden = false;
     updateRosterSelectionState();
-    renderIntendedInvitees();
 }
 
 async function loadHostRoster() {
@@ -115,66 +125,140 @@ async function loadHostRoster() {
     renderHostRoster();
 }
 
-function renderIntendedInvitees() {
+// Where each person stands in this game, so a name in the picker carries its own answer and
+// the host is never asked to remember who they already heard from.
+const RESPONSE_BADGES = {
+    confirmed: { label: 'IN', tone: 'in' },
+    waitlist: { label: 'Waitlist', tone: 'waiting' },
+    out: { label: 'OUT', tone: 'out' }
+};
+
+function responseByPhone() {
+    const byPhone = new Map();
+    const groups = [
+        ['confirmed', gameData?.players],
+        ['waitlist', gameData?.waitlist],
+        ['out', gameData?.outPlayers]
+    ];
+    for (const [response, entries] of groups) {
+        for (const entry of entries || []) {
+            const phone = normalizedPlayerPhone(entry?.phone);
+            if (phone && !byPhone.has(phone)) byPhone.set(phone, response);
+        }
+    }
+    return byPhone;
+}
+
+function inviteRecordByPhone() {
+    return new Map(
+        InviteStatus.inviteStatus(gameData || {}).invited
+            .map((entry) => [normalizedPlayerPhone(entry.phone), entry])
+    );
+}
+
+/** The one chip that best describes somebody: their answer, or why they still owe you one. */
+function inviteBadge(response, record) {
+    if (response) return RESPONSE_BADGES[response];
+    if (!record) return null;
+    if (record.lastTextStatus === 'failed') return { label: 'Text Failed', tone: 'out' };
+    return { label: 'No Reply', tone: 'muted' };
+}
+
+function renderInvitePicker() {
     const list = document.getElementById('intendedInviteeList');
     const status = document.getElementById('intendedInviteeStatus');
-    const button = document.getElementById('saveIntendedInvitees');
-    if (!list || !status || !button) return;
+    if (!list || !status) return;
+
+    // Any roster change redraws this list, and a host part-way through ticking six names must
+    // not lose them because somebody joined the game in the meantime.
+    const stillTicked = new Set(selectedInviteePhones().map(normalizedPlayerPhone));
     list.innerHTML = '';
+    status.classList.remove('error-text');
+    renderInviteAddForm();
+
     if (hostRosterState === 'loading' || hostRosterState === 'idle') {
         status.textContent = 'Loading your roster...';
-        button.disabled = true;
+        updateInviteSelectionState();
         return;
     }
+
     if (hostRosterState === 'error') {
-        status.textContent = 'Could not load your roster.';
-        button.disabled = true;
+        status.textContent = 'Could not load your roster. Please refresh the page to try again.';
+        status.classList.add('error-text');
+        updateInviteSelectionState();
         return;
     }
-    const selectedPhones = new Set(
-        (gameData?.invitedPlayers || []).map((player) => normalizedPlayerPhone(player.phone))
-    );
+
     if (!hostRoster.length) {
-        status.innerHTML = '';
-        const note = document.createTextNode(
-            'Your roster is empty. Add your regulars on the '
+        status.replaceChildren(
+            document.createTextNode('Your roster is empty. Add your regulars on the '),
+            Object.assign(document.createElement('a'), {
+                href: '/roster.html',
+                textContent: 'Roster page'
+            }),
+            document.createTextNode(', or copy the invitation below into a group chat.')
         );
-        const rosterLink = document.createElement('a');
-        rosterLink.href = '/roster.html';
-        rosterLink.textContent = 'Roster page';
-        status.append(
-            note,
-            rosterLink,
-            document.createTextNode(' and you can text invitations from here.')
-        );
-        button.disabled = true;
-        const textButton = document.getElementById('textInvitations');
-        if (textButton) textButton.disabled = true;
+        updateInviteSelectionState();
         return;
     }
-    hostRoster.forEach((player) => {
-        const label = document.createElement('label');
-        label.className = 'roster-picker-option';
-        const input = document.createElement('input');
-        input.type = 'checkbox';
-        input.className = 'intended-invitee-checkbox';
-        input.dataset.phone = player.phone;
-        input.checked = selectedPhones.has(normalizedPlayerPhone(player.phone));
-        const name = document.createElement('span');
-        name.textContent = player.name || player.phone;
-        label.append(input, name);
-        list.appendChild(label);
+
+    // Whoever still needs asking comes first; people who already answered sink to the bottom
+    // where they stay visible without being in the way.
+    const responses = responseByPhone();
+    const records = inviteRecordByPhone();
+    const rank = (player) => {
+        const phone = normalizedPlayerPhone(player.phone);
+        if (responses.has(phone)) return 2;
+        return records.has(phone) ? 1 : 0;
+    };
+    const ordered = hostRoster.map((player, index) => ({ player, index }))
+        .sort((a, b) => rank(a.player) - rank(b.player) || a.index - b.index)
+        .map((entry) => entry.player);
+
+    ordered.forEach((player) => {
+        const phone = normalizedPlayerPhone(player.phone);
+        const record = records.get(phone);
+        const meta = [];
+        if (record && !responses.has(phone)) {
+            const ago = PageUtils.formatTimeAgo(record.lastTextedAt);
+            if (ago) meta.push(record.textCount > 1 ? `texted ${record.textCount}×, last ${ago}` : `texted ${ago}`);
+        }
+        const option = ManageRender.createRosterOption(
+            document,
+            player,
+            updateInviteSelectionState,
+            { badge: inviteBadge(responses.get(phone), record), meta }
+        );
+        if (stillTicked.has(phone)) option.querySelector('input').checked = true;
+        list.appendChild(option);
     });
-    status.textContent = `${selectedPhones.size} intended invitee${selectedPhones.size === 1 ? '' : 's'} saved. Copying an invitation does not confirm delivery.`;
-    button.disabled = false;
-    const textButton = document.getElementById('textInvitations');
-    if (textButton) textButton.disabled = false;
+
+    status.textContent = `${hostRoster.length} ${hostRoster.length === 1 ? 'person' : 'people'} on your roster.`;
+    updateInviteSelectionState();
 }
 
 function selectedInviteePhones() {
-    return Array.from(document.querySelectorAll('.intended-invitee-checkbox:checked'))
-        .map((input) => input.dataset.phone)
-        .filter(Boolean);
+    return Array.from(document.querySelectorAll(
+        '#intendedInviteeList .roster-player-checkbox:checked'
+    )).map((input) => input.dataset.phone).filter(Boolean);
+}
+
+// The count belongs on the button itself: it confirms the selection at the moment of the tap,
+// which is the question a host actually has before sending.
+function updateInviteSelectionState() {
+    const button = document.getElementById('textInvitations');
+    if (!button) return;
+    const count = selectedInviteePhones().length;
+    button.disabled = count === 0;
+    button.textContent = count === 0
+        ? 'Text The Invitation'
+        : `Text The Invitation (${count})`;
+}
+
+function clearInviteSelection() {
+    document.querySelectorAll('#intendedInviteeList .roster-player-checkbox:checked')
+        .forEach((input) => { input.checked = false; });
+    updateInviteSelectionState();
 }
 
 // A texted invitation is the only invite path the app can actually vouch for, so the send
@@ -207,8 +291,9 @@ async function textInvitations(phones, { confirmTitle, confirmQuestion } = {}) {
                 if (!response.ok) throw new Error(data.error || 'Could not send the invitations');
 
                 gameData.invitedPlayers = data.invitedPlayers || gameData.invitedPlayers;
-                renderIntendedInvitees();
-                renderAwaitingReply();
+                clearInviteSelection();
+                renderInvitePicker();
+                renderInvitations();
 
                 const sentText = `Invitation texted to ${data.sentCount} ${data.sentCount === 1 ? 'person' : 'people'}`;
                 showStatus(
@@ -221,44 +306,45 @@ async function textInvitations(phones, { confirmTitle, confirmQuestion } = {}) {
                 console.error('Error texting invitations:', error);
                 showStatus('Could not send the invitations: ' + error.message, 'error');
             }
-        }
+        },
+        { destructive: false, confirmLabel: 'Send It' }
     );
 }
 
 // invitedPlayers has been stored for a long time without ever being compared against who
-// actually replied. This is that comparison, on the page where a host can act on it.
-function renderAwaitingReply() {
-    const list = document.getElementById('awaitingReplyList');
-    const status = document.getElementById('awaitingReplyStatus');
+// actually replied. This is that comparison, on the page where a host can act on it: everyone
+// who was asked, what they said, and who still owes an answer.
+function renderInvitations() {
+    const list = document.getElementById('invitedList');
+    const summary = document.getElementById('inviteSummary');
     const nudgeAll = document.getElementById('nudgeNonResponders');
-    if (!list || !status || !nudgeAll) return;
+    if (!list || !summary || !nudgeAll) return;
 
-    const { invited, nonResponders } = InviteStatus.inviteStatus(gameData || {});
+    const { invited, responded, nonResponders, counts } = InviteStatus.inviteStatus(gameData || {});
     list.innerHTML = '';
 
     if (invited.length === 0) {
-        status.textContent = 'Nobody has been invited yet.';
+        summary.textContent = 'Nobody has been invited yet.';
         nudgeAll.hidden = true;
         return;
     }
 
-    if (nonResponders.length === 0) {
-        status.textContent = `Everyone you invited has answered. ${invited.length} invited, ${invited.length} replied.`;
-        nudgeAll.hidden = true;
-        return;
-    }
+    const parts = [`${counts.invited} invited`];
+    if (counts.confirmed) parts.push(`${counts.confirmed} in`);
+    if (counts.waitlist) parts.push(`${counts.waitlist} waiting`);
+    if (counts.out) parts.push(`${counts.out} out`);
+    parts.push(counts.noReply ? `${counts.noReply} no reply` : 'everyone replied');
+    summary.textContent = parts.join(' · ');
 
-    if (nonResponders.length === invited.length) {
-        status.textContent = invited.length === 1
-            ? 'The one person you invited has not replied yet.'
-            : `None of the ${invited.length} people you invited have replied yet.`;
-    } else {
-        status.textContent =
-            `${nonResponders.length} of the ${invited.length} people you invited ` +
-            `${nonResponders.length === 1 ? 'has' : 'have'} not replied yet.`;
-    }
+    // A failed text is the one row a host has to do something about, so it sorts to the top;
+    // then everybody still silent, then the answers.
+    const ordered = [
+        ...nonResponders.filter((person) => person.lastTextStatus === 'failed'),
+        ...nonResponders.filter((person) => person.lastTextStatus !== 'failed'),
+        ...responded
+    ];
 
-    nonResponders.forEach((person) => {
+    ordered.forEach((person) => {
         const meta = [];
         if (person.lastTextedAt) {
             const ago = PageUtils.formatTimeAgo(person.lastTextedAt);
@@ -266,13 +352,14 @@ function renderAwaitingReply() {
                 ? `Texted ${person.textCount} times, last ${ago}`
                 : `Texted ${ago}`);
         } else {
-            meta.push('Not texted from here — you copied the invitation');
+            meta.push('Invitation copied, not texted from here');
         }
         if (person.lastTextStatus === 'failed') meta.push('The last text did not go through');
 
         list.appendChild(ManageRender.createPlayerItem(document, person, {
             meta,
-            actions: [
+            badge: inviteBadge(person.response, person),
+            actions: person.response ? [] : [
                 {
                     label: 'Text Again',
                     className: 'btn-secondary',
@@ -285,20 +372,22 @@ function renderAwaitingReply() {
         }));
     });
 
-    nudgeAll.hidden = false;
+    nudgeAll.hidden = nonResponders.length === 0;
     nudgeAll.textContent = nonResponders.length === 1
         ? 'Text The One Person Waiting'
         : `Text All ${nonResponders.length} Waiting`;
 }
 
-async function saveIntendedInvitees() {
-    const button = document.getElementById('saveIntendedInvitees');
-    const status = document.getElementById('intendedInviteeStatus');
-    const playerPhones = Array.from(document.querySelectorAll(
-        '.intended-invitee-checkbox:checked'
-    )).map((input) => input.dataset.phone);
-    button.disabled = true;
-    status.textContent = 'Saving intended invitees...';
+// Copying the invitation is the one path the app cannot verify, so the people ticked at that
+// moment are recorded as invited without any delivery history. The list is replaced wholesale
+// by this endpoint, so it has to be sent as the union with everyone already on it.
+async function recordCopiedInvitees() {
+    const ticked = selectedInviteePhones();
+    if (!ticked.length) return;
+
+    const existing = (gameData?.invitedPlayers || []).map((player) => player.phone);
+    const playerPhones = [...new Set([...existing, ...ticked])];
+
     try {
         const response = await fetch(`/api/games/${gameId}/invitees`, {
             method: 'PUT',
@@ -306,14 +395,88 @@ async function saveIntendedInvitees() {
             body: JSON.stringify({ token: hostToken, playerPhones })
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Could not save intended invitees');
+        if (!response.ok) throw new Error(data.error || 'Could not record who you invited');
         gameData.invitedPlayers = data.intendedInvitees || [];
-        renderIntendedInvitees();
-        // Marking somebody as invited puts them in the waiting list straight away, rather than
-        // leaving that panel stale until the next roster refresh.
-        renderAwaitingReply();
+        clearInviteSelection();
+        renderInvitePicker();
+        renderInvitations();
+    } catch (error) {
+        console.error('Could not record the copied invitees:', error);
+        showStatus(`Invitation copied, but ${error.message.toLowerCase()}.`, 'error');
+    }
+}
+
+// Adding to the saved roster needs the verified phone session, which the management link alone
+// does not grant: a game token that could write roster rows would also be a game token that
+// could text any number in the world through the invitation route.
+function hasVerifiedHostSession() {
+    const phone = localStorage.getItem('hostPhone') || '';
+    const token = localStorage.getItem('hostVerificationToken') || '';
+    return Boolean(token) && normalizedPlayerPhone(phone) === normalizedPlayerPhone(gameData?.hostPhone);
+}
+
+function renderInviteAddForm() {
+    const form = document.getElementById('inviteAddNew');
+    if (!form) return;
+    form.hidden = !(hostRosterState === 'loaded' && hasVerifiedHostSession());
+}
+
+async function addPersonToRoster() {
+    const nameInput = document.getElementById('inviteNewName');
+    const phoneInput = document.getElementById('inviteNewPhone');
+    const status = document.getElementById('inviteAddStatus');
+    const button = document.getElementById('inviteAddPerson');
+    const name = nameInput.value.trim();
+    const phone = normalizedPlayerPhone(phoneInput.value);
+
+    status.classList.remove('error-text');
+    if (!name || phone.length !== 10) {
+        status.textContent = 'Enter a name and a 10-digit phone number.';
+        status.classList.add('error-text');
+        return;
+    }
+    if (hostRoster.some((player) => normalizedPlayerPhone(player.phone) === phone)) {
+        status.textContent = `${name} is already on your roster.`;
+        status.classList.add('error-text');
+        return;
+    }
+
+    button.disabled = true;
+    status.textContent = 'Adding...';
+    try {
+        const response = await fetch(
+            `/api/roster/${encodeURIComponent(gameData.hostPhone)}/${encodeURIComponent(phone)}`,
+            {
+                method: 'PUT',
+                headers: HostVerification.authHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ name })
+            }
+        );
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+            throw new Error('Your verified session expired. Add them on the Roster page.');
+        }
+        if (!response.ok) throw new Error(data.error || 'Could not add that person');
+
+        hostRoster.push({ phone, name, duprId: '', duprRating: null, gamesCount: 0 });
+        hostRoster.sort((a, b) => (a.name || a.phone)
+            .localeCompare(b.name || b.phone, undefined, { sensitivity: 'base' }));
+        nameInput.value = '';
+        phoneInput.value = '';
+        status.textContent = `${name} added.`;
+        renderHostRoster();
+        // Ticked straight away: adding somebody here is only ever a prelude to inviting them.
+        const added = document.querySelector(
+            `#intendedInviteeList .roster-player-checkbox[data-phone="${CSS.escape(phone)}"]`
+        );
+        if (added) {
+            added.checked = true;
+            updateInviteSelectionState();
+        }
     } catch (error) {
         status.textContent = error.message;
+        status.classList.add('error-text');
+    } finally {
         button.disabled = false;
     }
 }
@@ -547,8 +710,10 @@ function updatePlayerLists() {
     // The header counts come from the same roster, so they refresh together.
     updateGameSummary();
 
-    // A reply moves somebody out of the waiting list, so this recomputes with the roster.
-    renderAwaitingReply();
+    // A reply moves somebody from "no reply" to their answer, so this recomputes with the
+    // roster - and the picker's chips come from the same comparison.
+    renderInvitations();
+    renderInvitePicker();
 }
 
 async function addPlayerManually() {
@@ -866,7 +1031,8 @@ async function addOutPlayerBackToGame(playerId) {
         console.error('Error adding out player back:', error);
         showStatus('Could not add that player back: ' + error.message, 'error');
       }
-    }
+    },
+    { destructive: false, confirmLabel: 'Add Them Back' }
   );
 }
 
@@ -913,7 +1079,10 @@ window.ManageApp.players = {
     updatePlayerLists,
     loadHostRoster,
     textInvitations,
-    renderAwaitingReply,
+    renderInvitations,
+    renderInvitePicker,
+    recordCopiedInvitees,
+    addPersonToRoster,
     addPlayersFromRoster,
     addPlayerManually,
     moveToWaitlist,

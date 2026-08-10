@@ -327,12 +327,14 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         additionalPlayersHelp: document.getElementById('playersHelp').textContent,
         personality: document.getElementById('personalityId').value,
         intendedInviteeChoices: document.querySelectorAll(
-          '.intended-invitee-checkbox'
+          '#intendedInviteeList .roster-player-checkbox'
         ).length,
-        inviteeCopyIsHonest: document.querySelector('#intendedInviteesTitle + p')
-          ?.textContent.includes('cannot see who actually received'),
+        // The disclaimer that used to sit under the title is gone; the invited list carries
+        // the same honesty per person, where it can name who it applies to.
+        inviteeExplainerGone: !document.querySelector('#intendedInviteesTitle + p'),
+        inviteScoreboard: document.getElementById('inviteSummary')?.textContent,
         imageUpdateCopy: document.querySelector('.court-images-intro')?.textContent
-          .includes('player link you already sent'),
+          .includes('link you already sent'),
         manualPlayerSamplesRemoved:
           !document.getElementById('playerName').hasAttribute('placeholder') &&
           !document.getElementById('playerPhone').hasAttribute('placeholder'),
@@ -353,8 +355,9 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         // Two seeded roster players plus the out player, who joined the host's roster by
         // texting that they could not make it.
         manageReady.intendedInviteeChoices === 3 &&
-        manageReady.inviteeCopyIsHonest,
-      'management edits Realist and tracks intended invitees without claiming delivery'
+        manageReady.inviteeExplainerGone &&
+        manageReady.inviteScoreboard === 'Nobody has been invited yet.',
+      'management edits Realist and offers the roster to invite without an explainer paragraph'
     );
     assert(manageReady.imageUpdateCopy,
       'court image copy explains that the existing player link updates automatically');
@@ -466,10 +469,12 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     );
 
     const inviteeTracking = await desktop.evaluate(`(async () => {
-      const choices = [...document.querySelectorAll('.intended-invitee-checkbox')];
-      choices[0].checked = true;
-      document.getElementById('saveIntendedInvitees').click();
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      const choices = [...document.querySelectorAll('#intendedInviteeList .roster-player-checkbox')];
+      const outPlayer = choices.find((box) => box.dataset.phone === '5555550888');
+      outPlayer.checked = true;
+      outPlayer.dispatchEvent(new Event('change', { bubbles: true }));
+      document.getElementById('copyPlayerLink').click();
+      await new Promise((resolve) => setTimeout(resolve, 700));
       const hostGame = await fetch(
         '/api/games/${fx.open.gameId}?token=${fx.open.hostToken}'
       ).then((response) => response.json());
@@ -485,6 +490,9 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       ).then((response) => response.json());
       return {
         intended: hostGame.invitedPlayers?.length,
+        clearedAfterCopy: document.querySelectorAll(
+          '#intendedInviteeList .roster-player-checkbox:checked'
+        ).length,
         publicLeak: Object.prototype.hasOwnProperty.call(publicGame, 'invitedPlayers'),
         invitationHasLink: invitation.message?.includes(
           '/game.html?id=${fx.open.gameId}'
@@ -495,21 +503,26 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     })()`);
     assert(
       inviteeTracking.intended === 1 &&
+        inviteeTracking.clearedAfterCopy === 0 &&
         !inviteeTracking.publicLeak &&
         inviteeTracking.invitationHasLink &&
         inviteeTracking.invitationHasDetails,
-      'intended invitees stay private and server-built invitations preserve every instruction'
+      'copying records who was ticked, privately, and server-built invitations keep every instruction'
     );
 
     const invitationSend = await desktop.evaluate(`(async () => {
-      const before = document.getElementById('awaitingReplyStatus').textContent;
-      const boxes = [...document.querySelectorAll('.intended-invitee-checkbox')];
+      const before = document.getElementById('inviteSummary').textContent;
+      const boxes = [...document.querySelectorAll('#intendedInviteeList .roster-player-checkbox')];
       boxes.forEach((box) => { box.checked = false; });
       // Roster Player Two has not joined this game, so they are a real invitee.
       const target = boxes.find((box) => box.dataset.phone === '${fx.FORM_PHONE}');
       target.checked = true;
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+      const sendLabel = document.getElementById('textInvitations').textContent;
       document.getElementById('textInvitations').click();
       const confirmText = document.getElementById('confirmMessage').textContent;
+      const confirmIsDanger = document.getElementById('confirmYes')
+        .classList.contains('btn-danger');
       document.getElementById('confirmYes').click();
       await new Promise((resolve) => setTimeout(resolve, 1200));
 
@@ -522,11 +535,18 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       return {
         before,
         confirmText,
+        confirmIsDanger,
+        sendLabel,
         status: document.getElementById('status').textContent,
-        waiting: document.getElementById('awaitingReplyStatus').textContent,
-        waitingNames: [...document.querySelectorAll('#awaitingReplyList .player-name')]
+        waiting: document.getElementById('inviteSummary').textContent,
+        waitingNames: [...document.querySelectorAll('#invitedList .player-name')]
+          .map((node) => node.textContent.trim()),
+        chips: [...document.querySelectorAll('#invitedList .status-chip')]
           .map((node) => node.textContent.trim()),
         nudgeVisible: !document.getElementById('nudgeNonResponders').hidden,
+        nudgeShown: getComputedStyle(
+          document.getElementById('nudgeNonResponders')
+        ).display !== 'none',
         recordedTextCount: recorded && recorded.textCount,
         recordedStatus: recorded && recorded.lastTextStatus,
         recordedAt: Boolean(recorded && recorded.lastTextedAt)
@@ -534,9 +554,11 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     })()`);
     assert(
       invitationSend.before.includes('invited') &&
-        invitationSend.confirmText === 'Text the invitation to 1 person now?',
-      `saving an intended invitee already counts as waiting, and the send confirms first ` +
-      `(${invitationSend.before} / ${invitationSend.confirmText})`
+        invitationSend.sendLabel === 'Text The Invitation (1)' &&
+        invitationSend.confirmText === 'Text the invitation to 1 person now?' &&
+        !invitationSend.confirmIsDanger,
+      `the button counts the selection and sending confirms without a danger colour ` +
+      `(${invitationSend.sendLabel} / ${invitationSend.confirmText})`
     );
     assert(
       /Invitation texted to 1 person/.test(invitationSend.status) &&
@@ -546,16 +568,18 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       `a texted invitation is recorded against the game (${invitationSend.status})`
     );
     assert(
-      invitationSend.waiting.includes('1 of the 2 people you invited has') &&
-        invitationSend.waitingNames.join('|') === 'Roster Player Two' &&
-        invitationSend.nudgeVisible,
-      `an invitee with no reply shows up as waiting (${invitationSend.waiting})`
+      invitationSend.waiting === '2 invited · 1 out · 1 no reply' &&
+        invitationSend.waitingNames[0] === 'Roster Player Two' &&
+        invitationSend.chips.join('|') === 'No Reply|OUT' &&
+        invitationSend.nudgeVisible && invitationSend.nudgeShown,
+      `the scoreboard counts everyone invited and chases the silent one ` +
+      `(${invitationSend.waiting} / ${invitationSend.chips.join(',')})`
     );
 
     const rosterPickerReady = await desktop.evaluate(`(() => {
       document.querySelector('[data-collapsible="addPlayerSection"]').click();
-      const choices = [...document.querySelectorAll('.roster-player-checkbox')];
-      const names = [...document.querySelectorAll('.roster-player-name')]
+      const choices = [...document.querySelectorAll('#rosterPlayerList .roster-player-checkbox')];
+      const names = [...document.querySelectorAll('#rosterPlayerList .roster-player-name')]
         .map((node) => node.textContent.trim());
       choices.forEach((choice) => {
         choice.checked = true;
@@ -605,14 +629,22 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     );
 
     const invitationAnswered = await desktop.evaluate(`(() => ({
-      waiting: document.getElementById('awaitingReplyStatus').textContent,
-      rows: document.querySelectorAll('#awaitingReplyList .player-item').length,
-      nudgeHidden: document.getElementById('nudgeNonResponders').hidden
+      waiting: document.getElementById('inviteSummary').textContent,
+      rows: document.querySelectorAll('#invitedList .player-item').length,
+      chips: [...document.querySelectorAll('#invitedList .status-chip')]
+        .map((node) => node.textContent.trim()),
+      nudgeHidden: document.getElementById('nudgeNonResponders').hidden,
+      nudgeGone: getComputedStyle(
+        document.getElementById('nudgeNonResponders')
+      ).display === 'none'
     }))()`);
     assert(
-      invitationAnswered.waiting.includes('Everyone you invited has answered') &&
-        invitationAnswered.rows === 0 && invitationAnswered.nudgeHidden,
-      `joining the game clears an invitee off the waiting list (${invitationAnswered.waiting})`
+      invitationAnswered.waiting === '2 invited · 1 waiting · 1 out · everyone replied' &&
+        invitationAnswered.rows === 2 &&
+        invitationAnswered.chips.join('|') === 'OUT|Waitlist' &&
+        invitationAnswered.nudgeHidden && invitationAnswered.nudgeGone,
+      `joining answers the invitation and the chase button really disappears ` +
+      `(${invitationAnswered.waiting} / ${invitationAnswered.chips.join(',')})`
     );
 
     const recipientSelection = await desktop.evaluate(`(() => {

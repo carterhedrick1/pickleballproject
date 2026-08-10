@@ -89,6 +89,68 @@ const clickTab = (i) => async (p) => {
   await cdp.sleep(1000);
 };
 
+/**
+ * The Invite tab is only worth photographing with something on it. This verifies the host's
+ * phone (which is also what reveals the Add Someone New form), puts one extra person on the
+ * saved roster, and really texts both invitations - so the gallery shows the scoreboard with
+ * one reply in and one still outstanding.
+ */
+const seedInviteActivity = (fx) => async (p) => {
+  await p.evaluate(`(async () => {
+    const phone = '${fx.HOST_PHONE}';
+    const requested = await fetch('/api/host-verification/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    }).then((response) => response.json());
+    const verified = await fetch('/api/host-verification/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code: requested.devCode })
+    }).then((response) => response.json());
+    if (!verified.token) throw new Error('Host verification fixture failed');
+    localStorage.setItem('hostPhone', phone);
+    localStorage.setItem('hostVerificationToken', verified.token);
+
+    for (const person of [
+      { number: '${fx.FORM_PHONE}', name: 'Jordan Blake' },
+      { number: '${fx.JOIN_PHONE}', name: 'Sam Rivera' }
+    ]) {
+      await fetch('/api/roster/' + phone + '/' + person.number, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + verified.token },
+        body: JSON.stringify({ name: person.name })
+      });
+    }
+
+    // One invitation has to come back answered for the gallery to show both states. Sam Rivera
+    // signs up here when the game-joined screen was filtered out of the run; when it ran, this
+    // is a duplicate the server rejects and the answer is already on the game.
+    const game = await fetch('/api/games/${fx.open.gameId}').then((r) => r.json());
+    const joined = (game.players || []).some(
+      (player) => String(player.phone || '').replace(/\\D/g, '').endsWith('${fx.JOIN_PHONE}')
+    );
+    if (!joined) {
+      await fetch('/api/games/${fx.open.gameId}/players', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Sam Rivera', phone: '${fx.JOIN_PHONE}', action: 'join' })
+      });
+    }
+
+    await fetch('/api/games/${fx.open.gameId}/invitations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: '${fx.open.hostToken}',
+        playerPhones: ['${fx.FORM_PHONE}', '${fx.JOIN_PHONE}']
+      })
+    });
+    location.reload();
+  })()`);
+  await cdp.sleep(2800);
+};
+
 // My Games, Roster and Stats share a verified host session. The local SMS client returns its
 // simulated code only in local development, so the gallery can exercise the real request and
 // confirmation endpoints without sending a text.
@@ -340,7 +402,8 @@ function buildScreens(fx) {
     { file: 'manage-invite', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}&tab=Invite`,
       title: 'Invite tab',
-      note: 'The tab that opens first. Text invitations to saved roster players, see who has not replied, or copy the invitation for a group chat.' },
+      note: 'The tab that opens first. Tick names, send, and read the answers back: every invitation with its reply, or No Reply and a way to chase it.',
+      act: seedInviteActivity(fx) },
     { file: 'manage-players', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
       title: 'Players tab',
@@ -352,11 +415,7 @@ function buildScreens(fx) {
     { file: 'manage-details', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
       title: 'Game Details tab',
-      note: 'Moving the court, date, time or duration texts everyone signed up, unless the host unticks the box.', act: clickTab(3) },
-    { file: 'manage-actions', of: '/manage.html?id=…&token=…', size: 'wide',
-      url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
-      title: 'Game Actions tab',
-      note: 'Cancelling the game, with a reason that gets texted to everyone.', act: clickTab(4) },
+      note: 'Moving the court, date, time or duration texts everyone signed up, unless the host unticks the box. Cancelling the game lives at the foot of this tab.', act: clickTab(3) },
     { file: 'manage-approval-roster', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.approval.gameId}&token=${fx.approval.hostToken}`,
       title: 'Players tab on an approval game',
