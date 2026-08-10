@@ -581,7 +581,7 @@ async function createGame(e) {
 
         
         // Replace the completed form with the invitation step.
-        showGameLinks(data.gameId);
+        showGameLinks(data.gameId, data.hostLink);
         
         // Clear form
         document.getElementById('gameForm').reset();
@@ -620,10 +620,17 @@ async function createGame(e) {
     }
 }
 
-        function showGameLinks(gameId) {
+        function showGameLinks(gameId, hostLink) {
             // Store the game ID for the copy function
             window.currentGameId = gameId;
-            
+
+            // The primary next step is inviting players from the manage page.
+            // Land on its Invite tab regardless of which tab was open last.
+            const inviteButton = document.getElementById('inviteYourPlayers');
+            if (inviteButton && hostLink) {
+                inviteButton.href = `${hostLink}&tab=Invite`;
+            }
+
             // A successful submission advances to a distinct result view. Leaving a reset form
             // above this panel makes the page look as though nothing was created, especially on
             // a phone when the status message scrolls back to the top.

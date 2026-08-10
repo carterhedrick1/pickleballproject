@@ -89,22 +89,35 @@
   }
 
   let pageSloganPromise;
+  let localPageSlogan;
+
+  // Synchronous pick from the built-in list, memoized so the header and footer
+  // show the same slogan while the server's rotation is still loading.
+  function chooseLocal() {
+    if (localPageSlogan === undefined) localPageSlogan = choose(normalizeConfig());
+    return localPageSlogan;
+  }
 
   function getForPage() {
     if (pageSloganPromise) return pageSloganPromise;
 
     pageSloganPromise = (async function() {
-      let config = normalizeConfig();
       if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+        // Both requests start together; the saved-config request is only needed
+        // if the rotation request comes back empty.
+        const configPromise = (async function() {
+          try {
+            const response = await window.fetch('/api/slogans', { headers: { Accept: 'application/json' } });
+            if (response.ok) return normalizeConfig(await response.json());
+          } catch (_err) {
+            // The built-in list keeps the brand visible if the API is temporarily unavailable.
+          }
+          return normalizeConfig();
+        })();
+
+        const fallback = chooseLocal();
         try {
-          const response = await window.fetch('/api/slogans', { headers: { Accept: 'application/json' } });
-          if (response.ok) config = normalizeConfig(await response.json());
-        } catch (_err) {
-          // The built-in list keeps the brand visible if the API is temporarily unavailable.
-        }
-        const fallback = choose(config);
-        try {
-          const name = randomItem(config.names);
+          const name = randomItem(normalizeConfig().names);
           const params = new URLSearchParams({
             surface: 'site-slogan',
             fallback: fallback,
@@ -132,9 +145,9 @@
         } catch (_err) {
           // The legacy saved rotation remains the page-level fallback.
         }
-        return fallback;
+        return choose(await configPromise);
       }
-      return choose(config);
+      return chooseLocal();
     })();
 
     return pageSloganPromise;
@@ -145,6 +158,7 @@
     DEFAULT_NAMES: DEFAULT_NAMES,
     normalizeConfig: normalizeConfig,
     choose: choose,
+    chooseLocal: chooseLocal,
     recentMessageIds: recentMessageIds,
     rememberMessageId: rememberMessageId,
     getForPage: getForPage

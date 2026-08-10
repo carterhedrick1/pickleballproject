@@ -57,7 +57,7 @@ function renderHostRoster() {
 
     if (hostRoster.length === 0) {
         status.textContent =
-            'Your roster is empty. Players with phone numbers appear here after they join one of your games.';
+            'Your roster is empty. Add people on the Roster page, or they appear here automatically after joining one of your games with a phone number.';
         actions.hidden = true;
         return;
     }
@@ -135,8 +135,21 @@ function renderIntendedInvitees() {
         (gameData?.invitedPlayers || []).map((player) => normalizedPlayerPhone(player.phone))
     );
     if (!hostRoster.length) {
-        status.textContent = 'Your roster is empty.';
+        status.innerHTML = '';
+        const note = document.createTextNode(
+            'Your roster is empty. Add your regulars on the '
+        );
+        const rosterLink = document.createElement('a');
+        rosterLink.href = '/roster.html';
+        rosterLink.textContent = 'Roster page';
+        status.append(
+            note,
+            rosterLink,
+            document.createTextNode(' and you can text invitations from here.')
+        );
         button.disabled = true;
+        const textButton = document.getElementById('textInvitations');
+        if (textButton) textButton.disabled = true;
         return;
     }
     hostRoster.forEach((player) => {

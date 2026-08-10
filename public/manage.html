@@ -49,9 +49,10 @@
             <!-- Mobile Tab Selection -->
             <div class="mobile-tab-container">
                 <select id="tabSelector" class="mobile-tab-selector">
-                    <option value="Details">Game Details</option>
+                    <option value="Invite">Invite</option>
                     <option value="Players">Players</option>
                     <option value="Communication">Communication</option>
+                    <option value="Details">Game Details</option>
                     <option value="Actions">Game Actions</option>
                 </select>
             </div>
@@ -59,20 +60,57 @@
             <!-- Desktop Tab Navigation -->
             <div class="tabs-container">
                 <div class="tabs">
-                    <button class="tab active" data-tab="Details">Game Details</button>
+                    <button class="tab active" data-tab="Invite">Invite</button>
                     <button class="tab" data-tab="Players">Players</button>
                     <button class="tab" data-tab="Communication">Communication</button>
+                    <button class="tab" data-tab="Details">Game Details</button>
                     <button class="tab" data-tab="Actions">Game Actions</button>
                 </div>
             </div>
 
-            <!-- Persistent Copy Invitation Bar (visible across all tabs) -->
-            <div class="persistent-copy-bar">
-                <button id="copyPlayerLinkPersistent" class="copy-btn persistent-copy-btn">Copy Invitation Message</button>
+            <!-- Invite Tab: the first job after creating a game, so it comes first. -->
+            <div id="Invite" class="tabcontent active">
+                <div class="form-section">
+                    <section class="roster-picker" aria-labelledby="intendedInviteesTitle">
+                        <h2 class="section-title" id="intendedInviteesTitle">Text Your Invitations</h2>
+                        <p class="form-help-text">Tick the people you want for this game. Texting the invitation from here records exactly who it went to and when. Saving them as intended invitees only records who you meant to invite &mdash; IN or OUT cannot see who actually received a message you pasted into another app.</p>
+                        <div id="intendedInviteeStatus" class="roster-picker-status" aria-live="polite">Loading your roster...</div>
+                        <div id="intendedInviteeList" class="roster-picker-list"></div>
+                        <div class="invite-actions">
+                            <button type="button" id="textInvitations">Text The Invitation</button>
+                            <button type="button" id="saveIntendedInvitees" class="btn-secondary">Save Intended Invitees</button>
+                        </div>
+                    </section>
+
+                    <section class="roster-picker invite-tracking" aria-labelledby="awaitingReplyTitle" style="margin-top:24px">
+                        <h3 id="awaitingReplyTitle">Waiting On A Reply</h3>
+                        <p class="form-help-text">Everyone you invited who has not said IN or OUT yet.</p>
+                        <div id="awaitingReplyStatus" class="roster-picker-status" aria-live="polite">Nobody has been invited yet.</div>
+                        <div id="awaitingReplyList" class="invite-tracking-list"></div>
+                        <button type="button" id="nudgeNonResponders" hidden>Text Everyone Waiting</button>
+                    </section>
+                </div>
+
+                <div class="share-section">
+                    <h3 class="share-title">Or Share Your Game Yourself</h3>
+                    <div class="center-copy-section">
+                        <p>Copy a complete invitation message with all the game details and the sign-up link.</p>
+                        <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
+                        <p class="save-suggestion">Paste it into a text, an email, or a group chat.</p>
+                    </div>
+                    <div class="player-link-section">
+                        <label for="playerLinkField">Player Link:</label>
+                        <div class="player-link-row">
+                            <input type="text" id="playerLinkField" readonly>
+                            <button id="copyPlayerLinkOnly" class="copy-btn">Copy Link</button>
+                        </div>
+                        <p class="save-suggestion">Just the address on its own, for a QR code or a group chat description.</p>
+                    </div>
+                </div>
             </div>
-            
+
             <!-- Game Details Tab -->
-            <div id="Details" class="tabcontent active">
+            <div id="Details" class="tabcontent">
                 <div class="form-section">
                     <h2 class="section-title">Edit Game Details</h2>
                     
@@ -204,42 +242,6 @@
                         
                         <button type="submit">Update Game Details</button>
                     </form>
-
-                    <section class="roster-picker" aria-labelledby="intendedInviteesTitle" style="margin-top:24px">
-                        <h3 id="intendedInviteesTitle">Invitations</h3>
-                        <p class="form-help-text">Tick the people you want for this game. Texting the invitation from here records exactly who it went to and when. Saving them as intended invitees only records who you meant to invite — IN or OUT cannot see who actually received a message you pasted into another app.</p>
-                        <div id="intendedInviteeStatus" class="roster-picker-status" aria-live="polite">Loading your roster...</div>
-                        <div id="intendedInviteeList" class="roster-picker-list"></div>
-                        <div class="invite-actions">
-                            <button type="button" id="textInvitations">Text The Invitation</button>
-                            <button type="button" id="saveIntendedInvitees" class="btn-secondary">Save Intended Invitees</button>
-                        </div>
-                    </section>
-
-                    <section class="roster-picker invite-tracking" aria-labelledby="awaitingReplyTitle" style="margin-top:24px">
-                        <h3 id="awaitingReplyTitle">Waiting On A Reply</h3>
-                        <p class="form-help-text">Everyone you invited who has not said IN or OUT yet.</p>
-                        <div id="awaitingReplyStatus" class="roster-picker-status" aria-live="polite">Nobody has been invited yet.</div>
-                        <div id="awaitingReplyList" class="invite-tracking-list"></div>
-                        <button type="button" id="nudgeNonResponders" hidden>Text Everyone Waiting</button>
-                    </section>
-                </div>
-                        
-                <div class="share-section">
-                    <h3 class="share-title">Share Your Game</h3>
-                    <div class="center-copy-section">
-                        <p>Copy a complete invitation message with all the game details and the sign-up link.</p>
-                        <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
-                        <p class="save-suggestion">Paste it into a text, an email, or a group chat.</p>
-                    </div>
-                    <div class="player-link-section">
-                        <label for="playerLinkField">Player Link:</label>
-                        <div class="player-link-row">
-                            <input type="text" id="playerLinkField" readonly>
-                            <button id="copyPlayerLinkOnly" class="copy-btn">Copy Link</button>
-                        </div>
-                        <p class="save-suggestion">Just the address on its own, for a QR code or a group chat description.</p>
-                    </div>
                 </div>
 
                 <!-- Court Images: let host manage court image library -->

@@ -35,9 +35,11 @@
   });
 })();
 
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', function() {
+// The header must never wait on the network: paint it with a bundled slogan
+// right away and swap in the server rotation's pick when it arrives.
 const slogan = window.InOrOutSlogans
-    ? await window.InOrOutSlogans.getForPage()
+    ? window.InOrOutSlogans.chooseLocal()
     : 'Pickleball Organizer';
 
 async function showLocalPreviewNotice() {
@@ -116,6 +118,12 @@ const headerHTML = `
 // Insert header at the beginning of body
 document.body.insertAdjacentHTML('afterbegin', headerHTML);
 document.querySelector('.header-slogan').textContent = slogan;
+if (window.InOrOutSlogans) {
+    window.InOrOutSlogans.getForPage().then(function(rotated) {
+        const sloganEl = document.querySelector('.header-slogan');
+        if (sloganEl && rotated) sloganEl.textContent = rotated;
+    }).catch(function() {});
+}
 showLocalPreviewNotice();
 // Adjust body padding to account for header
 document.body.style.paddingTop = '0';

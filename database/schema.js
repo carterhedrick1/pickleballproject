@@ -49,6 +49,8 @@ async function initializeDatabase() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
+        // My Games, Roster, and Stats all look games up by the host's phone.
+        await client.query('CREATE INDEX IF NOT EXISTS idx_games_host_phone ON games (host_phone)');
         await client.query(`
           CREATE TABLE IF NOT EXISTS sms_contexts (
             phone_number TEXT PRIMARY KEY,
@@ -327,6 +329,8 @@ async function initializeDatabase() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
+      // My Games, Roster, and Stats all look games up by the host's phone.
+      await sqliteRun('CREATE INDEX IF NOT EXISTS idx_games_host_phone ON games (host_phone)');
       console.log('SQLite games table initialized');
 
       await sqliteRun(`CREATE TABLE IF NOT EXISTS sms_contexts (
