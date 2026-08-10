@@ -131,4 +131,71 @@ describe('applyGameUpdate', () => {
 
     assert.equal(game.totalPlayers, 3);
   });
+
+  it('takes the organizer off the roster when they stop playing', () => {
+    const game = savedGame();
+    game.organizerPlaying = true;
+    game.organizerName = 'Scott';
+    game.players = [
+      { id: 'organizer', name: 'Scott', isOrganizer: true },
+      { id: 'p1', name: 'Alex' }
+    ];
+
+    applyGameUpdate(game, { organizerPlaying: false, playersNeeded: '3' });
+
+    assert.equal(game.organizerPlaying, false);
+    assert.deepEqual(game.players.map((player) => player.name), ['Alex']);
+    // Three others wanted, and no seat held back for the host.
+    assert.equal(game.totalPlayers, 3);
+  });
+
+  it('puts the organizer back on the roster when they start playing', () => {
+    const game = savedGame();
+    game.organizerPlaying = false;
+    game.organizerName = 'Scott';
+    game.organizerPhone = '5551234567';
+    game.players = [{ id: 'p1', name: 'Alex' }];
+
+    applyGameUpdate(game, { organizerPlaying: true, playersNeeded: '3' });
+
+    const organizer = game.players.find((player) => player.isOrganizer);
+    assert.equal(game.organizerPlaying, true);
+    assert.equal(organizer.name, 'Scott');
+    assert.equal(organizer.phone, '5551234567');
+    assert.ok(organizer.joinedAt);
+    assert.equal(game.totalPlayers, 4);
+  });
+
+  it('never lists the organizer twice, however many times it is saved', () => {
+    const game = savedGame();
+    game.organizerPlaying = true;
+    game.players = [{ id: 'organizer', name: 'Scott', isOrganizer: true }];
+
+    applyGameUpdate(game, { organizerPlaying: true });
+    applyGameUpdate(game, { organizerPlaying: true });
+
+    assert.equal(game.players.filter((player) => player.isOrganizer).length, 1);
+  });
+
+  it('leaves the roster alone when the flag is not being edited', () => {
+    const game = savedGame();
+    game.organizerPlaying = true;
+    game.players = [{ id: 'organizer', name: 'Scott', isOrganizer: true }];
+
+    applyGameUpdate(game, { location: 'New Court' });
+
+    assert.equal(game.players.length, 1);
+    assert.equal(game.organizerPlaying, true);
+  });
+
+  it('reads the flag as a real boolean rather than a checkbox string', () => {
+    const game = savedGame();
+    game.organizerPlaying = true;
+    game.players = [{ id: 'organizer', name: 'Scott', isOrganizer: true }];
+
+    applyGameUpdate(game, { organizerPlaying: 'false' });
+
+    assert.equal(game.organizerPlaying, false);
+    assert.deepEqual(game.players, []);
+  });
 });

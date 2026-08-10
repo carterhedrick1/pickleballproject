@@ -394,6 +394,11 @@ function setupEventListeners() {
         element.addEventListener('click', () => toggleCollapsible(element.dataset.collapsible));
     });
 
+    const organizerPlayingToggle = document.getElementById('organizerPlaying');
+    if (organizerPlayingToggle) {
+        organizerPlayingToggle.addEventListener('change', updateOrganizerPlayingCopy);
+    }
+
     const refreshDeliveryLog = document.getElementById('refreshDeliveryLog');
     if (refreshDeliveryLog) {
         refreshDeliveryLog.addEventListener('click', loadDeliveryLog);
@@ -522,6 +527,24 @@ function setupEventListeners() {
 }
 
 
+// The player-count field means "how many others" only while the host is playing, so its label
+// has to follow the tick box rather than waiting for a save.
+function updateOrganizerPlayingCopy() {
+    const playing = document.getElementById('organizerPlaying')?.checked === true;
+    const label = document.getElementById('playersLabel');
+    const help = document.getElementById('playersHelp');
+    if (label) {
+        label.textContent = playing
+            ? 'Number Of Additional Players Needed:'
+            : 'Number Of Players Needed:';
+    }
+    if (help) {
+        help.textContent = playing
+            ? 'You are already Player 1. Enter only the number of other players you need.'
+            : 'Enter the total number of players you need. No organizer will be added.';
+    }
+}
+
 function populateGameDetails() {
     console.log('[CLIENT] Populating game details with:', gameData);
     
@@ -531,16 +554,12 @@ function populateGameDetails() {
     document.getElementById('time').value = gameData.time || '';
     document.getElementById('duration').value = gameData.duration || '';
     const organizerPlaying = gameData.organizerPlaying === true;
+    document.getElementById('organizerPlaying').checked = organizerPlaying;
     document.getElementById('players').value = PlayerCapacity.additionalFromTotal(
         gameData.totalPlayers,
         organizerPlaying
     );
-    document.getElementById('playersLabel').textContent = organizerPlaying
-        ? 'Number Of Additional Players Needed:'
-        : 'Number Of Players Needed:';
-    document.getElementById('playersHelp').textContent = organizerPlaying
-        ? 'You are already Player 1. Enter only the number of other players you need.'
-        : 'Enter the total number of players you need. No organizer will be added.';
+    updateOrganizerPlayingCopy();
     document.getElementById('message').value = gameData.message || '';
     document.getElementById('personalityId').value = gameData.personalityId || 'realist';
     
@@ -639,6 +658,7 @@ async function updateGameDetails() {
             time: document.getElementById('time').value,
             duration: document.getElementById('duration').value,
             playersNeeded: document.getElementById('players').value,
+            organizerPlaying: document.getElementById('organizerPlaying').checked,
             message: document.getElementById('message').value,
             personalityId: document.getElementById('personalityId').value,
             notificationPreferences: formattedPreferences,
@@ -691,7 +711,7 @@ async function updateGameDetails() {
             duration: parseInt(document.getElementById('duration').value),
             totalPlayers: PlayerCapacity.totalFromAdditional(
                 document.getElementById('players').value,
-                gameData.organizerPlaying === true
+                document.getElementById('organizerPlaying').checked
             ),
             message: document.getElementById('message').value,
             personalityId: document.getElementById('personalityId').value,
@@ -1061,21 +1081,10 @@ function showUnauthorized() {
 
 
 
-document.addEventListener('DOMContentLoaded', () => {
-    
-    // Update player checkboxes after everything is loaded
-    setTimeout(() => {
-        if (gameData) {
-            updatePlayerCheckboxes();
-            // Force all checkboxes to be unchecked after creation
-            const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
-            allCheckboxes.forEach(checkbox => {
-                checkbox.checked = false;
-                checkbox.indeterminate = false;
-            });
-        }
-    }, 200);
-});
+// There used to be a timer here that unchecked every checkbox on the page 200ms after load. It
+// raced the notification preferences, which are restored at 250ms and only won by luck, and it
+// silently cancelled the "Confirmed Players" default that updatePlayerCheckboxes sets. The
+// recipient list already renders itself from the roster, so nothing needs to be reset here.
 
 // Add this function to update the group checkbox styling to match individual players
 

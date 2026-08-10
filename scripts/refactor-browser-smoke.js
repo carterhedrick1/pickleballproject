@@ -407,6 +407,38 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       'the bare player link is shown with its own copy button'
     );
 
+    const organizerSeat = await desktop.evaluate(`(() => {
+      const toggle = document.getElementById('organizerPlaying');
+      const before = {
+        checked: toggle.checked,
+        label: document.getElementById('playersLabel').textContent,
+        // The stray timer that used to uncheck every box 200ms after load is gone, so the
+        // default audience survives.
+        recipientDefault: document.getElementById('sendToPlayers').checked
+      };
+      toggle.checked = false;
+      toggle.dispatchEvent(new Event('change', { bubbles: true }));
+      const afterLabel = document.getElementById('playersLabel').textContent;
+      // Put it back: this game is photographed and asserted on elsewhere.
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change', { bubbles: true }));
+      return { before, afterLabel, restoredLabel: document.getElementById('playersLabel').textContent };
+    })()`);
+    assert(
+      organizerSeat.before.checked &&
+        organizerSeat.before.label === 'Number Of Additional Players Needed:',
+      'the host can see and change whether they are playing in their own game'
+    );
+    assert(
+      organizerSeat.afterLabel === 'Number Of Players Needed:' &&
+        organizerSeat.restoredLabel === 'Number Of Additional Players Needed:',
+      'the player-count label follows the playing toggle before anything is saved'
+    );
+    assert(
+      organizerSeat.before.recipientDefault,
+      'the confirmed-players recipient default survives page load'
+    );
+
     const organizerRow = await desktop.evaluate(`(() => {
       const rows = [...document.querySelectorAll('#confirmedPlayers .player-item')];
       const organizer = rows.find(
