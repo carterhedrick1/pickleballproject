@@ -66,7 +66,7 @@ function sendQuickMessage(type) {
         // TIMEZONE FIX: Use proper date formatting
         const formattedDate = formatDateForDisplay(gameData.date);
         
-        message = `Reminder: Your pickleball game is on ${formattedDate} at ${formatTime(gameData.time)} at ${gameData.location}. Looking forward to seeing you there!`;
+        message = `Reminder: Your pickleball game is on ${formattedDate} at ${formatTime(gameData.time)} — ${gameData.location}. Looking forward to seeing you there!`;
     } else if (type === 'location') {
         message = `Location details for our pickleball game: ${gameData.location}. Game starts at ${formatTime(gameData.time)}.`;
     }
@@ -82,22 +82,13 @@ function sendQuickMessage(type) {
 
 function getSelectedRecipients() {
     const recipients = [];
-    
-    console.log('Checking recipients...'); // Debug log
-    
-    // Check if group checkboxes are selected - try multiple possible IDs
-    const sendToPlayersEl = document.getElementById('sendToPlayers') || 
-                           document.querySelector('input[type="checkbox"][id*="Players"]') ||
-                           document.querySelector('input[type="checkbox"]:checked');
-    
-    const sendToWaitlistEl = document.getElementById('sendToWaitlist') || 
-                            document.querySelector('input[type="checkbox"][id*="Waitlist"]');
-    
-    const sendToPlayers = sendToPlayersEl?.checked || false;
-    const sendToWaitlist = sendToWaitlistEl?.checked || false;
-    
-    console.log('Group selections:', { sendToPlayers, sendToWaitlist }); // Debug log
-    
+
+    // Only the two real group toggles count. The old fallback selectors could bind
+    // "send to players" to any checked checkbox on the page, including a notification
+    // preference toggle that has nothing to do with this announcement.
+    const sendToPlayers = document.getElementById('sendToPlayers')?.checked || false;
+    const sendToWaitlist = document.getElementById('sendToWaitlist')?.checked || false;
+
     // If group checkboxes are selected, add all players from those groups
     if (sendToPlayers && gameData?.players) {
         gameData.players.forEach(player => {
@@ -110,7 +101,6 @@ function getSelectedRecipients() {
                 });
             }
         });
-        console.log('Added confirmed players:', recipients.length); // Debug log
     }
     
     if (sendToWaitlist && gameData?.waitlist) {
@@ -124,19 +114,16 @@ function getSelectedRecipients() {
                 });
             }
         });
-        console.log('Added waitlist players:', recipients.length); // Debug log
     }
-    
-    // Also check individual player checkboxes (for partial selections)
-    const playerCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked');
-    console.log('Found checked checkboxes:', playerCheckboxes.length); // Debug log
-    
+
+    // Individual picks live inside the recipient list only. Scanning the whole document swept
+    // in unrelated checkboxes such as the notification preferences.
+    const individualContainer = document.getElementById('playerCheckboxes');
+    const playerCheckboxes = individualContainer
+        ? individualContainer.querySelectorAll('input[type="checkbox"]:checked')
+        : [];
+
     playerCheckboxes.forEach(checkbox => {
-        // Skip if it's a group checkbox
-        if (checkbox.id === 'sendToPlayers' || checkbox.id === 'sendToWaitlist' || checkbox.id === 'sendToAll') {
-            return;
-        }
-        
         // Only add if not already included from group selection and has required data
         if (checkbox.dataset?.phone && checkbox.dataset?.name) {
             const existingRecipient = recipients.find(r => r.id === checkbox.value);
@@ -151,18 +138,28 @@ function getSelectedRecipients() {
         }
     });
     
-    console.log('Final recipients:', recipients); // Debug log
     return recipients;
+}
+
+// The recipient rows are inputs with the class, not wrappers around one, so the old
+// ".player-checkbox input" selectors matched nothing and the group toggles never reached the
+// individual rows. Everything here is scoped to the recipient list for the same reason.
+function recipientCheckboxes(type) {
+    const container = document.getElementById('playerCheckboxes');
+    if (!container) return [];
+    const selector = type
+        ? `.player-checkbox[data-type="${type}"]`
+        : '.player-checkbox';
+    return Array.from(container.querySelectorAll(selector));
 }
 
 function toggleAllPlayers(checked) {
     // Update group checkboxes
     document.getElementById('sendToPlayers').checked = checked;
     document.getElementById('sendToWaitlist').checked = checked;
-    
+
     // Update individual player checkboxes
-    const playerCheckboxes = document.querySelectorAll('.player-checkbox input[type="checkbox"]');
-    playerCheckboxes.forEach(checkbox => {
+    recipientCheckboxes().forEach(checkbox => {
         checkbox.checked = checked;
     });
 }
@@ -173,8 +170,8 @@ function updateGroupSelections() {
     const sendToAll = document.getElementById('sendToAll');
     
     // Update individual checkboxes based on group selections
-    const confirmedCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="confirmed"]');
-    const waitlistCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="waitlist"]');
+    const confirmedCheckboxes = recipientCheckboxes('confirmed');
+    const waitlistCheckboxes = recipientCheckboxes('waitlist');
     
     confirmedCheckboxes.forEach(checkbox => {
         checkbox.checked = sendToPlayers;
@@ -202,8 +199,8 @@ function updateGroupSelections() {
 }
 
 function updateIndividualSelection() {
-    const confirmedCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="confirmed"]');
-    const waitlistCheckboxes = document.querySelectorAll('.player-checkbox input[data-type="waitlist"]');
+    const confirmedCheckboxes = recipientCheckboxes('confirmed');
+    const waitlistCheckboxes = recipientCheckboxes('waitlist');
     
     // Check group checkbox states
     const allConfirmedChecked = Array.from(confirmedCheckboxes).every(cb => cb.checked);
@@ -271,9 +268,8 @@ function clearAllRecipientSelections() {
     document.getElementById('sendToWaitlist').indeterminate = false;
     
     // Clear all individual player checkboxes
-    const playerCheckboxes = document.querySelectorAll('.player-checkbox input[type="checkbox"]');
-    playerCheckboxes.forEach(checkbox => {
-        checkbox.checked = false;  // Changed to false for all players
+    recipientCheckboxes().forEach(checkbox => {
+        checkbox.checked = false;
     });
 }
 
@@ -343,12 +339,30 @@ function updateGroupCheckboxStyling() {
     }
 }
 
+const RECIPIENT_GROUP_IDS = ['sendToAll', 'sendToPlayers', 'sendToWaitlist'];
+
 function updatePlayerCheckboxes() {
     const container = document.getElementById('playerCheckboxes');
     if (!container) return;
-    
+
+    // This runs on every roster refresh, so a host who is halfway through picking recipients
+    // must get their picks back rather than watching them clear underneath them.
+    const firstRender = container.dataset.rendered !== 'true';
+    const selectedIds = new Set(
+        Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
+            .map((checkbox) => checkbox.value)
+    );
+    const groupState = {};
+    RECIPIENT_GROUP_IDS.forEach((id) => {
+        const checkbox = document.getElementById(id);
+        groupState[id] = {
+            checked: Boolean(checkbox && checkbox.checked),
+            indeterminate: Boolean(checkbox && checkbox.indeterminate)
+        };
+    });
+
     container.innerHTML = '';
-    
+
     // Add confirmed players
     gameData.players.forEach(player => {
         if (player.phone && !player.isOrganizer) { // Only players with phones who aren't organizers
@@ -422,26 +436,33 @@ function updatePlayerCheckboxes() {
         individualSection.style.display = hasPlayers ? 'block' : 'none';
     }
     
-    // Explicitly uncheck all checkboxes on initial load
-    const allPlayerCheckboxes = document.querySelectorAll('.player-checkbox');
-    allPlayerCheckboxes.forEach(checkbox => {
-        checkbox.checked = false;
+    container.dataset.rendered = 'true';
+
+    if (firstRender) {
+        // A fresh page starts with the confirmed players as the default audience.
+        container.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+            checkbox.checked = false;
+        });
+        RECIPIENT_GROUP_IDS.forEach((id) => {
+            const checkbox = document.getElementById(id);
+            if (checkbox) {
+                checkbox.checked = id === 'sendToPlayers';
+                checkbox.indeterminate = false;
+            }
+        });
+        return;
+    }
+
+    container.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+        checkbox.checked = selectedIds.has(checkbox.value);
     });
-    
-    // Also uncheck group checkboxes
-    const groupCheckboxes = ['sendToAll', 'sendToPlayers', 'sendToWaitlist'];
-    groupCheckboxes.forEach(id => {
+    RECIPIENT_GROUP_IDS.forEach((id) => {
         const checkbox = document.getElementById(id);
         if (checkbox) {
-            checkbox.checked = false;
+            checkbox.checked = groupState[id].checked;
+            checkbox.indeterminate = groupState[id].indeterminate;
         }
     });
-    
-    // Set "Confirmed Players" as default checked
-    const sendToPlayersCheckbox = document.getElementById('sendToPlayers');
-    if (sendToPlayersCheckbox) {
-        sendToPlayersCheckbox.checked = true;
-    }
 }
 
 

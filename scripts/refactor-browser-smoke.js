@@ -353,6 +353,32 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       'HTML-like player names remain text in the live page'
     );
 
+    const organizerRow = await desktop.evaluate(`(() => {
+      const rows = [...document.querySelectorAll('#confirmedPlayers .player-item')];
+      const organizer = rows.find(
+        (row) => row.querySelector('.player-name')?.textContent.includes('(Organizer)')
+      );
+      const other = rows.find((row) => row !== organizer);
+      return {
+        found: Boolean(organizer),
+        organizerActions: organizer
+          ? organizer.querySelectorAll('.player-actions button').length
+          : -1,
+        organizerNote: organizer?.textContent.includes('You are hosting this game'),
+        otherActions: other
+          ? [...other.querySelectorAll('.player-actions button')].map((b) => b.textContent)
+          : []
+      };
+    })()`);
+    assert(
+      organizerRow.found && organizerRow.organizerActions === 0 && organizerRow.organizerNote,
+      'the organizer row offers no way to remove the host from their own game'
+    );
+    assert(
+      organizerRow.otherActions.join('|') === 'To Waitlist|Remove',
+      'every other confirmed player keeps the roster actions'
+    );
+
     const inviteeTracking = await desktop.evaluate(`(async () => {
       const choices = [...document.querySelectorAll('.intended-invitee-checkbox')];
       choices[0].checked = true;
@@ -439,6 +465,48 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       rosterAddResult.status === '2 roster players added successfully.' &&
         rosterAddResult.pickerEmpty === 'Everyone on your roster is already listed for this game.',
       'the roster picker reports success and filters players already in the game'
+    );
+
+    const recipientSelection = await desktop.evaluate(`(() => {
+      const container = document.getElementById('playerCheckboxes');
+      const boxes = [...container.querySelectorAll('.player-checkbox')];
+      const groups = ['sendToAll', 'sendToPlayers', 'sendToWaitlist']
+        .map((id) => document.getElementById(id));
+
+      // A half-built recipient list must survive the roster poll that runs every refresh.
+      groups.forEach((group) => { group.checked = false; group.indeterminate = false; });
+      boxes[0].checked = true;
+      const chosen = boxes[0].value;
+      ManageApp.players.updatePlayerLists();
+      const refreshed = [...container.querySelectorAll('.player-checkbox')];
+      const kept = refreshed
+        .filter((box) => box.checked)
+        .map((box) => box.value);
+
+      // Notification preferences are checkboxes too, and they used to be able to stand in for
+      // "send to confirmed players" through the old fallback selectors.
+      const preference = document.getElementById('notifyPlayerJoins');
+      if (preference) preference.checked = true;
+      refreshed.forEach((box) => { box.checked = false; });
+      const strayRecipients = ManageApp.communications.getSelectedRecipients().length;
+
+      return {
+        rendered: boxes.length,
+        kept: kept.join('|'),
+        chosen,
+        groupsStillOff: groups.every((group) => !group.checked),
+        strayRecipients
+      };
+    })()`);
+    assert(
+      recipientSelection.rendered >= 2 &&
+        recipientSelection.kept === recipientSelection.chosen &&
+        recipientSelection.groupsStillOff,
+      'a partial recipient selection survives a roster refresh'
+    );
+    assert(
+      recipientSelection.strayRecipients === 0,
+      'notification preference toggles never count as announcement recipients'
     );
 
     await desktop.evaluate(`(() => {
