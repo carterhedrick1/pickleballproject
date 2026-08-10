@@ -393,7 +393,13 @@ module.exports = function mountGameRoutes(app) {
           error: 'Every invitee must come from your saved roster.'
         });
       }
+      // Keep whatever delivery history an invitee already has. Re-ticking the list is a change
+      // of intent, not a reason to forget that the app texted somebody last Tuesday.
+      const existingByPhone = new Map(
+        (game.invitedPlayers || []).map((entry) => [formatPhoneNumber(entry.phone), entry])
+      );
       game.invitedPlayers = uniquePhones.map((phone) => ({
+        ...(existingByPhone.get(phone) || {}),
         phone,
         name: rosterByPhone.get(phone).name || ''
       }));

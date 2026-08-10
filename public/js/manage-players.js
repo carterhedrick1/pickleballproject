@@ -154,6 +154,128 @@ function renderIntendedInvitees() {
     });
     status.textContent = `${selectedPhones.size} intended invitee${selectedPhones.size === 1 ? '' : 's'} saved. Copying an invitation does not confirm delivery.`;
     button.disabled = false;
+    const textButton = document.getElementById('textInvitations');
+    if (textButton) textButton.disabled = false;
+}
+
+function selectedInviteePhones() {
+    return Array.from(document.querySelectorAll('.intended-invitee-checkbox:checked'))
+        .map((input) => input.dataset.phone)
+        .filter(Boolean);
+}
+
+// A texted invitation is the only invite path the app can actually vouch for, so the send
+// records itself against the game and the roster below updates from the response.
+async function textInvitations(phones, { confirmTitle, confirmQuestion } = {}) {
+    if (!GameUtils.getGameStatus(gameData).canEdit) {
+        showStatus('This game has ended, so invitations can no longer be sent.', 'error');
+        return;
+    }
+
+    const playerPhones = phones && phones.length ? phones : selectedInviteePhones();
+    if (playerPhones.length === 0) {
+        showStatus('Tick at least one person to invite.', 'error');
+        return;
+    }
+
+    const people = `${playerPhones.length} ${playerPhones.length === 1 ? 'person' : 'people'}`;
+    showConfirmModal(
+        confirmTitle || 'Text The Invitation',
+        confirmQuestion || `Text the invitation to ${people} now?`,
+        async () => {
+            try {
+                showStatus(`Texting the invitation to ${people}...`, 'info');
+                const response = await fetch(`/api/games/${gameId}/invitations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: hostToken, playerPhones })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || 'Could not send the invitations');
+
+                gameData.invitedPlayers = data.invitedPlayers || gameData.invitedPlayers;
+                renderIntendedInvitees();
+                renderAwaitingReply();
+
+                const sentText = `Invitation texted to ${data.sentCount} ${data.sentCount === 1 ? 'person' : 'people'}`;
+                showStatus(
+                    data.failedCount
+                        ? `${sentText}. ${data.failedCount} did not go through.`
+                        : `${sentText}.`,
+                    data.failedCount ? 'error' : 'success'
+                );
+            } catch (error) {
+                console.error('Error texting invitations:', error);
+                showStatus('Could not send the invitations: ' + error.message, 'error');
+            }
+        }
+    );
+}
+
+// invitedPlayers has been stored for a long time without ever being compared against who
+// actually replied. This is that comparison, on the page where a host can act on it.
+function renderAwaitingReply() {
+    const list = document.getElementById('awaitingReplyList');
+    const status = document.getElementById('awaitingReplyStatus');
+    const nudgeAll = document.getElementById('nudgeNonResponders');
+    if (!list || !status || !nudgeAll) return;
+
+    const { invited, nonResponders } = InviteStatus.inviteStatus(gameData || {});
+    list.innerHTML = '';
+
+    if (invited.length === 0) {
+        status.textContent = 'Nobody has been invited yet.';
+        nudgeAll.hidden = true;
+        return;
+    }
+
+    if (nonResponders.length === 0) {
+        status.textContent = `Everyone you invited has answered. ${invited.length} invited, ${invited.length} replied.`;
+        nudgeAll.hidden = true;
+        return;
+    }
+
+    if (nonResponders.length === invited.length) {
+        status.textContent = invited.length === 1
+            ? 'The one person you invited has not replied yet.'
+            : `None of the ${invited.length} people you invited have replied yet.`;
+    } else {
+        status.textContent =
+            `${nonResponders.length} of the ${invited.length} people you invited ` +
+            `${nonResponders.length === 1 ? 'has' : 'have'} not replied yet.`;
+    }
+
+    nonResponders.forEach((person) => {
+        const meta = [];
+        if (person.lastTextedAt) {
+            const ago = PageUtils.formatTimeAgo(person.lastTextedAt);
+            meta.push(person.textCount > 1
+                ? `Texted ${person.textCount} times, last ${ago}`
+                : `Texted ${ago}`);
+        } else {
+            meta.push('Not texted from here — you copied the invitation');
+        }
+        if (person.lastTextStatus === 'failed') meta.push('The last text did not go through');
+
+        list.appendChild(ManageRender.createPlayerItem(document, person, {
+            meta,
+            actions: [
+                {
+                    label: 'Text Again',
+                    className: 'btn-secondary',
+                    onClick: () => textInvitations([person.phone], {
+                        confirmTitle: 'Text Again',
+                        confirmQuestion: `Send ${person.name || person.phone} the invitation again?`
+                    })
+                }
+            ]
+        }));
+    });
+
+    nudgeAll.hidden = false;
+    nudgeAll.textContent = nonResponders.length === 1
+        ? 'Text The One Person Waiting'
+        : `Text All ${nonResponders.length} Waiting`;
 }
 
 async function saveIntendedInvitees() {
@@ -174,6 +296,9 @@ async function saveIntendedInvitees() {
         if (!response.ok) throw new Error(data.error || 'Could not save intended invitees');
         gameData.invitedPlayers = data.intendedInvitees || [];
         renderIntendedInvitees();
+        // Marking somebody as invited puts them in the waiting list straight away, rather than
+        // leaving that panel stale until the next roster refresh.
+        renderAwaitingReply();
     } catch (error) {
         status.textContent = error.message;
         button.disabled = false;
@@ -408,6 +533,9 @@ function updatePlayerLists() {
 
     // The header counts come from the same roster, so they refresh together.
     updateGameSummary();
+
+    // A reply moves somebody out of the waiting list, so this recomputes with the roster.
+    renderAwaitingReply();
 }
 
 async function addPlayerManually() {
@@ -771,6 +899,8 @@ window.ManageApp.players = {
 
     updatePlayerLists,
     loadHostRoster,
+    textInvitations,
+    renderAwaitingReply,
     addPlayersFromRoster,
     addPlayerManually,
     moveToWaitlist,

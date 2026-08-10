@@ -431,7 +431,26 @@ function setupEventListeners() {
     if (saveIntendedInviteesBtn) {
         saveIntendedInviteesBtn.addEventListener('click', saveIntendedInvitees);
     }
-    
+
+    const textInvitationsBtn = document.getElementById('textInvitations');
+    if (textInvitationsBtn) {
+        textInvitationsBtn.addEventListener('click', () => textInvitations());
+    }
+
+    const nudgeBtn = document.getElementById('nudgeNonResponders');
+    if (nudgeBtn) {
+        nudgeBtn.addEventListener('click', () => {
+            const waiting = InviteStatus.inviteStatus(gameData || {}).nonResponders;
+            textInvitations(waiting.map((person) => person.phone), {
+                confirmTitle: 'Text Everyone Waiting',
+                confirmQuestion:
+                    `Send the invitation again to the ${waiting.length} ` +
+                    `${waiting.length === 1 ? 'person' : 'people'} who have not replied?`
+            });
+        });
+    }
+
+
     // Announcement form
     const announcementForm = document.getElementById('announcementForm');
     if (announcementForm) {

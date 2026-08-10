@@ -458,6 +458,57 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       'intended invitees stay private and server-built invitations preserve every instruction'
     );
 
+    const invitationSend = await desktop.evaluate(`(async () => {
+      const before = document.getElementById('awaitingReplyStatus').textContent;
+      const boxes = [...document.querySelectorAll('.intended-invitee-checkbox')];
+      boxes.forEach((box) => { box.checked = false; });
+      // Roster Player Two has not joined this game, so they are a real invitee.
+      const target = boxes.find((box) => box.dataset.phone === '${fx.FORM_PHONE}');
+      target.checked = true;
+      document.getElementById('textInvitations').click();
+      const confirmText = document.getElementById('confirmMessage').textContent;
+      document.getElementById('confirmYes').click();
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      const hostGame = await fetch(
+        '/api/games/${fx.open.gameId}?token=${fx.open.hostToken}'
+      ).then((response) => response.json());
+      const recorded = (hostGame.invitedPlayers || []).find(
+        (person) => person.phone === '${fx.FORM_PHONE}'
+      );
+      return {
+        before,
+        confirmText,
+        status: document.getElementById('status').textContent,
+        waiting: document.getElementById('awaitingReplyStatus').textContent,
+        waitingNames: [...document.querySelectorAll('#awaitingReplyList .player-name')]
+          .map((node) => node.textContent.trim()),
+        nudgeVisible: !document.getElementById('nudgeNonResponders').hidden,
+        recordedTextCount: recorded && recorded.textCount,
+        recordedStatus: recorded && recorded.lastTextStatus,
+        recordedAt: Boolean(recorded && recorded.lastTextedAt)
+      };
+    })()`);
+    assert(
+      invitationSend.before.includes('invited') &&
+        invitationSend.confirmText === 'Text the invitation to 1 person now?',
+      `saving an intended invitee already counts as waiting, and the send confirms first ` +
+      `(${invitationSend.before} / ${invitationSend.confirmText})`
+    );
+    assert(
+      /Invitation texted to 1 person/.test(invitationSend.status) &&
+        invitationSend.recordedTextCount === 1 &&
+        invitationSend.recordedStatus === 'sent' &&
+        invitationSend.recordedAt,
+      `a texted invitation is recorded against the game (${invitationSend.status})`
+    );
+    assert(
+      invitationSend.waiting.includes('1 of the 2 people you invited has') &&
+        invitationSend.waitingNames.join('|') === 'Roster Player Two' &&
+        invitationSend.nudgeVisible,
+      `an invitee with no reply shows up as waiting (${invitationSend.waiting})`
+    );
+
     const rosterPickerReady = await desktop.evaluate(`(() => {
       document.querySelector('[data-collapsible="addPlayerSection"]').click();
       const choices = [...document.querySelectorAll('.roster-player-checkbox')];
@@ -508,6 +559,17 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       rosterAddResult.status === '2 roster players added successfully.' &&
         rosterAddResult.pickerEmpty === 'Everyone on your roster is already listed for this game.',
       'the roster picker reports success and filters players already in the game'
+    );
+
+    const invitationAnswered = await desktop.evaluate(`(() => ({
+      waiting: document.getElementById('awaitingReplyStatus').textContent,
+      rows: document.querySelectorAll('#awaitingReplyList .player-item').length,
+      nudgeHidden: document.getElementById('nudgeNonResponders').hidden
+    }))()`);
+    assert(
+      invitationAnswered.waiting.includes('Everyone you invited has answered') &&
+        invitationAnswered.rows === 0 && invitationAnswered.nudgeHidden,
+      `joining the game clears an invitee off the waiting list (${invitationAnswered.waiting})`
     );
 
     const recipientSelection = await desktop.evaluate(`(() => {
@@ -840,7 +902,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
             'Do not change the app until I explicitly say'
           ) &&
           document.getElementById('randomizerReusablePrompt').value.includes('Paragraph 9:') &&
-          document.getElementById('randomizerPromptSurface').options.length === 17 &&
+          document.getElementById('randomizerPromptSurface').options.length === 18 &&
           document.querySelectorAll('#randomizerPromptParagraphs textarea').length === 9 &&
           document.querySelectorAll('[data-share-paragraph]').length === 9 &&
           !document.querySelector('#randomizerPromptParagraphs textarea').readOnly &&
@@ -848,7 +910,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
           Boolean(document.getElementById('randomizerSavePrompt')),
         savedPrompts:
           promptSavedStatus &&
-          savedPromptSections.length === 16 &&
+          savedPromptSections.length === 17 &&
           savedPromptSections.every((sections) => sections[8] === promptSections[8]),
         allCategoryScope,
         targetPlayers: document.getElementById('randomizerRulePlayer').options.length,
@@ -866,7 +928,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         messageRandomizer.collapsibleSections === 7 &&
         messageRandomizer.onlyPreviewExpanded &&
         messageRandomizer.personality === 'realist' &&
-        messageRandomizer.surfaces === 16 &&
+        messageRandomizer.surfaces === 17 &&
         messageRandomizer.messages >= 41 &&
         messageRandomizer.slogans === 19 &&
         messageRandomizer.youreIn === 22 &&

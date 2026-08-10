@@ -28,6 +28,7 @@ const mountPhotoRoutes = require('./routes/photos');
 const mountRosterRoutes = require('./routes/roster');
 const mountHostVerificationRoutes = require('./routes/host-verification');
 const mountAnnouncementRoutes = require('./routes/announcements');
+const mountInvitationRoutes = require('./routes/invitations');
 const mountPlayerRoutes = require('./routes/players');
 const { mountPublicRandomizerRoutes } = require('./routes/message-randomizer');
 
@@ -131,6 +132,7 @@ mountCourtImageRoutes(app);
 mountPhotoRoutes(app);
 mountRosterRoutes(app);
 mountAnnouncementRoutes(app);
+mountInvitationRoutes(app);
 mountPlayerRoutes(app);
 
 

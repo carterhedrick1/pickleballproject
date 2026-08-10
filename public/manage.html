@@ -198,11 +198,22 @@
                     </form>
 
                     <section class="roster-picker" aria-labelledby="intendedInviteesTitle" style="margin-top:24px">
-                        <h3 id="intendedInviteesTitle">Intended Invitees</h3>
-                        <p class="form-help-text">Select people you intend to include when you copy the invitation. IN or OUT can only record who you meant to invite. It cannot see who actually received a message you pasted into another app.</p>
+                        <h3 id="intendedInviteesTitle">Invitations</h3>
+                        <p class="form-help-text">Tick the people you want for this game. Texting the invitation from here records exactly who it went to and when. Saving them as intended invitees only records who you meant to invite — IN or OUT cannot see who actually received a message you pasted into another app.</p>
                         <div id="intendedInviteeStatus" class="roster-picker-status" aria-live="polite">Loading your roster...</div>
                         <div id="intendedInviteeList" class="roster-picker-list"></div>
-                        <button type="button" id="saveIntendedInvitees">Save Intended Invitees</button>
+                        <div class="invite-actions">
+                            <button type="button" id="textInvitations">Text The Invitation</button>
+                            <button type="button" id="saveIntendedInvitees" class="btn-secondary">Save Intended Invitees</button>
+                        </div>
+                    </section>
+
+                    <section class="roster-picker invite-tracking" aria-labelledby="awaitingReplyTitle" style="margin-top:24px">
+                        <h3 id="awaitingReplyTitle">Waiting On A Reply</h3>
+                        <p class="form-help-text">Everyone you invited who has not said IN or OUT yet.</p>
+                        <div id="awaitingReplyStatus" class="roster-picker-status" aria-live="polite">Nobody has been invited yet.</div>
+                        <div id="awaitingReplyList" class="invite-tracking-list"></div>
+                        <button type="button" id="nudgeNonResponders" hidden>Text Everyone Waiting</button>
                     </section>
                 </div>
                         
@@ -488,6 +499,7 @@
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>
     <script src="/js/page-utils.js"></script>
+    <script src="/js/invite-status.js"></script>
     <script src="/js/game-utils.js"></script>
     <script src="/js/manage-render.js"></script>
     <script src="/js/manage-scripts.js"></script>
