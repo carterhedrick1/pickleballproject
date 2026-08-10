@@ -46,6 +46,16 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
   let browser;
   let seeded = false;
   try {
+    const [createPageResponse, createScriptResponse] = await Promise.all([
+      fetch(`${local.baseUrl}/create.html`),
+      fetch(`${local.baseUrl}/js/create.js?v=cache-policy-check`)
+    ]);
+    assert(
+      /no-cache/.test(createPageResponse.headers.get('cache-control') || '') &&
+        /no-cache/.test(createScriptResponse.headers.get('cache-control') || ''),
+      'HTML and JavaScript revalidate together after a deploy'
+    );
+
     const fx = await fixtures.seed(local.baseUrl);
     seeded = true;
     const verificationRequest = await fetch(`${local.baseUrl}/api/host-verification/request`, {
@@ -107,7 +117,9 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
           document.querySelector('[data-checkbox-id="notifyWaitlistStarts"]').classList.contains('checked'),
         notificationTitles: [...document.querySelectorAll('.notifications-section .notification-title')]
           .map((element) => element.textContent.trim()),
-        scriptExternal: [...document.scripts].some((s) => s.src.endsWith('/js/create.js')),
+        scriptExternal: [...document.scripts].some(
+          (script) => new URL(script.src).pathname === '/js/create.js'
+        ),
         personality: document.getElementById('personalityId')?.value,
         personalityChoices: document.getElementById('personalityId')?.options.length,
         headerSlogan: document.querySelector('.header-slogan')?.textContent.trim(),
