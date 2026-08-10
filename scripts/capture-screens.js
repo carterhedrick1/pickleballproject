@@ -312,6 +312,12 @@ function buildScreens(fx) {
     { file: 'create-form', of: '/create.html', size: 'narrow', url: '/create.html',
       title: 'The form, top to bottom',
       note: 'Everything a host fills in, including the five notification toggles.' },
+    // Grouped under /create.html: same file, filled in from a past game. A group heading only
+    // exists for each `of` in GROUPS, and a screen with an unlisted `of` is silently dropped.
+    { file: 'create-repeat', of: '/create.html', size: 'narrow',
+      url: `/create.html?repeat=${fx.open.gameId}&token=${fx.open.hostToken}`,
+      title: 'Run It Again',
+      note: 'Reached from a past game in My Games. Every field is copied from that game and the date moves to the next same weekday. Nothing is created until the host submits.' },
     { file: 'create-done', of: '/create.html', size: 'narrow', url: '/create.html',
       title: 'After you submit',
       note: 'The share panel that replaces the form. Reached by actually filling it in and submitting.',

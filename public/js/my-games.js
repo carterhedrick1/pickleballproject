@@ -105,6 +105,9 @@ function gameCard(game) {
     // Cancellation tells the players first, so a cancelled game is safe for its host to erase
     // immediately. Active upcoming games remain protected until their scheduled start passes.
     const canDelete = PageUtils.canPermanentlyDelete(game);
+    // A weekly game is retyped from scratch every week today. Offering the repeat on played and
+    // cancelled games only keeps it away from the game the host is currently filling.
+    const isPast = PageUtils.belongsInPastGames(game);
 
     const badges = [];
     if (game.cancelled) {
@@ -127,6 +130,7 @@ function gameCard(game) {
         <div class="game-badges">${badges.join('')}</div>
         <div class="card-actions">
             <a class="btn btn-primary" href="${game.managementLink}">Manage</a>
+            ${isPast ? `<a class="btn" href="/create.html?repeat=${encodeURIComponent(game.gameId)}&token=${encodeURIComponent(game.hostToken)}">Run It Again</a>` : ''}
             <button type="button" class="btn" id="copyButton-${game.gameId}">Copy Invitation</button>
             <button type="button" class="btn" data-notes-toggle>Notes</button>
             ${canDelete ? '<button type="button" class="btn btn-danger" data-delete>Delete</button>' : ''}

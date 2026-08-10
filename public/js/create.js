@@ -21,8 +21,7 @@
             const organizerPlaying = document.getElementById('organizerPlaying');
             organizerPlaying.addEventListener('change', updatePlayersHelp);
             updatePlayersHelp();
-            loadMessagePersonalities();
-            setupLocationPicker();
+            const ready = Promise.all([loadMessagePersonalities(), setupLocationPicker()]);
             document.querySelectorAll('[data-checkbox-id]').forEach((element) => {
                 element.addEventListener('click', (event) => {
                     toggleNotification(element, element.dataset.checkboxId, event);
@@ -33,7 +32,113 @@
                     toggleRegistrationMode(element, element.dataset.radioId, event);
                 });
             });
+
+            // "Run It Again" from My Games lands here. The form is filled in but never
+            // submitted: the host confirms the new date and presses Create Game themselves.
+            const params = new URLSearchParams(window.location.search);
+            const repeatId = params.get('repeat');
+            if (repeatId) {
+                ready.then(() => prefillFromGame(repeatId, params.get('token')));
+            }
         });
+
+        function setNotificationToggle(checkboxId, isChecked) {
+            const checkbox = document.getElementById(checkboxId);
+            if (!checkbox) return;
+            checkbox.checked = isChecked;
+            const option = document.querySelector(`[data-checkbox-id="${checkboxId}"]`);
+            if (option) option.classList.toggle('checked', isChecked);
+        }
+
+        function setRegistrationMode(mode) {
+            const radioId = mode === 'waitlist' ? 'waitlistMode' : 'fcfsMode';
+            const radio = document.getElementById(radioId);
+            if (radio) radio.checked = true;
+            document.querySelectorAll('.mode-option').forEach((option) => {
+                option.classList.toggle('checked', option.dataset.radioId === radioId);
+            });
+        }
+
+        function setRepeatLocation(location) {
+            const select = document.getElementById('locationSelect');
+            const input = document.getElementById('location');
+            const freeText = document.getElementById('locationFreeText');
+            if (!input) return;
+
+            const saved = select && [...select.options].some((option) => option.value === location);
+            if (select) {
+                select.value = saved ? location : NEW_LOCATION_VALUE;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (!saved) {
+                // A court the host has since renamed or removed is still typed in for them.
+                input.value = location;
+                if (freeText) freeText.style.display = 'block';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+
+        async function prefillFromGame(gameId, token) {
+            const notice = document.getElementById('repeatNotice');
+            try {
+                const response = await fetch(
+                    `/api/games/${encodeURIComponent(gameId)}?token=${encodeURIComponent(token || '')}`
+                );
+                if (!response.ok) throw new Error(`Server returned ${response.status}`);
+                const game = await response.json();
+
+                setRepeatLocation(game.location || '');
+                document.getElementById('date').value =
+                    PageUtils.nextWeeklyDate(game.date) || document.getElementById('date').value;
+                document.getElementById('time').value = game.time || '18:00';
+                document.getElementById('duration').value = game.duration || 90;
+                document.getElementById('organizerName').value = game.organizerName || '';
+                document.getElementById('organizerPhone').value =
+                    game.organizerPhone || game.hostPhone || '';
+
+                const organizerPlaying = game.organizerPlaying === true;
+                document.getElementById('organizerPlaying').checked = organizerPlaying;
+                document.getElementById('players').value = PlayerCapacity.additionalFromTotal(
+                    game.totalPlayers,
+                    organizerPlaying
+                );
+                updatePlayersHelp();
+
+                document.getElementById('message').value = game.message || '';
+                const personality = document.getElementById('personalityId');
+                if (game.personalityId &&
+                    [...personality.options].some((option) => option.value === game.personalityId)) {
+                    personality.value = game.personalityId;
+                    personality.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+
+                setRegistrationMode(game.registrationMode || 'fcfs');
+
+                const preferences = game.notificationPreferences || {};
+                setNotificationToggle('notifyGameFull', preferences.gameFull === true);
+                setNotificationToggle('notifyPlayerJoins', preferences.playerJoins === true);
+                setNotificationToggle('notifyPlayerCancels', preferences.playerCancels === true);
+                setNotificationToggle('notifyOneSpotLeft', preferences.oneSpotLeft === true);
+                setNotificationToggle('notifyWaitlistStarts', preferences.waitlistStarts === true);
+
+                if (notice) {
+                    const when = PageUtils.formatLocalDate(game.date, {
+                        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+                    });
+                    notice.textContent =
+                        `Copied from your ${game.location} game on ${when}. ` +
+                        'Check the date and anything else you want to change, then create it.';
+                    notice.hidden = false;
+                }
+            } catch (error) {
+                console.error('Could not repeat that game:', error);
+                if (notice) {
+                    notice.textContent =
+                        'We could not load that game, so this form is blank. Fill it in as usual.';
+                    notice.hidden = false;
+                }
+            }
+        }
 
         async function loadMessagePersonalities() {
             const select = document.getElementById('personalityId');

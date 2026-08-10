@@ -58,6 +58,22 @@
         return duration === 'just now' ? 'just now' : `${duration} ago`;
     }
 
+    // Repeating a game means next week, same day, same time. Stepping in weeks rather than
+    // "today plus seven" keeps a Tuesday game on a Tuesday however long ago it was played.
+    function nextWeeklyDate(dateStr, now = new Date()) {
+        const original = parseLocalDate(dateStr);
+        if (!original) return '';
+
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const next = new Date(original.getFullYear(), original.getMonth(), original.getDate());
+        while (next <= today) {
+            next.setDate(next.getDate() + 7);
+        }
+
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
+    }
+
     function belongsInPastGames(game, now = new Date()) {
         return Boolean(game?.cancelled) ||
             isGameCompleted(game?.date, game?.time, now);
@@ -74,6 +90,7 @@
         formatTime12Hour,
         formatDuration,
         formatTimeAgo,
+        nextWeeklyDate,
         isGameCompleted,
         belongsInPastGames,
         canPermanentlyDelete
