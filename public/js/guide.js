@@ -22,7 +22,7 @@ const sectionOrder = [
   { id: 'game-modes', label: 'Game Modes Explained' },
   { id: 'creating-games', label: 'Creating A Game' },
   { id: 'managing-players', label: 'Managing Your Game' },
-  { id: 'sms-examples', label: 'SMS Messages' },
+  { id: 'sms-examples', label: 'Text Messages' },
   { id: 'player-experience', label: 'Player Experience' },
   { id: 'tips-tricks', label: 'FAQs' }
 ];

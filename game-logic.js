@@ -77,7 +77,7 @@ function checkGameNotExpired(game) {
   if (isGameExpired(game)) {
     return {
       error: true,
-      message: 'This game has ended and no longer accepts new registrations'
+      message: "This game has already ended, so it's no longer accepting sign-ups."
     };
   }
   return { error: false };
@@ -153,7 +153,7 @@ function validatePlayerData(name, phone) {
   const cleanPhone = phone ? phone.trim() : '';
   
   if (!cleanName) {
-    throw new Error('Player name is required');
+    throw new Error('Player name is required.');
   }
   
   if (cleanPhone) {
@@ -166,7 +166,7 @@ function validatePlayerData(name, phone) {
       if (cleaned.length >= 10 && cleaned.length <= 15) {
         if (DEBUG) console.log('[VALIDATE PLAYER] Passed lenient validation for Chrome iOS');
       } else {
-        throw new Error('Please enter a valid US phone number (e.g., (555) 123-4567)');
+        throw new Error('Please enter a valid US phone number — for example 555-123-4567.');
       }
     }
   }
@@ -185,10 +185,10 @@ function checkExistingPlayer(game, phone) {
 
   const existing = findExistingPlayer(game, formattedPhone);
   if (existing?.status === 'confirmed') {
-    return { exists: true, location: 'confirmed', message: 'This phone number is already registered for this game' };
+    return { exists: true, location: 'confirmed', message: 'This phone number is already registered for this game.' };
   }
   if (existing?.status === 'waitlist') {
-    return { exists: true, location: 'waitlist', message: 'This phone number is already on the waitlist' };
+    return { exists: true, location: 'waitlist', message: 'This phone number is already on the waitlist.' };
   }
   
   return { exists: false };

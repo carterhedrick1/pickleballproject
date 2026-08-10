@@ -55,7 +55,7 @@
                 });
                 const updateHelp = () => {
                     help.textContent = select.selectedOptions[0]?.dataset.description ||
-                        'This personality shapes future randomized copy for the game.';
+                        'This sets the tone of the texts we send for this game.';
                 };
                 select.addEventListener('change', updateHelp);
                 updateHelp();
@@ -148,7 +148,7 @@
                 count.textContent = '';
                 return;
             }
-            count.textContent = `${currentCourtImages.length} saved`;
+            count.textContent = `${currentCourtImages.length} saved ${currentCourtImages.length === 1 ? 'photo' : 'photos'}`;
         }
 
         function makeImageChoice(value, imageUrl, alt) {
@@ -222,7 +222,7 @@
                 return;
             }
 
-            setCourtImageStatus('Loading every photo saved for this court…');
+            setCourtImageStatus('Loading every photo saved for this court...');
             try {
                 const response = await fetch(
                     `/api/courts/${encodeURIComponent(normalizedName)}/library`
@@ -377,7 +377,7 @@ async function saveCourtImageChoice(gameId, hostToken, selectedValue) {
             }
         } catch (error) {
             console.error('Could not select court image:', error);
-            warnings.push('The game was created, but its court image could not be selected.');
+            warnings.push('Your game was created, but we could not attach the court photo. You can add it from the manage page.');
         }
     }
 
@@ -500,7 +500,7 @@ async function createGame(e) {
         } else if (data.hostSms && data.hostSms.success) {
             successMessage = 'Game created successfully! Check your phone for confirmation. Reply "1" to get your management link.';
         } else if (data.hostSms && !data.hostSms.success) {
-            successMessage = 'Game created successfully! However, we couldn\'t send the confirmation text.';
+            successMessage = 'Game created — but we could not send your confirmation text.';
         } else {
             successMessage = 'Game created successfully!';
         }
@@ -530,6 +530,13 @@ async function createGame(e) {
         function copyToClipboard() {
             const currentGameData = window.currentGameData ||
                 InvitationGenerator.getCurrentGameDataFromStorage();
+            if (!currentGameData) {
+                showStatus(
+                    "We couldn't find your game details on this device. Open the game from My Games and copy the invitation from there.",
+                    'error'
+                );
+                return;
+            }
             if (!currentGameData.registrationMode) {
                 currentGameData.registrationMode = 'fcfs';
             }

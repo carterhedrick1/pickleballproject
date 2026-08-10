@@ -300,7 +300,7 @@ async function fetchGameData() {
         loadHostRoster();
         
         // Generate share links (only if not expired)
-        if (!GameUtils.getGameStatus(gameData).canEdit) {
+        if (GameUtils.getGameStatus(gameData).canEdit) {
             populateShareLinks();
         }
         
@@ -341,7 +341,10 @@ async function loadManagePersonalities() {
             (personality) => personality.isDefault
         )?.id || personalities[0].id;
         const updateHelp = () => {
-            help.textContent = `${select.selectedOptions[0]?.dataset.description || ''} Changing this affects future copy only.`;
+            const description = select.selectedOptions[0]?.dataset.description || '';
+            help.textContent = [description, 'Changing this affects future copy only.']
+                .filter(Boolean)
+                .join(' ');
         };
         select.addEventListener('change', updateHelp);
         updateHelp();
@@ -495,8 +498,8 @@ function populateGameDetails() {
         ? 'Number Of Additional Players Needed:'
         : 'Number Of Players Needed:';
     document.getElementById('playersHelp').textContent = organizerPlaying
-        ? 'You are Player 1. Enter only the number of other players needed.'
-        : 'Enter the total number of players needed. No organizer is included.';
+        ? 'You are already Player 1. Enter only the number of other players you need.'
+        : 'Enter the total number of players you need. No organizer will be added.';
     document.getElementById('message').value = gameData.message || '';
     document.getElementById('personalityId').value = gameData.personalityId || 'realist';
     
@@ -557,7 +560,7 @@ function populateGameDetails() {
 
 async function updateGameDetails() {
     if (!GameUtils.getGameStatus(gameData).canEdit) {
-        showStatus('Cannot update expired games', 'error');
+        showStatus('This game has ended and can no longer be edited.', 'error');
         return;
     }
     
@@ -667,7 +670,7 @@ async function updateGameDetails() {
 
 async function cancelGame() {
     if (!GameUtils.getGameStatus(gameData).canEdit) {
-        showStatus('Cannot cancel expired games', 'error');
+        showStatus('This game has already ended.', 'error');
         return;
     }
     
@@ -728,7 +731,7 @@ async function cancelGame() {
             console.error('[CANCEL] Error updating localStorage for cancellation:', error);
         }
         
-        showStatus('Game cancelled successfully! All players have been notified.', 'success');
+        showStatus('Game cancelled. All players have been notified.', 'success');
         
         // Refresh after a short delay
         setTimeout(() => {
@@ -779,8 +782,8 @@ function populateShareLinks() {
     const gameStatus = GameUtils.getGameStatus(gameData);
     const shouldDisable = !gameStatus.canJoin || gameData.cancelled;
     
-    const disabledText = gameData.cancelled ? 'Game Cancelled - Cannot Share' : 'Game Ended - Cannot Share';
-    const disabledTitle = gameData.cancelled ? 'Cannot share invitations for cancelled games' : 'Cannot share invitations for expired games';
+    const disabledText = gameData.cancelled ? 'Game Cancelled — Cannot Share' : 'Game Ended — Cannot Share';
+    const disabledTitle = gameData.cancelled ? 'This game is cancelled, so its invitation can no longer be shared.' : 'This game has ended, so its invitation can no longer be shared.';
     
     function setButtonState(btn, disabled) {
         if (!btn) return;
@@ -791,7 +794,7 @@ function populateShareLinks() {
             btn.title = disabledTitle;
         } else {
             btn.classList.remove('disabled');
-            btn.textContent = btn === persistentCopyButton ? 'Copy Invitation Message' : 'Copy Invitation Message';
+            btn.textContent = 'Copy Invitation Message';
             btn.title = '';
         }
     }
@@ -812,7 +815,7 @@ function populateShareLinks() {
     } else {
         const descriptionP = shareSection.querySelector('p');
         if (descriptionP) {
-            descriptionP.textContent = 'Click the button below to copy a complete invitation message with all game details and registration link:';
+            descriptionP.textContent = 'Copy a complete invitation message with all the game details and the sign-up link.';
         }
         const saveSuggestion = shareSection.querySelector('.save-suggestion');
         if (saveSuggestion) saveSuggestion.style.display = 'block';
@@ -823,12 +826,12 @@ function populateShareLinks() {
 async function copyPlayerInvitation(buttonId) {
     // Check if game is expired or cancelled
     if (!GameUtils.getGameStatus(gameData).canEdit) {
-        showStatus('Cannot share invitations for expired games', 'error');
+        showStatus('This game has ended, so its invitation can no longer be shared.', 'error');
         return;
     }
     
     if (gameData.cancelled) {
-        showStatus('Cannot share invitations for cancelled games', 'error');
+        showStatus('This game is cancelled, so its invitation can no longer be shared.', 'error');
         return;
     }
     
@@ -873,7 +876,7 @@ function fallbackCopyMessage(text) {
         
     } catch (err) {
         console.error('Failed to copy text: ', err);
-        showStatus('Failed to copy to clipboard', 'error');
+        showStatus('Could not copy to clipboard. Select the message and copy it manually.', 'error');
     }
     
     document.body.removeChild(textArea);

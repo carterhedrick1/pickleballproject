@@ -91,7 +91,7 @@ module.exports = function mountPlayerRoutes(app) {
             };
           } else {
             return res.status(400).json({ 
-              error: 'Please enter a valid phone number. For Chrome iOS users: try entering just the 10 digits (e.g., 5551234567).' 
+              error: 'Please enter a valid phone number — 10 digits, no spaces or dashes (for example 5551234567).' 
             });
           }
         } else {
@@ -112,7 +112,7 @@ module.exports = function mountPlayerRoutes(app) {
         }
         if (result.status === 'organizer') {
           return res.status(400).json({
-            error: "You're the organizer of this game. Use your management link to cancel it or to remove yourself."
+            error: "You're the organizer of this game. Use your management link to cancel the game or to remove yourself from it."
           });
         }
 
@@ -132,7 +132,7 @@ module.exports = function mountPlayerRoutes(app) {
             const statusText = game.registrationMode === 'waitlist' ? 'application' : 'waitlist spot';
             message = `Your pickleball ${statusText} at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`;
           } else {
-            message = `Thanks for letting us know you can't make the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. We appreciate the heads up!`;
+            message = `Thanks for letting us know you can't make the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. We appreciate the heads-up!`;
           }
           message = await resolveTextMessage(
             'player-cancellation',
@@ -195,8 +195,8 @@ module.exports = function mountPlayerRoutes(app) {
       }
       if (result.status === 'duplicate') {
         const message = result.duplicateStatus === 'confirmed'
-          ? 'This phone number is already registered for this game'
-          : 'This phone number is already on the waitlist';
+          ? 'This phone number is already registered for this game.'
+          : 'This phone number is already on the waitlist.';
         return res.status(400).json({ error: message });
       }
 
@@ -222,10 +222,10 @@ module.exports = function mountPlayerRoutes(app) {
           // Handle waitlist mode vs regular waitlist
           if (result.hidePosition || game.registrationMode === 'waitlist') {
             // Waitlist mode - don't show position, don't mention "2" for details
-            message = `Thanks for signing up for Pickleball at ${locationText} on ${gameDate} at ${gameTime}! The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.`;
+            message = `Thanks for signing up for pickleball at ${locationText} on ${gameDate} at ${gameTime}! The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.`;
           } else {
             // Regular waitlist - show position, allow details
-            message = `You've been added to the waitlist for Pickleball at ${locationText}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.`;
+            message = `You've been added to the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up. Reply 2 for game details, or 9 to cancel.`;
           }
           message = await resolveTextMessage(
             game.registrationMode === 'waitlist'
@@ -323,8 +323,8 @@ module.exports = function mountPlayerRoutes(app) {
       }
       if (result.status === 'duplicate') {
         const message = result.duplicateStatus === 'confirmed'
-          ? 'This phone number is already registered for this game'
-          : 'This phone number is already on the waitlist';
+          ? 'This phone number is already registered for this game.'
+          : 'This phone number is already on the waitlist.';
         return res.status(400).json({ error: message });
       }
 
@@ -349,7 +349,11 @@ module.exports = function mountPlayerRoutes(app) {
             gameId
           );
         } else {
-          message = `You've been added to the waitlist for the pickleball game at ${locationText}. You are #${result.position} on the waitlist. You'll be notified if a spot opens up! Reply 2 for details or 9 to cancel.`;
+          // Approval mode keeps positions hidden until the organizer selects players, so the
+          // host-added path has to branch the same way the self-signup path does.
+          message = (result.hidePosition || game.registrationMode === 'waitlist')
+            ? `You've been added as an applicant for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.`
+            : `You've been added to the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up. Reply 2 for details, or 9 to cancel.`;
           message = await resolveTextMessage(
             game.registrationMode === 'waitlist'
               ? 'application-confirmation'
@@ -382,7 +386,7 @@ module.exports = function mountPlayerRoutes(app) {
       const statusText = result.status === 'confirmed' ? 'game' : 'waitlist';
       res.json({
         success: true,
-        message: `${playerData.name} added to ${statusText}`,
+        message: `${playerData.name} added to the ${statusText}.`,
         sms: smsResult,
         status: result.status,
         position: result.position,
@@ -410,7 +414,7 @@ module.exports = function mountPlayerRoutes(app) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
       if (result.status === 'not_found') {
-        return res.status(404).json({ error: 'Player not found in confirmed players' });
+        return res.status(404).json({ error: 'That player is not on the confirmed list.' });
       }
 
       // Send SMS notification to the moved player
@@ -422,7 +426,12 @@ module.exports = function mountPlayerRoutes(app) {
         const gameTime = formatTimeForSMS(game.time);
         const locationText = formatLocationForSMS(game);
 
-        const defaultMessage = `You've been moved to the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. You are #${game.waitlist.length} on the waitlist. Reply 2 for details or 9 to cancel.`;
+        // Read the real index rather than assuming the player was appended to the end.
+        const waitlistIndex = (game.waitlist || []).findIndex((entry) => entry.id === player.id);
+        const waitlistPosition = waitlistIndex >= 0 ? waitlistIndex + 1 : (game.waitlist || []).length;
+        const defaultMessage = game.registrationMode === 'waitlist'
+          ? `You've been moved back to the applicant list for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. The organizer will let you know if you're selected. Reply 9 to cancel your application.`
+          : `You've been moved to the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. You are #${waitlistPosition} on the waitlist. Reply 2 for details, or 9 to cancel.`;
         const message = await resolveTextMessage(
           'roster-status-change',
           defaultMessage,
@@ -430,7 +439,7 @@ module.exports = function mountPlayerRoutes(app) {
             LOCATION: locationText,
             DATE: gameDate,
             TIME: gameTime,
-            POSITION: game.waitlist.length,
+            POSITION: waitlistPosition,
             STATUS: 'waitlist'
           },
           {
@@ -446,7 +455,7 @@ module.exports = function mountPlayerRoutes(app) {
       
       res.json({
         success: true,
-        message: `${player.name} moved to waitlist`,
+        message: `${player.name} moved to the waitlist.`,
         sms: smsResult
       });
     } catch (error) {
@@ -468,10 +477,10 @@ module.exports = function mountPlayerRoutes(app) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
       if (result.status === 'full') {
-        return res.status(400).json({ error: 'Cannot promote: Game is already full' });
+        return res.status(400).json({ error: 'This game is already full, so nobody can be promoted right now.' });
       }
       if (result.status === 'not_found') {
-        return res.status(404).json({ error: 'Player not found in waitlist' });
+        return res.status(404).json({ error: 'That player is not on the waitlist.' });
       }
 
       // Send SMS notification to the promoted player
@@ -497,7 +506,7 @@ module.exports = function mountPlayerRoutes(app) {
       
       res.json({
         success: true,
-        message: `${player.name} promoted to confirmed players`,
+        message: `${player.name} promoted to the confirmed list.`,
         sms: smsResult
       });
     } catch (error) {
@@ -532,7 +541,11 @@ module.exports = function mountPlayerRoutes(app) {
         const gameTime = formatTimeForSMS(game.time);
         const locationText = formatLocationForSMS(game);
 
-        const statusText = removalType === 'confirmed' ? 'registration' : 'waitlist spot';
+        const statusText = removalType === 'confirmed'
+          ? 'registration'
+          : game.registrationMode === 'waitlist'
+            ? 'application'
+            : 'waitlist spot';
         const defaultMessage = `Your ${statusText} for the pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been cancelled by the organizer.`;
         const message = await resolveTextMessage(
           'roster-status-change',

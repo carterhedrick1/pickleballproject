@@ -26,19 +26,19 @@ const SYSTEM_REPLY_OPTIONS = Object.freeze([
     command: '1',
     title: 'Management Link',
     audience: 'host',
-    description: 'Sends the Host management link for one upcoming game, or a list when they host several.'
+    description: 'Sends the host management link for one upcoming game, or a list when the host has several.'
   }),
   Object.freeze({
     command: '2',
     title: 'Game Details',
     audience: 'host-and-player',
-    description: 'Sends upcoming game details. When there are several games, it starts a numbered selection.'
+    description: 'Sends upcoming game details. When there are several games, it sends a numbered list to choose from.'
   }),
   Object.freeze({
     command: '9',
     title: 'Cancel A Spot',
     audience: 'player',
-    description: 'Cancels one Player registration, waitlist spot, or application after any needed game selection.'
+    description: 'Cancels one player registration, waitlist spot, or application, asking which game first when there are several.'
   })
 ]);
 
@@ -90,7 +90,7 @@ function validateReplyOptionsConfig(value) {
   for (const item of value.options) {
     const option = normalizeReplyOption(item);
     if (!CUSTOM_COMMANDS.includes(option.command)) {
-      return { error: `Choose an available reply number: ${CUSTOM_COMMANDS.join(', ')}.` };
+      return { error: `Choose one of these reply numbers: ${CUSTOM_COMMANDS.join(', ')}.` };
     }
     if (commands.has(option.command)) {
       return { error: `Reply ${option.command} can only be used once.` };

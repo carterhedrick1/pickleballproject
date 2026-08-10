@@ -2,7 +2,7 @@
 
 async function sendAnnouncement() {
     if (!GameUtils.getGameStatus(gameData).canEdit) {
-        showStatus('Cannot send announcements for expired games', 'error');
+        showStatus('This game has ended, so announcements can no longer be sent.', 'error');
         return;
     }
     
@@ -51,7 +51,7 @@ async function sendAnnouncement() {
         document.getElementById('announcementPersonalityWrapper').checked = false;
         clearAllRecipientSelections();
         
-        showStatus(`Announcement sent to ${data.recipientCount} players`, 'success');
+        showStatus(`Announcement sent to ${data.recipientCount} ${data.recipientCount === 1 ? 'player' : 'players'}.`, 'success');
         
     } catch (error) {
         console.error('Error sending announcement:', error);

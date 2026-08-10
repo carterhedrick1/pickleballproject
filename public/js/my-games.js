@@ -110,9 +110,9 @@ function gameCard(game) {
     if (game.cancelled) {
         badges.push(`<span class="badge cancelled">Cancelled${game.cancellationReason ? ': ' + esc(game.cancellationReason) : ''}</span>`);
     }
-    badges.push(`<span class="badge">${game.playerCount} of ${game.totalPlayers} in</span>`);
+    badges.push(`<span class="badge">${game.playerCount} of ${game.totalPlayers} players in</span>`);
     if (game.waitlistCount) {
-        badges.push(`<span class="badge">${game.waitlistCount} waiting</span>`);
+        badges.push(`<span class="badge">${game.waitlistCount} ${game.waitlistCount === 1 ? 'player' : 'players'} waiting</span>`);
     }
     if (game.registrationMode === 'waitlist') {
         badges.push('<span class="badge">You pick the players</span>');
@@ -132,14 +132,13 @@ function gameCard(game) {
             ${canDelete ? '<button type="button" class="btn btn-danger" data-delete>Delete</button>' : ''}
         </div>
         <div class="notes-panel" style="display: none;">
-            <textarea placeholder="e.g. 'Gate code 4417'">${esc(game.hostNotes || '')}</textarea>
+            <textarea placeholder="e.g. Gate code 4417">${esc(game.hostNotes || '')}</textarea>
             <button type="button" class="btn" data-notes-save>Save Note</button>
             <div class="notes-status"></div>
         </div>
         ${canDelete ? `
         <div class="delete-panel" style="display: none;">
-            <p>Delete this game for good? Its photos and its place in your stats go too,
-               and there is no undo.</p>
+            <p>Delete this game for good? Its photos and its place in your stats go too, and there is no undo.</p>
             <button type="button" class="btn btn-danger" data-delete-confirm>Yes, Delete It</button>
             <button type="button" class="btn" data-delete-cancel>Keep It</button>
             <div class="delete-status"></div>
@@ -259,8 +258,8 @@ async function textMeMyLinks() {
         const data = await response.json();
         showStatus(
             data.gamesFound
-                ? 'Sent - check your phone.'
-                : 'No recent games to send links for.',
+                ? 'Sent — check your phone.'
+                : 'There are no recent games to send.',
             data.gamesFound ? 'success' : 'info'
         );
     } catch (error) {

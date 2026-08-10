@@ -70,8 +70,9 @@ function capitalizeText(text) {
       );
     })
     .join('')
-    .replace(/\bIN Or OUT\b/g, 'IN or OUT')
-    .replace(/\bIn Or Out\b/g, 'In or Out');
+    // One wordmark only. Allowing "In or Out" as a second permitted form is what let the
+    // header and footer drift into showing different casing on the same screen.
+    .replace(/\bIn Or Out\b/gi, 'IN or OUT');
 }
 
 function titleCaseInnerHtml(innerHtml) {

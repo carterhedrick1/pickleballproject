@@ -11,7 +11,7 @@ test("ships the requested You're In rotation", () => {
   );
   assert.equal(
     youreInMessages.DEFAULT_MESSAGES[21],
-    "You're IN. The waitlist has been told and is coping."
+    "You're IN. Somewhere, a waitlist is coping."
   );
 });
 

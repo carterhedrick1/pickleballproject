@@ -203,7 +203,7 @@ async function postHostPlayer(player, addTo) {
 
 async function addPlayersFromRoster() {
     if (!GameUtils.getGameStatus(gameData).canEdit) {
-        showStatus('Cannot add players to expired games', 'error');
+        showStatus('This game has ended, so players can no longer be added.', 'error');
         return;
     }
 
@@ -216,7 +216,7 @@ async function addPlayersFromRoster() {
     );
 
     if (selectedPlayers.length === 0) {
-        showStatus('Select at least one roster player to add', 'error');
+        showStatus('Please select at least one player to add.', 'error');
         return;
     }
 
@@ -257,7 +257,7 @@ async function addPlayersFromRoster() {
     const smsText = smsFailures
         ? ` (${smsFailures} SMS ${smsFailures === 1 ? 'notification' : 'notifications'} failed)`
         : '';
-    showStatus(`${addedText} successfully${smsText}`, smsFailures ? 'error' : 'success');
+    showStatus(`${addedText} successfully${smsText}.`, smsFailures ? 'error' : 'success');
 }
 
 function updatePlayerLists() {
@@ -328,7 +328,7 @@ function updatePlayerLists() {
     
     // Populate waitlist
     if (gameData.waitlist.length === 0) {
-        waitlistPlayers.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">No one waiting</p>';
+        waitlistPlayers.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">Nobody waiting</p>';
     } else {
         gameData.waitlist.forEach((player, index) => {
             waitlistPlayers.appendChild(ManageRender.createPlayerItem(document, player, {
@@ -351,7 +351,7 @@ function updatePlayerLists() {
 
     // Populate out players - FIXED VERSION
     if (!gameData.outPlayers || gameData.outPlayers.length === 0) {
-        outPlayersContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">No one marked as out</p>';
+        outPlayersContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">Nobody marked as out</p>';
     } else {
         gameData.outPlayers.forEach((player) => {
             outPlayersContainer.appendChild(
@@ -366,7 +366,7 @@ function updatePlayerLists() {
 
 async function addPlayerManually() {
     if (!GameUtils.getGameStatus(gameData).canEdit) {
-        showStatus('Cannot add players to expired games', 'error');
+        showStatus('This game has ended, so players can no longer be added.', 'error');
         return;
     }
     
@@ -388,7 +388,7 @@ async function addPlayerManually() {
         await fetchGameData();
         
         // Build status message
-        let statusMessage = `Player ${name} added successfully`;
+        let statusMessage = `${name} added`;
         
         // Add SMS status info
         if (phone && data.sms && data.sms.success) {
@@ -396,7 +396,7 @@ async function addPlayerManually() {
         } else if (phone && data.sms && !data.sms.success) {
             statusMessage += ' (SMS notification failed)';
         } else if (!phone) {
-            statusMessage += ' (no phone number provided)';
+            statusMessage += ' — they will not get texts';
         }
         
         showStatus(statusMessage, 'success');
@@ -440,7 +440,7 @@ async function moveToWaitlist(playerId) {
     await fetchGameData();
     
     // Show status with SMS info
-    let statusMessage = `Player ${player.name} moved to waitlist`;
+    let statusMessage = `${player.name} moved to waitlist`;
     if (data.sms && data.sms.success) {
       statusMessage += ' and notified via SMS';
     } else if (data.sms && !data.sms.success) {
@@ -494,7 +494,7 @@ async function promoteToGame(playerId) {
     await fetchGameData();
     
     // Show status with SMS info
-    let statusMessage = `Player ${player.name} promoted to confirmed players`;
+    let statusMessage = `${player.name} promoted to confirmed players`;
     if (data.sms && data.sms.success) {
       statusMessage += ' and notified via SMS';
     } else if (data.sms && !data.sms.success) {
@@ -543,7 +543,7 @@ async function removePlayer(playerId) {
           await fetchGameData();
           
           // Build status message
-          let statusMessage = `Player ${player.name} removed from game`;
+          let statusMessage = `${player.name} removed from game`;
           
           // Add SMS status info
           if (data.removalSms && data.removalSms.success) {
@@ -608,7 +608,7 @@ async function removeWaitlisted(playerId) {
           await fetchGameData();
           
           // Build status message
-          let statusMessage = `Player ${player.name} removed from waitlist`;
+          let statusMessage = `${player.name} removed from waitlist`;
           
           // Add SMS status info if applicable
           if (data.removalSms && data.removalSms.success) {
@@ -634,9 +634,10 @@ async function removeWaitlisted(playerId) {
 
 async function removeOutPlayer(playerId) {
   try {
+    const player = (gameData.outPlayers || []).find((entry) => entry.id === playerId);
     showConfirmModal(
-      'Remove Player', 
-      'Are you sure you want to remove this player from the "out" list?', 
+      'Remove Player',
+      `Remove ${player ? player.name : 'this player'} from the "out" list?`,
       async () => {
         try {
           showStatus('Removing player...', 'info');
@@ -653,7 +654,7 @@ async function removeOutPlayer(playerId) {
           // Refresh game data
           await fetchGameData();
           
-          showStatus('Player removed from "out" list', 'success');
+          showStatus('Player removed from the "out" list.', 'success');
           
         } catch (error) {
           console.error('Error removing out player:', error);

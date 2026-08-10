@@ -55,7 +55,7 @@ test('rejects reserved commands and unsupported message values', () => {
     validateReplyOptionsConfig({
       options: [{ command: '2', title: 'Other Details', audience: 'player', message: 'Hello' }]
     }).error,
-    /available reply number/
+    /reply numbers/
   );
   assert.match(
     validateReplyOptionsConfig({

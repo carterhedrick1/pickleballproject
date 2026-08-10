@@ -312,7 +312,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
           '.intended-invitee-checkbox'
         ).length,
         inviteeCopyIsHonest: document.querySelector('#intendedInviteesTitle + p')
-          ?.textContent.includes('does not know who receives'),
+          ?.textContent.includes('cannot see who actually received'),
         imageUpdateCopy: document.querySelector('.court-images-intro')?.textContent
           .includes('player link you already sent'),
         manualPlayerSamplesRemoved:
@@ -436,7 +436,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       'multiple selected roster players are added through the management page'
     );
     assert(
-      rosterAddResult.status === '2 roster players added successfully' &&
+      rosterAddResult.status === '2 roster players added successfully.' &&
         rosterAddResult.pickerEmpty === 'Everyone on your roster is already listed for this game.',
       'the roster picker reports success and filters players already in the game'
     );

@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             <div class="footer-container">
                 <div class="footer-content">
                     <div class="footer-section">
-                        <h4>In or Out</h4>
+                        <h4>IN or OUT</h4>
                         <p class="footer-slogan"></p>
                     </div>
                     
@@ -34,12 +34,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <div class="footer-section">
                         <h4>Connect</h4>
                         <p>Email: <a href="mailto:support@inorout.club">support@inorout.club</a></p>
-                        <p><small>Response within 24 hours</small></p>
+                        <p><small>Response within 48 hours</small></p>
                     </div>
                 </div>
                 
                 <div class="footer-bottom">
-                    <p>&copy; 2025 In or Out. All rights reserved.</p>
+                    <p>&copy; ${new Date().getFullYear()} IN or OUT. All rights reserved.</p>
                 </div>
             </div>
         </footer>

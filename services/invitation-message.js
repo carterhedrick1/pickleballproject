@@ -30,7 +30,9 @@ function buildDeterministicInvitation(game, gameId, baseUrl) {
   const availableSpots = additionalPlayers(game);
   const spotsText = availableSpots === 1 ? 'Spot' : 'Spots';
   const isFirstCome = (game.registrationMode || 'fcfs') === 'fcfs';
-  const firstComeMessage = isFirstCome ? `\nFirst ${availableSpots} are in.` : '';
+  const firstComeMessage = isFirstCome
+    ? `\nFirst ${availableSpots} to respond ${availableSpots === 1 ? 'is' : 'are'} in.`
+    : '';
   return `Let us know if you're IN or OUT for pickleball by clicking the link below:
 
 ${gameLink}
@@ -42,7 +44,7 @@ Duration: ${game.duration} minutes
 ${spotsText}: ${availableSpots}
 ${game.message ? `\n${game.message}` : ''}
 
-Even if you can't make it, your response helps us plan and find additional players if needed. Please use the link above to respond - do not reply to this text message.
+Even if you can't make it, your response helps us plan and find additional players if needed. Please use the link above to respond — do not reply to this text message.
 ${firstComeMessage}
 
 `;

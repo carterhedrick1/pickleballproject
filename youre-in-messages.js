@@ -1,29 +1,29 @@
 const DEFAULT_MESSAGES = Object.freeze([
   "You're IN. The others have been warned.",
-  "You're IN. Feel free to leave the new paddle home. It was never the problem.",
+  "You're IN. Feel free to leave the new paddle at home. It was never the problem.",
   "You're IN. Your one good shot is scheduled for game three.",
   "You're IN. Somebody had to be.",
-  "You're IN. They needed a fourth and you were available. That's the whole reason.",
-  "You're IN and you have been randomly selected to bring snacks for everyone.",
+  "You're IN. They needed one more, and you were available. That's the whole reason.",
+  "You're IN, and you have been randomly selected to bring snacks for everyone.",
   "You're IN. You committed, which is more than most people managed today.",
-  "You're IN. Availability beats ability, and today you've got one of them.",
+  "You're IN. Availability beats ability, and today you've got the first one.",
   "You're IN. Don't make me regret the automation.",
   "You're IN. The bar was low and you cleared it.",
   "You're IN. You answered, which narrowed the field considerably.",
   "You're IN. Not the first choice. First to respond.",
-  "You're IN. A pulse and a paddle was the entire requirement.",
+  "You're IN. A pulse and a paddle were the entire requirement.",
   "You're IN. Congratulations on being reachable.",
   "You're IN. Standards were adjusted to accommodate.",
-  "You're IN. Four spots, four people who answered. Do the math.",
+  "You're IN. Supply met demand. Do the math.",
   "You're IN. You're here because you're here.",
   "You're IN. Your thumbs performed admirably.",
   "You're IN. You've been flagged for a surprise DUPR audit.",
-  "You're IN. A background check was run and we're choosing to overlook it.",
+  "You're IN. A background check was run, and we're choosing to overlook it.",
   "You're IN. Two people immediately checked who else is playing.",
-  "You're IN. The waitlist has been told and is coping."
+  "You're IN. Somewhere, a waitlist is coping."
 ]);
 const DEFAULT_DETAILS_TEMPLATE =
-  'Pickleball at {LOCATION} on {DATE} at {TIME}! You are Player {POSITION} of {TOTAL_PLAYERS}. Reply 2 for who is playing and game details or 9 to cancel.';
+  'Pickleball at {LOCATION} on {DATE} at {TIME}! You are Player {POSITION} of {TOTAL_PLAYERS}. Reply 2 for who is playing and game details, or 9 to cancel.';
 
 function cleanMessages(value) {
   if (!Array.isArray(value)) return DEFAULT_MESSAGES.slice();
