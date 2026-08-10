@@ -126,6 +126,23 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     detailsMaxLength: DETAILS_MAX_LENGTH
   },
   {
+    id: 'game-details-changed',
+    title: 'Game Details Changed',
+    addTitle: 'Add A Game Details Changed Text',
+    listTitle: 'Game Details Changed Texts',
+    recipient: 'Confirmed And Waitlisted Players',
+    description:
+      'Sent to everyone signed up when the organizer moves the court, date, time, or duration. Editing only the message or the personality sends nothing.',
+    preview:
+      'UPDATED: Your pickleball game changed time.\n\nOak Park Courts\nSat, Aug 1 at 10:30 AM\nDuration: 90 minutes\n\nReply 2 for details, or 9 to cancel.',
+    previewNote:
+      'The message always restates the full time and place, not only the part that changed.',
+    defaultDetailsTemplate: DEFAULT_TEXT_TOKEN,
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'DURATION'],
+    maxLength: 240,
+    detailsMaxLength: DETAILS_MAX_LENGTH
+  },
+  {
     id: 'organizer-announcement',
     title: 'Organizer-Written Announcement',
     addTitle: 'Add An Organizer-Written Announcement Text',

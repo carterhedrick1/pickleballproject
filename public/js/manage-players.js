@@ -355,7 +355,20 @@ function updatePlayerLists() {
     } else {
         gameData.outPlayers.forEach((player) => {
             outPlayersContainer.appendChild(
-                ManageRender.createPlayerItem(document, player)
+                ManageRender.createPlayerItem(document, player, {
+                    actions: [
+                        {
+                            label: 'Add Back',
+                            className: 'btn-secondary',
+                            onClick: () => addOutPlayerBackToGame(player.id)
+                        },
+                        {
+                            label: 'Clear',
+                            className: 'btn-danger',
+                            onClick: () => removeOutPlayer(player.id)
+                        }
+                    ]
+                })
             );
         });
     }
@@ -632,6 +645,57 @@ async function removeWaitlisted(playerId) {
   }
 }
 
+// Somebody who said OUT and then found a sitter is the most common roster change there is, and
+// until now the only way back in was for the host to retype their name and number by hand.
+async function addOutPlayerBackToGame(playerId) {
+  if (!GameUtils.getGameStatus(gameData).canEdit) {
+    showStatus('This game has ended, so players can no longer be added.', 'error');
+    return;
+  }
+
+  const player = (gameData.outPlayers || []).find((entry) => entry.id === playerId);
+  if (!player) {
+    showStatus('That player is no longer on the "out" list.', 'error');
+    return;
+  }
+
+  const gameIsFull = gameData.players.length >= parseInt(gameData.totalPlayers, 10);
+  const destination = gameIsFull ? 'waitlist' : 'add';
+  const destinationLabel = gameIsFull ? 'the waitlist' : 'the confirmed players';
+
+  showConfirmModal(
+    'Add Player Back',
+    `Add ${player.name} back to ${destinationLabel}?`,
+    async () => {
+      try {
+        showStatus('Adding player back...', 'info');
+        const data = await postHostPlayer({ name: player.name, phone: player.phone }, destination);
+
+        // Clearing the "out" entry second means a failure above leaves the roster untouched
+        // rather than dropping the player off both lists.
+        await fetch(`/api/games/${gameId}/out-players/${playerId}?token=${hostToken}`, {
+          method: 'DELETE'
+        });
+
+        await fetchGameData();
+
+        let statusMessage = `${player.name} added back to ${destinationLabel}`;
+        if (player.phone && data.sms && data.sms.success) {
+          statusMessage += ' and notified by text.';
+        } else if (player.phone && data.sms && !data.sms.success) {
+          statusMessage += ', but the text did not go out.';
+        } else {
+          statusMessage += '.';
+        }
+        showStatus(statusMessage, 'success');
+      } catch (error) {
+        console.error('Error adding out player back:', error);
+        showStatus('Could not add that player back: ' + error.message, 'error');
+      }
+    }
+  );
+}
+
 async function removeOutPlayer(playerId) {
   try {
     const player = (gameData.outPlayers || []).find((entry) => entry.id === playerId);
@@ -680,6 +744,7 @@ window.ManageApp.players = {
     promoteToGame,
     removePlayer,
     removeWaitlisted,
-    removeOutPlayer
+    removeOutPlayer,
+    addOutPlayerBackToGame
 
 };

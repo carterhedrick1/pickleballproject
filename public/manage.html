@@ -109,6 +109,17 @@
                             <div id="personalityHelp" class="form-help-text">Changing this affects future copy only.</div>
                         </div>
 
+                        <div class="form-group notify-change-group">
+                            <label class="notify-change-label" for="notifyPlayersOfChange">
+                                <input type="checkbox" id="notifyPlayersOfChange" checked>
+                                Text Players About This Change
+                            </label>
+                            <div class="form-help-text">
+                                Only sent when you move the court, date, time, or duration. Changing
+                                the message or the personality never sends a text.
+                            </div>
+                        </div>
+
                         <div class="form-group notifications-section">
                             <label>Organizer Notifications:</label>
                             <div class="form-help-text">Get SMS alerts when these events happen (optional)</div>
@@ -218,28 +229,8 @@
                     </div>
                 </div>
 
-                <!-- Photos: lives at the bottom of Details rather than as a fifth tab, so the
-                     desktop tab row and the mobile tab selector both stay as they are. -->
-                <div class="form-section photos-section">
-                    <h2 class="section-title">Photos</h2>
-                    <p class="photos-intro">Add photos from the game. Anyone with your game link can see them.</p>
-
-                    <div id="photoGrid" class="photo-grid"></div>
-                    <p id="photoEmpty" class="photos-empty">No photos yet.</p>
-
-                    <div class="photo-upload">
-                        <label for="photoFile">Choose A Photo</label>
-                        <input type="file" id="photoFile" accept="image/*">
-
-                        <label for="photoCaption">Caption (Optional)</label>
-                        <input type="text" id="photoCaption" maxlength="200" placeholder="e.g. Saturday morning doubles">
-
-                        <button type="button" id="addPhotoBtn" class="copy-btn">Add Photo</button>
-                        <p id="photoStatus" class="photo-status"></p>
-                    </div>
-                </div>
             </div>
-            
+
             <!-- Players Tab -->
             <div id="Players" class="tabcontent">
                 <div class="form-section">
@@ -348,8 +339,30 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Photos live on the Players tab rather than Game Details because the whole
+                     Details tab goes read-only once a game ends, and adding photos afterwards is
+                     exactly what a host wants to do then. -->
+                <div class="form-section photos-section">
+                    <h2 class="section-title">Photos</h2>
+                    <p class="photos-intro">Add photos from the game. Anyone with your game link can see them.</p>
+
+                    <div id="photoGrid" class="photo-grid"></div>
+                    <p id="photoEmpty" class="photos-empty">No photos yet.</p>
+
+                    <div class="photo-upload">
+                        <label for="photoFile">Choose A Photo</label>
+                        <input type="file" id="photoFile" accept="image/*">
+
+                        <label for="photoCaption">Caption (Optional)</label>
+                        <input type="text" id="photoCaption" maxlength="200" placeholder="e.g. Saturday morning doubles">
+
+                        <button type="button" id="addPhotoBtn" class="copy-btn">Add Photo</button>
+                        <p id="photoStatus" class="photo-status"></p>
+                    </div>
+                </div>
             </div>
-            
+
             <!-- Communication Tab -->
             <div id="Communication" class="tabcontent">
                 <div class="form-section">

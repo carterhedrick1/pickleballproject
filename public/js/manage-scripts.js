@@ -249,6 +249,12 @@ function openTabFromSelect(tabName) {
             tablinks[i].classList.add("active");
         }
     }
+    // This function is also called programmatically, so the mobile picker has to be told
+    // which tab it is now showing rather than assuming the user drove it.
+    const tabSelector = document.getElementById('tabSelector');
+    if (tabSelector) {
+        tabSelector.value = tabName;
+    }
     localStorage.setItem('managePageActiveTab', tabName);
 }
 
@@ -601,6 +607,9 @@ async function updateGameDetails() {
             message: document.getElementById('message').value,
             personalityId: document.getElementById('personalityId').value,
             notificationPreferences: formattedPreferences,
+            // The server only acts on this when the court, date, time, or duration actually
+            // changed, so leaving it checked never texts anyone about a copy edit.
+            notifyPlayers: document.getElementById('notifyPlayersOfChange')?.checked !== false,
             token: hostToken
         };
         
@@ -625,7 +634,7 @@ async function updateGameDetails() {
         // Force refresh game data to verify the save
         await fetchGameData();
         
-        showStatus(responseData.message || 'Game details updated successfully!', 'success');
+        showStatus(responseData.message || 'Game details updated.', 'success');
         
     } catch (error) {
         console.error('[CLIENT] Error updating game:', error);

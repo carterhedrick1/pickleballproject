@@ -26,6 +26,22 @@ function promoteNextFromWaitlist(game) {
 }
 
 /**
+ * Promotes the next person on the waitlist only when the roster actually has room.
+ *
+ * promoteNextFromWaitlist alone assumes a spot just opened. This is the version for the case
+ * where the spot appeared because the host raised the player count, so capacity has to be
+ * rechecked before every promotion.
+ *
+ * @returns the promoted player, or null when the game is full, in approval mode, or nobody waits.
+ */
+function promoteIntoOpenSpot(game) {
+  const total = parseInt(game.totalPlayers, 10);
+  if (!Number.isFinite(total)) return null;
+  if ((game.players || []).length >= total) return null;
+  return promoteNextFromWaitlist(game);
+}
+
+/**
  * Records that somebody is not playing, deduped by phone number so that tapping OUT twice
  * (or texting 9 after tapping OUT) leaves one entry rather than several.
  *
@@ -86,4 +102,9 @@ function departureAlertType(game, wasConfirmed) {
   return 'playerCancels';
 }
 
-module.exports = { promoteNextFromWaitlist, recordOutPlayer, departureAlertType };
+module.exports = {
+  promoteNextFromWaitlist,
+  promoteIntoOpenSpot,
+  recordOutPlayer,
+  departureAlertType
+};

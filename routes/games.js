@@ -39,9 +39,17 @@ const { isGameUpcoming } = require('../utils/central-time');
 const { routeFailed } = require('../utils/route-error');
 const { isHost, requireVerifiedHostPhone } = require('../utils/host-auth');
 const { applyGameUpdate } = require('../utils/game-update');
+const {
+  snapshotGame,
+  changedFields,
+  buildChangeMessage,
+  summarizeForHost
+} = require('../utils/game-changes');
+const { promoteIntoOpenSpot } = require('../utils/promotion');
 const { resolveTextMessage } = require('../services/text-message-rotation');
 const { appendCustomReplyInstructions } = require('../sms-reply-options');
 const { buildRandomizedInvitation } = require('../services/invitation-message');
+const { buildSelectedPlayerMessage } = require('../services/youre-in-rotation');
 
 function creationRequestId(req) {
   const value = String(req.get('Idempotency-Key') || '').trim();
@@ -226,10 +234,31 @@ module.exports = function mountGameRoutes(app) {
           return res.status(400).json({ error: 'Choose an enabled personality.' });
         }
       }
+
+      const notifyPlayers = updateData.notifyPlayers !== false;
+      const before = snapshotGame(game);
       applyGameUpdate(game, updateData);
-      
+
+      // Shrinking a game below the people already confirmed would leave the roster over
+      // capacity with no indication of who is meant to lose their spot.
+      const confirmedCount = (game.players || []).length;
+      if (parseInt(game.totalPlayers) < confirmedCount) {
+        return res.status(400).json({
+          error: `You already have ${confirmedCount} confirmed ${confirmedCount === 1 ? 'player' : 'players'}. Move somebody to the waitlist before lowering the player count.`
+        });
+      }
+
+      // Raising the player count used to change the number and nothing else, leaving people
+      // sitting on the waitlist for spots that had just opened.
+      const promoted = [];
+      let nextPromotion;
+      while ((nextPromotion = promoteIntoOpenSpot(game))) {
+        promoted.push(nextPromotion);
+      }
+
+      const changed = changedFields(before, game);
       console.log('[SERVER] Saving game with notification preferences:', game.notificationPreferences);
-      
+
       await saveGame(gameId, game, game.hostToken, game.hostPhone);
 
       // A host can move the game to a new court; remember that one too. Never fail the update over it.
@@ -244,9 +273,68 @@ module.exports = function mountGameRoutes(app) {
       console.log('[SERVER] Verified saved notification preferences:', savedGame.notificationPreferences);
       releaseLock();
 
-      res.json({ 
-        success: true, 
-        message: 'Game updated successfully. Use the Communication tab to notify players of changes if needed.',
+      // Texts go out after the lock is released so nobody else waits on a TextBelt round trip.
+      let notifiedCount = 0;
+      if (changed.length && notifyPlayers) {
+        const defaultChangeMessage = buildChangeMessage(before, game, changed);
+        const changeMessage = await resolveTextMessage(
+          'game-details-changed',
+          defaultChangeMessage,
+          {
+            LOCATION: formatLocationForSMS(game),
+            DATE: formatDateForSMS(game.date),
+            TIME: formatTimeForSMS(game.time),
+            DURATION: game.duration
+          },
+          {
+            game,
+            gameId,
+            audience: 'known-game-audience'
+          }
+        );
+
+        // Everyone holding a spot or waiting for one needs this. Players who already said
+        // they are out do not.
+        const recipients = [...(game.players || []), ...(game.waitlist || [])];
+        for (const player of recipients) {
+          if (!player.phone || player.isOrganizer) continue;
+          const result = await sendSMS(player.phone, changeMessage, gameId, {
+            eventId: 'game-details-changed'
+          });
+          if (result.success) notifiedCount++;
+        }
+      }
+
+      for (const player of promoted) {
+        if (!player.phone) continue;
+        const promotionMessage = await buildSelectedPlayerMessage(
+          game,
+          game.players.indexOf(player) + 1,
+          player.phone,
+          gameId
+        );
+        await sendSMS(player.phone, promotionMessage, gameId, {
+          eventId: 'player-confirmed'
+        });
+      }
+
+      const changeSummary = summarizeForHost(before, game, changed);
+      let message = 'Game updated.';
+      if (changed.length) {
+        message += notifyPlayers
+          ? ` We texted ${notifiedCount} ${notifiedCount === 1 ? 'person' : 'people'} about the new ${changeSummary}.`
+          : ` Your players have not been told about the new ${changeSummary} — use the Communication tab to send them an announcement.`;
+      }
+      if (promoted.length) {
+        message += ` ${promoted.length} ${promoted.length === 1 ? 'player was' : 'players were'} promoted from the waitlist.`;
+      }
+
+      res.json({
+        success: true,
+        message,
+        changedFields: changed,
+        playersNotified: notifiedCount,
+        promoted: promoted.map((player) => player.name),
         notificationPreferences: savedGame.notificationPreferences
       });
     } catch (error) {
