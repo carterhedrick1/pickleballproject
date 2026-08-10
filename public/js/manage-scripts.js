@@ -241,6 +241,13 @@ function openTab(evt, tabName) {
     document.getElementById(tabName).classList.add("active");
     evt.currentTarget.classList.add("active");
 
+    // Keep the mobile picker in agreement, or a resize to a narrow window shows a
+    // selector naming a tab the host left long ago.
+    const tabSelector = document.getElementById('tabSelector');
+    if (tabSelector) {
+        tabSelector.value = tabName;
+    }
+
     localStorage.setItem('managePageActiveTab', tabName);
 }
 
@@ -300,11 +307,11 @@ async function fetchGameData() {
         
         // Show expired warning if needed
         if (!GameUtils.getGameStatus(gameData).canEdit) {
-            showExpiredGameWarning();
+            showExpiredGameWarning(gameStatus.type);
             // Add expired class to disable editing
             document.getElementById('gameManagement').classList.add('expired');
             // Update page title
-            document.title = '[ENDED] ' + document.title;
+            document.title = (gameStatus.type === 'cancelled' ? '[CANCELLED] ' : '[ENDED] ') + document.title;
         }
         
         // Populate game details (this will set notification preferences).
@@ -412,11 +419,21 @@ async function loadManagePersonalities() {
     }
 }
 
-function showExpiredGameWarning() {
+function showExpiredGameWarning(statusType) {
     const warningSection = document.getElementById('expiredGameWarning');
-    if (warningSection) {
-        warningSection.style.display = 'block';
+    if (!warningSection) return;
+    // A cancelled game did not "finish" - saying so right under the cancellation banner
+    // reads like the app lost the plot. Name what actually happened.
+    if (statusType === 'cancelled') {
+        const title = warningSection.querySelector('h3');
+        const body = warningSection.querySelector('p');
+        if (title) title.textContent = 'Game Cancelled';
+        if (body) {
+            body.textContent = 'Your players were texted that it is off. You can still view '
+                + 'everything here, but the game can no longer be changed.';
+        }
     }
+    warningSection.style.display = 'block';
 }
 
 
@@ -442,7 +459,21 @@ function setupEventListeners() {
 
     const organizerPlayingToggle = document.getElementById('organizerPlaying');
     if (organizerPlayingToggle) {
-        organizerPlayingToggle.addEventListener('change', updateOrganizerPlayingCopy);
+        organizerPlayingToggle.addEventListener('change', () => {
+            // "Give up your spot" means the seat goes to somebody else, not that the court
+            // shrinks. The count field switches meaning with the tick box (others-needed vs
+            // total-needed), so adjust its value in step to keep the number of seats the same.
+            // The host sees the new number before saving and can still change it.
+            const players = document.getElementById('players');
+            if (players) {
+                const current = parseInt(players.value, 10);
+                if (!Number.isNaN(current)) {
+                    const adjusted = organizerPlayingToggle.checked ? current - 1 : current + 1;
+                    players.value = Math.max(adjusted, 1);
+                }
+            }
+            updateOrganizerPlayingCopy();
+        });
     }
 
     const refreshDeliveryLog = document.getElementById('refreshDeliveryLog');

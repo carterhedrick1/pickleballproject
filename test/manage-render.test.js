@@ -57,7 +57,7 @@ describe('ManageRender', () => {
     assert.equal(option.children[0].type, 'checkbox');
     assert.equal(option.children[0].dataset.phone, '5551234567');
     assert.equal(option.children[1].children[0].textContent, name);
-    assert.equal(option.children[1].children[1].textContent, '5551234567 · DUPR 3.75');
+    assert.equal(option.children[1].children[1].textContent, '(555) 123-4567 · DUPR 3.75');
     assert.equal(option.children.some((child) => child.tag === 'img'), false);
   });
 });

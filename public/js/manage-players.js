@@ -653,7 +653,8 @@ function updatePlayerLists() {
     if (playerCountElement) {
         const count = gameData.players.length;
         const total = gameData.totalPlayers;
-        const playerText = count === 1 ? 'player' : 'players';
+        // "1/4 player" reads as a fraction of a person - the unit follows the capacity.
+        const playerText = total === 1 ? 'player' : 'players';
         playerCountElement.innerHTML = `<span id="playerCount">${count}</span>/<span id="totalPlayers">${total}</span> ${playerText}`;
     }
 
