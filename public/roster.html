@@ -49,11 +49,24 @@
             <div id="rosterBody" style="display: none;">
                 <p class="summary-line" id="summaryLine"></p>
 
+                <div class="roster-row" id="rosterAdd">
+                    <h3 class="section-subtitle">Add A Player</h3>
+                    <p class="roster-meta">Add someone before their first game and you can text them invitations right away. Everyone who joins one of your games is added automatically.</p>
+                    <label for="addPlayerName">Name</label>
+                    <input type="text" id="addPlayerName" placeholder="Their name" maxlength="100">
+                    <label for="addPlayerPhone">Phone Number</label>
+                    <input type="tel" id="addPlayerPhone" placeholder="(555) 123-4567" autocomplete="off">
+                    <div class="card-actions" style="margin-top: 12px;">
+                        <button type="button" class="btn btn-primary" id="addPlayerBtn">Add To Roster</button>
+                    </div>
+                    <div class="row-status" id="addPlayerStatus"></div>
+                </div>
+
                 <div id="rosterList"></div>
 
                 <div id="emptyState" class="no-games" style="display: none;">
                     <h3>Nobody Yet</h3>
-                    <p>Host a game and your roster builds itself &mdash; everyone who signs up lands here.</p>
+                    <p>Add your regulars above, or host a game and your roster builds itself &mdash; everyone who signs up lands here.</p>
                     <a href="/create.html" class="create-game-btn">Create A Game</a>
                 </div>
 
@@ -93,6 +106,62 @@
         }
 
         const prettyPhone = HostVerification.prettyPhone;
+
+        document.getElementById('addPlayerBtn').addEventListener('click', addPlayerToRoster);
+
+        async function addPlayerToRoster() {
+            const nameInput = document.getElementById('addPlayerName');
+            const phoneInput = document.getElementById('addPlayerPhone');
+            const status = document.getElementById('addPlayerStatus');
+            const button = document.getElementById('addPlayerBtn');
+
+            const name = nameInput.value.trim();
+            const phoneDigits = phoneInput.value.replace(/\D/g, '');
+
+            if (!name) {
+                status.style.color = 'var(--danger)';
+                status.textContent = 'Please enter their name.';
+                return;
+            }
+            if (phoneDigits.length < 10) {
+                status.style.color = 'var(--danger)';
+                status.textContent = 'Please enter a full phone number so we can text them.';
+                return;
+            }
+
+            status.style.color = 'var(--text-muted)';
+            status.textContent = 'Adding...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch(
+                    `/api/roster/${hostPhone}/${encodeURIComponent(phoneDigits)}`,
+                    {
+                        method: 'PUT',
+                        headers: HostVerification.authHeaders({ 'Content-Type': 'application/json' }),
+                        body: JSON.stringify({ name })
+                    }
+                );
+                const data = await response.json().catch(() => ({}));
+                if (response.status === 401) {
+                    HostVerification.expireSession();
+                    return;
+                }
+                if (!response.ok) throw new Error(data.error || `Server returned ${response.status}`);
+
+                nameInput.value = '';
+                phoneInput.value = '';
+                status.style.color = 'var(--brand)';
+                status.textContent = `${data.player && data.player.name ? data.player.name : name} is on your roster.`;
+                await loadRoster();
+            } catch (error) {
+                console.error('Error adding roster entry:', error);
+                status.style.color = 'var(--danger)';
+                status.textContent = error.message || 'Could not add that player.';
+            } finally {
+                button.disabled = false;
+            }
+        }
 
         async function loadRoster() {
             showStatus('Loading your roster...', 'info');

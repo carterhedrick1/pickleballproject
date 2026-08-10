@@ -651,18 +651,6 @@ button:active {
     box-shadow: 0 6px 20px color-mix(in srgb, var(--brand) 40%, transparent);
 }
 
-/* Persistent Copy Invitation bar - visible across all tabs */
-.persistent-copy-bar {
-    background: var(--canvas);
-    border-bottom: 1px solid var(--border);
-    padding: 16px 24px;
-    text-align: center;
-}
-.persistent-copy-bar .persistent-copy-btn {
-    max-width: 320px;
-    margin: 0 auto;
-}
-
 /* Player management */
 .players-container {
     display: grid;
@@ -1356,6 +1344,7 @@ button:disabled {
 /* The tabs moved from inline onclick handlers to data-tab plus JS listeners, so these rules
    selected nothing and an ended game showed live-looking tabs over inert panes. Photos now
    live on the Players tab, which stays enabled below, so disabling Details is safe. */
+#gameManagement.expired .tab[data-tab="Invite"],
 #gameManagement.expired .tab[data-tab="Details"],
 #gameManagement.expired .tab[data-tab="Communication"],
 #gameManagement.expired .tab[data-tab="Actions"] {
@@ -1365,6 +1354,7 @@ button:disabled {
     color: var(--text-muted) !important;
 }
 
+#gameManagement.expired #Invite,
 #gameManagement.expired #Details,
 #gameManagement.expired #Communication,
 #gameManagement.expired #Actions {
@@ -1372,12 +1362,16 @@ button:disabled {
     pointer-events: none;
 }
 
+#gameManagement.expired #Invite .form-section,
 #gameManagement.expired #Details .form-section,
 #gameManagement.expired #Communication .form-section,
 #gameManagement.expired #Actions .form-section {
     background: var(--canvas) !important;
 }
 
+#gameManagement.expired #Invite input,
+#gameManagement.expired #Invite textarea,
+#gameManagement.expired #Invite button,
 #gameManagement.expired #Details input,
 #gameManagement.expired #Details textarea,
 #gameManagement.expired #Details button,
@@ -1416,8 +1410,7 @@ button:disabled {
     pointer-events: none;
 }
 
-#gameManagement.expired .share-section .copy-btn,
-#gameManagement.expired .persistent-copy-bar .copy-btn {
+#gameManagement.expired .share-section .copy-btn {
     background: var(--surface) !important;
     cursor: not-allowed !important;
     pointer-events: none !important;
@@ -1467,8 +1460,7 @@ button:disabled {
     background: var(--canvas) !important;
 }
 
-#gameManagement.expired .share-section .copy-btn,
-#gameManagement.expired .persistent-copy-bar .copy-btn {
+#gameManagement.expired .share-section .copy-btn {
     background: var(--surface) !important;
     cursor: not-allowed !important;
     pointer-events: none !important;

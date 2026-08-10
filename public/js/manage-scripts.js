@@ -162,7 +162,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
-    // Fetch game data
+    // Fetch game data, and start the personality list alongside it - the dropdown
+    // needs no game data, so the two requests should never queue behind each other.
+    fetchManagePersonalityList().catch(() => {});
     fetchGameData();
 
     // Loaded once rather than with every roster refresh: the log is a look-back, and it has
@@ -180,7 +182,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function restoreActiveTab() {
-    const activeTab = localStorage.getItem('managePageActiveTab') || 'Details';
+    // A tab named in the URL wins (the Game Created screen links straight to
+    // Invite), then the tab from the last visit, then Invite - the first job
+    // on a fresh game is getting players into it.
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    let activeTab = requestedTab || localStorage.getItem('managePageActiveTab') || 'Invite';
+    if (!document.getElementById(activeTab)) {
+        activeTab = 'Invite';
+    }
     
     // Hide all tabs first
     const tabcontent = document.getElementsByClassName("tabcontent");
@@ -298,8 +307,10 @@ async function fetchGameData() {
             document.title = '[ENDED] ' + document.title;
         }
         
-        // Populate game details (this will set notification preferences)
-        await loadManagePersonalities();
+        // Populate game details (this will set notification preferences).
+        // The personality dropdown fills itself in when its own request lands;
+        // nothing below depends on it, so the page must not wait for it.
+        loadManagePersonalities();
         populateGameDetails();
         updateGameSummary();
         updatePlayerLinkField();
@@ -331,14 +342,28 @@ async function fetchGameData() {
     }
 }
 
+let managePersonalityListPromise;
+
+function fetchManagePersonalityList() {
+    if (!managePersonalityListPromise) {
+        managePersonalityListPromise = fetch('/api/message-personalities').then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        }).catch((error) => {
+            // A failed request is not cached, so a later refresh can try again.
+            managePersonalityListPromise = null;
+            throw error;
+        });
+    }
+    return managePersonalityListPromise;
+}
+
 async function loadManagePersonalities() {
     const select = document.getElementById('personalityId');
     const help = document.getElementById('personalityHelp');
     if (!select) return;
     try {
-        const response = await fetch('/api/message-personalities');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
+        const data = await fetchManagePersonalityList();
         const personalities = Array.isArray(data.personalities) ? data.personalities : [];
         if (!personalities.length) throw new Error('No enabled personalities');
         select.innerHTML = '';
@@ -501,14 +526,10 @@ function setupEventListeners() {
         });
     }
     
-    // Copy link buttons (Details tab + persistent bar)
+    // Copy invitation button (Invite tab)
     const copyPlayerLinkBtn = document.getElementById('copyPlayerLink');
     if (copyPlayerLinkBtn) {
         copyPlayerLinkBtn.addEventListener('click', () => copyPlayerInvitation('copyPlayerLink'));
-    }
-    const copyPlayerLinkPersistentBtn = document.getElementById('copyPlayerLinkPersistent');
-    if (copyPlayerLinkPersistentBtn) {
-        copyPlayerLinkPersistentBtn.addEventListener('click', () => copyPlayerInvitation('copyPlayerLinkPersistent'));
     }
 
 
@@ -911,8 +932,7 @@ async function copyPlayerLinkOnly() {
 function populateShareLinks() {
     const shareSection = document.querySelector('.share-section');
     const copyButton = document.getElementById('copyPlayerLink');
-    const persistentCopyButton = document.getElementById('copyPlayerLinkPersistent');
-    
+
     if (!shareSection || !copyButton) return;
     
     // Check if game is expired or cancelled
@@ -937,7 +957,6 @@ function populateShareLinks() {
     }
     
     setButtonState(copyButton, shouldDisable);
-    setButtonState(persistentCopyButton, shouldDisable);
     
     if (shouldDisable) {
         // Update the description text in share section

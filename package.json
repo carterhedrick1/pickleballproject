@@ -33,6 +33,7 @@
     "docs:publish": "node scripts/publish-docs.js"
   },
   "dependencies": {
+    "compression": "^1.8.1",
     "dotenv": "^16.5.0",
     "express": "^4.18.2",
     "express-rate-limit": "^7.5.0",

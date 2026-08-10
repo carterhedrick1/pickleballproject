@@ -6,6 +6,7 @@
 // after everything. /api/health stays here too - it is how a deploy is confirmed, so it
 // should not sit inside any group being changed.
 const express = require('express');
+const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
@@ -43,8 +44,17 @@ app.set('trust proxy', 1);
 const databaseReady = initializeDatabase();
 
 // Middleware
+app.use(compression());
 app.use(express.json());
-app.use(express.static('public'));
+// maxAge lets browsers and the CDN reuse CSS/JS/images for an hour instead of
+// re-fetching all of them on every page view. Pages themselves stay no-cache so
+// a deploy shows up on the next visit rather than up to an hour later.
+app.use(express.static('public', {
+  maxAge: '1h',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+  }
+}));
 app.use('/api', (req, res, next) => {
   databaseReady.then(() => next()).catch(next);
 });

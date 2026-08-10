@@ -1,7 +1,9 @@
 // footer.js
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', function() {
+    // Same rule as the header: paint immediately with the bundled slogan and
+    // let the server rotation's pick replace it when it arrives.
     const slogan = window.InOrOutSlogans
-        ? await window.InOrOutSlogans.getForPage()
+        ? window.InOrOutSlogans.chooseLocal()
         : 'Pickleball Organizer';
     const footerHTML = `
         <footer class="site-footer">
@@ -48,4 +50,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Insert footer at the end of body
     document.body.insertAdjacentHTML('beforeend', footerHTML);
     document.querySelector('.footer-slogan').textContent = slogan;
+    if (window.InOrOutSlogans) {
+        window.InOrOutSlogans.getForPage().then(function(rotated) {
+            const sloganEl = document.querySelector('.footer-slogan');
+            if (sloganEl && rotated) sloganEl.textContent = rotated;
+        }).catch(function() {});
+    }
 });
