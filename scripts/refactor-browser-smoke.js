@@ -773,6 +773,72 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       'a cancelled upcoming game offers immediate permanent deletion'
     );
 
+    const repeatLink = await desktop.evaluate(`(() => {
+      const card = document.querySelector('#pastList .game-item.cancelled');
+      const link = [...card.querySelectorAll('a.btn')]
+        .find((anchor) => anchor.textContent.trim() === 'Run It Again');
+      return {
+        href: link && link.getAttribute('href'),
+        offeredOnUpcoming: [...document.querySelectorAll('#upcomingList a.btn')]
+          .some((anchor) => anchor.textContent.trim() === 'Run It Again')
+      };
+    })()`);
+    assert(
+      repeatLink.href && repeatLink.href.startsWith('/create.html?repeat=') &&
+        !repeatLink.offeredOnUpcoming,
+      'past games offer Run It Again and upcoming games do not'
+    );
+
+    await desktop.goto(`${local.baseUrl}${repeatLink.href}`);
+    await cdp.sleep(1200);
+    const repeated = await desktop.evaluate(`(() => {
+      const nextWeek = PageUtils.nextWeeklyDate('${fx.date}');
+      return {
+        notice: document.getElementById('repeatNotice').textContent,
+        noticeVisible: !document.getElementById('repeatNotice').hidden,
+        location: document.getElementById('location').value,
+        date: document.getElementById('date').value,
+        expectedDate: nextWeek,
+        time: document.getElementById('time').value,
+        duration: document.getElementById('duration').value,
+        players: document.getElementById('players').value,
+        organizerPlaying: document.getElementById('organizerPlaying').checked,
+        message: document.getElementById('message').value,
+        mode: document.querySelector('input[name="registrationMode"]:checked').value,
+        modeHighlighted: document.querySelector('.mode-option[data-radio-id="waitlistMode"]')
+          .classList.contains('checked'),
+        joinsOn: document.getElementById('notifyPlayerJoins').checked,
+        joinsHighlighted: document.querySelector('[data-checkbox-id="notifyPlayerJoins"]')
+          .classList.contains('checked'),
+        repeatedGameCreated: JSON.parse(localStorage.getItem('myGames') || '[]')
+          .filter((stored) => stored.location === 'Riverside Athletic Club').length,
+        today: new Date().toISOString().slice(0, 10)
+      };
+    })()`);
+    assert(
+      repeated.location === 'Riverside Athletic Club' && repeated.time === '09:30' &&
+        repeated.duration === '120' && repeated.players === '3' && repeated.organizerPlaying &&
+        repeated.message.includes('3.5+ level'),
+      `Run It Again refills the court, time, length and player count (${repeated.location})`
+    );
+    assert(
+      repeated.mode === 'waitlist' && repeated.modeHighlighted &&
+        repeated.joinsOn && repeated.joinsHighlighted,
+      'the registration mode and notification toggles come back with their visual state'
+    );
+    assert(
+      repeated.date === repeated.expectedDate && repeated.date >= repeated.today,
+      `the repeated game is never dated in the past (${repeated.date})`
+    );
+    assert(
+      repeated.noticeVisible && repeated.notice.includes('Riverside Athletic Club') &&
+        repeated.repeatedGameCreated === 0,
+      'the repeat is a filled-in form, not a game created behind the host'
+    );
+
+    await desktop.goto(`${local.baseUrl}/my-games.html`);
+    await cdp.sleep(700);
+
     const deletePanelOpened = await desktop.evaluate(`(() => {
       const card = document.querySelector('#pastList .game-item.cancelled');
       card.querySelector('[data-delete]').click();

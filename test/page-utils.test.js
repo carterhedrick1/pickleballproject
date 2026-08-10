@@ -73,6 +73,31 @@ describe('PageUtils', () => {
     assert.equal(PageUtils.formatDuration('2026-07-27T11:59:50.000Z', now), 'just now');
   });
 
+  it('moves a repeated game to the next same weekday', () => {
+    const now = new Date(2026, 6, 27, 12, 0); // Monday 27 July 2026
+
+    // A game played last Tuesday repeats tomorrow, not seven days from today.
+    assert.equal(PageUtils.nextWeeklyDate('2026-07-21', now), '2026-07-28');
+    // Six weeks of not getting round to it still lands on a Tuesday.
+    assert.equal(PageUtils.nextWeeklyDate('2026-06-16', now), '2026-07-28');
+    // Today's game repeats next week rather than in the past.
+    assert.equal(PageUtils.nextWeeklyDate('2026-07-27', now), '2026-08-03');
+  });
+
+  it('leaves a repeated game that is still ahead of us where it is', () => {
+    const now = new Date(2026, 6, 27, 12, 0);
+
+    assert.equal(PageUtils.nextWeeklyDate('2026-07-30', now), '2026-07-30');
+  });
+
+  it('crosses a month boundary without drifting off the weekday', () => {
+    const now = new Date(2026, 6, 27, 12, 0);
+
+    assert.equal(PageUtils.nextWeeklyDate('2026-07-30', new Date(2026, 7, 1, 12, 0)), '2026-08-06');
+    assert.equal(PageUtils.nextWeeklyDate('', now), '');
+    assert.equal(PageUtils.nextWeeklyDate('not-a-date', now), '');
+  });
+
   it('says nothing when a timestamp is missing or unreadable', () => {
     assert.equal(PageUtils.formatTimeAgo(undefined), '');
     assert.equal(PageUtils.formatTimeAgo(''), '');
