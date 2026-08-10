@@ -13,7 +13,6 @@
 const {
   getGame,
   saveGame,
-  getRosterForHost,
   getSmsEventsForGame,
   recipientHash
 } = require('../database');
@@ -33,6 +32,7 @@ const { routeFailed } = require('../utils/route-error');
 const { isHost } = require('../utils/host-auth');
 const { isGameUpcoming } = require('../utils/central-time');
 const { buildDeterministicInvitation } = require('../services/invitation-message');
+const { getVisibleHostRoster } = require('../services/host-roster');
 const { resolveTextMessage } = require('../services/text-message-rotation');
 const { normalizePhone } = require('../public/js/invite-status');
 
@@ -103,8 +103,12 @@ module.exports = function mountInvitationRoutes(app) {
         });
       }
 
-      const roster = await getRosterForHost(game.hostPhone);
-      const rosterByPhone = new Map(roster.map((player) => [player.playerPhone, player]));
+      // Validate against the exact same union shown in the picker. That includes players from
+      // older games created before the separate saved-roster table existed.
+      const roster = await getVisibleHostRoster(game.hostPhone);
+      const rosterByPhone = new Map(
+        roster.map((player) => [formatPhoneNumber(player.phone), player])
+      );
       const unknown = requested.filter((phone) => !rosterByPhone.has(phone));
       if (unknown.length) {
         return res.status(400).json({ error: 'Every invitation must go to somebody on your saved roster.' });

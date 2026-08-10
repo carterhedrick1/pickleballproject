@@ -12,6 +12,7 @@ const {
 
 const { formatPhoneNumber } = require('../sms-handler');
 const { computeHostStats } = require('../stats');
+const { getVisibleHostRoster } = require('../services/host-roster');
 const { routeFailed } = require('../utils/route-error');
 const { requireVerifiedHostPhone } = require('../utils/host-auth');
 
@@ -25,76 +26,7 @@ module.exports = function mountRosterRoutes(app) {
     try {
       const hostPhone = formatPhoneNumber(req.params.phone);
 
-      const [rosterRows, games] = await Promise.all([
-        getRosterForHost(hostPhone),
-        getGamesByHostPhone(hostPhone)
-      ]);
-
-      const byPhone = new Map();
-
-      for (const game of games) {
-        const countedThisGame = new Set();
-        const entries = [
-          ...(game.players || []),
-          ...(game.waitlist || []),
-          ...(game.outPlayers || [])
-        ];
-
-        for (const entry of entries) {
-          if (!entry || !entry.phone) continue;                 // phoneless entries can't be matched
-          const phone = formatPhoneNumber(entry.phone);
-          if (!phone || phone === hostPhone) continue;          // the host is not on their own roster
-
-          let record = byPhone.get(phone);
-          if (!record) {
-            record = {
-              phone,
-              name: '',
-              duprId: '',
-              duprRating: null,
-              isAndroid: null,
-              lastSeen: null,
-              gamesCount: 0
-            };
-            byPhone.set(phone, record);
-          }
-
-          // A player on both the waitlist and the out list is still one game.
-          if (!countedThisGame.has(phone)) {
-            countedThisGame.add(phone);
-            record.gamesCount += 1;
-          }
-
-          const when = entry.joinedAt || entry.outAt || game.created || game.date || null;
-          if (when && (!record.lastSeen || when > record.lastSeen)) {
-            record.lastSeen = when;
-            if (entry.name) record.name = entry.name;           // most recent name they signed up with
-          } else if (entry.name && !record.name) {
-            record.name = entry.name;
-          }
-        }
-      }
-
-      for (const row of rosterRows) {
-        const record = byPhone.get(row.playerPhone) || {
-          phone: row.playerPhone,
-          name: '',
-          duprId: '',
-          duprRating: null,
-          isAndroid: null,
-          lastSeen: null,
-          gamesCount: 0
-        };
-        if (row.name) record.name = row.name;
-        record.duprId = row.duprId;
-        record.duprRating = row.duprRating;
-        record.isAndroid = row.isAndroid;
-        byPhone.set(row.playerPhone, record);
-      }
-
-      const roster = [...byPhone.values()].sort((a, b) =>
-        (a.name || a.phone).localeCompare(b.name || b.phone, undefined, { sensitivity: 'base' })
-      );
+      const roster = await getVisibleHostRoster(hostPhone);
 
       res.json({ phoneNumber: hostPhone, count: roster.length, roster });
     } catch (error) {

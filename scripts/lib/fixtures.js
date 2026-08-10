@@ -171,6 +171,26 @@ function seedSmsEvent({ gameId, eventId, phone, status = 'sent', attempts = 1, e
   });
 }
 
+// Models a player from before host_roster existed: they remain in a fixture game and therefore
+// in the visible roster, but have no separate saved row. The guards keep this helper incapable
+// of touching non-fixture data.
+function removeSavedRosterFixture(hostPhone, playerPhone) {
+  if (hostPhone !== HOST_PHONE || !/^555555\d{4}$/.test(playerPhone)) {
+    return Promise.reject(new Error('Refusing to remove a non-fixture roster row'));
+  }
+  const sqlite3 = require('sqlite3');
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(DB_FILE, (err) => {
+      if (err) return reject(err);
+      db.run(
+        'DELETE FROM host_roster WHERE host_phone = ? AND player_phone = ?',
+        [hostPhone, playerPhone],
+        (runErr) => db.close(() => (runErr ? reject(runErr) : resolve()))
+      );
+    });
+  });
+}
+
 /**
  * Deletes fixture rows from the local SQLite database.
  * Only rows that carry MARKER and a fixture 555 phone are eligible, so this cannot remove a
@@ -245,6 +265,6 @@ function cleanup() {
 }
 
 module.exports = {
-  seed, verify, cleanup, seedSmsEvent,
+  seed, verify, cleanup, seedSmsEvent, removeSavedRosterFixture,
   MARKER, HOST_PHONE, FORM_PHONE, JOIN_PHONE, inDays, FIXTURE_LOCATIONS
 };
