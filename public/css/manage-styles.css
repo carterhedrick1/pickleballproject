@@ -885,6 +885,29 @@ button:active {
     line-height: 1.35;
 }
 
+/* Texting the invitation and saving who you meant to invite sit side by side. */
+.invite-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.invite-actions button {
+    flex: 1 1 220px;
+    margin: 0;
+}
+
+.invite-tracking-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.invite-tracking-list:empty {
+    margin-top: 0;
+}
+
 .roster-picker-actions {
     margin-top: 20px;
 }

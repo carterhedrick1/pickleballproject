@@ -11,9 +11,9 @@ const {
   normalizeDraftConfig
 } = require('../text-message-categories');
 
-test('defines all 14 editable text message categories with current previews', () => {
-  assert.equal(TEXT_MESSAGE_CATEGORIES.length, 14);
-  assert.equal(new Set(TEXT_MESSAGE_CATEGORIES.map((category) => category.id)).size, 14);
+test('defines all 15 editable text message categories with current previews', () => {
+  assert.equal(TEXT_MESSAGE_CATEGORIES.length, 15);
+  assert.equal(new Set(TEXT_MESSAGE_CATEGORIES.map((category) => category.id)).size, 15);
   TEXT_MESSAGE_CATEGORIES.forEach((category) => {
     assert.ok(category.title);
     assert.ok(category.addTitle);
@@ -28,10 +28,10 @@ test('defines all 14 editable text message categories with current previews', ()
   });
 });
 
-test("keeps You're In live while the other 13 category rotations are drafts", () => {
+test("keeps You're In live while the other 14 category rotations are drafts", () => {
   const live = TEXT_MESSAGE_CATEGORIES.filter((category) => category.live);
   assert.deepEqual(live.map((category) => category.id), ['youre-in']);
-  assert.equal(TEXT_MESSAGE_CATEGORIES.filter((category) => !category.live).length, 13);
+  assert.equal(TEXT_MESSAGE_CATEGORIES.filter((category) => !category.live).length, 14);
 });
 
 test('normalizes bulk message additions without merging their bodies', () => {
@@ -95,6 +95,7 @@ test('wires every toggle-controlled category into an outgoing SMS path', () => {
   const runtimeSources = [
     'routes/announcements.js',
     'routes/games.js',
+    'routes/invitations.js',
     'routes/players.js',
     'services/reminders.js',
     'services/sms-webhook.js'

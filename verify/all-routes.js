@@ -107,6 +107,9 @@ async function hit(method, path, { body, raw, headers = {} } = {}) {
   // announcements — one route, taking the people the host picked
   await hit('POST', `/api/games/${id}/announcement-individual`, { body: { token: tok, message: 'hi', recipients: [] } });
 
+  // invitations — an empty list is refused before anything can be texted
+  await hit('POST', `/api/games/${id}/invitations`, { body: { token: tok, playerPhones: [] } });
+
   // sms webhook
   await hit('POST', '/api/sms/webhook', { body: { fromNumber: '5555559001', text: '2' } });
 

@@ -151,8 +151,25 @@ const roster = [
     'says cancellation counts are incomplete');
   check(s.notes.some(n => /not how fast they reply/i.test(n)),
     'says signup speed is not response time');
-  eq(s.parked.nonResponders, null, 'non-responders parked until invites are tracked');
-  eq(s.parked.responseTimes, null, 'response times parked too');
+  eq(s.parked.responseTimes, null, 'response times still parked');
+  eq(s.invitations.gamesCounted, 0, 'no invited-versus-replied without texted invitations');
+
+  console.log('\n9b. Texted invitations make invited-versus-replied real');
+  const invited = computeHostStats('5555550000', [{
+    date: '2026-01-05', time: '18:00', created: '2026-01-01T00:00:00.000Z',
+    players: [{ name: 'Replied', phone: '5555550101' }],
+    waitlist: [], outPlayers: [],
+    invitedPlayers: [
+      { phone: '5555550101', name: 'Replied', textCount: 1 },
+      { phone: '5555550102', name: 'Quiet', textCount: 2 }
+    ]
+  }], []);
+  eq(invited.invitations.gamesCounted, 1, 'counts the game with texted invitations');
+  eq(invited.invitations.invited, 2, 'counts both invitees');
+  eq(invited.invitations.nonResponders, 1, 'one person never replied');
+  eq(invited.invitations.quiet[0].name, 'Quiet', 'names the quiet invitee');
+  check(invited.notes.some(n => /only counts invitations the app texted/i.test(n)),
+    'says copied invitations cannot be tracked');
 
   console.log('\n10. A host with no games gets a zeroed shape, not an error');
   const empty = computeHostStats('5555550000', [], []);

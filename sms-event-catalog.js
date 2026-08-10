@@ -57,6 +57,12 @@ const SMS_EVENT_DEFINITIONS = Object.freeze([
     description: 'The organizer moves the court, date, time, or duration and tells everyone signed up.'
   },
   {
+    id: 'game-invitation',
+    title: 'Game Invitation Sent',
+    recipient: 'Invited Roster Player',
+    description: 'The organizer texts the invitation to people on their roster, or nudges the ones who never replied.'
+  },
+  {
     id: 'organizer-announcement',
     title: 'Organizer Announcement',
     recipient: 'Organizer-Selected Players',

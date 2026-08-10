@@ -6,9 +6,55 @@
 //
 // Everything here is computed from data the app actually records. Where a number is only
 // partly knowable, it says so in `notes` rather than quietly presenting a half-truth - and the
-// stats that need invite tracking to be honest are left as nulls under `parked`.
+// stats that still need data the app does not record are left as nulls under `parked`.
 
 const { isGameUpcoming } = require('./utils/central-time');
+const { inviteStatus } = require('./public/js/invite-status');
+
+/**
+ * Invited-versus-replied, counted only from games where the app texted the invitation itself.
+ *
+ * A copied invitation records who the host meant to ask, not who received anything, so counting
+ * those would turn "I pasted this into a group chat" into "four people ignored you".
+ */
+function summarizeInvitations(games = []) {
+  let gamesCounted = 0;
+  let invited = 0;
+  let responded = 0;
+  const quietCounts = new Map();
+  const quietNames = new Map();
+
+  for (const game of games) {
+    const status = inviteStatus(game);
+    if (!status.texted) continue;
+
+    gamesCounted += 1;
+    invited += status.invited.length;
+    responded += status.responded.length;
+
+    for (const person of status.nonResponders) {
+      const key = person.phone;
+      quietCounts.set(key, (quietCounts.get(key) || 0) + 1);
+      if (person.name) quietNames.set(key, person.name);
+    }
+  }
+
+  const quiet = [...quietCounts.entries()]
+    .map(([key, timesQuiet]) => ({
+      name: quietNames.get(key) || 'Unknown player',
+      timesQuiet
+    }))
+    .sort((a, b) => b.timesQuiet - a.timesQuiet || a.name.localeCompare(b.name))
+    .slice(0, 5);
+
+  return {
+    gamesCounted,
+    invited,
+    responded,
+    nonResponders: invited - responded,
+    quiet
+  };
+}
 
 /** People are identified by phone. Failing that, by lowercased name - two phoneless "daves"
  *  in different games are treated as one person, which is the best guess available. */
@@ -58,8 +104,9 @@ function emptyStats(phone) {
     signupSpeed: [],
     schedule: { busiestLocation: null, favoriteDay: null, favoriteTime: null },
     dupr: { ratedPlayers: 0, min: null, max: null, average: null },
+    invitations: { gamesCounted: 0, invited: 0, responded: 0, nonResponders: 0, quiet: [] },
     notes: [],
-    parked: { nonResponders: null, responseTimes: null }
+    parked: { responseTimes: null }
   };
 }
 
@@ -215,8 +262,13 @@ function computeHostStats(phone, games = [], roster = []) {
     .slice(0, 5)
     .map(({ key, ...rest }) => rest);
 
+  const invitations = summarizeInvitations(games);
+
   // Honest caveats, shown on the page rather than buried here.
   const notes = [];
+  if (invitations.gamesCounted) {
+    notes.push('Invited-versus-replied only counts invitations the app texted for you. An invitation you copied and pasted somewhere else cannot be tracked.');
+  }
   if (outCounts.size) {
     notes.push('Cancellations are only counted from when this feature was added - earlier text-message cancellations are not counted.');
   }
@@ -244,10 +296,11 @@ function computeHostStats(phone, games = [], roster = []) {
       favoriteTime: favoriteTime ? { name: favoriteTime.value, games: favoriteTime.count } : null
     },
     dupr: duprSpread(roster),
+    invitations,
     notes,
-    // These need invite tracking - the app never learns who was invited, only who replied - so
-    // they stay null rather than being guessed at. See the plan's parked section.
-    parked: { nonResponders: null, responseTimes: null }
+    // How quickly people reply still needs a recorded send time on every invitation, including
+    // the copied ones, so it stays null rather than being guessed at.
+    parked: { responseTimes: null }
   };
 }
 

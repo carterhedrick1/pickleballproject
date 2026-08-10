@@ -126,6 +126,23 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     detailsMaxLength: DETAILS_MAX_LENGTH
   },
   {
+    id: 'game-invitation',
+    title: 'Game Invitation',
+    addTitle: 'Add A Game Invitation Text',
+    listTitle: 'Game Invitation Texts',
+    recipient: 'Invited Roster Player',
+    description:
+      'Sent when the organizer texts an invitation from the management page. The body is the same invitation the Copy Invitation button produces, so the two can never drift apart.',
+    preview:
+      "Let us know if you're IN or OUT for pickleball by clicking the link below:\n\nhttps://inorout.club/game.html?id=example\n\nLocation: Oak Park Courts\nDate: Saturday, August 1, 2026\nTime: 9:00 AM",
+    previewNote:
+      'The full invitation is built by the invitation builder and arrives here as {DEFAULT_TEXT}.',
+    defaultDetailsTemplate: DEFAULT_TEXT_TOKEN,
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'ORGANIZER'],
+    maxLength: 900,
+    detailsMaxLength: DETAILS_MAX_LENGTH
+  },
+  {
     id: 'game-details-changed',
     title: 'Game Details Changed',
     addTitle: 'Add A Game Details Changed Text',
