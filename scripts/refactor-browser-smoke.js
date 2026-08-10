@@ -284,6 +284,13 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       assert(response.ok, `${player.name} is available in the host roster fixture`);
     }
 
+    // Someone who said OUT and left a phone number - the audience for "a spot just opened".
+    await fetch(`${local.baseUrl}/api/games/${fx.open.gameId}/players`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Out Player', phone: '5555550888', action: 'out' })
+    });
+
     await desktop.goto(
       `${local.baseUrl}/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`
     );
@@ -332,7 +339,9 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     );
     assert(
       manageReady.personality === 'realist' &&
-        manageReady.intendedInviteeChoices === 2 &&
+        // Two seeded roster players plus the out player, who joined the host's roster by
+        // texting that they could not make it.
+        manageReady.intendedInviteeChoices === 3 &&
         manageReady.inviteeCopyIsHonest,
       'management edits Realist and tracks intended invitees without claiming delivery'
     );
@@ -541,6 +550,31 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     assert(
       recipientSelection.strayRecipients === 0,
       'notification preference toggles never count as announcement recipients'
+    );
+
+    const outAudience = await desktop.evaluate(`(() => {
+      const groups = ['sendToPlayers', 'sendToWaitlist', 'sendToOut'];
+      groups.forEach((id) => {
+        const group = document.getElementById(id);
+        group.checked = id === 'sendToOut';
+        group.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      const chosen = ManageApp.communications.getSelectedRecipients();
+      return {
+        label: document.querySelector('label[for="sendToOut"]')?.textContent.trim(),
+        rows: [...document.querySelectorAll('#playerCheckboxes .player-checkbox')]
+          .map((box) => box.dataset.type),
+        chosen: chosen.map((person) => person.type + ':' + person.name),
+        allPartial: document.getElementById('sendToAll').indeterminate
+      };
+    })()`);
+    assert(
+      outAudience.label === 'Players Who Are Out' && outAudience.rows.includes('out'),
+      'the out list is offered as its own recipient group and row'
+    );
+    assert(
+      outAudience.chosen.join('|') === 'out:Out Player' && outAudience.allPartial,
+      `choosing only the out list selects only those players (${outAudience.chosen.join('|')})`
     );
 
     await desktop.evaluate(`(() => {

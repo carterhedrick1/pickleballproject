@@ -18,97 +18,17 @@ const {
 } = require('../sms-handler');
 
 const { acquireGameLock } = require('../utils/game-lock');
+const { findOnGame } = require('../utils/game-audience');
 const { routeFailed } = require('../utils/route-error');
 const { isHost } = require('../utils/host-auth');
 const { resolveTextMessage } = require('../services/text-message-rotation');
 
 module.exports = function mountAnnouncementRoutes(app) {
-  // Send announcement
-  app.post('/api/games/:id/announcement', async (req, res) => {
-    try {
-      const gameId = req.params.id;
-      const { token, message, includeConfirmed, includeWaitlist, personalityWrapper } = req.body;
-      
-      const game = await getGame(gameId);
-      if (!game) {
-        return res.status(404).json({ error: 'Game not found' });
-      }
-      
-      if (!isHost(game, token)) {
-        return res.status(403).json({ error: 'Unauthorized' });
-      }
-      
-      if (!message || !message.trim()) {
-        return res.status(400).json({ error: 'Message is required' });
-      }
-      
-      let recipientCount = 0;
-      const results = [];
-      if (includeConfirmed) {
-        for (const player of game.players) {
-          if (player.phone && !player.isOrganizer) {
-            const configuredMessage = personalityWrapper === true ? await resolveTextMessage(
-              'organizer-announcement',
-              message,
-              {
-                ANNOUNCEMENT: message,
-                LOCATION: formatLocationForSMS(game),
-                DATE: formatDateForSMS(game.date),
-                TIME: formatTimeForSMS(game.time)
-              },
-              {
-                game,
-                gameId,
-                recipientPhone: player.phone,
-                audience: 'confirmed'
-              }
-            ) : message;
-            const result = await sendSMS(player.phone, configuredMessage, gameId, {
-              eventId: 'organizer-announcement'
-            });
-            results.push({ player: player.name, type: 'confirmed', result });
-            if (result.success) recipientCount++;
-          }
-        }
-      }
-      
-      if (includeWaitlist) {
-        for (const player of game.waitlist || []) {
-          if (player.phone) {
-            const configuredMessage = personalityWrapper === true ? await resolveTextMessage(
-              'organizer-announcement',
-              message,
-              {
-                ANNOUNCEMENT: message,
-                LOCATION: formatLocationForSMS(game),
-                DATE: formatDateForSMS(game.date),
-                TIME: formatTimeForSMS(game.time)
-              },
-              {
-                game,
-                gameId,
-                recipientPhone: player.phone,
-                audience: 'known-game-audience'
-              }
-            ) : message;
-            const result = await sendSMS(player.phone, configuredMessage, gameId, {
-              eventId: 'organizer-announcement'
-            });
-            results.push({ player: player.name, type: 'waitlist', result });
-            if (result.success) recipientCount++;
-          }
-        }
-      }
-      
-      res.json({ 
-        success: true, 
-        recipientCount,
-        results 
-      });
-    } catch (error) {
-      routeFailed(req, res, error, 'Failed to send announcement');
-    }
-  });
+  // There used to be a second, group-shaped announcement route here taking includeConfirmed and
+  // includeWaitlist. Nothing ever called it - the page always expands its groups into a list of
+  // people and posts them here - and the two paths tagged the randomizer audience differently,
+  // so the same announcement could pick a different message depending on which route sent it.
+  // The group route is gone and its audience tagging moved onto this one.
 
   // Send announcement to individual players
   app.post('/api/games/:id/announcement-individual', async (req, res) => {
@@ -135,42 +55,53 @@ module.exports = function mountAnnouncementRoutes(app) {
       
       let recipientCount = 0;
       const results = [];
+      const skipped = [];
       // Send to each selected recipient
       for (const recipient of recipients) {
-        if (recipient.phone) {
-          const configuredMessage = personalityWrapper === true ? await resolveTextMessage(
-            'organizer-announcement',
-            message,
-            {
-              ANNOUNCEMENT: message,
-              LOCATION: formatLocationForSMS(game),
-              DATE: formatDateForSMS(game.date),
-              TIME: formatTimeForSMS(game.time)
-            },
-            {
-              game,
-              gameId,
-              recipientPhone: recipient.phone
-            }
-          ) : message;
-          const result = await sendSMS(recipient.phone, configuredMessage, gameId, {
-            eventId: 'organizer-announcement'
-          });
-          results.push({ 
-            player: recipient.name, 
-            type: recipient.type, 
-            phone: recipient.phone,
-            result 
-          });
-          if (result.success) recipientCount++;
+        if (!recipient || !recipient.phone) continue;
+
+        // The client posts whichever names the host ticked, so the roster - not the request
+        // body - decides who can be texted and which audience rules apply to them.
+        const listed = findOnGame(game, recipient.phone);
+        if (!listed || listed.isOrganizer) {
+          skipped.push({ player: recipient.name || recipient.phone, reason: 'not on this game' });
+          continue;
         }
+
+        const configuredMessage = personalityWrapper === true ? await resolveTextMessage(
+          'organizer-announcement',
+          message,
+          {
+            ANNOUNCEMENT: message,
+            LOCATION: formatLocationForSMS(game),
+            DATE: formatDateForSMS(game.date),
+            TIME: formatTimeForSMS(game.time)
+          },
+          {
+            game,
+            gameId,
+            recipientPhone: recipient.phone,
+            audience: listed.type === 'confirmed' ? 'confirmed' : 'known-game-audience'
+          }
+        ) : message;
+        const result = await sendSMS(recipient.phone, configuredMessage, gameId, {
+          eventId: 'organizer-announcement'
+        });
+        results.push({
+          player: listed.player.name || recipient.name,
+          type: listed.type,
+          phone: recipient.phone,
+          result
+        });
+        if (result.success) recipientCount++;
       }
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         recipientCount,
         totalRecipients: recipients.length,
-        results 
+        skipped,
+        results
       });
     } catch (error) {
       routeFailed(req, res, error, 'Failed to send announcement');
