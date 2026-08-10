@@ -22,6 +22,17 @@ async function postAnnouncement(message, recipients, { personalityWrapper = fals
     return data;
 }
 
+// The server drops anybody who has left the game since the host ticked them, which otherwise
+// shows up only as a recipient count that is quietly one short.
+function announcementResultText(data) {
+    const sent = `Announcement sent to ${data.recipientCount} ${data.recipientCount === 1 ? 'player' : 'players'}.`;
+    const skipped = data.skipped || [];
+    if (skipped.length === 0) return sent;
+
+    const names = skipped.map((entry) => entry.player).join(', ');
+    return `${sent} ${skipped.length === 1 ? 'One person was' : `${skipped.length} people were`} skipped because they are no longer on this game: ${names}.`;
+}
+
 async function sendAnnouncement() {
     if (!GameUtils.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so announcements can no longer be sent.', 'error');
@@ -59,7 +70,7 @@ async function sendAnnouncement() {
         // The log below is about what this game has texted, so a send belongs in it now.
         loadDeliveryLog();
 
-        showStatus(`Announcement sent to ${data.recipientCount} ${data.recipientCount === 1 ? 'player' : 'players'}.`, 'success');
+        showStatus(announcementResultText(data), data.skipped?.length ? 'info' : 'success');
         
     } catch (error) {
         console.error('Error sending announcement:', error);

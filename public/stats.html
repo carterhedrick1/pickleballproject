@@ -55,6 +55,10 @@
                 <h3 class="section-subtitle">Who Plays</h3>
                 <div id="playersBlock"></div>
 
+                <h3 class="section-subtitle">Invitations</h3>
+                <div class="stat-grid" id="invitationCards"></div>
+                <div id="invitationBlock"></div>
+
                 <h3 class="section-subtitle">Where And When</h3>
                 <div class="stat-grid" id="scheduleCards"></div>
 
@@ -155,6 +159,7 @@
 
         function render(stats) {
             const { summary, fillRate, players, schedule, dupr, signupSpeed, notes } = stats;
+            const invitations = stats.invitations || { gamesCounted: 0, quiet: [] };
 
             document.getElementById('whichPhone').textContent = prettyPhone(stats.phoneNumber);
 
@@ -192,6 +197,28 @@
                     (p) => `<li>${esc(p.name)} <span class="count">- usually within ${p.medianMinutes} min of your posting (${p.samples} ${p.samples === 1 ? 'game' : 'games'})</span></li>`,
                     'Not enough first-come signups to tell yet.')}
             `;
+
+            // Only games where the app did the texting can answer this, so an untexted history
+            // says so rather than showing four zeroes as if nobody ever replied.
+            document.getElementById('invitationCards').innerHTML = invitations.gamesCounted
+                ? [
+                    statCard(invitations.invited, 'Invited'),
+                    statCard(invitations.responded, 'Replied'),
+                    statCard(invitations.nonResponders, 'Never Replied'),
+                    statCard(
+                        percent(invitations.invited
+                            ? invitations.responded / invitations.invited
+                            : null),
+                        'Reply Rate'
+                    )
+                ].join('')
+                : '';
+            document.getElementById('invitationBlock').innerHTML = invitations.gamesCounted
+                ? `<h4 class="section-subtitle" style="font-size:16px;">Goes Quiet The Most</h4>
+                   ${list(invitations.quiet,
+                       (p) => `<li>${esc(p.name)} <span class="count">- no reply ${p.timesQuiet} ${p.timesQuiet === 1 ? 'time' : 'times'}</span></li>`,
+                       'Everybody you invited has replied.')}`
+                : '<p class="muted">Text an invitation from a game\'s management page and this fills in. Invitations you copy and paste elsewhere cannot be tracked.</p>';
 
             document.getElementById('scheduleCards').innerHTML = [
                 statCard(esc(schedule.busiestLocation?.name || '--'), 'Usual Court'),
