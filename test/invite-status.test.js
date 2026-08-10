@@ -1,7 +1,11 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { inviteStatus, normalizePhone } = require('../public/js/invite-status');
-const { recordInvitations } = require('../routes/invitations');
+const {
+  recordInvitations,
+  mapWithConcurrency,
+  INVITATION_SEND_CONCURRENCY
+} = require('../routes/invitations');
 
 function game(overrides = {}) {
   return {
@@ -133,5 +137,23 @@ describe('recording an invitation send', () => {
     assert.equal(invited.length, 2);
     assert.equal(invited[0].textCount, 3);
     assert.equal(invited[0].lastTextedAt, undefined);
+  });
+});
+
+describe('sending an invitation group', () => {
+  it('runs a small group together, caps larger groups, and preserves roster order', async () => {
+    const phones = Array.from({ length: INVITATION_SEND_CONCURRENCY + 3 }, (_, index) => index);
+    let active = 0;
+    let peak = 0;
+    const results = await mapWithConcurrency(phones, INVITATION_SEND_CONCURRENCY, async (phone) => {
+      active++;
+      peak = Math.max(peak, active);
+      await new Promise((resolve) => setTimeout(resolve, 5 + (phone % 2) * 5));
+      active--;
+      return `sent-${phone}`;
+    });
+
+    assert.equal(peak, INVITATION_SEND_CONCURRENCY);
+    assert.deepEqual(results, phones.map((phone) => `sent-${phone}`));
   });
 });

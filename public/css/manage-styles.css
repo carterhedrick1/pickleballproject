@@ -123,20 +123,9 @@ body {
     color: var(--text-muted);
 }
 
-.loading-icon {
-    font-size: 32px;
-    margin-bottom: 16px;
-    animation: pulse 2s infinite;
-}
-
 .loading-text {
     font-size: 16px;
     color: var(--text-muted);
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
 }
 
 /* Tab system - modern design */

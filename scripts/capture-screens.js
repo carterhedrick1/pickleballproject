@@ -53,22 +53,24 @@ const openGuideSection = (id) => async (p) => {
   await cdp.sleep(1100);
 };
 
-const fillAndSubmitCreateForm = (fx) => async (p) => {
+const showCreateLoading = (fx) => async (p) => {
   await p.evaluate(`(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (url, options) => {
+      if (url === '/api/games' && options?.method === 'POST') return new Promise(() => {});
+      return originalFetch(url, options);
+    };
     const set = (id, v) => { const e = document.getElementById(id); e.value = v;
       e.dispatchEvent(new Event('input', { bubbles: true })); };
-    // The court is a dropdown now. "Somewhere new..." is what reveals the free-text box,
-    // and picking it is what a host does for a court nobody has played at yet.
     const select = document.getElementById('locationSelect');
     select.value = '__new__';
     select.dispatchEvent(new Event('change'));
     set('location', 'Sunset Park Courts');
     set('organizerName', 'Scott H.'); set('organizerPhone', '${fx.FORM_PHONE}');
     set('date', '${fixtures.inDays(4)}'); set('time', '17:30'); set('players', '4');
-    set('message', 'Doubles, casual pace. Bring a spare ball. ${fx.MARKER}');
     document.getElementById('gameForm').requestSubmit();
   })()`);
-  await cdp.sleep(2600);
+  await cdp.sleep(350);
 };
 
 const signUpAsPlayer = (fx) => async (p) => {
@@ -380,10 +382,10 @@ function buildScreens(fx) {
       url: `/create.html?repeat=${fx.open.gameId}&token=${fx.open.hostToken}`,
       title: 'Run It Again',
       note: 'Reached from a past game in My Games. Every field is copied from that game and the date moves to the next same weekday. Nothing is created until the host submits.' },
-    { file: 'create-done', of: '/create.html', size: 'narrow', url: '/create.html',
-      title: 'After you submit',
-      note: 'The share panel that replaces the form. Reached by actually filling it in and submitting.',
-      act: fillAndSubmitCreateForm(fx) },
+    { file: 'create-loading', of: '/create.html', size: 'narrow', url: '/create.html',
+      title: 'While The Game Is Created',
+      note: 'The pickleball loading screen appears immediately and stays up until Game Management opens.',
+      act: showCreateLoading(fx) },
 
     { file: 'game-open', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.open.gameId}`,
       title: 'Spots still open',
