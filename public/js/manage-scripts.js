@@ -297,7 +297,9 @@ async function fetchGameData() {
         // Populate game details (this will set notification preferences)
         await loadManagePersonalities();
         populateGameDetails();
-        
+        updateGameSummary();
+        updatePlayerLinkField();
+
         // Populate player lists
         updatePlayerLists();
 
@@ -387,6 +389,11 @@ function setupEventListeners() {
     document.querySelectorAll('[data-collapsible]').forEach((element) => {
         element.addEventListener('click', () => toggleCollapsible(element.dataset.collapsible));
     });
+
+    const copyLinkOnly = document.getElementById('copyPlayerLinkOnly');
+    if (copyLinkOnly) {
+        copyLinkOnly.addEventListener('click', copyPlayerLinkOnly);
+    }
 
     const sendToAll = document.getElementById('sendToAll');
     if (sendToAll) {
@@ -778,6 +785,79 @@ function showConfirmModal(title, message, confirmAction) {
 function closeModal() {
     const modal = document.getElementById('confirmModal');
     modal.style.display = 'none';
+}
+
+// The page used to open straight into form fields with nothing saying which game they belong
+// to. This sits outside the tab panes, so the answer travels with the host.
+function updateGameSummary() {
+    const summary = document.getElementById('gameSummary');
+    if (!summary || !gameData) return;
+
+    const dateText = PageUtils.formatLocalDate(gameData.date, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+    });
+    const timeText = formatTime(gameData.time);
+    const when = [dateText, timeText].filter(Boolean).join(' at ');
+    document.getElementById('gameSummaryHeadline').textContent = gameData.location
+        ? `${when} — ${gameData.location}`
+        : when;
+
+    const confirmed = (gameData.players || []).length;
+    const total = parseInt(gameData.totalPlayers, 10) || confirmed;
+    const waiting = (gameData.waitlist || []).length;
+    const out = (gameData.outPlayers || []).length;
+
+    const parts = [`${confirmed} of ${total} in`];
+    if (waiting) parts.push(`${waiting} waiting`);
+    if (out) parts.push(`${out} out`);
+
+    const status = GameUtils.getGameStatus(gameData);
+    if (status.type === 'cancelled') {
+        parts.push('Game cancelled');
+    } else if (status.type === 'expired') {
+        parts.push('Game ended');
+    } else {
+        const countdown = GameUtils.getTimeUntilGame(gameData.date, gameData.time);
+        if (countdown) parts.push(countdown === 'Game has started' ? countdown : `starts in ${countdown.replace(' away', '')}`);
+    }
+
+    document.getElementById('gameSummaryMeta').textContent = parts.join(' · ');
+    summary.hidden = false;
+}
+
+// Hosts kept having to dig the bare URL back out of the copied invitation text to build a QR
+// code or put it in a group chat description.
+function updatePlayerLinkField() {
+    const field = document.getElementById('playerLinkField');
+    if (!field) return;
+    field.value = `${window.location.origin}/game.html?id=${gameId}`;
+}
+
+async function copyPlayerLinkOnly() {
+    const field = document.getElementById('playerLinkField');
+    const button = document.getElementById('copyPlayerLinkOnly');
+    if (!field || !field.value) return;
+
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(field.value);
+        } else {
+            field.select();
+            document.execCommand('copy');
+        }
+        if (button) {
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            setTimeout(() => { button.textContent = originalText; }, 2000);
+        }
+        showStatus('Player link copied.', 'success');
+    } catch (error) {
+        console.error('Could not copy the player link:', error);
+        field.select();
+        showStatus('Could not copy automatically. The link is selected, so copy it by hand.', 'error');
+    }
 }
 
 function populateShareLinks() {

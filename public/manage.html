@@ -39,6 +39,13 @@
         </div>
         
         <div id="gameManagement" style="display: none;">
+            <!-- Which game am I looking at? Outside the tab panes so the answer follows the
+                 host onto every tab. -->
+            <div id="gameSummary" class="game-summary" hidden>
+                <div id="gameSummaryHeadline" class="game-summary-headline"></div>
+                <div id="gameSummaryMeta" class="game-summary-meta"></div>
+            </div>
+
             <!-- Mobile Tab Selection -->
             <div class="mobile-tab-container">
                 <select id="tabSelector" class="mobile-tab-selector">
@@ -205,6 +212,14 @@
                         <p>Copy a complete invitation message with all the game details and the sign-up link.</p>
                         <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
                         <p class="save-suggestion">Paste it into a text, an email, or a group chat.</p>
+                    </div>
+                    <div class="player-link-section">
+                        <label for="playerLinkField">Player Link:</label>
+                        <div class="player-link-row">
+                            <input type="text" id="playerLinkField" readonly>
+                            <button id="copyPlayerLinkOnly" class="copy-btn">Copy Link</button>
+                        </div>
+                        <p class="save-suggestion">Just the address on its own, for a QR code or a group chat description.</p>
                     </div>
                 </div>
 
@@ -413,6 +428,7 @@
                     </form>
                     
                     <h3 class="subsection-title">Quick Messages</h3>
+                    <p class="form-help-text">Both go to your confirmed players. You see the exact wording and confirm before anything is sent.</p>
                     <div class="quick-actions">
                         <button id="sendReminder" class="quick-action-btn btn-secondary">
                             Send Game Reminder

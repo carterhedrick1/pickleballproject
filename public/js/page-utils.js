@@ -33,6 +33,31 @@
         return new Date(year, month - 1, day, hours, minutes) < now;
     }
 
+    // "3 hours" reads better than a timestamp on a roster a host scans in a hurry, and it is
+    // the same phrase whether it answers "when did they sign up" or "how long have they waited".
+    function formatDuration(fromIso, now = new Date()) {
+        if (!fromIso) return '';
+        const started = new Date(fromIso);
+        if (isNaN(started.getTime())) return '';
+
+        const minutes = Math.floor((now.getTime() - started.getTime()) / 60000);
+        if (minutes < 0) return 'just now';
+        if (minutes < 1) return 'just now';
+        if (minutes < 60) return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+
+        const days = Math.floor(hours / 24);
+        return `${days} ${days === 1 ? 'day' : 'days'}`;
+    }
+
+    function formatTimeAgo(fromIso, now = new Date()) {
+        const duration = formatDuration(fromIso, now);
+        if (!duration) return '';
+        return duration === 'just now' ? 'just now' : `${duration} ago`;
+    }
+
     function belongsInPastGames(game, now = new Date()) {
         return Boolean(game?.cancelled) ||
             isGameCompleted(game?.date, game?.time, now);
@@ -47,6 +72,8 @@
         parseLocalDate,
         formatLocalDate,
         formatTime12Hour,
+        formatDuration,
+        formatTimeAgo,
         isGameCompleted,
         belongsInPastGames,
         canPermanentlyDelete

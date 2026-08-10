@@ -1,5 +1,27 @@
 // communications features for the management page.
 
+async function postAnnouncement(message, recipients, { personalityWrapper = false } = {}) {
+    const response = await fetch(
+        `/api/games/${gameId}/announcement-individual?token=${hostToken}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message,
+                recipients,
+                personalityWrapper,
+                token: hostToken
+            })
+        }
+    );
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || 'Failed to send announcement');
+    }
+    return data;
+}
+
 async function sendAnnouncement() {
     if (!GameUtils.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so announcements can no longer be sent.', 'error');
@@ -21,29 +43,12 @@ async function sendAnnouncement() {
         }
         
         showStatus('Sending announcement...', 'info');
-        
-        // Send to individual players
-        const response = await fetch(`/api/games/${gameId}/announcement-individual?token=${hostToken}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message,
-                recipients: recipients,
-                personalityWrapper: document.getElementById(
-                    'announcementPersonalityWrapper'
-                ).checked,
-                token: hostToken
-            })
+
+        const data = await postAnnouncement(message, recipients, {
+            personalityWrapper: document.getElementById(
+                'announcementPersonalityWrapper'
+            ).checked
         });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to send announcement');
-        }
-        
-        const data = await response.json();
         console.log('Announcement sent:', data);
         
         // Reset form
@@ -59,25 +64,77 @@ async function sendAnnouncement() {
     }
 }
 
-function sendQuickMessage(type) {
-    let message = '';
-    
+function quickMessageText(type) {
     if (type === 'reminder') {
         // TIMEZONE FIX: Use proper date formatting
         const formattedDate = formatDateForDisplay(gameData.date);
-        
-        message = `Reminder: Your pickleball game is on ${formattedDate} at ${formatTime(gameData.time)} — ${gameData.location}. Looking forward to seeing you there!`;
-    } else if (type === 'location') {
-        message = `Location details for our pickleball game: ${gameData.location}. Game starts at ${formatTime(gameData.time)}.`;
+
+        return `Reminder: Your pickleball game is on ${formattedDate} at ${formatTime(gameData.time)} — ${gameData.location}. Looking forward to seeing you there!`;
     }
-    
-    // Pre-fill the announcement form
-    document.getElementById('announcementText').value = message;
-    document.getElementById('sendToPlayers').checked = true;
-    document.getElementById('sendToWaitlist').checked = false;
-    
-    // Switch to Communication tab
-    openTabFromSelect('Communication');
+
+    if (type === 'location') {
+        // Repeating the location a player already has is not worth a text. The gate code in the
+        // host's private notes is - but only when the host has seen it in the confirmation and
+        // chosen to send it.
+        const notes = String(gameData.hostNotes || '').trim();
+        const base = `Location details for our pickleball game: ${gameData.location}. Game starts at ${formatTime(gameData.time)}.`;
+        return notes ? `${base} ${notes}` : base;
+    }
+
+    return '';
+}
+
+// Confirmed players only. A waitlisted player has no spot yet, so "your game is on Saturday"
+// and directions to the court would both be wrong for them.
+function confirmedRecipients() {
+    return (gameData?.players || [])
+        .filter((player) => player.phone && !player.isOrganizer)
+        .map((player) => ({
+            id: player.id,
+            phone: player.phone,
+            name: player.name,
+            type: 'confirmed'
+        }));
+}
+
+function sendQuickMessage(type) {
+    if (!GameUtils.getGameStatus(gameData).canEdit) {
+        showStatus('This game has ended, so announcements can no longer be sent.', 'error');
+        return;
+    }
+
+    const message = quickMessageText(type);
+    if (!message) return;
+
+    const recipients = confirmedRecipients();
+    if (recipients.length === 0) {
+        showStatus('None of your confirmed players have a phone number to text.', 'error');
+        return;
+    }
+
+    const includesNotes = type === 'location' && Boolean(String(gameData.hostNotes || '').trim());
+    const audience = `${recipients.length} confirmed ${recipients.length === 1 ? 'player' : 'players'}`;
+    const notesWarning = includesNotes
+        ? '\n\nThis includes your private host notes.'
+        : '';
+
+    showConfirmModal(
+        type === 'reminder' ? 'Send Game Reminder' : 'Send Location Details',
+        `Text this to ${audience} now?\n\n"${message}"${notesWarning}`,
+        async () => {
+            try {
+                showStatus('Sending...', 'info');
+                const data = await postAnnouncement(message, recipients);
+                showStatus(
+                    `Sent to ${data.recipientCount} ${data.recipientCount === 1 ? 'player' : 'players'}.`,
+                    'success'
+                );
+            } catch (error) {
+                console.error('Error sending quick message:', error);
+                showStatus('Error sending message: ' + error.message, 'error');
+            }
+        }
+    );
 }
 
 function getSelectedRecipients() {
@@ -471,6 +528,7 @@ window.ManageApp.communications = {
 
     sendAnnouncement,
     sendQuickMessage,
+    quickMessageText,
     getSelectedRecipients,
     toggleAllPlayers,
     updateGroupSelections,
