@@ -203,6 +203,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       window.fetch = async (url, options = {}) => {
         if (url === '/api/games' && options.method === 'POST') {
           window.__createPostKeys.push(options.headers?.['Idempotency-Key']);
+          sessionStorage.setItem('__createPostKeys', JSON.stringify(window.__createPostKeys));
           const response = await originalFetch(url, options);
           if (window.__createPostKeys.length === 1) {
             throw new TypeError('Load failed');
@@ -219,9 +220,22 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       set('message', '${fx.MARKER}');
       document.getElementById('gameForm').requestSubmit();
     })()`);
+    await cdp.sleep(150);
+    const createLoading = await desktop.evaluate(`(() => ({
+      visible: !document.getElementById('createLoadingOverlay').hidden,
+      busy: document.getElementById('gameForm').getAttribute('aria-busy'),
+      submitDisabled: document.querySelector('#gameForm button[type="submit"]').disabled,
+      loadingTitle: document.querySelector('.create-loading-card h2').textContent.trim(),
+      hasPickleball: Boolean(document.querySelector('.create-loading-card .pickleball-spinner'))
+    }))()`);
+    assert(
+      createLoading.visible && createLoading.busy === 'true' && createLoading.submitDisabled &&
+        createLoading.loadingTitle === 'Creating Your Game...' && createLoading.hasPickleball,
+      'submitting immediately covers the form with an accessible pickleball loading screen'
+    );
     await cdp.sleep(2500);
     const noImageResult = await desktop.evaluate(`(async () => {
-      const gameId = window.currentGameId;
+      const gameId = new URLSearchParams(location.search).get('id');
       const response = await fetch('/api/games/' + gameId + '/court-images');
       const library = await response.json();
       const gameResponse = await fetch('/api/games/' + gameId);
@@ -233,7 +247,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         totalPlayers: game.totalPlayers,
         confirmedPlayers: game.players.length,
         waitlistNotificationSaved: game.notificationPreferences?.waitlistStarts === true,
-        createPostKeys: window.__createPostKeys
+        createPostKeys: JSON.parse(sessionStorage.getItem('__createPostKeys') || '[]')
       };
     })()`);
     assert(
@@ -251,20 +265,21 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       noImageResult.createPostKeys[0] === noImageResult.createPostKeys[1],
       'a dropped creation response retries safely with the same idempotency key'
     );
-    const createSuccessView = await desktop.evaluate(`(() => ({
-      formHidden: document.querySelector('.form-section').hidden,
-      shareVisible: getComputedStyle(document.getElementById('shareLink')).display !== 'none',
+    const createLanding = await desktop.evaluate(`(() => ({
+      path: location.pathname,
+      tab: new URLSearchParams(location.search).get('tab'),
       heading: document.querySelector('.page-header h1').textContent.trim(),
-      hasManagementReminder: Boolean(document.querySelector('.management-reminder')),
-      canCreateAnother: Boolean(document.querySelector('a[href="/create.html"].create-another-link'))
+      inviteActive: document.getElementById('Invite').classList.contains('active'),
+      status: document.getElementById('status').textContent.trim(),
+      hasCopyInvitation: Boolean(document.getElementById('copyPlayerLink'))
     }))()`);
     assert(
-      createSuccessView.formHidden && createSuccessView.shareVisible &&
-      createSuccessView.heading === 'Game Created',
-      'successful creation replaces the reset form with the invitation step'
+      createLanding.path === '/manage.html' && createLanding.tab === 'Invite' &&
+        createLanding.heading === 'Game Management' && createLanding.inviteActive &&
+        createLanding.status === 'Game created. Invite your players below.' &&
+        createLanding.hasCopyInvitation,
+      'successful creation lands directly on the Game Management Invite tab'
     );
-    assert(!createSuccessView.hasManagementReminder && !createSuccessView.canCreateAnother,
-      'the success step omits the management reminder and create-another link');
 
     for (const player of [
       { phone: fx.JOIN_PHONE, name: 'Roster Player One', duprRating: 3.5 },
@@ -301,6 +316,55 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Out Player', phone: '5555550888', action: 'out' })
     });
+
+    // Reproduce the reported group size through the real API. This separate fixture keeps its
+    // invitation history from changing the management-screen assertions below.
+    const inviteGroupGame = await fetch(`${local.baseUrl}/api/games`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'Three Player Invite Test',
+        organizerName: 'Scott H.',
+        organizerPhone: fx.HOST_PHONE,
+        organizerPlaying: true,
+        date: fx.date,
+        time: '19:00',
+        duration: 90,
+        totalPlayers: 4,
+        message: fx.MARKER,
+        registrationMode: 'fcfs'
+      })
+    }).then((response) => response.json());
+    const inviteRoster = await fetch(`${local.baseUrl}/api/roster/${fx.HOST_PHONE}`, {
+      headers: {
+        'X-Game-Id': inviteGroupGame.gameId,
+        'X-Host-Token': inviteGroupGame.hostToken
+      }
+    }).then((response) => response.json());
+    const invitePhones = inviteRoster.roster.slice(0, 3).map((person) => person.phone);
+    const inviteGroupStartedAt = Date.now();
+    const inviteGroupResponse = await fetch(
+      `${local.baseUrl}/api/games/${inviteGroupGame.gameId}/invitations`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: inviteGroupGame.hostToken,
+          playerPhones: invitePhones
+        })
+      }
+    );
+    const inviteGroup = await inviteGroupResponse.json();
+    const recordedInvitePhones = new Set(
+      (inviteGroup.invitedPlayers || []).map((person) => person.phone)
+    );
+    assert(
+      invitePhones.length === 3 && inviteGroupResponse.status === 200 &&
+        inviteGroup.sentCount === 3 && inviteGroup.failedCount === 0 &&
+        invitePhones.every((phone) => recordedInvitePhones.has(phone)),
+      `three selected players are texted and recorded in one request ` +
+        `(${Date.now() - inviteGroupStartedAt}ms in dev mode)`
+    );
 
     await desktop.goto(
       `${local.baseUrl}/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`
@@ -512,6 +576,16 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
 
     const invitationSend = await desktop.evaluate(`(async () => {
       const before = document.getElementById('inviteSummary').textContent;
+      const originalFetch = window.fetch.bind(window);
+      let droppedInvitationResponse = false;
+      window.fetch = async (url, options = {}) => {
+        if (!droppedInvitationResponse && String(url).endsWith('/invitations') && options.method === 'POST') {
+          droppedInvitationResponse = true;
+          await originalFetch(url, options);
+          throw new TypeError('Load failed');
+        }
+        return originalFetch(url, options);
+      };
       const boxes = [...document.querySelectorAll('#intendedInviteeList .roster-player-checkbox')];
       boxes.forEach((box) => { box.checked = false; });
       // Roster Player Two has not joined this game, so they are a real invitee.
@@ -525,6 +599,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         .classList.contains('btn-danger');
       document.getElementById('confirmYes').click();
       await new Promise((resolve) => setTimeout(resolve, 1200));
+      window.fetch = originalFetch;
 
       const hostGame = await fetch(
         '/api/games/${fx.open.gameId}?token=${fx.open.hostToken}'
@@ -549,7 +624,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         ).display !== 'none',
         recordedTextCount: recorded && recorded.textCount,
         recordedStatus: recorded && recorded.lastTextStatus,
-        recordedAt: Boolean(recorded && recorded.lastTextedAt)
+        recordedAt: Boolean(recorded && recorded.lastTextedAt),
+        recoveredDroppedResponse: droppedInvitationResponse
       };
     })()`);
     assert(
@@ -562,10 +638,12 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     );
     assert(
       /Invitation texted to 1 person/.test(invitationSend.status) &&
+        invitationSend.recoveredDroppedResponse &&
         invitationSend.recordedTextCount === 1 &&
         invitationSend.recordedStatus === 'sent' &&
         invitationSend.recordedAt,
-      `a texted invitation is recorded against the game (${invitationSend.status})`
+      `a texted invitation is recorded and a dropped response is recovered without resending ` +
+        `(${invitationSend.status})`
     );
     assert(
       invitationSend.waiting === '2 invited · 1 out · 1 no reply' &&

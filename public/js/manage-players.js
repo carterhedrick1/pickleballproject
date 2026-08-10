@@ -280,6 +280,7 @@ async function textInvitations(phones, { confirmTitle, confirmQuestion } = {}) {
         confirmTitle || 'Text The Invitation',
         confirmQuestion || `Text the invitation to ${people} now?`,
         async () => {
+            const sendStartedAt = Date.now();
             try {
                 showStatus(`Texting the invitation to ${people}...`, 'info');
                 const response = await fetch(`/api/games/${gameId}/invitations`, {
@@ -304,11 +305,63 @@ async function textInvitations(phones, { confirmTitle, confirmQuestion } = {}) {
                 );
             } catch (error) {
                 console.error('Error texting invitations:', error);
-                showStatus('Could not send the invitations: ' + error.message, 'error');
+                const recovered = await recoverInvitationSend(playerPhones, sendStartedAt);
+                if (recovered) {
+                    gameData.invitedPlayers = recovered.invitedPlayers;
+                    clearInviteSelection();
+                    renderInvitePicker();
+                    renderInvitations();
+                    const sentText = `Invitation texted to ${recovered.sentCount} ${recovered.sentCount === 1 ? 'person' : 'people'}`;
+                    showStatus(
+                        recovered.failedCount
+                            ? `${sentText}. ${recovered.failedCount} did not go through.`
+                            : `${sentText}.`,
+                        recovered.failedCount ? 'error' : 'success'
+                    );
+                    return;
+                }
+                const detail = /load failed|failed to fetch|network/i.test(error.message)
+                    ? 'The connection ended before the server answered. Check Who You Invited before trying again.'
+                    : error.message;
+                showStatus('Could not send the invitations: ' + detail, 'error');
             }
         },
         { destructive: false, confirmLabel: 'Send It' }
     );
+}
+
+// Safari reports a dropped response as "Load failed" even when the server finished the work.
+// Read the host-only game back before claiming failure. This never retries a text, so recovering
+// the answer cannot accidentally send somebody the same invitation twice.
+async function recoverInvitationSend(phones, sendStartedAt) {
+    const wanted = new Set(phones.map(normalizedPlayerPhone));
+    const earliest = sendStartedAt - 5000;
+    const retryDelays = [0, 500, 1500];
+
+    for (const delay of retryDelays) {
+        if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+        try {
+            const response = await fetch(`/api/games/${gameId}?token=${hostToken}`);
+            if (!response.ok) continue;
+            const latestGame = await response.json();
+            const recent = (latestGame.invitedPlayers || []).filter((person) =>
+                wanted.has(normalizedPlayerPhone(person.phone)) &&
+                Number.isFinite(Date.parse(person.lastTextedAt)) &&
+                Date.parse(person.lastTextedAt) >= earliest
+            );
+            const matched = new Set(recent.map((person) => normalizedPlayerPhone(person.phone)));
+            if (matched.size !== wanted.size) continue;
+
+            return {
+                invitedPlayers: latestGame.invitedPlayers,
+                sentCount: recent.filter((person) => person.lastTextStatus === 'sent').length,
+                failedCount: recent.filter((person) => person.lastTextStatus !== 'sent').length
+            };
+        } catch (recoveryError) {
+            console.warn('Could not check whether the invitation send finished:', recoveryError);
+        }
+    }
+    return null;
 }
 
 // invitedPlayers has been stored for a long time without ever being compared against who
@@ -1079,6 +1132,7 @@ window.ManageApp.players = {
     updatePlayerLists,
     loadHostRoster,
     textInvitations,
+    recoverInvitationSend,
     renderInvitations,
     renderInvitePicker,
     recordCopiedInvitees,

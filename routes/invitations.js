@@ -37,6 +37,23 @@ const { resolveTextMessage } = require('../services/text-message-rotation');
 const { normalizePhone } = require('../public/js/invite-status');
 
 const MAX_INVITES_PER_REQUEST = 50;
+const INVITATION_SEND_CONCURRENCY = 5;
+
+async function mapWithConcurrency(items, limit, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(Math.max(1, limit), items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex++;
+        results[index] = await mapper(items[index], index);
+      }
+    }
+  );
+  await Promise.all(workers);
+  return results;
+}
 
 module.exports = function mountInvitationRoutes(app) {
   // "I never got the reminder" used to be unanswerable. Every send is already recorded; this
@@ -98,32 +115,38 @@ module.exports = function mountInvitationRoutes(app) {
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       const invitation = buildDeterministicInvitation(game, gameId, baseUrl);
 
-      const results = [];
-      for (const phone of requested) {
-        const message = await resolveTextMessage(
-          'game-invitation',
-          invitation,
-          {
-            LOCATION: formatLocationForSMS(game),
-            DATE: formatDateForSMS(game.date),
-            TIME: formatTimeForSMS(game.time),
-            ORGANIZER: game.organizerName || ''
-          },
-          {
-            game,
-            gameId,
-            recipientPhone: phone,
-            audience: 'invitation-copy'
-          }
-        );
-        const result = await sendSMS(phone, message, gameId, { eventId: 'game-invitation' });
-        results.push({
-          phone,
-          name: rosterByPhone.get(phone).name || '',
-          success: Boolean(result.success),
-          error: result.success ? null : result.error || 'Text could not be sent'
-        });
-      }
+      // A host normally invites a handful of people. Those texts are independent, so send a
+      // small bounded group together instead of making three provider round trips serially.
+      // The bound also prevents a 50-person roster from becoming a 50-request burst.
+      const results = await mapWithConcurrency(
+        requested,
+        INVITATION_SEND_CONCURRENCY,
+        async (phone) => {
+          const message = await resolveTextMessage(
+            'game-invitation',
+            invitation,
+            {
+              LOCATION: formatLocationForSMS(game),
+              DATE: formatDateForSMS(game.date),
+              TIME: formatTimeForSMS(game.time),
+              ORGANIZER: game.organizerName || ''
+            },
+            {
+              game,
+              gameId,
+              recipientPhone: phone,
+              audience: 'invitation-copy'
+            }
+          );
+          const result = await sendSMS(phone, message, gameId, { eventId: 'game-invitation' });
+          return {
+            phone,
+            name: rosterByPhone.get(phone).name || '',
+            success: Boolean(result.success),
+            error: result.success ? null : result.error || 'Text could not be sent'
+          };
+        }
+      );
 
       // The game is only re-read and written after the texts, so a slow carrier never holds the
       // game lock. Recording a send that failed still matters: the host needs to see the attempt.
@@ -177,3 +200,5 @@ function recordInvitations(existing, results, now = new Date().toISOString()) {
 }
 
 module.exports.recordInvitations = recordInvitations;
+module.exports.mapWithConcurrency = mapWithConcurrency;
+module.exports.INVITATION_SEND_CONCURRENCY = INVITATION_SEND_CONCURRENCY;

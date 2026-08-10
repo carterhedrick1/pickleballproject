@@ -2,9 +2,7 @@
             // Set up form submission
             const gameForm = document.getElementById('gameForm');
             gameForm.addEventListener('submit', createGame);
-            
-            // Set up copy button - simplified
-            document.getElementById('copyLink').addEventListener('click', copyToClipboard);
+
             // TIMEZONE FIX: Set default date to tomorrow using local date
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
@@ -491,8 +489,9 @@ async function saveCourtImageChoice(gameId, hostToken, selectedValue) {
 
 async function createGame(e) {
     e.preventDefault();
-    
+
     const formData = new FormData(e.target);
+    setCreatingState(true);
     clearTimeout(courtImageLookupTimer);
     if (document.getElementById('locationSelect').value === NEW_LOCATION_VALUE) {
         courtImageLoadPromise = loadCourtImages(formData.get('location'));
@@ -530,8 +529,6 @@ async function createGame(e) {
     };
     
     try {
-        showStatus('Creating game...', 'info');
-
         const response = await postGameWithRetry(
             gameData,
             creationRequestFor(gameData)
@@ -550,9 +547,8 @@ async function createGame(e) {
             selectedImageValue
         );
 
-        // Save enough detail for the post-create invitation and browser history. Keep an
-        // in-memory copy too: a storage problem must never make a successfully-created game
-        // look like it failed or prevent the invitation from being copied.
+        // Save enough detail for browser history. A storage problem must never make a
+        // successfully-created game look like it failed or block Game Management.
         const createdGame = {
             id: data.gameId,
             hostToken: data.hostToken,
@@ -569,7 +565,6 @@ async function createGame(e) {
             created: new Date().toISOString(),
             cancelled: false
         };
-        window.currentGameData = createdGame;
         try {
             const storedGames = JSON.parse(localStorage.getItem('myGames') || '[]');
             const myGames = Array.isArray(storedGames) ? storedGames : [];
@@ -580,86 +575,53 @@ async function createGame(e) {
         }
 
         
-        // Replace the completed form with the invitation step.
-        showGameLinks(data.gameId, data.hostLink);
-        
-        // Clear form
-        document.getElementById('gameForm').reset();
-        resetCourtImagePicker();
-        document.getElementById('locationFreeText').style.display = 'none';
-        
-        // Set tomorrow's date and default time again
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const year = tomorrow.getFullYear();
-        const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
-        const day = String(tomorrow.getDate()).padStart(2, '0');
-        const tomorrowStr = `${year}-${month}-${day}`;
-        document.getElementById('date').value = tomorrowStr;
-        document.getElementById('time').value = '18:00';
-        
-        // Check SMS status and show appropriate message
-        let successMessage;
-        if (data.hostSms && data.hostSms.dev) {
-            successMessage = 'Game created successfully! SMS confirmation is disabled in development mode.';
-        } else if (data.hostSms && data.hostSms.success) {
-            successMessage = 'Game created successfully! Check your phone for confirmation. Reply "1" to get your management link.';
-        } else if (data.hostSms && !data.hostSms.success) {
-            successMessage = 'Game created — but we could not send your confirmation text.';
-        } else {
-            successMessage = 'Game created successfully!';
-        }
-        showStatus(
-            courtImageWarning ? `${successMessage} ${courtImageWarning}` : successMessage,
-            courtImageWarning ? 'warning' : 'success'
-        );
+        rememberCreationNotice(data.gameId, data.hostSms, courtImageWarning);
+
+        // The Invite tab already contains every sharing option. Keep the loading screen in
+        // place until this navigation begins so the reset create form never flashes again.
+        const manageUrl = new URL(data.hostLink, window.location.origin);
+        manageUrl.searchParams.set('tab', 'Invite');
+        manageUrl.searchParams.set('created', '1');
+        window.location.replace(`${manageUrl.pathname}${manageUrl.search}`);
         
     } catch (error) {
         console.error('[CLIENT] Error creating game:', error);
+        setCreatingState(false);
         showStatus('Error creating game: ' + error.message, 'error');
     }
 }
 
-        function showGameLinks(gameId, hostLink) {
-            // Store the game ID for the copy function
-            window.currentGameId = gameId;
+function setCreatingState(isCreating) {
+    const overlay = document.getElementById('createLoadingOverlay');
+    const form = document.getElementById('gameForm');
+    const submit = form?.querySelector('button[type="submit"]');
+    if (overlay) overlay.hidden = !isCreating;
+    if (form) form.setAttribute('aria-busy', String(isCreating));
+    if (submit) submit.disabled = isCreating;
+}
 
-            // The primary next step is inviting players from the manage page.
-            // Land on its Invite tab regardless of which tab was open last.
-            const inviteButton = document.getElementById('inviteYourPlayers');
-            if (inviteButton && hostLink) {
-                inviteButton.href = `${hostLink}&tab=Invite`;
-            }
+function rememberCreationNotice(gameId, hostSms, courtImageWarning) {
+    const warnings = [];
+    if (hostSms && !hostSms.success && !hostSms.dev) {
+        warnings.push('we could not send your confirmation text');
+    }
+    if (courtImageWarning) {
+        warnings.push('we could not attach the court photo');
+    }
 
-            // A successful submission advances to a distinct result view. Leaving a reset form
-            // above this panel makes the page look as though nothing was created, especially on
-            // a phone when the status message scrolls back to the top.
-            document.querySelector('.form-section').hidden = true;
-            document.querySelector('.page-header h1').textContent = 'Game Created';
-            document.getElementById('shareLink').style.display = 'block';
+    const notice = warnings.length
+        ? {
+            type: 'warning',
+            message: `Game created, but ${warnings.join(' and ')}. You can keep managing it here.`
         }
+        : { type: 'success', message: 'Game created. Invite your players below.' };
 
-        function copyToClipboard() {
-            const currentGameData = window.currentGameData ||
-                InvitationGenerator.getCurrentGameDataFromStorage();
-            if (!currentGameData) {
-                showStatus(
-                    "We couldn't find your game details on this device. Open the game from My Games and copy the invitation from there.",
-                    'error'
-                );
-                return;
-            }
-            if (!currentGameData.registrationMode) {
-                currentGameData.registrationMode = 'fcfs';
-            }
-            InvitationGenerator.copyInvitationToClipboard(
-                currentGameData,
-                window.currentGameId,
-                'copyLink',
-                null,
-                currentGameData.hostToken
-            );
-        }
+    try {
+        sessionStorage.setItem(`gameCreationNotice:${gameId}`, JSON.stringify(notice));
+    } catch (storageError) {
+        console.warn('Could not save the new-game notice:', storageError);
+    }
+}
 
         function showStatus(message, type) {
     const statusDiv = document.getElementById('status');

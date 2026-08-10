@@ -10,6 +10,16 @@
     <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body class="page-create">
+    <div id="createLoadingOverlay" class="create-loading-overlay" role="status" aria-live="polite" hidden>
+        <div class="create-loading-card">
+            <div class="pickleball-spinner" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <h2>Creating Your Game...</h2>
+            <p>We&rsquo;re setting up Game Management. Keep this page open.</p>
+        </div>
+    </div>
+
     <div class="container">
         <div class="page-header">
             <div class="header-content">
@@ -237,27 +247,11 @@
             </form>
         </div>
 
-        <!-- MOVE the shareLink section INSIDE the container but OUTSIDE the form-section: -->
-        <div id="shareLink" class="share-section" style="display: none;">
-            <h3 class="share-title">Your Game Has Been Created!</h3>
-
-            <div class="center-copy-section">
-                <a id="inviteYourPlayers" class="create-game-btn" href="#">Invite Your Players</a>
-                <p class="save-suggestion">Also your management page &mdash; players, texts, and changes all live there.</p>
-            </div>
-
-            <div class="center-copy-section">
-                <button id="copyLink" class="copy-btn">Copy Invitation Message</button>
-                <p class="save-suggestion">Anyone with the link can sign up &mdash; they don't need an account.</p>
-            </div>
-
-        </div>
     </div> <!-- Close container -->
 
     <script src="/js/player-capacity.js"></script>
     <script src="/js/page-utils.js"></script>
     <script src="/js/create.js"></script>
-    <script src="/js/invitation-generator.js"></script>
     <script src="/js/slogans.js"></script>
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>

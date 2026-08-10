@@ -7,6 +7,11 @@ const PERMANENT_SMS_ERRORS = [
 
 const { normalizeSmsEventId } = require('../sms-event-catalog');
 
+// A provider connection must finish before the hosting proxy gives up on the browser request.
+// Callers turn this into an ordinary failed text, so one stalled provider response cannot leave
+// a host looking at Safari's unhelpful "Load failed" message.
+const SMS_PROVIDER_TIMEOUT_MS = 12000;
+
 async function recordSmsResult(to, gameId, eventId, result, attempts = 1) {
   if (process.env.SMS_DISABLE_EVENT_LOGGING === '1') return;
   try {
@@ -64,7 +69,8 @@ async function performSendSMS(to, message, gameId = null) {
     const response = await fetch('https://textbelt.com/text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(params)
+      body: new URLSearchParams(params),
+      signal: AbortSignal.timeout(SMS_PROVIDER_TIMEOUT_MS)
     });
     const result = await response.json();
 
@@ -133,6 +139,7 @@ async function sendSMSWithRetry(
 
 module.exports = {
   PERMANENT_SMS_ERRORS,
+  SMS_PROVIDER_TIMEOUT_MS,
   isPermanentSmsError,
   sendSMS,
   sendSMSWithRetry

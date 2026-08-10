@@ -1,6 +1,6 @@
 const { describe, it, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
-const { sendSMS } = require('../services/sms-client');
+const { sendSMS, SMS_PROVIDER_TIMEOUT_MS } = require('../services/sms-client');
 
 const ORIGINAL_ENV = {
   DATABASE_URL: process.env.DATABASE_URL,
@@ -61,6 +61,8 @@ describe('SMS environment safety', () => {
 
     assert.equal(result.success, true);
     assert.equal(request.url, 'https://textbelt.com/text');
+    assert.equal(request.options.signal.aborted, false);
+    assert.equal(SMS_PROVIDER_TIMEOUT_MS, 12000);
     assert.equal(
       request.options.body.get('replyWebhookUrl'),
       'https://reachable-tunnel.example/api/sms/webhook'

@@ -182,8 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function restoreActiveTab() {
-    // A tab named in the URL wins (the Game Created screen links straight to
-    // Invite), then the tab from the last visit, then Invite - the first job
+    // A tab named in the URL wins (new games link straight to Invite), then the tab
+    // from the last visit, then Invite - the first job
     // on a fresh game is getting players into it.
     const requestedTab = new URLSearchParams(window.location.search).get('tab');
     let activeTab = requestedTab || localStorage.getItem('managePageActiveTab') || 'Invite';
@@ -326,6 +326,8 @@ async function fetchGameData() {
         if (GameUtils.getGameStatus(gameData).canEdit) {
             populateShareLinks();
         }
+
+        showCreationNotice();
         
         // If game is expired, force switch to Players tab (read-only)
         if (!GameUtils.getGameStatus(gameData).canEdit) {
@@ -340,6 +342,25 @@ async function fetchGameData() {
         showStatus('Error loading game: ' + error.message, 'error');
         document.getElementById('loading').style.display = 'none';
     }
+}
+
+function showCreationNotice() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('created') !== '1') return;
+
+    let notice = { type: 'success', message: 'Game created. Invite your players below.' };
+    try {
+        const saved = sessionStorage.getItem(`gameCreationNotice:${gameId}`);
+        if (saved) notice = JSON.parse(saved);
+        sessionStorage.removeItem(`gameCreationNotice:${gameId}`);
+    } catch (storageError) {
+        console.warn('Could not read the new-game notice:', storageError);
+    }
+
+    showStatus(notice.message, notice.type);
+    params.delete('created');
+    const cleanUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+    window.history.replaceState({}, '', cleanUrl);
 }
 
 let managePersonalityListPromise;
