@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Manage Pickleball Game</title>
+    <title>Manage Your Game - IN or OUT</title>
     
     <!-- Load our separated CSS files -->
     <link rel="stylesheet" href="/css/header.css">
@@ -16,7 +16,7 @@
         <div class="page-header">
             <div class="header-content">
                 <h1>Game Management</h1>
-                <div class="subtitle">Manage your pickleball game with ease</div>
+                <div class="subtitle">Everything for this game in one place</div>
             </div>
         </div>
         
@@ -93,7 +93,7 @@
                         <div class="form-group">
                             <label id="playersLabel" for="players">Number Of Additional Players Needed:</label>
                             <input type="number" id="players" name="players" min="1" max="50" required>
-                            <div id="playersHelp" class="form-help-text">This does not include you as the organizer.</div>
+                            <div id="playersHelp" class="form-help-text">You are already Player 1. Enter only the number of other players you need.</div>
                         </div>
                         
                         <div class="form-group">
@@ -181,7 +181,7 @@
 
                     <section class="roster-picker" aria-labelledby="intendedInviteesTitle" style="margin-top:24px">
                         <h3 id="intendedInviteesTitle">Intended Invitees</h3>
-                        <p class="form-help-text">Select people you intend to include when you copy the invitation. IN or OUT records intent only; it does not know who receives a message copied into another app.</p>
+                        <p class="form-help-text">Select people you intend to include when you copy the invitation. IN or OUT can only record who you meant to invite. It cannot see who actually received a message you pasted into another app.</p>
                         <div id="intendedInviteeStatus" class="roster-picker-status" aria-live="polite">Loading your roster...</div>
                         <div id="intendedInviteeList" class="roster-picker-list"></div>
                         <button type="button" id="saveIntendedInvitees">Save Intended Invitees</button>
@@ -191,16 +191,16 @@
                 <div class="share-section">
                     <h3 class="share-title">Share Your Game</h3>
                     <div class="center-copy-section">
-                        <p>Click the button below to copy a complete invitation message with all game details and registration link:</p>
+                        <p>Copy a complete invitation message with all the game details and the sign-up link.</p>
                         <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
-                        <p class="save-suggestion">This copies a complete invitation message that you can send via text, email, or social media. It includes all game details and the registration link.</p>
+                        <p class="save-suggestion">Paste it into a text, an email, or a group chat.</p>
                     </div>
                 </div>
 
                 <!-- Court Images: let host manage court image library -->
                 <div class="form-section court-images-section">
                     <h2 class="section-title">Court Image</h2>
-                    <p class="court-images-intro">Update the image shown on the player link you already sent, or select No Image. Players will see the change automatically.</p>
+                    <p class="court-images-intro">Update the image shown on the player link you already sent, or choose "No Image". Players will see the change automatically.</p>
 
                     <div id="courtImageGallery" class="court-image-gallery">
                         <div id="courtImageList" class="court-image-list"></div>
@@ -249,7 +249,7 @@
                         <div class="player-section confirmed">
                             <h3 class="subsection-title">Confirmed Players</h3>
                             <div class="player-count">
-                                <span id="playerCount">0</span>/<span id="totalPlayers">0</span> spots filled
+                                <span id="playerCount">0</span>/<span id="totalPlayers">0</span> <span id="playerCountWord">players</span>
                             </div>
                             <div id="confirmedPlayers" class="player-list">
                                 <!-- Player list will be populated here -->
@@ -420,7 +420,7 @@
                     <p class="danger-warning">This will notify all players that the game has been cancelled.</p>
                     <div class="form-group">
                         <label for="cancellationReason">Reason For Cancellation:</label>
-                        <textarea id="cancellationReason" rows="3" placeholder="e.g., Weather conditions, court unavailable..."></textarea>
+                        <textarea id="cancellationReason" rows="3" placeholder="e.g. Weather conditions, court unavailable..."></textarea>
                     </div>
                     <button id="cancelGameBtn" class="btn-danger">Cancel This Game</button>
                 </div>
@@ -442,7 +442,7 @@
         
         <div id="unauthorizedMessage" class="unauthorized" style="display: none;">
             <h3>Unauthorized Access</h3>
-            <p>You do not have permission to manage this game. Please check your URL or contact the organizer.</p>
+            <p>You do not have permission to manage this game. Please check the link you used, or ask the organizer to resend it.</p>
             <a href="/" class="create-game-btn">Back To Home</a>
         </div>
     </div>

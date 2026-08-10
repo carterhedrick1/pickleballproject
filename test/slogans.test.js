@@ -12,7 +12,7 @@ test('ships the requested slogan and name rotation', () => {
   );
   assert.equal(
     slogans.DEFAULT_SLOGANS[18],
-    'Ignore this and you will be paddle stacking at The Y next time.'
+    'Ignore this and you will be paddle-stacking at The Y next time.'
   );
 });
 

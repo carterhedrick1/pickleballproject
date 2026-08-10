@@ -15,7 +15,7 @@
     'Your spot is not guaranteed. Your replacement is.',
     'Your reply time is your reputation.',
     'Sign up. Show up. Shut up about the line call.',
-    '"I\'m 90% in" means you\'re Out.',
+    '"I\'m 90% in" means you\'re OUT.',
     'Nobody is putting you down as a Maybe.',
     'Commitment issues are not a calendar problem.',
     'You\'re not busy. You\'re indecisive.',
@@ -24,7 +24,7 @@
     'Availability beats ability. Ask {NAME}.',
     'You found time to research a $280 paddle. Find 4 seconds to respond.',
     'You had time to read this. Find a second to respond.',
-    'Ignore this and you will be paddle stacking at The Y next time.'
+    'Ignore this and you will be paddle-stacking at The Y next time.'
   ]);
 
   const DEFAULT_NAMES = Object.freeze(['Scott', 'Mike', 'Brett', 'Zac']);

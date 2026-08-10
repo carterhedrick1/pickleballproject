@@ -31,25 +31,25 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
     
     // Handle singular/plural spots
     const spotsText = availableSpots === 1 ? 'Spot' : 'Spots';
-    const spotsWord = availableSpots === 1 ? 'spot' : 'spots';
-    
+
     // Get registration mode - check multiple possible property names
     const registrationMode = gameData.registrationMode || gameData.gameMode || 'fcfs';
     
     console.log('[INVITATION] Registration mode detected:', registrationMode); // Debug log
     console.log('[INVITATION] Game data:', gameData); // Debug log
     
-    // Determine if we should add "First X are in" mes
-    // sage
+    // Determine if we should add the "First X to respond are in" message.
     // Only show for first-come-first-serve mode
     const isFirstCome = registrationMode === 'fcfs';
-    
-    const firstComeMessage = isFirstCome ? `\nFirst ${availableSpots} are in.` : '';
+
+    const firstComeMessage = isFirstCome
+        ? `\nFirst ${availableSpots} to respond ${availableSpots === 1 ? 'is' : 'are'} in.`
+        : '';
     
     console.log('[INVITATION] First come mode:', isFirstCome, '- Message:', firstComeMessage); // Debug log
     
     // Build the complete invitation message
-    const message = `Let us know if you're IN or OUT for pickleball by clicking the link below:  
+    const message = `Let us know if you're IN or OUT for pickleball by clicking the link below:
 
 ${gameLink}
 
@@ -57,10 +57,10 @@ Location: ${gameData.location}
 Date: ${formattedDate}
 Time: ${formattedTime}
 Duration: ${gameData.duration} minutes
-${spotsText}: ${availableSpots} 
+${spotsText}: ${availableSpots}
 ${gameData.message ? '\n' + gameData.message : ''}
 
-Even if you can't make it, your response helps us plan and find additional players if needed. Please use the link above to respond - do not reply to this text message.
+Even if you can't make it, your response helps us plan and find additional players if needed. Please use the link above to respond — do not reply to this text message.
 ${firstComeMessage}
 
 `;
@@ -218,18 +218,9 @@ function showCopyFeedback(buttonId, message, isError = false) {
 function getCurrentGameDataFromStorage() {
     const myGames = JSON.parse(localStorage.getItem('myGames') || '[]');
     
-    if (myGames.length === 0) {
-        return {
-            location: 'Game Location',
-            date: new Date().toISOString().split('T')[0], // Today's date
-            time: '18:00', // 6 PM default
-            duration: '90',
-            totalPlayers: '4',
-            organizerPlaying: true,
-            registrationMode: 'fcfs', // Ensure this is set
-            message: ''
-        };
-    }
+    // Returning placeholder details here would copy an invitation reading "Location: Game
+    // Location" to a host who thinks they copied their real game.
+    if (myGames.length === 0) return null;
     
     // Return the most recent game
     const mostRecentGame = myGames[myGames.length - 1];

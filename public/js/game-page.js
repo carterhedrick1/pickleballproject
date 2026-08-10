@@ -43,7 +43,7 @@
             const gameId = urlParams.get('id');
             
             if (!gameId) {
-                showStatus("Game not found. Please check your link. The URL should include an 'id' parameter.", 'error');
+                showStatus("This game link looks incomplete. Ask the organizer to resend it.", 'error');
                 return;
             }
             
@@ -149,7 +149,13 @@
                 })
                 .catch(error => {
                     console.error("Error fetching game:", error);
-                    showStatus(`Game not found. Please check your link.`, 'error');
+                    // A dropped connection and a deleted game are different problems for the
+                    // player, and telling someone with bad signal that the game is gone is worse
+                    // than telling them to try again.
+                    const message = navigator.onLine === false
+                        ? "You appear to be offline. Check your connection and reload this page."
+                        : "We couldn't load this game. It may have been deleted, or the link may be incomplete. Ask the organizer to resend it.";
+                    showStatus(message, 'error');
                 });
 
             function showGameStatusWarning(gameStatus) {
@@ -341,7 +347,7 @@
                     li.style.fontStyle = 'italic';
                     li.style.color = 'var(--text-muted)';
                     li.style.fontSize = '14px';
-                    li.textContent = 'None yet - be the first to join!';
+                    li.textContent = 'None yet — be the first to join!';
                     playersList.appendChild(li);
                 } else {
                     // Add players to list
@@ -375,6 +381,10 @@
                     spotsAvailableBar.style.display = 'none';
                     spotsFullContainer.style.display = 'block';
                     waitlistCount.textContent = waitlistLength;
+                    const waitlistCountWord = document.getElementById('waitlistCountWord');
+                    if (waitlistCountWord) {
+                        waitlistCountWord.textContent = waitlistLength === 1 ? 'person' : 'people';
+                    }
                     joinSectionTitle.textContent = 'Join The Waitlist';
                     joinButton.textContent = 'Join Waitlist';
                 }
@@ -412,23 +422,23 @@
                         // They gave up a real spot, so say what actually happened to it.
                         confirmTitle.textContent = "You're Out";
                         confirmMessage.textContent = data.promoted
-                            ? `Your spot has been cancelled and given to the next player on the waitlist. Thanks for the heads up.`
-                            : `Your spot has been cancelled and opened up for the next player. Thanks for the heads up.`;
-                        confirmStatus.textContent = `Spot cancelled`;
+                            ? `Your spot has been cancelled and given to the next player on the waitlist. Thanks for the heads-up.`
+                            : `Your spot has been cancelled and opened up for the next player. Thanks for the heads-up.`;
+                        confirmStatus.textContent = `Spot Cancelled`;
                     } else if (data.cancelled) {
                         confirmTitle.textContent = "You're Out";
                         confirmMessage.textContent = `We've taken you off the list for this game. Thanks for letting us know.`;
-                        confirmStatus.textContent = `Removed from the waitlist`;
+                        confirmStatus.textContent = `Removed From The Waitlist`;
                     } else {
                         confirmTitle.textContent = "Thanks For Letting Us Know!";
-                        confirmMessage.textContent = `We've recorded that you can't make this game. Thanks for being courteous to other players!`;
+                        confirmMessage.textContent = `We've recorded that you can't make this game. Thanks for letting everyone know.`;
                         confirmStatus.textContent = `Marked as "Out"`;
                     }
                 } else if (data.status === 'confirmed') {
                     // Regular confirmed player
                     confirmationSection.classList.remove('waitlist', 'out');
                     confirmTitle.textContent = "You're In!";
-                    confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play!`;
+                    confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play.`;
                     confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
                 } else if (data.status === 'waitlist') {
                     // Waitlisted player

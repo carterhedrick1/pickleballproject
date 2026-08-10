@@ -79,7 +79,7 @@ function getGameStatus(game) {
     if (game.cancelled) {
         return {
             type: 'cancelled',
-            message: 'This game has been cancelled',
+            message: 'This game has been cancelled.',
             canJoin: false,
             canEdit: false
         };
@@ -88,7 +88,7 @@ function getGameStatus(game) {
     if (isGameExpired(game.date, game.time, game.duration)) {
         return {
             type: 'expired',
-            message: 'This game has ended',
+            message: 'This game has ended.',
             canJoin: false,
             canEdit: false
         };
@@ -127,12 +127,12 @@ function getTimeUntilGame(gameDate, gameTime) {
         const diffDays = Math.floor(diffHours / 24);
         
         if (diffDays > 0) {
-            return `${diffDays} day${diffDays > 1 ? 's' : ''} away`;
+            return `${diffDays} day${diffDays !== 1 ? 's' : ''} away`;
         } else if (diffHours > 0) {
-            return `${diffHours} hour${diffHours > 1 ? 's' : ''} away`;
+            return `${diffHours} hour${diffHours !== 1 ? 's' : ''} away`;
         } else {
             const diffMinutes = Math.floor(diffMs / (1000 * 60));
-            return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} away`;
+            return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} away`;
         }
     } catch (error) {
         return '';

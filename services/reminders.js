@@ -107,8 +107,8 @@ async function checkAndSendReminders() {
           const gameDay = describeGameDay(game, centralNow);
           const defaultMessage =
             `Reminder: Your pickleball game is ${gameDay} ` +
-            `at ${formatTimeForSMS(game.time)} at ${formatLocationForSMS(game)}. ` +
-            'Looking forward to seeing you! Reply 2 for details or 9 to cancel.';
+            `at ${formatTimeForSMS(game.time)} — ${formatLocationForSMS(game)}. ` +
+            'Looking forward to seeing you! Reply 2 for details, or 9 to cancel.';
           let message = await resolveTextMessage(
             'upcoming-reminder',
             defaultMessage,

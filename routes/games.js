@@ -113,7 +113,7 @@ module.exports = function mountGameRoutes(app) {
 
       if (hostPhone && !isValidPhoneNumber(hostPhone)) {
         return res.status(400).json({ 
-          error: 'Please enter a valid US phone number for the organizer' 
+          error: 'Please enter a valid US phone number for the organizer.' 
         });
       }    
       
@@ -141,7 +141,7 @@ module.exports = function mountGameRoutes(app) {
         const gameDate = formatDateForSMS(gameData.date);
         const gameTime = formatTimeForSMS(gameData.time);
         const locationText = formatLocationForSMS(gameData);
-        const defaultHostMessage = `Your pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been created! Reply "1" for management link or "2" for game details.`;
+        const defaultHostMessage = `Your pickleball game at ${locationText} on ${gameDate} at ${gameTime} has been created! Reply "1" for your management link, or "2" for game details.`;
         let hostMessage = await resolveTextMessage(
           'game-created',
           defaultHostMessage,
@@ -265,7 +265,7 @@ module.exports = function mountGameRoutes(app) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
       if (game.cancelled) {
-        return res.status(400).json({ error: 'Invitations cannot be copied for a cancelled game.' });
+        return res.status(400).json({ error: "This game is cancelled, so there's no invitation to copy." });
       }
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       const result = await buildRandomizedInvitation(game, gameId, baseUrl);
@@ -302,7 +302,7 @@ module.exports = function mountGameRoutes(app) {
       const unknown = uniquePhones.filter((phone) => !rosterByPhone.has(phone));
       if (unknown.length) {
         return res.status(400).json({
-          error: 'Every intended invitee must come from the organizer’s saved roster.'
+          error: 'Every invitee must come from your saved roster.'
         });
       }
       game.invitedPlayers = uniquePhones.map((phone) => ({
@@ -378,13 +378,17 @@ module.exports = function mountGameRoutes(app) {
       // Notify all players
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      const cancellationReason = reason || 'No reason provided';
-      const defaultCancellationMessage = `CANCELLED: Your pickleball game at ${game.location} on ${gameDate} at ${gameTime} has been cancelled. Reason: ${cancellationReason}.`;
+      const cancellationReason = String(reason || '').trim().replace(/[.!?]+$/, '');
+      // Only add the "Reason:" clause when the host actually gave one, and never double-punctuate
+      // a reason the host already ended with a period.
+      const reasonClause = cancellationReason ? ` Reason: ${cancellationReason}.` : '';
+      const locationText = formatLocationForSMS(game);
+      const defaultCancellationMessage = `CANCELLED: Your pickleball game at ${locationText} on ${gameDate} at ${gameTime} is off.${reasonClause}`;
       const cancellationMessage = await resolveTextMessage(
         'game-cancelled',
         defaultCancellationMessage,
         {
-          LOCATION: game.location,
+          LOCATION: locationText,
           DATE: gameDate,
           TIME: gameTime,
           REASON: cancellationReason
@@ -458,7 +462,7 @@ module.exports = function mountGameRoutes(app) {
       // immediately even if its scheduled start is still upcoming.
       if (!game.cancelled && isGameUpcoming(game.date, game.time)) {
         return res.status(400).json({
-          error: 'This game has not happened yet. Cancel it instead so the players are told.'
+          error: 'This game has not happened yet. Cancel it instead so your players are told.'
         });
       }
 
@@ -591,7 +595,7 @@ module.exports = function mountGameRoutes(app) {
           const gameDate = formatDateForSMS(game.date);
           const gameTime = formatTimeForSMS(game.time);
           const locationText = formatLocationForSMS(game);
-          message = `Your pickleball game management link:\n\n${locationText}\n${gameDate} at ${gameTime}\n\n${game.managementLink}`;
+          message = `Here's your management link for ${locationText} on ${gameDate} at ${gameTime}:\n\n${game.managementLink}`;
         } else {
           // Sort by date and get the most recent upcoming game
           recentGames.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -602,7 +606,7 @@ module.exports = function mountGameRoutes(app) {
           const gameTime = formatTimeForSMS(gameToShow.time);
           const locationText = formatLocationForSMS(gameToShow);
 
-          message = `You have ${recentGames.length} recent games. Here's your ${upcomingGames.length > 0 ? 'next' : 'most recent'} game:\n\n${locationText}\n${gameDate} at ${gameTime}\n\n${gameToShow.managementLink}`;
+          message = `You have ${recentGames.length} games. Here's your ${upcomingGames.length > 0 ? 'next' : 'most recent'} one:\n\n${locationText}\n${gameDate} at ${gameTime}\n\n${gameToShow.managementLink}`;
         }
         
         const templateGame = recentGames.length === 1

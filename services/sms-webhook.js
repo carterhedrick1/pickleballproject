@@ -95,7 +95,8 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
       case 'gameFull':
         if (prefs.gameFull === true) {
           shouldSend = true;
-          message = `HOST ALERT: Your pickleball game at ${locationText} on ${gameDate} is now FULL! All ${game.totalPlayers} spots are taken.`;
+          const totalSpots = parseInt(game.totalPlayers);
+          message = `HOST ALERT: Your pickleball game at ${locationText} on ${gameDate} is now FULL! All ${totalSpots} ${totalSpots === 1 ? 'spot is' : 'spots are'} taken.`;
         }
         break;
       case 'playerJoins':
@@ -118,7 +119,10 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
         // which is the exact problem this app exists to fix.
         shouldSend = true;
         const waiting = (game.waitlist || []).length;
-        message = `HOST ALERT: ${playerName || 'A player'} gave up their confirmed spot for your pickleball game at ${locationText} on ${gameDate}. You have ${waiting} ${waiting === 1 ? 'person' : 'people'} on your waitlist - open your management link to pick a replacement.`;
+        const waitlistText = waiting === 0
+          ? 'Nobody has applied yet — open your management link to invite a replacement.'
+          : `You have ${waiting} ${waiting === 1 ? 'person' : 'people'} on your waitlist — open your management link to pick a replacement.`;
+        message = `HOST ALERT: ${playerName || 'A player'} gave up their confirmed spot for your pickleball game at ${locationText} on ${gameDate}. ${waitlistText}`;
         break;
       }
       case 'oneSpotLeft':
@@ -215,7 +219,7 @@ async function handleIncomingSMS(req, res) {
         await sendCategorySMS(
           'cancellation-help',
           fromNumber,
-          `Reply 1 for host management, 2 for your game details, or 9 to cancel a spot. If you need anything else, reach out to the organizer.`
+          `Reply "1" for your management link, "2" for game details, or "9" to cancel your spot. If you need anything else, reach out to the organizer.`
         );
       }
       await clearLastCommand(cleanedFromNumber);
@@ -253,7 +257,7 @@ async function handleCustomReplyOption(fromNumber, cleanedFromNumber, option) {
           : 'a Host or Player';
       await sendSMS(
         fromNumber,
-        `Reply "${option.command}" is available when this phone number is registered as ${audience} in an upcoming game.`,
+        `You can use reply "${option.command}" once this phone number is registered as ${audience} for an upcoming game.`,
         null,
         { eventId: 'custom-reply-option' }
       );
@@ -289,7 +293,7 @@ async function handleCustomReplyOption(fromNumber, cleanedFromNumber, option) {
     console.error(`Error handling custom SMS reply ${option.command}:`, error);
     await sendSMS(
       fromNumber,
-      `Sorry, there was an error retrieving ${option.title.toLowerCase()}. Please try again.`,
+      `Sorry, there was a problem with that reply. Please try again.`,
       null,
       { eventId: 'custom-reply-option' }
     );
@@ -309,7 +313,7 @@ async function handleNumberResponse(fromNumber, cleanedFromNumber, messageText, 
     await sendCategorySMS(
       'cancellation-help',
       fromNumber,
-      `Reply "1" for management link, "2" for game details, or "9" to cancel your reservation.`
+      `Reply "1" for your management link, "2" for game details, or "9" to cancel your spot.`
     );
   }
 }
@@ -367,7 +371,7 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
       // Check message length and truncate if needed
       if (responseMessage.length > 1500) {
         console.log(`[SMS DEBUG] Message too long (${responseMessage.length} chars), sending shortened version`);
-        responseMessage = `You have ${hostGames.length} upcoming games. Please visit the website to manage them.`;
+        responseMessage = `You have ${hostGames.length} upcoming games — too many to list here. Visit inorout.club and open My Games to manage them.`;
       }
       
       await sendCategorySMS(
@@ -416,7 +420,9 @@ async function handleGameDetailsSelection(fromNumber, cleanedFromNumber, selecti
       await sendCategorySMS(
         'game-details',
         fromNumber,
-        `Invalid game number. Please reply with a number from 1 to ${userGames.length}, or text "2" to see the list again.`,
+        userGames.length === 1
+          ? `That wasn't one of the numbers on the list. Reply 1, or text "2" to see the game again.`
+          : `That wasn't one of the numbers on the list. Reply with a number from 1 to ${userGames.length}, or text "2" to see the list again.`,
         { GAME_COUNT: userGames.length }
       );
     }
@@ -445,7 +451,7 @@ async function handleCancellationSelection(fromNumber, cleanedFromNumber, select
       await sendCategorySMS(
         'cancellation-help',
         fromNumber,
-        `Invalid selection. Please reply with a valid number from the list or text "9" to try cancelling again.`,
+        `That wasn't one of the numbers on the list. Reply with a number from the list, or text "9" to start over.`,
         { GAME_COUNT: playerGames.length }
       );
       await clearLastCommand(cleanedFromNumber);
@@ -730,7 +736,7 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
     }
   } else {
     // Waitlist mode - hide player info from waitlist users only
-    responseMessage += `Player selection in progress\n`;
+    responseMessage += `Player selection is still in progress.\n`;
     responseMessage += `The organizer will review all applications and select players.\n`;
   }
   
@@ -743,7 +749,10 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
       responseMessage += `\nYou are: Application Submitted\nReply "9" to cancel application`;
     } else {
       const waitlistPosition = game.waitlist.findIndex(p => p.phone === cleanedFromNumber) + 1;
-      responseMessage += `\nYou are: Waitlist #${waitlistPosition}\nReply "9" to cancel`;
+      // findIndex returns -1 when the roster shifted between lookups, which would print "#0".
+      responseMessage += waitlistPosition > 0
+        ? `\nYou are: Waitlist #${waitlistPosition}\nReply "9" to cancel`
+        : `\nYou are: On the waitlist\nReply "9" to cancel`;
     }
   }
 
@@ -781,7 +790,7 @@ responseMessage += `${index + 1}. ${statusIcon ? statusIcon + ' ' : ''}${locatio
 
 // Helper function to build cancellation list message
 async function buildCancellationListMessage(playerGames) {
-  let responseMessage = `You're registered for ${playerGames.length} upcoming games. Reply with the number of the game you want to cancel:\n\n`;
+  let responseMessage = `You're signed up for ${playerGames.length} upcoming games. Reply with the number of the game you want to cancel:\n\n`;
   
   playerGames.forEach(({ game, status }, index) => {
     const gameDate = formatDateForSMS(game.date);
@@ -813,7 +822,9 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
     if (result.status === 'not_found') {
       const message = status === 'confirmed'
         ? `You're no longer registered for that game, so there was nothing to cancel.`
-        : `You're no longer on that waitlist, so there was nothing to cancel.`;
+        : staleGame && staleGame.registrationMode === 'waitlist'
+          ? `You no longer have an application for that game, so there was nothing to cancel.`
+          : `You're no longer on that waitlist, so there was nothing to cancel.`;
       await sendCategorySMS('cancellation-help', fromNumber, message);
       return;
     }

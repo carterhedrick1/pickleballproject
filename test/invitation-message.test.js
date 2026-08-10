@@ -32,7 +32,7 @@ test('deterministic invitation preserves every operational detail and instructio
   assert.match(message, /Spots: 3/);
   assert.match(message, /Bring water\./);
   assert.match(message, /do not reply to this text message/);
-  assert.match(message, /First 3 are in\./);
+  assert.match(message, /First 3 to respond are in\./);
 });
 
 test('randomized invitation adds one stored opening without changing deterministic copy', async () => {

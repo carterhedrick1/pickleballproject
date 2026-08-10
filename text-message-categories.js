@@ -18,11 +18,11 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'One text is selected whenever a player is confirmed automatically or chosen by the host. Game details and reply instructions are added after it.',
     preview:
-      "You're IN. The others have been warned.\n\nPickleball at Oak Park Courts on Sat, Aug 1 at 9:00 AM! You are Player 2 of 4. Reply 2 for who is playing and game details or 9 to cancel.",
+      "You're IN. The others have been warned.\n\nPickleball at Oak Park Courts on Sat, Aug 1 at 9:00 AM! You are Player 2 of 4. Reply 2 for who is playing and game details, or 9 to cancel.",
     detailsPreview:
-      'Pickleball at Oak Park Courts on Sat, Aug 1 at 9:00 AM! You are Player 2 of 4. Reply 2 for who is playing and game details or 9 to cancel.',
+      'Pickleball at Oak Park Courts on Sat, Aug 1 at 9:00 AM! You are Player 2 of 4. Reply 2 for who is playing and game details, or 9 to cancel.',
     defaultDetailsTemplate:
-      'Pickleball at {LOCATION} on {DATE} at {TIME}! You are Player {POSITION} of {TOTAL_PLAYERS}. Reply 2 for who is playing and game details or 9 to cancel.',
+      'Pickleball at {LOCATION} on {DATE} at {TIME}! You are Player {POSITION} of {TOTAL_PLAYERS}. Reply 2 for who is playing and game details, or 9 to cancel.',
     tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'POSITION', 'TOTAL_PLAYERS'],
     maxLength: 240,
     detailsMaxLength: DETAILS_MAX_LENGTH,
@@ -38,9 +38,9 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'Sent when a player joins a numbered first-come waitlist. The app adds their live position and game details.',
     preview:
-      "You've been added to the waitlist for Pickleball at Oak Park Courts. You are #1 on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.",
+      "You've been added to the waitlist for the pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM. You are #1 on the waitlist. We'll notify you if a spot opens up. Reply 2 for game details, or 9 to cancel.",
     defaultDetailsTemplate:
-      "You've been added to the waitlist for Pickleball at {LOCATION}. You are #{POSITION} on the waitlist. We'll notify you if a spot opens up! Reply 2 for game details or 9 to cancel.",
+      "You've been added to the waitlist for the pickleball game at {LOCATION} on {DATE} at {TIME}. You are #{POSITION} on the waitlist. We'll notify you if a spot opens up. Reply 2 for game details, or 9 to cancel.",
     tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'POSITION'],
     maxLength: 240,
     detailsMaxLength: DETAILS_MAX_LENGTH
@@ -54,9 +54,9 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'Sent in approval mode after a player applies. Positions and the player list stay hidden until the organizer selects players.',
     preview:
-      "Thanks for signing up for Pickleball at Oak Park Courts on Sat, Aug 1 at 9:00 AM! The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.",
+      "Thanks for signing up for pickleball at Oak Park Courts on Sat, Aug 1 at 9:00 AM! The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.",
     defaultDetailsTemplate:
-      "Thanks for signing up for Pickleball at {LOCATION} on {DATE} at {TIME}! The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.",
+      "Thanks for signing up for pickleball at {LOCATION} on {DATE} at {TIME}! The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.",
     tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME'],
     maxLength: 240,
     detailsMaxLength: DETAILS_MAX_LENGTH
@@ -70,9 +70,9 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'Sent when the organizer moves a confirmed player to the waitlist, selects them, promotes them, or removes them.',
     preview:
-      "You've been moved to the waitlist for the pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM. You are #1 on the waitlist. Reply 2 for details or 9 to cancel.",
+      "You've been moved to the waitlist for the pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM. You are #1 on the waitlist. We'll notify you if a spot opens up. Reply 2 for details, or 9 to cancel.",
     previewNote:
-      'Selection and promotion use the You’re In text. Organizer removal uses registration or waitlist wording.',
+      "Selection and promotion use the You're In text. Organizer removal uses registration or waitlist wording.",
     defaultDetailsTemplate: DEFAULT_TEXT_TOKEN,
     tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'STATUS'],
     maxLength: 240,
@@ -102,9 +102,9 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'Sent once to confirmed players when their game enters the 24-hour reminder window.',
     preview:
-      'Reminder: Your pickleball game is tomorrow at 9:00 AM at Oak Park Courts. Looking forward to seeing you! Reply 2 for details or 9 to cancel.',
+      'Reminder: Your pickleball game is tomorrow at 9:00 AM — Oak Park Courts. Looking forward to seeing you! Reply 2 for details, or 9 to cancel.',
     defaultDetailsTemplate:
-      'Reminder: Your pickleball game is {DAY} at {TIME} at {LOCATION}. Looking forward to seeing you! Reply 2 for details or 9 to cancel.',
+      'Reminder: Your pickleball game is {DAY} at {TIME} — {LOCATION}. Looking forward to seeing you! Reply 2 for details, or 9 to cancel.',
     tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'DAY'],
     maxLength: 240,
     detailsMaxLength: DETAILS_MAX_LENGTH
@@ -118,9 +118,9 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'Sent to every confirmed and waitlisted player when the organizer cancels the entire game.',
     preview:
-      'CANCELLED: Your pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM has been cancelled. Reason: Courts are closed.',
+      'CANCELLED: Your pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM is off. Reason: Courts are closed.',
     defaultDetailsTemplate:
-      'CANCELLED: Your pickleball game at {LOCATION} on {DATE} at {TIME} has been cancelled. Reason: {REASON}.',
+      'CANCELLED: Your pickleball game at {LOCATION} on {DATE} at {TIME} is off. Reason: {REASON}',
     tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'REASON'],
     maxLength: 240,
     detailsMaxLength: DETAILS_MAX_LENGTH
@@ -134,9 +134,9 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'The organizer writes this message and can send it to confirmed players, the waitlist, or selected individuals.',
     preview:
-      'We moved to courts 3 and 4. Please arrive ten minutes early so we can warm up.',
+      'We moved to courts 3 and 4. Please arrive 10 minutes early so we can warm up.',
     previewNote:
-      'There is no fixed default body today—the organizer’s message is delivered exactly as written.',
+      "There is no fixed default body today. The organizer's message is delivered exactly as written.",
     defaultDetailsTemplate: '{ANNOUNCEMENT}',
     tokens: ['DEFAULT_TEXT', 'ANNOUNCEMENT', 'LOCATION', 'DATE', 'TIME'],
     maxLength: 240,
@@ -151,9 +151,9 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'Sent to the organizer immediately after a new game is successfully created.',
     preview:
-      'Your pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM has been created! Reply "1" for management link or "2" for game details.',
+      'Your pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM has been created! Reply "1" for your management link, or "2" for game details.',
     defaultDetailsTemplate:
-      'Your pickleball game at {LOCATION} on {DATE} at {TIME} has been created! Reply "1" for management link or "2" for game details.',
+      'Your pickleball game at {LOCATION} on {DATE} at {TIME} has been created! Reply "1" for your management link, or "2" for game details.',
     tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME'],
     maxLength: 240,
     detailsMaxLength: DETAILS_MAX_LENGTH
@@ -167,7 +167,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'Alerts the organizer about joins, cancellations, a full game, one remaining spot, a new waitlist, or an approval-mode opening.',
     preview:
-      'HOST ALERT: Jamie just joined your pickleball game at Oak Park Courts on Sat, Aug 1. 1 spot remaining.',
+      'HOST ALERT: Jamie just joined your pickleball game at Oak Park Courts on Sat, Aug 1. Only 1 spot remaining.',
     previewNote:
       'This is the player-joined version. The current app has five other event-specific versions.',
     tokens: [
@@ -228,7 +228,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'Guides reply-9 cancellations and answers unknown commands, invalid selections, missing games, and processing errors.',
     preview:
-      'Reply 1 for host management, 2 for your game details, or 9 to cancel a spot. If you need anything else, reach out to the organizer.',
+      'Reply "1" for your management link, "2" for game details, or "9" to cancel your spot. If you need anything else, reach out to the organizer.',
     previewNote:
       'Cancellation menus, confirmations, no-game responses, and error replies use additional current versions.',
     defaultDetailsTemplate: DEFAULT_TEXT_TOKEN,

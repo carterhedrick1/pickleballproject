@@ -62,7 +62,7 @@
                 body: JSON.stringify({ phone })
             });
             const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.error || 'Could not send a verification code.');
+            if (!response.ok) throw new Error(data.error || 'Could not send a verification code. Please check the number and try again.');
             showCodeStep(phone);
         } catch (error) {
             config.showStatus(error.message, 'error');
@@ -74,7 +74,7 @@
     async function confirmCode() {
         const code = digitsOnly(byId('codeInput').value);
         if (!/^\d{6}$/.test(code)) {
-            config.showStatus('Enter the 6-digit verification code.', 'error');
+            config.showStatus('Please enter the 6-digit verification code.', 'error');
             return;
         }
 
@@ -88,7 +88,7 @@
                 body: JSON.stringify({ phone: pendingPhone, code })
             });
             const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.error || 'Could not verify that code.');
+            if (!response.ok) throw new Error(data.error || "That code did not work. It may have expired — tap Send A New Code.");
 
             localStorage.setItem(PHONE_KEY, data.phoneNumber);
             localStorage.setItem(TOKEN_KEY, data.token);
@@ -147,7 +147,7 @@
     function expireSession() {
         localStorage.removeItem(TOKEN_KEY);
         config.showStatus(
-            'For your privacy, please verify this phone number again.',
+            'Your session expired. Please verify your number again.',
             'info'
         );
         const phone = localStorage.getItem(PHONE_KEY) || '';

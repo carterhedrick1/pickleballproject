@@ -1,4 +1,4 @@
-// header.js - Updated with In or Out logo
+// header.js - Updated with IN or OUT logo
 
 // Reports browser errors to the developer area so a player hitting a broken page
 // shows up somewhere Scott can see. Capped and fail-silent: a reporting problem
@@ -108,6 +108,7 @@ const headerHTML = `
  <a href="/create.html" class="${currentPage === 'create' ? 'active' : ''}">Create Game</a>
 <a href="/my-games.html" class="${currentPage === 'my-games' ? 'active' : ''}">My Games</a>
 <a href="/roster.html" class="${currentPage === 'roster' ? 'active' : ''}">Roster</a>
+<a href="/stats.html" class="${currentPage === 'stats' ? 'active' : ''}">Stats</a>
  </nav>
  </div>
  </header>
