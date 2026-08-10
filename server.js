@@ -46,13 +46,16 @@ const databaseReady = initializeDatabase();
 // Middleware
 app.use(compression());
 app.use(express.json());
-// maxAge lets browsers and the CDN reuse CSS/JS/images for an hour instead of
-// re-fetching all of them on every page view. Pages themselves stay no-cache so
-// a deploy shows up on the next visit rather than up to an hour later.
+// maxAge lets browsers and the CDN reuse CSS/images for an hour instead of
+// re-fetching all of them on every page view. HTML and JavaScript must be
+// revalidated together: otherwise a deploy can pair new markup with an old cached
+// script and prevent a page from starting at all.
 app.use(express.static('public', {
   maxAge: '1h',
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+    if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
   }
 }));
 app.use('/api', (req, res, next) => {
