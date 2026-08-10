@@ -128,11 +128,12 @@ function createGameData(formData) {
   }
 
   // Set up initial players list
+  gameData.outPlayers = [];
   if (gameData.organizerPlaying) {
     gameData.players = [
-      { 
-        id: 'organizer', 
-        name: gameData.organizerName, 
+      {
+        id: 'organizer',
+        name: gameData.organizerName,
         phone: gameData.organizerPhone,
         isOrganizer: true,
         joinedAt: new Date().toISOString()
@@ -140,8 +141,6 @@ function createGameData(formData) {
     ];
   } else {
     gameData.players = [];
-    gameData.outPlayers = [];
-
   }
 
   return gameData;

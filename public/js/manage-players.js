@@ -309,19 +309,24 @@ function updatePlayerLists() {
         confirmedPlayers.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">No players yet</p>';
     } else {
         gameData.players.forEach((player) => {
+            // The organizer's seat is held by organizerPlaying, which nothing on this page can
+            // switch off, so offering Remove or To Waitlist here only leads to a game that is
+            // permanently one player short.
+            const actions = player.isOrganizer ? [] : [
+                {
+                    label: 'To Waitlist',
+                    className: 'btn-secondary',
+                    onClick: () => moveToWaitlist(player.id)
+                },
+                {
+                    label: 'Remove',
+                    className: 'btn-danger',
+                    onClick: () => removePlayer(player.id)
+                }
+            ];
             confirmedPlayers.appendChild(ManageRender.createPlayerItem(document, player, {
-                actions: [
-                    {
-                        label: 'To Waitlist',
-                        className: 'btn-secondary',
-                        onClick: () => moveToWaitlist(player.id)
-                    },
-                    {
-                        label: 'Remove',
-                        className: 'btn-danger',
-                        onClick: () => removePlayer(player.id)
-                    }
-                ]
+                meta: player.isOrganizer ? ['You are hosting this game'] : [],
+                actions
             }));
         });
     }

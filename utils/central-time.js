@@ -32,7 +32,27 @@ function isGameUpcoming(gameDate, gameTime) {
   return gameDateTime > centralNow;
 }
 
+/**
+ * Checks if a game has already started but is recent enough that its host still needs it.
+ * Photos, thank-you notes and roster corrections all happen after the final point, so a
+ * finished game stays reachable for a while. Thirty days matches the "recent games" window
+ * the phone-number lookup already uses.
+ * @param {string} gameDate - YYYY-MM-DD
+ * @param {string} gameTime - HH:MM
+ * @param {number} [days=30]
+ * @returns {boolean}
+ */
+function isGameRecentlyFinished(gameDate, gameTime, days = 30) {
+  const gameDateTime = new Date(`${gameDate}T${gameTime}:00`);
+  if (isNaN(gameDateTime.getTime())) return false;
+
+  const centralNow = getCentralTimeNow();
+  if (gameDateTime > centralNow) return false;
+  return centralNow - gameDateTime <= days * 24 * 60 * 60 * 1000;
+}
+
 module.exports = {
   getCentralTimeNow,
-  isGameUpcoming
+  isGameUpcoming,
+  isGameRecentlyFinished
 };

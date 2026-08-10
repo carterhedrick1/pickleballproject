@@ -133,4 +133,27 @@ describe('player transitions', () => {
     assert.equal(removed.previousStatus, 'confirmed');
     assert.equal(removed.promotedPlayer.id, 'one');
   });
+
+  it('refuses to remove or waitlist the organizer out of their own game', () => {
+    const value = game({
+      players: [
+        { id: 'organizer', name: 'Host', isOrganizer: true },
+        { id: 'one', name: 'One' }
+      ]
+    });
+
+    const removed = removePlayer(value, 'organizer');
+    assert.equal(removed.status, 'organizer');
+    assert.equal(removed.changed, false);
+    assert.equal(value.players.length, 2);
+
+    const moved = movePlayerToWaitlist(value, 'organizer');
+    assert.equal(moved.status, 'organizer');
+    assert.equal(moved.changed, false);
+    assert.equal(value.players.length, 2);
+    assert.equal(value.waitlist.length, 0);
+
+    // Everyone else still moves normally.
+    assert.equal(removePlayer(value, 'one').status, 'removed');
+  });
 });

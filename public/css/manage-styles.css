@@ -1190,9 +1190,12 @@ button:disabled {
 }
 
 /* Disabled tabs and sections for expired games */
-#gameManagement.expired .tab[onclick*="Details"],
-#gameManagement.expired .tab[onclick*="Communication"],
-#gameManagement.expired .tab[onclick*="Actions"] {
+/* The tabs moved from inline onclick handlers to data-tab plus JS listeners, so these rules
+   selected nothing and an ended game showed live-looking tabs over inert panes. Photos now
+   live on the Players tab, which stays enabled below, so disabling Details is safe. */
+#gameManagement.expired .tab[data-tab="Details"],
+#gameManagement.expired .tab[data-tab="Communication"],
+#gameManagement.expired .tab[data-tab="Actions"] {
     opacity: 0.5;
     pointer-events: none;
     background: var(--canvas) !important;

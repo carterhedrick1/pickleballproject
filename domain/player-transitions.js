@@ -153,6 +153,19 @@ function removePlayer(game, playerId) {
   const found = locatePlayer(game, { playerId });
   if (!found) return transitionResult(game, { status: 'not_found' });
 
+  // The organizer's seat is reserved by organizerPlaying, which no host tool can turn off
+  // afterwards. Splicing them out of the roster would leave the game permanently short a
+  // player with no way to correct it, so their own row is not removable.
+  const target = found.collection[found.index];
+  if (target.isOrganizer) {
+    return transitionResult(game, {
+      player: target,
+      previousStatus: found.status,
+      status: 'organizer',
+      isOrganizer: true
+    });
+  }
+
   const player = found.collection.splice(found.index, 1)[0];
   const promotedPlayer =
     found.status === 'confirmed' ? promoteNextFromWaitlist(game) : null;
@@ -170,6 +183,17 @@ function removePlayer(game, playerId) {
 function movePlayerToWaitlist(game, playerId) {
   const index = (game.players || []).findIndex((player) => player.id === playerId);
   if (index < 0) return transitionResult(game, { status: 'not_found' });
+
+  // Same reservation problem as removePlayer: the organizer cannot waitlist themselves out
+  // of the seat that organizerPlaying keeps counting.
+  if (game.players[index].isOrganizer) {
+    return transitionResult(game, {
+      player: game.players[index],
+      previousStatus: 'confirmed',
+      status: 'organizer',
+      isOrganizer: true
+    });
+  }
 
   if (!game.waitlist) game.waitlist = [];
   const player = game.players.splice(index, 1)[0];

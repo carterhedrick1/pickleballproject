@@ -112,7 +112,7 @@ module.exports = function mountPlayerRoutes(app) {
         }
         if (result.status === 'organizer') {
           return res.status(400).json({
-            error: "You're the organizer of this game. Use your management link to cancel the game or to remove yourself from it."
+            error: "You're the organizer of this game. Use your management link to cancel the game."
           });
         }
 
@@ -416,6 +416,11 @@ module.exports = function mountPlayerRoutes(app) {
       if (result.status === 'not_found') {
         return res.status(404).json({ error: 'That player is not on the confirmed list.' });
       }
+      if (result.status === 'organizer') {
+        return res.status(400).json({
+          error: 'The organizer holds a reserved spot in their own game and cannot be removed from it.'
+        });
+      }
 
       // Send SMS notification to the moved player
       const game = result.game;
@@ -529,6 +534,11 @@ module.exports = function mountPlayerRoutes(app) {
       }
       if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Player not found' });
+      }
+      if (result.status === 'organizer') {
+        return res.status(400).json({
+          error: 'The organizer holds a reserved spot in their own game and cannot be removed from it.'
+        });
       }
 
       // Send removal notification to the removed player (if they have a phone and aren't organizer)
