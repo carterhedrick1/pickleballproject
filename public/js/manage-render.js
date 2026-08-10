@@ -10,6 +10,15 @@
         return node;
     }
 
+    /** (816) 555-0102 instead of 8165550102. Anything that is not a plain 10- or
+     *  11-digit US number passes through untouched. */
+    function prettyPhone(value) {
+        const digits = String(value == null ? '' : value).replace(/\D/g, '');
+        const local = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+        if (local.length !== 10) return value;
+        return `(${local.slice(0, 3)}) ${local.slice(3, 6)}-${local.slice(6)}`;
+    }
+
     /** A short coloured word - IN, OUT, No Reply - that carries the row's state at a glance. */
     function createStatusChip(document, badge) {
         return element(
@@ -26,7 +35,7 @@
         const suffix = player.isOrganizer ? ' (Organizer)' : '';
         info.appendChild(element(document, 'div', 'player-name', `${player.name || ''}${suffix}`));
         if (player.phone) {
-            info.appendChild(element(document, 'div', 'player-phone', player.phone));
+            info.appendChild(element(document, 'div', 'player-phone', prettyPhone(player.phone)));
         }
         for (const value of meta) {
             info.appendChild(element(document, 'div', 'player-phone', value));
@@ -80,7 +89,7 @@
             element(document, 'span', 'roster-player-name', player.name || player.phone || '')
         );
 
-        const metadata = [player.phone || ''];
+        const metadata = [prettyPhone(player.phone || '')];
         if (player.duprRating != null) metadata.push(`DUPR ${player.duprRating}`);
         metadata.push(...meta);
         details.appendChild(
@@ -93,5 +102,5 @@
         return option;
     }
 
-    return { createPlayerItem, createRecipientOption, createRosterOption, createStatusChip };
+    return { createPlayerItem, createRecipientOption, createRosterOption, createStatusChip, prettyPhone };
 });

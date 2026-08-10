@@ -20,6 +20,7 @@ const {
 const { handleIncomingSMS } = require('./sms-handler');
 const { checkAndSendReminders } = require('./game-logic');
 const { routeFailed } = require('./utils/route-error');
+const { createDatabaseGate } = require('./utils/database-gate');
 
 const mountDevRoutes = require('./routes/dev');
 const mountGameRoutes = require('./routes/games');
@@ -40,8 +41,9 @@ const SERVER_STARTED_AT = new Date().toISOString();
 // Tell Express to trust proxy headers (for rate limiting on platforms like Render)
 app.set('trust proxy', 1);
 
-// Initialize database
-const databaseReady = initializeDatabase();
+// Initialize database. The gate retries a failed boot-time attempt on the next request,
+// so a brief Postgres outage during a deploy cannot leave the API answering 500 forever.
+const databaseGate = createDatabaseGate(initializeDatabase);
 
 // Middleware
 app.use(compression());
@@ -58,9 +60,7 @@ app.use(express.static('public', {
     }
   }
 }));
-app.use('/api', (req, res, next) => {
-  databaseReady.then(() => next()).catch(next);
-});
+app.use('/api', databaseGate);
 
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);

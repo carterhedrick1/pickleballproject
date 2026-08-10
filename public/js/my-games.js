@@ -85,8 +85,11 @@ function render() {
     document.getElementById('emptyState').style.display = total ? 'none' : 'block';
     document.getElementById('upcomingHeading').style.display = upcoming.length ? 'block' : 'none';
     document.getElementById('pastWrapper').style.display = past.length ? 'block' : 'none';
-    document.getElementById('pastSummary').textContent =
-        `Past Games (${past.length})`;
+    // Cancelled games land in this group too, and a cancelled game dated next Thursday
+    // is not "past" to the host who just cancelled it - say the group holds both.
+    document.getElementById('pastSummary').textContent = past.some((game) => game.cancelled)
+        ? `Past & Cancelled Games (${past.length})`
+        : `Past Games (${past.length})`;
 
     renderInto('upcomingList', upcoming);
     renderInto('pastList', past);

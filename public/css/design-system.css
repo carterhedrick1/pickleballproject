@@ -1230,17 +1230,20 @@ button:disabled,
     .header-nav {
         display: grid;
         gap: var(--space-1) !important;
-        grid-template-columns: repeat(3, 1fr);
+        /* Four links in three columns strands the last one alone on a second row. */
+        grid-template-columns: repeat(4, 1fr);
         margin: 0 !important;
     }
 
     .header-nav a {
         align-items: center;
         display: flex;
-        font-size: 13px !important;
+        font-size: 12px !important;
         justify-content: center;
-        padding: var(--space-2) var(--space-1) !important;
+        padding: var(--space-2) 2px !important;
         text-align: center;
+        /* "Create Game" must stay on one line inside its quarter-width cell. */
+        white-space: nowrap;
     }
 
     .local-preview-notice {

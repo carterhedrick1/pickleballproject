@@ -23,8 +23,14 @@ function locationKey(displayName) {
 
 // Remove the old court from existing databases and do not remember it again if an older
 // game at that location is edited. Include the historical misspellings as well as the
-// spelling shown in the picker.
-const RETIRED_LOCATION_KEYS = new Set(['wimbledom', 'wimbledon', 'wimbleton']);
+// spelling shown in the picker. "Production Verification Court" is residue from a
+// retired deploy-verification script; real hosts should never see it in the picker.
+const RETIRED_LOCATION_KEYS = new Set([
+  'wimbledom',
+  'wimbledon',
+  'wimbleton',
+  'production verification court'
+]);
 
 function isRetiredLocation(displayName) {
   return RETIRED_LOCATION_KEYS.has(locationKey(displayName));

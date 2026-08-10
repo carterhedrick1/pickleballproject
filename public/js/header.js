@@ -35,6 +35,18 @@
   });
 })();
 
+// Every page pulls this script, so the favicon rides along instead of being pasted
+// into fifteen <head> sections. Without it, every page 404s on /favicon.ico and the
+// browser tab shows a blank globe.
+(function attachFavicon() {
+  if (document.querySelector('link[rel="icon"]')) return;
+  var link = document.createElement('link');
+  link.rel = 'icon';
+  link.type = 'image/svg+xml';
+  link.href = '/favicon.svg';
+  document.head.appendChild(link);
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
 // The header must never wait on the network: paint it with a bundled slogan
 // right away and swap in the server rotation's pick when it arrives.

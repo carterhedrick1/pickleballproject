@@ -17,7 +17,17 @@
             // Set default start time to 6:00 PM
             document.getElementById('time').value = '18:00';
             const organizerPlaying = document.getElementById('organizerPlaying');
-            organizerPlaying.addEventListener('change', updatePlayersHelp);
+            organizerPlaying.addEventListener('change', () => {
+                // The count field switches meaning with this tick box (others-needed vs
+                // total-needed), so adjust its value in step: a host who typed 3 meaning
+                // "3 plus me" still has a four-player game after unticking.
+                const players = document.getElementById('players');
+                const current = parseInt(players.value, 10);
+                if (!Number.isNaN(current)) {
+                    players.value = Math.max(organizerPlaying.checked ? current - 1 : current + 1, 1);
+                }
+                updatePlayersHelp();
+            });
             updatePlayersHelp();
             const ready = Promise.all([loadMessagePersonalities(), setupLocationPicker()]);
             document.querySelectorAll('[data-checkbox-id]').forEach((element) => {
