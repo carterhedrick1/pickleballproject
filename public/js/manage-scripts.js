@@ -399,7 +399,7 @@ function setupEventListeners() {
     if (sendToAll) {
         sendToAll.addEventListener('change', () => toggleAllPlayers(sendToAll.checked));
     }
-    for (const id of ['sendToPlayers', 'sendToWaitlist']) {
+    for (const id of ['sendToPlayers', 'sendToWaitlist', 'sendToOut']) {
         const checkbox = document.getElementById(id);
         if (checkbox) checkbox.addEventListener('change', updateGroupSelections);
     }

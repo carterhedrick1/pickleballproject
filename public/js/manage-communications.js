@@ -137,41 +137,48 @@ function sendQuickMessage(type) {
     );
 }
 
+// The three audiences a host can reach, in the order they appear on the page. Adding the "out"
+// list meant either a third copy of every group/individual sync, or one table - this is the table.
+const RECIPIENT_GROUPS = [
+    {
+        checkboxId: 'sendToPlayers',
+        type: 'confirmed',
+        // The host is not a recipient of their own announcement.
+        players: () => (gameData?.players || []).filter((p) => p.phone && !p.isOrganizer)
+    },
+    {
+        checkboxId: 'sendToWaitlist',
+        type: 'waitlist',
+        players: () => (gameData?.waitlist || []).filter((p) => p.phone)
+    },
+    {
+        checkboxId: 'sendToOut',
+        type: 'out',
+        players: () => (gameData?.outPlayers || []).filter((p) => p.phone)
+    }
+];
+
+function groupCheckbox(group) {
+    return document.getElementById(group.checkboxId);
+}
+
 function getSelectedRecipients() {
     const recipients = [];
 
-    // Only the two real group toggles count. The old fallback selectors could bind
-    // "send to players" to any checked checkbox on the page, including a notification
-    // preference toggle that has nothing to do with this announcement.
-    const sendToPlayers = document.getElementById('sendToPlayers')?.checked || false;
-    const sendToWaitlist = document.getElementById('sendToWaitlist')?.checked || false;
-
-    // If group checkboxes are selected, add all players from those groups
-    if (sendToPlayers && gameData?.players) {
-        gameData.players.forEach(player => {
-            if (player.phone && !player.isOrganizer) {
-                recipients.push({
-                    id: player.id,
-                    phone: player.phone,
-                    name: player.name,
-                    type: 'confirmed'
-                });
-            }
+    // Only the real group toggles count. The old fallback selectors could bind "send to
+    // players" to any checked checkbox on the page, including a notification preference
+    // toggle that has nothing to do with this announcement.
+    RECIPIENT_GROUPS.forEach((group) => {
+        if (!groupCheckbox(group)?.checked) return;
+        group.players().forEach((player) => {
+            recipients.push({
+                id: player.id,
+                phone: player.phone,
+                name: player.name,
+                type: group.type
+            });
         });
-    }
-    
-    if (sendToWaitlist && gameData?.waitlist) {
-        gameData.waitlist.forEach(player => {
-            if (player.phone) {
-                recipients.push({
-                    id: player.id,
-                    phone: player.phone,
-                    name: player.name,
-                    type: 'waitlist'
-                });
-            }
-        });
-    }
+    });
 
     // Individual picks live inside the recipient list only. Scanning the whole document swept
     // in unrelated checkboxes such as the notification preferences.
@@ -210,134 +217,72 @@ function recipientCheckboxes(type) {
     return Array.from(container.querySelectorAll(selector));
 }
 
-function toggleAllPlayers(checked) {
-    // Update group checkboxes
-    document.getElementById('sendToPlayers').checked = checked;
-    document.getElementById('sendToWaitlist').checked = checked;
+function setCheckboxState(checkbox, { checked, indeterminate = false }) {
+    if (!checkbox) return;
+    checkbox.checked = checked;
+    checkbox.indeterminate = indeterminate;
+}
 
-    // Update individual player checkboxes
-    recipientCheckboxes().forEach(checkbox => {
+// "All Players" is on when every group is on, part-way when some are.
+function updateSendToAll() {
+    const states = RECIPIENT_GROUPS.map((group) => Boolean(groupCheckbox(group)?.checked));
+    setCheckboxState(document.getElementById('sendToAll'), {
+        checked: states.every(Boolean),
+        indeterminate: !states.every(Boolean) && states.some(Boolean)
+    });
+}
+
+function toggleAllPlayers(checked) {
+    RECIPIENT_GROUPS.forEach((group) => {
+        setCheckboxState(groupCheckbox(group), { checked });
+    });
+    recipientCheckboxes().forEach((checkbox) => {
         checkbox.checked = checked;
     });
 }
 
 function updateGroupSelections() {
-    const sendToPlayers = document.getElementById('sendToPlayers').checked;
-    const sendToWaitlist = document.getElementById('sendToWaitlist').checked;
-    const sendToAll = document.getElementById('sendToAll');
-    
-    // Update individual checkboxes based on group selections
-    const confirmedCheckboxes = recipientCheckboxes('confirmed');
-    const waitlistCheckboxes = recipientCheckboxes('waitlist');
-    
-    confirmedCheckboxes.forEach(checkbox => {
-        checkbox.checked = sendToPlayers;
+    RECIPIENT_GROUPS.forEach((group) => {
+        const checked = Boolean(groupCheckbox(group)?.checked);
+        recipientCheckboxes(group.type).forEach((checkbox) => {
+            checkbox.checked = checked;
+        });
     });
-    
-    waitlistCheckboxes.forEach(checkbox => {
-        checkbox.checked = sendToWaitlist;
-    });
-    
-    // Update "All Players" checkbox
-    const allChecked = sendToPlayers && sendToWaitlist && 
-                      confirmedCheckboxes.length > 0 && waitlistCheckboxes.length > 0;
-    const someChecked = sendToPlayers || sendToWaitlist;
-    
-    if (allChecked) {
-        sendToAll.checked = true;
-        sendToAll.indeterminate = false;
-    } else if (someChecked) {
-        sendToAll.checked = false;
-        sendToAll.indeterminate = true;
-    } else {
-        sendToAll.checked = false;
-        sendToAll.indeterminate = false;
-    }
+    updateSendToAll();
 }
 
 function updateIndividualSelection() {
-    const confirmedCheckboxes = recipientCheckboxes('confirmed');
-    const waitlistCheckboxes = recipientCheckboxes('waitlist');
-    
-    // Check group checkbox states
-    const allConfirmedChecked = Array.from(confirmedCheckboxes).every(cb => cb.checked);
-    const allWaitlistChecked = Array.from(waitlistCheckboxes).every(cb => cb.checked);
-    const anyConfirmedChecked = Array.from(confirmedCheckboxes).some(cb => cb.checked);
-    const anyWaitlistChecked = Array.from(waitlistCheckboxes).some(cb => cb.checked);
-    
-    // Update group checkboxes
-    const sendToPlayers = document.getElementById('sendToPlayers');
-    const sendToWaitlist = document.getElementById('sendToWaitlist');
-    const sendToAll = document.getElementById('sendToAll');
-    
-    // Update confirmed players checkbox
-    if (confirmedCheckboxes.length > 0) {
-        if (allConfirmedChecked) {
-            sendToPlayers.checked = true;
-            sendToPlayers.indeterminate = false;
-        } else if (anyConfirmedChecked) {
-            sendToPlayers.checked = false;
-            sendToPlayers.indeterminate = true;
-        } else {
-            sendToPlayers.checked = false;
-            sendToPlayers.indeterminate = false;
-        }
-    }
-    
-    // Update waitlist checkbox
-    if (waitlistCheckboxes.length > 0) {
-        if (allWaitlistChecked) {
-            sendToWaitlist.checked = true;
-            sendToWaitlist.indeterminate = false;
-        } else if (anyWaitlistChecked) {
-            sendToWaitlist.checked = false;
-            sendToWaitlist.indeterminate = true;
-        } else {
-            sendToWaitlist.checked = false;
-            sendToWaitlist.indeterminate = false;
-        }
-    }
-    
-    // Update "All Players" checkbox
-    const allPlayersChecked = allConfirmedChecked && allWaitlistChecked && 
-                             confirmedCheckboxes.length > 0 && waitlistCheckboxes.length > 0;
-    const anyPlayersChecked = anyConfirmedChecked || anyWaitlistChecked;
-    
-    if (allPlayersChecked) {
-        sendToAll.checked = true;
-        sendToAll.indeterminate = false;
-    } else if (anyPlayersChecked) {
-        sendToAll.checked = false;
-        sendToAll.indeterminate = true;
-    } else {
-        sendToAll.checked = false;
-        sendToAll.indeterminate = false;
-    }
+    RECIPIENT_GROUPS.forEach((group) => {
+        const boxes = recipientCheckboxes(group.type);
+        if (boxes.length === 0) return;
+        const allChecked = boxes.every((checkbox) => checkbox.checked);
+        const anyChecked = boxes.some((checkbox) => checkbox.checked);
+        setCheckboxState(groupCheckbox(group), {
+            checked: allChecked,
+            indeterminate: !allChecked && anyChecked
+        });
+    });
+    updateSendToAll();
 }
 
 function clearAllRecipientSelections() {
-    // Clear all group checkboxes - start with nothing selected
-    document.getElementById('sendToAll').checked = false;
-    document.getElementById('sendToAll').indeterminate = false;
-    document.getElementById('sendToPlayers').checked = false;  // Changed from true to false
-    document.getElementById('sendToPlayers').indeterminate = false;
-    document.getElementById('sendToWaitlist').checked = false;
-    document.getElementById('sendToWaitlist').indeterminate = false;
-    
-    // Clear all individual player checkboxes
-    recipientCheckboxes().forEach(checkbox => {
+    // Nothing selected, so an announcement can never go out to a group the host did not pick.
+    setCheckboxState(document.getElementById('sendToAll'), { checked: false });
+    RECIPIENT_GROUPS.forEach((group) => {
+        setCheckboxState(groupCheckbox(group), { checked: false });
+    });
+    recipientCheckboxes().forEach((checkbox) => {
         checkbox.checked = false;
     });
 }
 
 function updateGroupCheckboxStyling() {
     // Style the group checkbox containers
-    const groupCheckboxes = [
-        document.getElementById('sendToAll')?.parentElement,
-        document.getElementById('sendToPlayers')?.parentElement, 
-        document.getElementById('sendToWaitlist')?.parentElement
-    ];
-    
+    const groupCheckboxes = RECIPIENT_GROUP_IDS.map(
+        (id) => document.getElementById(id)?.parentElement
+    );
+
+
     groupCheckboxes.forEach(container => {
         if (container) {
             // Apply consistent styling to match individual players
@@ -384,19 +329,26 @@ function updateGroupCheckboxStyling() {
     if (sendToAll) {
         sendToAll.style.borderLeft = '4px solid var(--brand) !important';
     }
-    
-    const sendToPlayers = document.getElementById('sendToPlayers')?.parentElement;
-    if (sendToPlayers) {
-        sendToPlayers.style.borderLeft = '4px solid var(--brand) !important';
-    }
-    
-    const sendToWaitlist = document.getElementById('sendToWaitlist')?.parentElement;
-    if (sendToWaitlist) {
-        sendToWaitlist.style.borderLeft = '4px solid var(--warning) !important';
-    }
+
+    RECIPIENT_GROUPS.forEach((group) => {
+        const row = groupCheckbox(group)?.parentElement;
+        if (row) {
+            row.style.borderLeft = `4px solid ${RECIPIENT_GROUP_ACCENTS[group.type]} !important`;
+        }
+    });
 }
 
-const RECIPIENT_GROUP_IDS = ['sendToAll', 'sendToPlayers', 'sendToWaitlist'];
+// One colour per audience, used on both the group rows and the individual rows under them.
+const RECIPIENT_GROUP_ACCENTS = {
+    confirmed: 'var(--brand)',
+    waitlist: 'var(--warning)',
+    out: 'var(--danger)'
+};
+
+const RECIPIENT_GROUP_IDS = [
+    'sendToAll',
+    ...RECIPIENT_GROUPS.map((group) => group.checkboxId)
+];
 
 function updatePlayerCheckboxes() {
     const container = document.getElementById('playerCheckboxes');
@@ -420,16 +372,15 @@ function updatePlayerCheckboxes() {
 
     container.innerHTML = '';
 
-    // Add confirmed players
-    gameData.players.forEach(player => {
-        if (player.phone && !player.isOrganizer) { // Only players with phones who aren't organizers
+    RECIPIENT_GROUPS.forEach((group) => {
+        group.players().forEach((player) => {
             const checkboxItem = ManageRender.createRecipientOption(
                 document,
                 player,
-                'confirmed',
+                group.type,
                 updateIndividualSelection
             );
-            
+
             // Styling to match group checkboxes
             checkboxItem.style.cssText = `
                 display: flex !important;
@@ -440,52 +391,19 @@ function updatePlayerCheckboxes() {
                 background: var(--surface) !important;
                 border: 2px solid var(--border) !important;
                 border-radius: 8px !important;
-                border-left: 4px solid var(--brand) !important;
+                border-left: 4px solid ${RECIPIENT_GROUP_ACCENTS[group.type]} !important;
                 transition: all 0.2s ease !important;
                 box-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 10%, transparent) !important;
                 margin-bottom: 8px !important;
                 font-size: inherit !important;
                 line-height: inherit !important;
             `;
-            
+
             container.appendChild(checkboxItem);
-        }
-    });
-    
-    // Add waitlist players
-    if (gameData.waitlist) {
-        gameData.waitlist.forEach(player => {
-            if (player.phone) {
-                const checkboxItem = ManageRender.createRecipientOption(
-                    document,
-                    player,
-                    'waitlist',
-                    updateIndividualSelection
-                );
-                
-                // Styling to match group checkboxes
-                checkboxItem.style.cssText = `
-                    display: flex !important;
-                    flex-direction: row !important;
-                    align-items: center !important;
-                    gap: 12px !important;
-                    padding: 12px 15px !important;
-                    background: var(--surface) !important;
-                    border: 2px solid var(--border) !important;
-                    border-radius: 8px !important;
-                    border-left: 4px solid var(--warning) !important;
-                    transition: all 0.2s ease !important;
-                    box-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 10%, transparent) !important;
-                    margin-bottom: 8px !important;
-                    font-size: inherit !important;
-                    line-height: inherit !important;
-                `;
-                
-                container.appendChild(checkboxItem);
-            }
         });
-    }
-    
+    });
+
+
     // Show section only if there are players with phones
     const individualSection = document.getElementById('individualPlayersSection');
     if (individualSection) {

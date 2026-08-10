@@ -104,8 +104,7 @@ async function hit(method, path, { body, raw, headers = {} } = {}) {
   await hit('PUT', `/api/games/${id}/court-image-none?token=${tok}`);
   await hit('DELETE', `/api/games/${id}/court-images/${imageId}?token=${tok}`);
 
-  // announcements
-  await hit('POST', `/api/games/${id}/announcement`, { body: { token: tok, message: 'hi', includeConfirmed: true } });
+  // announcements — one route, taking the people the host picked
   await hit('POST', `/api/games/${id}/announcement-individual`, { body: { token: tok, message: 'hi', recipients: [] } });
 
   // sms webhook
