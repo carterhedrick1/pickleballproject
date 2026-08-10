@@ -328,6 +328,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Out Player', phone: '5555550888', action: 'out' })
     });
+    await fixtures.removeSavedRosterFixture(fx.HOST_PHONE, '5555550888');
 
     // Reproduce the reported group size through the real API. This separate fixture keeps its
     // invitation history from changing the management-screen assertions below.
@@ -374,7 +375,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       invitePhones.length === 3 && inviteGroupResponse.status === 200 &&
         inviteGroup.sentCount === 3 && inviteGroup.failedCount === 0 &&
         invitePhones.every((phone) => recordedInvitePhones.has(phone)),
-      `three selected players are texted and recorded in one request ` +
+      `three selected players, including an older-game roster entry, are texted and recorded ` +
+        `in one request ` +
         `(${Date.now() - inviteGroupStartedAt}ms in dev mode)`
     );
 

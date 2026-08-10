@@ -17,8 +17,7 @@ const {
   addLocation,
   getAllPhotoCounts,
   getPersonality,
-  getDefaultPersonality,
-  getRosterForHost
+  getDefaultPersonality
 } = require('../database');
 
 const {
@@ -39,6 +38,7 @@ const { isGameUpcoming } = require('../utils/central-time');
 const { routeFailed } = require('../utils/route-error');
 const { isHost, requireVerifiedHostPhone } = require('../utils/host-auth');
 const { applyGameUpdate } = require('../utils/game-update');
+const { getVisibleHostRoster } = require('../services/host-roster');
 const {
   snapshotGame,
   changedFields,
@@ -385,8 +385,10 @@ module.exports = function mountGameRoutes(app) {
       if (requestedPhones.length > 200) {
         return res.status(400).json({ error: 'Choose up to 200 intended invitees.' });
       }
-      const roster = await getRosterForHost(game.hostPhone);
-      const rosterByPhone = new Map(roster.map((player) => [player.playerPhone, player]));
+      const roster = await getVisibleHostRoster(game.hostPhone);
+      const rosterByPhone = new Map(
+        roster.map((player) => [formatPhoneNumber(player.phone), player])
+      );
       const uniquePhones = [...new Set(requestedPhones)];
       const unknown = uniquePhones.filter((phone) => !rosterByPhone.has(phone));
       if (unknown.length) {
