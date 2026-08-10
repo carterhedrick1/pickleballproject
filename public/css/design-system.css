@@ -531,6 +531,15 @@ button,
     text-align: center !important;
 }
 
+/*
+ * The rule above wins over the browser's own `[hidden] { display: none }`, so every
+ * button a page hides with the hidden attribute stayed on screen. Restore it for
+ * everything, at the same weight, rather than making each page remember to.
+ */
+[hidden] {
+    display: none !important;
+}
+
 :where(
     button[type="submit"],
     .copy-btn,
@@ -753,6 +762,13 @@ button:disabled,
     background: var(--danger-soft) !important;
     border-color: var(--danger-border) !important;
     color: var(--danger) !important;
+}
+
+/* An outstanding invitation is the one badge worth a second glance. */
+.badge.waiting {
+    background: var(--warning-soft) !important;
+    border-color: var(--warning-border) !important;
+    color: var(--warning) !important;
 }
 
 .row-status,

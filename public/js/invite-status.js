@@ -33,7 +33,8 @@
 
     /**
      * @param {object} game a full game, including invitedPlayers
-     * @returns {{invited: object[], responded: object[], nonResponders: object[], texted: number}}
+     * @returns {{invited: object[], responded: object[], nonResponders: object[],
+     *   texted: number, counts: object}}
      */
     function inviteStatus(game) {
         const responded = respondedPhones(game);
@@ -62,7 +63,18 @@
             (entry.response ? answered : nonResponders).push(entry);
         }
 
-        return { invited, responded: answered, nonResponders, texted };
+        // The management page and the My Games cards both headline these numbers, so they are
+        // counted once here rather than tallied separately at each place that shows them.
+        const counts = {
+            invited: invited.length,
+            confirmed: answered.filter((entry) => entry.response === 'confirmed').length,
+            waitlist: answered.filter((entry) => entry.response === 'waitlist').length,
+            out: answered.filter((entry) => entry.response === 'out').length,
+            noReply: nonResponders.length,
+            failed: invited.filter((entry) => entry.lastTextStatus === 'failed').length
+        };
+
+        return { invited, responded: answered, nonResponders, texted, counts };
     }
 
     return { normalizePhone, inviteStatus };

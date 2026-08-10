@@ -10,7 +10,17 @@
         return node;
     }
 
-    function createPlayerItem(document, player, { meta = [], actions = [] } = {}) {
+    /** A short coloured word - IN, OUT, No Reply - that carries the row's state at a glance. */
+    function createStatusChip(document, badge) {
+        return element(
+            document,
+            'span',
+            `status-chip status-chip--${badge.tone || 'muted'}`,
+            badge.label
+        );
+    }
+
+    function createPlayerItem(document, player, { meta = [], actions = [], badge = null } = {}) {
         const item = element(document, 'div', 'player-item');
         const info = element(document, 'div', 'player-info');
         const suffix = player.isOrganizer ? ' (Organizer)' : '';
@@ -22,6 +32,8 @@
             info.appendChild(element(document, 'div', 'player-phone', value));
         }
         item.appendChild(info);
+
+        if (badge) item.appendChild(createStatusChip(document, badge));
 
         if (actions.length) {
             const actionBox = element(document, 'div', 'player-actions');
@@ -55,7 +67,7 @@
         return item;
     }
 
-    function createRosterOption(document, player, onChange) {
+    function createRosterOption(document, player, onChange, { badge = null, meta = [] } = {}) {
         const option = element(document, 'label', 'roster-player-option');
         const input = element(document, 'input', 'roster-player-checkbox');
         input.type = 'checkbox';
@@ -70,14 +82,16 @@
 
         const metadata = [player.phone || ''];
         if (player.duprRating != null) metadata.push(`DUPR ${player.duprRating}`);
+        metadata.push(...meta);
         details.appendChild(
             element(document, 'span', 'roster-player-meta', metadata.filter(Boolean).join(' · '))
         );
 
         option.appendChild(input);
         option.appendChild(details);
+        if (badge) option.appendChild(createStatusChip(document, badge));
         return option;
     }
 
-    return { createPlayerItem, createRecipientOption, createRosterOption };
+    return { createPlayerItem, createRecipientOption, createRosterOption, createStatusChip };
 });

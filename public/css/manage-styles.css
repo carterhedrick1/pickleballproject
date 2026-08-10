@@ -936,7 +936,6 @@ button:active {
     font-weight: 600;
 }
 
-/* Texting the invitation and saving who you meant to invite sit side by side. */
 .invite-actions {
     display: flex;
     flex-wrap: wrap;
@@ -949,6 +948,25 @@ button:active {
     margin: 0;
 }
 
+.invite-tracking {
+    border-top: 1px solid var(--border);
+    margin-top: 28px;
+    padding-top: 22px;
+}
+
+.invite-tracking h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+}
+
+/* The one line that answers "how is this game coming along". */
+.invite-summary {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
 .invite-tracking-list {
     display: grid;
     gap: 10px;
@@ -957,6 +975,95 @@ button:active {
 
 .invite-tracking-list:empty {
     margin-top: 0;
+}
+
+/*
+ * Same shape as every other player row on this page - name, then the actions underneath - with
+ * the answer pinned to the top right corner. Laying the row out as a flex line instead fought
+ * the mobile rule that stacks .player-actions, and left a tall gap mid-row on a phone.
+ */
+.invite-tracking-list .player-item {
+    margin-bottom: 0;
+    position: relative;
+}
+
+.invite-tracking-list .player-info {
+    padding-right: 100px;
+}
+
+.invite-tracking-list .status-chip {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+}
+
+/* A row's answer, readable without reading: IN, OUT, Waitlist, No Reply, Text Failed. */
+.status-chip {
+    align-self: center;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 4px 10px;
+    white-space: nowrap;
+}
+
+.status-chip--in {
+    background: var(--brand-soft);
+    border-color: var(--brand-border);
+    color: var(--brand);
+}
+
+.status-chip--out {
+    background: var(--danger-soft);
+    border-color: var(--danger-border);
+    color: var(--danger);
+}
+
+.status-chip--waiting {
+    background: var(--warning-soft);
+    border-color: var(--warning-border);
+    color: var(--warning);
+}
+
+.status-chip--muted {
+    background: var(--quiet);
+}
+
+.roster-player-option .status-chip {
+    margin-left: auto;
+}
+
+.invite-add-new {
+    border-top: 1px solid var(--border);
+    margin-top: 22px;
+    padding-top: 18px;
+}
+
+.invite-add-new h4 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+}
+
+.invite-add-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.invite-add-row input {
+    flex: 1 1 150px;
+    margin: 0;
+    min-width: 0;
+}
+
+.invite-add-row button {
+    flex: 0 0 auto;
+    margin: 0;
 }
 
 .roster-picker-actions {
@@ -1296,11 +1403,64 @@ button:disabled {
     transform: translateY(-1px);
 }
 
+/*
+ * Tick boxes that sit on a line with their own label. These classes were only ever styled in
+ * create-styles.css, which this page does not load, so the box floated to the right of a label
+ * on the line above it. The global `input { width: 100% }` rule is what made that so wide.
+ */
+.checkbox-inline,
+.notify-change-label {
+    align-items: center;
+    background: var(--canvas);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+}
+
+.checkbox-inline input[type="checkbox"],
+.notify-change-label input[type="checkbox"] {
+    accent-color: var(--brand);
+    cursor: pointer;
+    flex-shrink: 0;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+    width: 18px;
+}
+
+.checkbox-inline label,
+.notify-change-label {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.notify-change-group .form-help-text,
+.checkbox-inline + .form-help-text {
+    margin-top: 8px;
+}
+
 /* Danger warning */
 .danger-warning {
     color: var(--danger);
     margin-bottom: 20px;
     font-style: italic;
+}
+
+/* Cancelling now sits at the foot of Game Details, so it needs its own edge to sit behind. */
+.danger-section {
+    border-top: 1px solid var(--border);
+    padding-top: 28px;
+}
+
+/* design-system.css sets .section-title colour with !important, so matching it takes the same. */
+.danger-section .section-title {
+    color: var(--danger) !important;
 }
 
 /* Expired game warning */
@@ -1346,8 +1506,7 @@ button:disabled {
    live on the Players tab, which stays enabled below, so disabling Details is safe. */
 #gameManagement.expired .tab[data-tab="Invite"],
 #gameManagement.expired .tab[data-tab="Details"],
-#gameManagement.expired .tab[data-tab="Communication"],
-#gameManagement.expired .tab[data-tab="Actions"] {
+#gameManagement.expired .tab[data-tab="Communication"] {
     opacity: 0.5;
     pointer-events: none;
     background: var(--canvas) !important;
@@ -1356,16 +1515,14 @@ button:disabled {
 
 #gameManagement.expired #Invite,
 #gameManagement.expired #Details,
-#gameManagement.expired #Communication,
-#gameManagement.expired #Actions {
+#gameManagement.expired #Communication {
     opacity: 0.6;
     pointer-events: none;
 }
 
 #gameManagement.expired #Invite .form-section,
 #gameManagement.expired #Details .form-section,
-#gameManagement.expired #Communication .form-section,
-#gameManagement.expired #Actions .form-section {
+#gameManagement.expired #Communication .form-section {
     background: var(--canvas) !important;
 }
 
@@ -1377,10 +1534,7 @@ button:disabled {
 #gameManagement.expired #Details button,
 #gameManagement.expired #Communication input,
 #gameManagement.expired #Communication textarea,
-#gameManagement.expired #Communication button,
-#gameManagement.expired #Actions input,
-#gameManagement.expired #Actions textarea,
-#gameManagement.expired #Actions button {
+#gameManagement.expired #Communication button {
     background-color: var(--canvas) !important;
     color: var(--text-muted) !important;
     cursor: not-allowed !important;

@@ -117,6 +117,14 @@ function gameCard(game) {
     if (game.waitlistCount) {
         badges.push(`<span class="badge">${game.waitlistCount} ${game.waitlistCount === 1 ? 'player' : 'players'} waiting</span>`);
     }
+    // Whether the invitations are still outstanding is the reason a host opens a game, so the
+    // answer belongs on the card rather than three taps inside it.
+    if (game.invitedCount) {
+        badges.push(`<span class="badge">${game.invitedCount} invited</span>`);
+    }
+    if (game.awaitingReplyCount) {
+        badges.push(`<span class="badge waiting">${game.awaitingReplyCount} ${game.awaitingReplyCount === 1 ? 'has' : 'have'} not replied</span>`);
+    }
     if (game.registrationMode === 'waitlist') {
         badges.push('<span class="badge">You pick the players</span>');
     }
