@@ -284,6 +284,17 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       assert(response.ok, `${player.name} is available in the host roster fixture`);
     }
 
+    // The smoke server keeps SMS event logging off, so the delivery log gets one seeded row:
+    // a reminder that failed, which is exactly the case a host goes looking for.
+    await fixtures.seedSmsEvent({
+      gameId: fx.open.gameId,
+      eventId: 'upcoming-game-reminder',
+      phone: fx.JOIN_PHONE,
+      status: 'failed',
+      attempts: 3,
+      error: 'Carrier rejected the message'
+    });
+
     // Someone who said OUT and left a phone number - the audience for "a spot just opened".
     await fetch(`${local.baseUrl}/api/games/${fx.open.gameId}/players`, {
       method: 'POST',
@@ -698,6 +709,43 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     assert(
       quickMessage.modalClosed && /Sent to \d+ player/.test(quickMessage.status),
       `the confirmed quick message is actually sent (${quickMessage.status})`
+    );
+
+    const deliveryLog = await desktop.evaluate(`(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      const rows = [...document.querySelectorAll('.delivery-row')];
+      const raw = await fetch(
+        '/api/games/${fx.open.gameId}/sms-events?token=${fx.open.hostToken}'
+      ).then((response) => response.json());
+      const unauthorized = await fetch(
+        '/api/games/${fx.open.gameId}/sms-events?token=not-the-host'
+      );
+      return {
+        status: document.getElementById('deliveryLogStatus').textContent,
+        rowCount: rows.length,
+        firstRow: rows[0] && rows[0].textContent,
+        namedEveryone: raw.events.every((event) => event.name && !/^[0-9a-f]{64}$/.test(event.name)),
+        namesAPlayer: raw.events.some((event) => event.name === 'Roster Player One'),
+        showsTheFailure: raw.events.some(
+          (event) => event.status === 'failed' && event.attempts === 3 &&
+            event.event === 'Upcoming Game Reminder'
+        ),
+        leaksHashes: JSON.stringify(raw).includes('recipientHash'),
+        unauthorizedStatus: unauthorized.status,
+        readOnly: !document.querySelector('.delivery-row button, .delivery-row input')
+      };
+    })()`);
+    assert(
+      deliveryLog.rowCount > 0 && deliveryLog.namedEveryone && deliveryLog.namesAPlayer,
+      `the delivery log lists sends by name rather than by number (${deliveryLog.status})`
+    );
+    assert(
+      deliveryLog.showsTheFailure && deliveryLog.readOnly && !deliveryLog.leaksHashes,
+      'a failed text is shown with its attempts, read-only, and no recipient hashes'
+    );
+    assert(
+      deliveryLog.unauthorizedStatus === 403,
+      'the delivery log needs the host token'
     );
 
     const activeDeleteResponse = await fetch(

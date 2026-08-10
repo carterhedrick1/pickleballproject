@@ -144,6 +144,34 @@ async function verify(baseUrl, fixtures) {
 }
 
 /**
+ * Writes one sms_events row for a fixture game.
+ *
+ * The browser smoke server runs with SMS event logging switched off, so fixture texts never
+ * reach this table on their own. The host-facing delivery log still has to be provable, so a
+ * row is seeded directly - hashed exactly the way the app hashes recipients.
+ */
+function seedSmsEvent({ gameId, eventId, phone, status = 'sent', attempts = 1, error = null }) {
+  const crypto = require('crypto');
+  const sqlite3 = require('sqlite3');
+  const recipientHash = crypto
+    .createHash('sha256')
+    .update(String(phone || '').replace(/\D/g, ''))
+    .digest('hex');
+
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(DB_FILE, (err) => {
+      if (err) return reject(err);
+      db.run(
+        `INSERT INTO sms_events (id, event_id, game_id, recipient_hash, status, attempts, error)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [crypto.randomUUID(), eventId, gameId, recipientHash, status, attempts, error],
+        (runErr) => db.close(() => (runErr ? reject(runErr) : resolve()))
+      );
+    });
+  });
+}
+
+/**
  * Deletes fixture rows from the local SQLite database.
  * Only rows that carry MARKER and a fixture 555 phone are eligible, so this cannot remove a
  * real game even if the marker string were somehow reused. The side tables a fixture run also
@@ -171,7 +199,14 @@ function cleanup() {
             gameIds, next
           );
         };
-        dropPhotos(() => db.run(
+        const dropSmsEvents = (next) => {
+          if (!gameIds.length) return next();
+          db.run(
+            `DELETE FROM sms_events WHERE game_id IN (${gameIds.map(() => '?').join(',')})`,
+            gameIds, next
+          );
+        };
+        dropPhotos(() => dropSmsEvents(() => db.run(
           `DELETE FROM host_roster WHERE host_phone IN (${phoneMarks}) OR player_phone IN (${phoneMarks})`,
           [...FIXTURE_PHONES, ...FIXTURE_PHONES],
           () => {
@@ -189,7 +224,7 @@ function cleanup() {
               }
             );
           }
-        ));
+        )));
       };
 
       db.all(`SELECT id FROM games ${where}`, params, (selErr, rows) => {
@@ -210,5 +245,6 @@ function cleanup() {
 }
 
 module.exports = {
-  seed, verify, cleanup, MARKER, HOST_PHONE, FORM_PHONE, JOIN_PHONE, inDays, FIXTURE_LOCATIONS
+  seed, verify, cleanup, seedSmsEvent,
+  MARKER, HOST_PHONE, FORM_PHONE, JOIN_PHONE, inDays, FIXTURE_LOCATIONS
 };
