@@ -443,6 +443,14 @@
                         <button type="submit">Send Announcement</button>
                     </form>
                     
+                    <section class="delivery-log" aria-labelledby="deliveryLogTitle">
+                        <h3 class="subsection-title" id="deliveryLogTitle">Text Delivery Log</h3>
+                        <p class="form-help-text">Every text this game has sent, and whether it reached the phone. Read only.</p>
+                        <div id="deliveryLogStatus" class="roster-picker-status" aria-live="polite">Loading the delivery log...</div>
+                        <div id="deliveryLogList" class="delivery-log-list"></div>
+                        <button type="button" id="refreshDeliveryLog" class="btn-secondary">Refresh The Log</button>
+                    </section>
+
                     <h3 class="subsection-title">Quick Messages</h3>
                     <p class="form-help-text">Both go to your confirmed players. You see the exact wording and confirm before anything is sent.</p>
                     <div class="quick-actions">

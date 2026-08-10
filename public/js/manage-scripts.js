@@ -165,6 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fetch game data
     fetchGameData();
 
+    // Loaded once rather than with every roster refresh: the log is a look-back, and it has
+    // its own Refresh button for the "I never got the reminder" conversation.
+    loadDeliveryLog();
+
     // Set up event listeners
     setupEventListeners();
 
@@ -389,6 +393,11 @@ function setupEventListeners() {
     document.querySelectorAll('[data-collapsible]').forEach((element) => {
         element.addEventListener('click', () => toggleCollapsible(element.dataset.collapsible));
     });
+
+    const refreshDeliveryLog = document.getElementById('refreshDeliveryLog');
+    if (refreshDeliveryLog) {
+        refreshDeliveryLog.addEventListener('click', loadDeliveryLog);
+    }
 
     const copyLinkOnly = document.getElementById('copyPlayerLinkOnly');
     if (copyLinkOnly) {

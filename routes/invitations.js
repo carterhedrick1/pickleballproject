@@ -1,4 +1,5 @@
-// Texting the invitation, and chasing the people who never answered it.
+// Texting the invitation, chasing the people who never answered it, and showing the host what
+// this game has actually texted to whom.
 //
 // Every other invite path in the app is a clipboard copy, which is why the app could tell a host
 // who replied but never who was asked. This route sends the same invitation body that the Copy
@@ -12,8 +13,12 @@
 const {
   getGame,
   saveGame,
-  getRosterForHost
+  getRosterForHost,
+  getSmsEventsForGame,
+  recipientHash
 } = require('../database');
+
+const { describeSmsEvents } = require('../utils/delivery-log');
 
 const {
   sendSMS,
@@ -34,6 +39,24 @@ const { normalizePhone } = require('../public/js/invite-status');
 const MAX_INVITES_PER_REQUEST = 50;
 
 module.exports = function mountInvitationRoutes(app) {
+  // "I never got the reminder" used to be unanswerable. Every send is already recorded; this
+  // reads back the rows for one game, named rather than hashed.
+  app.get('/api/games/:id/sms-events', async (req, res) => {
+    const gameId = req.params.id;
+    try {
+      const game = await getGame(gameId);
+      if (!game) return res.status(404).json({ error: 'Game not found' });
+      if (!isHost(game, req.query.token)) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      const rows = await getSmsEventsForGame(gameId);
+      res.json(describeSmsEvents(game, rows, recipientHash));
+    } catch (error) {
+      routeFailed(req, res, error, 'Failed to load the delivery log');
+    }
+  });
+
   app.post('/api/games/:id/invitations', async (req, res) => {
     const gameId = req.params.id;
     try {

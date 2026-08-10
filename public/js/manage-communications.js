@@ -55,7 +55,10 @@ async function sendAnnouncement() {
         document.getElementById('announcementText').value = '';
         document.getElementById('announcementPersonalityWrapper').checked = false;
         clearAllRecipientSelections();
-        
+
+        // The log below is about what this game has texted, so a send belongs in it now.
+        loadDeliveryLog();
+
         showStatus(`Announcement sent to ${data.recipientCount} ${data.recipientCount === 1 ? 'player' : 'players'}.`, 'success');
         
     } catch (error) {
@@ -125,6 +128,7 @@ function sendQuickMessage(type) {
             try {
                 showStatus('Sending...', 'info');
                 const data = await postAnnouncement(message, recipients);
+                loadDeliveryLog();
                 showStatus(
                     `Sent to ${data.recipientCount} ${data.recipientCount === 1 ? 'player' : 'players'}.`,
                     'success'
@@ -442,11 +446,96 @@ function updatePlayerCheckboxes() {
 
 
 
+// "I never got the reminder" is a question the host could not answer until now, even though
+// every attempt has been recorded all along.
+const DELIVERY_STATUS_TEXT = {
+    sent: 'Delivered',
+    failed: 'Did not send',
+    simulated: 'Test mode, not really sent'
+};
+
+async function loadDeliveryLog() {
+    const list = document.getElementById('deliveryLogList');
+    const status = document.getElementById('deliveryLogStatus');
+    const refresh = document.getElementById('refreshDeliveryLog');
+    if (!list || !status) return;
+
+    status.classList.remove('error-text');
+    status.textContent = 'Loading the delivery log...';
+    if (refresh) refresh.disabled = true;
+
+    try {
+        const response = await fetch(`/api/games/${gameId}/sms-events?token=${hostToken}`);
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        const data = await response.json();
+        renderDeliveryLog(data.events || [], data.counts || {});
+    } catch (error) {
+        console.error('Error loading the delivery log:', error);
+        list.innerHTML = '';
+        status.textContent = 'Could not load the delivery log. Try refreshing it.';
+        status.classList.add('error-text');
+    } finally {
+        if (refresh) refresh.disabled = false;
+    }
+}
+
+function renderDeliveryLog(events, counts) {
+    const list = document.getElementById('deliveryLogList');
+    const status = document.getElementById('deliveryLogStatus');
+    list.innerHTML = '';
+
+    if (events.length === 0) {
+        status.textContent = 'No texts have gone out for this game yet.';
+        return;
+    }
+
+    const failed = counts.failed || 0;
+    const simulated = counts.simulated || 0;
+    const total = `${events.length} ${events.length === 1 ? 'text' : 'texts'}`;
+    if (failed) {
+        status.textContent = `${total}, ${failed} of which did not go through.`;
+    } else if (simulated === events.length) {
+        // Only a local or test server records simulated sends, and calling those "delivered"
+        // would be a lie the host could act on.
+        status.textContent = `${total}, all in test mode. Nothing was really sent.`;
+    } else {
+        status.textContent = `${total}, all delivered.`;
+    }
+
+    events.forEach((event) => {
+        const row = document.createElement('div');
+        row.className = `delivery-row ${event.status}`;
+
+        const who = document.createElement('div');
+        who.className = 'delivery-who';
+        who.textContent = event.name;
+
+        const what = document.createElement('div');
+        what.className = 'delivery-what';
+        const when = PageUtils.formatTimeAgo(event.sentAt);
+        const parts = [event.event];
+        if (when) parts.push(when);
+        if (event.attempts > 1) parts.push(`${event.attempts} attempts`);
+        what.textContent = parts.join(' · ');
+
+        const outcome = document.createElement('div');
+        outcome.className = 'delivery-status';
+        outcome.textContent = DELIVERY_STATUS_TEXT[event.status] || event.status;
+        if (event.status === 'failed' && event.error) {
+            outcome.title = event.error;
+        }
+
+        row.append(who, what, outcome);
+        list.appendChild(row);
+    });
+}
+
 window.ManageApp.communications = {
 
     sendAnnouncement,
     sendQuickMessage,
     quickMessageText,
+    loadDeliveryLog,
     getSelectedRecipients,
     toggleAllPlayers,
     updateGroupSelections,

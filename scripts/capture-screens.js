@@ -580,6 +580,16 @@ ${body}
     process.stdout.write('seeding demo games ... ');
     const fx = await fixtures.seed(app.baseUrl);
     await fixtures.verify(app.baseUrl, fx);
+
+    // The screenshot server keeps SMS event logging off, so the delivery log would photograph
+    // as an empty panel. These two rows show what a host actually sees in it.
+    await fixtures.seedSmsEvent({
+      gameId: fx.open.gameId, eventId: 'upcoming-game-reminder', phone: fx.JOIN_PHONE
+    });
+    await fixtures.seedSmsEvent({
+      gameId: fx.open.gameId, eventId: 'host-player-joined', phone: fx.HOST_PHONE,
+      status: 'failed', attempts: 3, error: 'Carrier rejected the message'
+    });
     console.log('3 games, shapes verified');
 
     process.stdout.write('launching headless Chrome ... ');

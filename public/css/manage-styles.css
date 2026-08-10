@@ -885,6 +885,69 @@ button:active {
     line-height: 1.35;
 }
 
+/* Read-only record of what this game has texted, and whether it landed. */
+.delivery-log {
+    margin: 28px 0;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+
+.delivery-log-list {
+    display: grid;
+    gap: 8px;
+    margin: 16px 0;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.delivery-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 16px;
+    padding: 12px 15px;
+    border: 2px solid var(--border);
+    border-left: 4px solid var(--brand);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.delivery-row.failed {
+    border-left-color: var(--danger);
+}
+
+.delivery-row.simulated {
+    border-left-color: var(--warning);
+}
+
+.delivery-who {
+    color: var(--ink);
+    font-weight: 600;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.delivery-what {
+    grid-column: 1;
+    color: var(--text-muted);
+    font-size: 13px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.delivery-status {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    align-self: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.delivery-row.failed .delivery-status {
+    color: var(--danger);
+    font-weight: 600;
+}
+
 /* Texting the invitation and saving who you meant to invite sit side by side. */
 .invite-actions {
     display: flex;

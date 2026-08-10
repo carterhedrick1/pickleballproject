@@ -191,6 +191,8 @@ async function initializeDatabase() {
         `);
         await client.query('CREATE INDEX IF NOT EXISTS idx_sms_events_created ON sms_events (created_at)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_sms_events_event ON sms_events (event_id)');
+        // The host-facing delivery log reads one game at a time.
+        await client.query('CREATE INDEX IF NOT EXISTS idx_sms_events_game ON sms_events (game_id)');
         // Same reason as photos: no persistent disk, so the generated doc pages live here.
         await client.query(`
           CREATE TABLE IF NOT EXISTS dev_assets (
@@ -460,6 +462,7 @@ async function initializeDatabase() {
       )`);
       await sqliteRun('CREATE INDEX IF NOT EXISTS idx_sms_events_created ON sms_events (created_at)');
       await sqliteRun('CREATE INDEX IF NOT EXISTS idx_sms_events_event ON sms_events (event_id)');
+      await sqliteRun('CREATE INDEX IF NOT EXISTS idx_sms_events_game ON sms_events (game_id)');
       // Same reason as photos: no persistent disk, so the generated doc pages live here.
       await sqliteRun(`CREATE TABLE IF NOT EXISTS dev_assets (
         name TEXT PRIMARY KEY,

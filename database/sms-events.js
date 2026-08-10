@@ -48,6 +48,38 @@ async function logSmsEvent({
   }
 }
 
+/**
+ * Every text this game produced, newest first.
+ *
+ * Rows identify their recipient by hash only, so the caller matches those hashes against the
+ * phone numbers it already knows to put names on them. A number nobody on the game recognizes
+ * stays anonymous, which is the point of storing the hash rather than the number.
+ */
+async function getSmsEventsForGame(gameId, { limit = 200 } = {}) {
+  if (!gameId) return [];
+  const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 500);
+  const query = isProduction
+    ? `SELECT event_id, recipient_hash, status, attempts, error, created_at
+       FROM sms_events WHERE game_id = $1
+       ORDER BY created_at DESC, id DESC LIMIT $2`
+    : `SELECT event_id, recipient_hash, status, attempts, error, created_at
+       FROM sms_events WHERE game_id = ?
+       ORDER BY created_at DESC, id DESC LIMIT ?`;
+
+  const rows = isProduction
+    ? await withPgClient(async (client) => (await client.query(query, [gameId, safeLimit])).rows)
+    : await sqliteAll(query, [gameId, safeLimit]);
+
+  return rows.map((row) => ({
+    eventId: row.event_id,
+    recipientHash: row.recipient_hash,
+    status: row.status,
+    attempts: Number(row.attempts) || 1,
+    error: row.error || null,
+    sentAt: toIso(row.created_at)
+  }));
+}
+
 async function getSmsEventMetrics() {
   const intervalColumns = isProduction
     ? `
@@ -142,5 +174,6 @@ async function getSmsEventMetrics() {
 module.exports = {
   logSmsEvent,
   getSmsEventMetrics,
+  getSmsEventsForGame,
   recipientHash
 };
