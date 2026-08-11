@@ -1688,6 +1688,46 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     assert(gameReady.external, 'game page uses its external script');
     assert(gameReady.locationOnly, 'player game details use location without a separate court field');
 
+    // Answering twice from a browser that does not remember you - a second phone, a cleared
+    // browser, a shared tablet - used to come back as a red failure over a roster that already
+    // had your name on it.
+    const firstJoin = await mobile.evaluate(`(async () => {
+      document.getElementById('playerName').value = 'Twice Tapper';
+      document.getElementById('phoneNumber').value = '${fx.JOIN_PHONE}';
+      document.getElementById('joinButton').click();
+      await new Promise((resolve) => setTimeout(resolve, 1400));
+      return {
+        confirmed: getComputedStyle(document.getElementById('confirmationSection')).display !== 'none'
+      };
+    })()`);
+    assert(firstJoin.confirmed, 'a first-time player can still sign up from the game page');
+
+    await mobile.evaluate(`localStorage.clear()`);
+    await mobile.goto(`${local.baseUrl}/game.html?id=${fx.open.gameId}`);
+    const secondJoin = await mobile.evaluate(`(async () => {
+      document.getElementById('playerName').value = 'Twice Tapper';
+      document.getElementById('phoneNumber').value = '${fx.JOIN_PHONE}';
+      document.getElementById('joinButton').click();
+      await new Promise((resolve) => setTimeout(resolve, 1400));
+      const banner = document.getElementById('status');
+      const card = document.getElementById('yourStatusSection');
+      return {
+        errored: banner.className === 'error',
+        bannerText: banner.textContent,
+        cardVisible: getComputedStyle(card).display !== 'none',
+        cardTitle: document.getElementById('yourStatusTitle').textContent,
+        formHidden: getComputedStyle(document.getElementById('signupForm')).display === 'none'
+      };
+    })()`);
+    assert(
+      !secondJoin.errored &&
+        /already IN/.test(secondJoin.bannerText) &&
+        secondJoin.cardVisible &&
+        secondJoin.cardTitle === "You're IN" &&
+        secondJoin.formHidden,
+      'tapping IN when already signed up shows the player their standing, not an error'
+    );
+
     const hostDelete = await desktop.evaluate(`(async () => {
       document.querySelector('[data-tab="rosters"]').click();
       await new Promise((resolve) => setTimeout(resolve, 250));

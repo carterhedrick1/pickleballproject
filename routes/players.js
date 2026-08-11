@@ -202,7 +202,13 @@ module.exports = function mountPlayerRoutes(app) {
         const message = result.duplicateStatus === 'confirmed'
           ? 'This phone number is already registered for this game.'
           : 'This phone number is already on the waitlist.';
-        return res.status(400).json({ error: message });
+        // Tagged, not just worded: someone tapping IN twice is asking "am I in?", and the
+        // page answers by showing them where they stand instead of a failure.
+        return res.status(400).json({
+          error: message,
+          status: 'duplicate',
+          duplicateStatus: result.duplicateStatus
+        });
       }
 
       const game = result.game;

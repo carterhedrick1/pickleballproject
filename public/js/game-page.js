@@ -880,11 +880,13 @@
                         })
                     })
                     .then(async response => {
+                        const payload = await response.json().catch(() => ({}));
                         if (!response.ok) {
-                            const errorData = await response.json().catch(() => ({}));
-                            throw new Error(errorData.error || 'Failed to join game');
+                            const failure = new Error(payload.error || 'Failed to join game');
+                            failure.payload = payload;
+                            throw failure;
                         }
-                        return response.json();
+                        return payload;
                     })
                     .then(data => {
                         // Hide status message
@@ -914,10 +916,45 @@
                             });
                     })
                     .catch(error => {
+                        // Tapping IN when you are already in is a question, not a mistake:
+                        // "am I in this?". Answer it with their standing rather than red text.
+                        if (error.payload && error.payload.status === 'duplicate') {
+                            return showExistingStanding(
+                                playerName,
+                                phoneNumber,
+                                error.payload.duplicateStatus
+                            );
+                        }
                         console.error('Error joining game:', error);
                         showStatus(error.message, 'error');
                         throw error;
                     });
+            }
+
+            /** What to tell someone whose answer is already on this game's roster. */
+            function alreadyAnsweredMessage(duplicateStatus) {
+                if (duplicateStatus === 'confirmed') {
+                    return "You're already IN this game. No need to answer twice.";
+                }
+                if (gameData && gameData.registrationMode === 'waitlist') {
+                    return 'Your application is already in. The organizer will text you either way.';
+                }
+                return "You're already on the waitlist for this game.";
+            }
+
+            /**
+             * Replaces the signup form with this player's actual standing. The phone number they
+             * just typed proves who they are, so the browser remembers them from here on.
+             */
+            function showExistingStanding(playerName, phoneNumber, duplicateStatus) {
+                if (PlayerIdentity.save({ name: playerName, phone: phoneNumber })) {
+                    identity = PlayerIdentity.read();
+                }
+                return refreshIdentityView().then(() => {
+                    // The message stands on its own, because a browser that refuses to store
+                    // the identity has no status card to fall back on.
+                    showStatus(alreadyAnsweredMessage(duplicateStatus), 'info');
+                });
             }
 
             function setupEventHandlers() {
