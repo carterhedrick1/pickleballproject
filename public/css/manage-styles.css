@@ -150,6 +150,69 @@ body {
     margin-top: 6px;
 }
 
+/* The day-of card. Sits under the summary, above the tabs, so it is the first thing a host
+   sees on the morning of a game and disappears again the moment the game is over. */
+.game-day-card {
+    background: var(--brand-soft);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    text-align: center;
+}
+
+.game-day-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px 10px;
+}
+
+.game-day-title {
+    color: var(--brand);
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.game-day-when {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.game-day-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+.game-day-actions button {
+    flex: 1 1 220px;
+    margin: 0;
+    max-width: 300px;
+}
+
+/* A link, not a third button: it goes somewhere rather than sending anything. */
+.game-day-link {
+    background: none;
+    border: none;
+    box-shadow: none;
+    color: var(--brand);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 12px 0 0;
+    padding: 4px 8px;
+    text-decoration: underline;
+}
+
+.game-day-link:hover {
+    background: none;
+    box-shadow: none;
+    transform: none;
+}
+
 @media (max-width: 600px) {
     .game-summary {
         padding: 16px 20px;
@@ -157,6 +220,15 @@ body {
 
     .game-summary-headline {
         font-size: 16px;
+    }
+
+    .game-day-card {
+        padding: 16px 20px;
+    }
+
+    .game-day-actions button {
+        flex: 1 1 100%;
+        max-width: none;
     }
 }
 
@@ -569,6 +641,25 @@ button:active {
     line-height: 1.5;
 }
 
+/* Share sits beside Copy where there is room and above it where there is not. */
+.share-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+}
+
+.share-buttons .copy-btn {
+    margin: 16px 0;
+    flex: 0 1 260px;
+}
+
+/* .copy-btn is display:block, which would otherwise beat the browser's own [hidden] rule. */
+.copy-btn[hidden] {
+    display: none;
+}
+
 .save-suggestion {
     font-style: italic;
     color: var(--text-muted);
@@ -809,6 +900,39 @@ button:active {
     overflow-y: auto;
     margin-top: 18px;
     padding-right: 4px;
+}
+
+/*
+ * The invite checklist is the one list where a hidden row means somebody never gets asked, so
+ * it says when it is holding people back. The cap is roomier than the old five-row 300px, the
+ * fade shows the list continues, and the count below names how many are still down there.
+ * Phones drop the cap entirely (see the 768px block) and let the page do the scrolling.
+ */
+.roster-picker-scroll {
+    position: relative;
+}
+
+#intendedInviteeList {
+    max-height: min(58vh, 520px);
+}
+
+.roster-picker-fade {
+    position: absolute;
+    left: 0;
+    right: 4px;
+    bottom: 0;
+    height: 48px;
+    pointer-events: none;
+    border-radius: 0 0 10px 10px;
+    background: linear-gradient(to bottom, transparent, var(--canvas));
+}
+
+.roster-picker-more {
+    margin: 10px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
 }
 
 .roster-player-option {
@@ -1725,6 +1849,13 @@ button:disabled {
     
     .expired-game-warning {
         margin: 20px;
+    }
+
+    /* A phone has the whole page to scroll with, so the invite checklist stops holding
+       people inside a 300px window and simply shows everybody. */
+    #intendedInviteeList {
+        max-height: none;
+        overflow-y: visible;
     }
 
     /* Extra small mobile devices */

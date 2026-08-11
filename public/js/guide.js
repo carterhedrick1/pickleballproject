@@ -27,7 +27,37 @@ const sectionOrder = [
   { id: 'tips-tricks', label: 'FAQs' }
 ];
 
+/**
+ * The hero line comes from the same rotation as the site header, but never the same line the
+ * header just picked - two of these stacked on one screen reads as a glitch, not as voice.
+ */
+function fillHeroSlogan() {
+  const hero = document.getElementById('heroSlogan');
+  const slogans = window.InOrOutSlogans;
+  if (!hero || !slogans) return;
+
+  const pickOtherThan = (taken) => {
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const candidate = slogans.choose();
+      if (candidate !== taken) return candidate;
+    }
+    return hero.textContent;
+  };
+
+  // Paint straight away from the bundled list; the header's pick may still be in flight.
+  hero.textContent = slogans.choose();
+  slogans.getForPage().then(function (headerSlogan) {
+    if (headerSlogan && hero.textContent === headerSlogan) {
+      hero.textContent = pickOtherThan(headerSlogan);
+    }
+  }).catch(function () {
+    // The line already on screen is a real slogan, so there is nothing to recover from.
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+  fillHeroSlogan();
+
   document.querySelectorAll('.toc-item').forEach(item => {
     item.addEventListener('click', function () {
       const sectionId = this.getAttribute('data-section');

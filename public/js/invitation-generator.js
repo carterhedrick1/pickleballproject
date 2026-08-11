@@ -104,6 +104,75 @@ function formatTime(timeStr) {
 }
 
 /**
+ * Builds the invitation text a host is about to send.
+ *
+ * With a host token this asks the server, which is where the personality opening line is
+ * chosen; the client-built message is the fallback when that endpoint is unavailable.
+ * @param {Object} gameData - Game information
+ * @param {string} gameId - Game ID
+ * @param {string} baseUrl - Base URL (optional)
+ * @param {string} hostToken - Host token (optional)
+ * @returns {Promise<string>} The invitation text
+ */
+async function buildInvitationMessage(gameData, gameId, baseUrl = null, hostToken = null) {
+    const message = generateInvitationMessage(gameData, gameId, baseUrl);
+    if (!hostToken || typeof fetch !== 'function') return message;
+
+    try {
+        const response = await fetch(`/api/games/${encodeURIComponent(gameId)}/invitation-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: hostToken })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.ok && data.message) return data.message;
+    } catch (_error) {
+        // The deterministic client copy is the safe fallback when the endpoint is unavailable.
+    }
+    return message;
+}
+
+/** Whether this browser can hand the invitation to the phone's own share sheet. */
+function canShareInvitation() {
+    return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+}
+
+/**
+ * Hands the invitation to the operating system share sheet.
+ *
+ * Resolves to true only when the share actually went through, so a host who opens the sheet
+ * and backs out is not recorded as having invited anybody.
+ * @param {Object} gameData - Game information
+ * @param {string} gameId - Game ID
+ * @param {string} buttonId - ID of the button to show feedback on
+ * @param {string} baseUrl - Base URL (optional)
+ * @param {string} hostToken - Host token (optional)
+ * @returns {Promise<boolean>} True when the invitation was shared
+ */
+async function shareInvitation(
+    gameData,
+    gameId,
+    buttonId,
+    baseUrl = null,
+    hostToken = null
+) {
+    if (!canShareInvitation()) return false;
+
+    const message = await buildInvitationMessage(gameData, gameId, baseUrl, hostToken);
+    try {
+        await navigator.share({ text: message });
+        showCopyFeedback(buttonId, 'Invitation Shared!');
+        return true;
+    } catch (error) {
+        // Backing out of the share sheet is a normal thing to do, not an error worth shouting about.
+        if (error && error.name === 'AbortError') return false;
+        console.error('Could not share the invitation:', error);
+        showCopyFeedback(buttonId, 'Share Failed', true);
+        return false;
+    }
+}
+
+/**
  * Copies the invitation message to clipboard and shows feedback
  * @param {Object} gameData - Game information
  * @param {string} gameId - Game ID
@@ -118,22 +187,9 @@ async function copyInvitationToClipboard(
     hostToken = null
 ) {
     console.log('[COPY] Copying invitation with game data:', gameData); // Debug log
-    
-    let message = generateInvitationMessage(gameData, gameId, baseUrl);
-    if (hostToken && typeof fetch === 'function') {
-        try {
-            const response = await fetch(`/api/games/${encodeURIComponent(gameId)}/invitation-message`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: hostToken })
-            });
-            const data = await response.json().catch(() => ({}));
-            if (response.ok && data.message) message = data.message;
-        } catch (_error) {
-            // The deterministic client copy is the safe fallback when the endpoint is unavailable.
-        }
-    }
-    
+
+    const message = await buildInvitationMessage(gameData, gameId, baseUrl, hostToken);
+
     try {
         // Try modern clipboard API first
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -238,6 +294,9 @@ function getCurrentGameDataFromStorage() {
 // Export functions for use in other scripts
 window.InvitationGenerator = {
     generateInvitationMessage,
+    buildInvitationMessage,
+    canShareInvitation,
+    shareInvitation,
     copyInvitationToClipboard,
     getCurrentGameDataFromStorage,
     formatDateForDisplay,

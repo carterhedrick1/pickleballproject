@@ -156,9 +156,9 @@ const seedInviteActivity = (fx) => async (p) => {
 // My Games, Roster and Stats share a verified host session. The local SMS client returns its
 // simulated code only in local development, so the gallery can exercise the real request and
 // confirmation endpoints without sending a text.
-const seedHostPhone = (fx) => async (p) => {
+const seedHostPhone = (fx, hostPhone = fx.HOST_PHONE) => async (p) => {
   await p.evaluate(`(async () => {
-    const phone = ${JSON.stringify(fx.HOST_PHONE)};
+    const phone = ${JSON.stringify(hostPhone)};
     if (localStorage.getItem('hostVerificationToken') &&
         localStorage.getItem('hostPhone') === phone) {
       location.reload();
@@ -362,12 +362,75 @@ const GUIDE_SECTIONS = [
   ['tips-tricks', 'FAQs', 'Setup, management and troubleshooting questions.'],
 ];
 
+/**
+ * Two extra demo games for states the three standard fixtures cannot show: a game close enough
+ * to photograph the game-day card, and a host whose calendar is empty.
+ *
+ * They are created here rather than in lib/fixtures.js so the browser smoke test keeps the
+ * exact three games its assertions count. Both carry the fixture MARKER and a fixture 555 host
+ * number, which is what fixtures.cleanup() matches on, so they are swept with the rest.
+ */
+async function seedStateFixtures(baseUrl, fx) {
+  const post = async (pathname, body) => {
+    const response = await fetch(baseUrl + pathname, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(`POST ${pathname} -> ${response.status} ${JSON.stringify(json)}`);
+    return json;
+  };
+
+  // Six hours out: comfortably inside the 24-hour game-day window and still in the future even
+  // if this machine's clock is a few hours off the Central Time the server checks expiry in.
+  const soon = new Date(Date.now() + 6 * 60 * 60 * 1000);
+  const gameDay = await post('/api/games', {
+    location: 'Oak Park Courts',
+    organizerName: 'Scott H.',
+    organizerPhone: fixtures.HOST_PHONE,
+    organizerPlaying: true,
+    date: `${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, '0')}-${String(soon.getDate()).padStart(2, '0')}`,
+    time: `${String(soon.getHours()).padStart(2, '0')}:${String(soon.getMinutes()).padStart(2, '0')}`,
+    duration: '90',
+    totalPlayers: '4',
+    message: `Tonight. Bring a light jacket. ${fixtures.MARKER}`,
+    registrationMode: 'fcfs',
+    notifyPlayerCancels: true,
+  });
+  for (const name of ['Maria Alvarez', 'Dev Patel', 'Tom Whitfield']) {
+    await post(`/api/games/${gameDay.gameId}/players`, { name, action: 'join' });
+  }
+
+  // A second host with one game, cancelled, and nothing upcoming - the state the Run It Again
+  // card exists for. FORM_PHONE is already a fixture number, so cleanup sweeps this too.
+  const lapsed = await post('/api/games', {
+    location: 'Lakeside Park',
+    organizerName: 'Jordan Blake',
+    organizerPhone: fixtures.FORM_PHONE,
+    organizerPlaying: true,
+    date: fixtures.inDays(2),
+    time: '18:30',
+    duration: '90',
+    totalPlayers: '4',
+    message: `Thursday regulars. ${fixtures.MARKER}`,
+    registrationMode: 'fcfs',
+  });
+  await fetch(`${baseUrl}/api/games/${lapsed.gameId}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: lapsed.hostToken, reason: 'Court flooded' }),
+  });
+
+  return { gameDay, lapsed };
+}
+
 /** The screens to capture, in reading order. fx is the seeded fixture data. */
 function buildScreens(fx) {
   return [
     { file: 'index-landing', of: '/', size: 'wide', url: '/',
       title: 'The landing view',
-      note: 'What everyone lands on. The six cards are a section picker — every guide section below is hidden until you tap one.' },
+      note: 'What everyone lands on: a line from the slogan rotation, the whole product in three steps, and the one button. The detailed guide below it is a section picker — each section stays hidden until you tap a card.' },
     ...GUIDE_SECTIONS.map(([id, title, note]) => ({
       file: `index-guide-${id}`, of: '/', size: 'tall', url: '/',
       title: `Guide — ${title}`, note, act: openGuideSection(id),
@@ -422,6 +485,10 @@ function buildScreens(fx) {
       url: `/manage.html?id=${fx.approval.gameId}&token=${fx.approval.hostToken}`,
       title: 'Players tab on an approval game',
       note: 'Three applicants waiting. Nobody is confirmed until the host promotes them.', act: clickTab(1) },
+    { file: 'manage-game-day', of: '/manage.html?id=…&token=…', size: 'wide',
+      url: `/manage.html?id=${fx.gameDay.gameId}&token=${fx.gameDay.hostToken}`,
+      title: 'Game day',
+      note: 'Inside 24 hours a card appears above the tabs with the two day-of sends and a jump to the delivery log. It is gone again once the game is over or cancelled.' },
     { file: 'manage-wrong-token', of: '/manage.html?id=…&token=…', size: 'narrow',
       url: `/manage.html?id=${fx.open.gameId}&token=wrong-token-value`,
       title: 'Wrong or missing token', note: 'What anyone without the host link sees.' },
@@ -434,6 +501,10 @@ function buildScreens(fx) {
       title: 'The host history',
       note: 'Loaded after phone verification, split into upcoming and past. Each card has Manage, Copy Invitation and a private note.',
       act: seedHostPhone(fx) },
+    { file: 'my-games-run-it-again', of: '/my-games.html', size: 'narrow', url: '/my-games.html',
+      title: 'Nothing coming up',
+      note: 'A host with a history but an empty calendar is offered their last game back, straight into the prefilled repeat form, instead of an empty Upcoming heading.',
+      act: seedHostPhone(fx, fx.FORM_PHONE) },
 
     { file: 'roster-list', of: '/roster.html', size: 'narrow', url: '/roster.html',
       title: 'Everyone you play with',
@@ -503,7 +574,7 @@ function buildScreens(fx) {
 // How the gallery groups the screens. Order here is the order on the page.
 const GROUPS = [
   { of: '/', who: 'Anyone', lane: 'In the nav',
-    blurb: 'The homepage. It opens as a compact landing page — the six cards are a section picker, and each guide section is hidden until you tap one. Those sections appear here as separate screens because that is how you actually meet them.' },
+    blurb: 'The homepage. It opens with the hero — a slogan, the three steps, and Create Game Now — and the detailed guide sits under it as a section picker, each section hidden until you tap a card. Those sections appear here as separate screens because that is how you actually meet them.' },
   { of: '/create.html', who: 'Organizers', lane: 'In the nav',
     blurb: 'One long form, then a share panel that replaces it.' },
   { of: '/game.html?id=…', who: 'Players', lane: 'Link only',
@@ -615,7 +686,7 @@ ${body}
 <section class="notes">
   <div class="eyebrow">How these were made</div>
   <div class="note"><h3>Captured from the app running locally</h3>
-    <p>A throwaway server on SQLite, driven by headless Chrome at ${PHONE ? 'phone' : 'roughly desktop'} width. Three demo games were seeded to fill the screens: a first-come game with 2 of 6 spots left, a full 2-player game, and an approval game with three applicants. The signup, the form submit, the tab clicks and the phone-number gate are real interactions.</p></div>
+    <p>A throwaway server on SQLite, driven by headless Chrome at ${PHONE ? 'phone' : 'roughly desktop'} width. Five demo games were seeded to fill the screens: a first-come game with 2 of 6 spots left, a full 2-player game, an approval game with three applicants, one starting in six hours, and one cancelled game belonging to a second host. The signup, the form submit, the tab clicks and the phone-number gate are real interactions.</p></div>
   <div class="note"><h3>No text messages were sent</h3>
     <p>The server ran with the Textbelt key blanked, so all ${devSends} sends took the dev-mode branch and none reached Textbelt. The demo phone numbers are fake 555 numbers, and the demo games were deleted from the local database afterwards.</p></div>
   <div class="note"><h3>Freshness</h3><p>${generatedNote(PHONE
@@ -645,6 +716,7 @@ ${body}
     process.stdout.write('seeding demo games ... ');
     const fx = await fixtures.seed(app.baseUrl);
     await fixtures.verify(app.baseUrl, fx);
+    Object.assign(fx, await seedStateFixtures(app.baseUrl, fx));
 
     // The screenshot server keeps SMS event logging off, so the delivery log would photograph
     // as an empty panel. These two rows show what a host actually sees in it.
@@ -655,7 +727,7 @@ ${body}
       gameId: fx.open.gameId, eventId: 'host-player-joined', phone: fx.HOST_PHONE,
       status: 'failed', attempts: 3, error: 'Carrier rejected the message'
     });
-    console.log('3 games, shapes verified');
+    console.log('3 games plus a game-day and a cancelled-only fixture, shapes verified');
 
     process.stdout.write('launching headless Chrome ... ');
     browser = await cdp.launch();

@@ -179,6 +179,7 @@ function renderInvitePicker() {
     if (hostRosterState === 'loading' || hostRosterState === 'idle') {
         status.textContent = 'Loading your roster...';
         updateInviteSelectionState();
+        updateInviteNoteVisibility();
         return;
     }
 
@@ -186,6 +187,7 @@ function renderInvitePicker() {
         status.textContent = 'Could not load your roster. Please refresh the page to try again.';
         status.classList.add('error-text');
         updateInviteSelectionState();
+        updateInviteNoteVisibility();
         return;
     }
 
@@ -199,6 +201,7 @@ function renderInvitePicker() {
             document.createTextNode(', or copy the invitation below into a group chat.')
         );
         updateInviteSelectionState();
+        updateInviteNoteVisibility();
         return;
     }
 
@@ -235,6 +238,31 @@ function renderInvitePicker() {
 
     status.textContent = `${hostRoster.length} ${hostRoster.length === 1 ? 'person' : 'people'} on your roster.`;
     updateInviteSelectionState();
+    updateInviteNoteVisibility();
+    updateInviteOverflowHint();
+}
+
+// Says out loud how many people are below the fold of the checklist, and keeps saying it as the
+// host scrolls. Reads the live geometry rather than the roster length, so it stays right on a
+// phone (where the list is uncapped and this never shows) and after a window resize.
+function updateInviteOverflowHint() {
+    const list = document.getElementById('intendedInviteeList');
+    const fade = document.getElementById('intendedInviteeFade');
+    const more = document.getElementById('intendedInviteeMore');
+    if (!list || !fade || !more) return;
+
+    // Measured against the list's own box rather than offsetTop, which is relative to the
+    // positioned wrapper and would be off by the list's top margin.
+    const visibleBottom = list.getBoundingClientRect().bottom;
+    const options = [...list.querySelectorAll('.roster-player-option')];
+    // A row counts as below the fold once more than a sliver of it is out of sight.
+    const below = options.filter(
+        (option) => option.getBoundingClientRect().top + 12 > visibleBottom
+    ).length;
+
+    fade.hidden = below === 0;
+    more.hidden = below === 0;
+    if (below) more.textContent = `${below} More Below — Scroll The List`;
 }
 
 function selectedInviteePhones() {
@@ -1136,6 +1164,7 @@ window.ManageApp.players = {
     recoverInvitationSend,
     renderInvitations,
     renderInvitePicker,
+    updateInviteOverflowHint,
     recordCopiedInvitees,
     addPersonToRoster,
     addPlayersFromRoster,

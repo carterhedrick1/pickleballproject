@@ -565,6 +565,26 @@ function setupEventListeners() {
             sendQuickMessage('location');
         });
     }
+
+    // Game-day card: the same two sends, plus a jump to the log that proves they went out.
+    const gameDayReminderBtn = document.getElementById('gameDayReminder');
+    if (gameDayReminderBtn) {
+        gameDayReminderBtn.addEventListener('click', () => sendQuickMessage('reminder'));
+    }
+
+    const gameDayLocationBtn = document.getElementById('gameDayLocation');
+    if (gameDayLocationBtn) {
+        gameDayLocationBtn.addEventListener('click', () => sendQuickMessage('location'));
+    }
+
+    const gameDayLogBtn = document.getElementById('gameDayLog');
+    if (gameDayLogBtn) {
+        gameDayLogBtn.addEventListener('click', () => {
+            openTabFromSelect('Communication');
+            document.querySelector('.delivery-log')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
     
     // Cancel game button
     const cancelGameBtn = document.getElementById('cancelGameBtn');
@@ -582,6 +602,20 @@ function setupEventListeners() {
     const copyPlayerLinkBtn = document.getElementById('copyPlayerLink');
     if (copyPlayerLinkBtn) {
         copyPlayerLinkBtn.addEventListener('click', () => copyPlayerInvitation('copyPlayerLink'));
+    }
+
+    // Share invitation button (Invite tab) - phones only, see populateShareLinks
+    const sharePlayerLinkBtn = document.getElementById('sharePlayerLink');
+    if (sharePlayerLinkBtn) {
+        sharePlayerLinkBtn.addEventListener('click', () => sharePlayerInvitation('sharePlayerLink'));
+    }
+
+    // The "N more below" count follows the scroll position, and the cap itself changes at the
+    // phone breakpoint, so a rotated phone or a resized window recounts.
+    const inviteeList = document.getElementById('intendedInviteeList');
+    if (inviteeList) {
+        inviteeList.addEventListener('scroll', updateInviteOverflowHint);
+        window.addEventListener('resize', updateInviteOverflowHint);
     }
 
 
@@ -955,6 +989,41 @@ function updateGameSummary() {
 
     document.getElementById('gameSummaryMeta').textContent = parts.join(' · ');
     summary.hidden = false;
+    updateGameDayCard();
+}
+
+const GAME_DAY_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** Milliseconds until the game starts, negative once it has, or null if the game has no time. */
+function millisecondsUntilGameStart() {
+    const [year, month, day] = String(gameData?.date || '').split('-').map(Number);
+    const [hours, minutes] = String(gameData?.time || '').split(':').map(Number);
+    if ([year, month, day, hours, minutes].some((part) => !Number.isFinite(part))) return null;
+    return new Date(year, month - 1, day, hours, minutes).getTime() - Date.now();
+}
+
+// Inside the last day the host's job changes from filling the game to running it. This lifts the
+// two day-of actions out of the Communication tab, where they were three taps away, and puts
+// them where the host lands. A cancelled or finished game has no day-of actions left, so it
+// gets no card.
+function updateGameDayCard() {
+    const card = document.getElementById('gameDayCard');
+    if (!card) return;
+
+    const untilStart = millisecondsUntilGameStart();
+    const isGameDay = GameUtils.getGameStatus(gameData || {}).canEdit &&
+        untilStart !== null &&
+        untilStart <= GAME_DAY_WINDOW_MS;
+    card.hidden = !isGameDay;
+    if (!isGameDay) return;
+
+    const countdown = GameUtils.getTimeUntilGame(gameData.date, gameData.time);
+    const when = document.getElementById('gameDayWhen');
+    if (when) {
+        when.textContent = countdown === 'Game has started'
+            ? 'Game has started'
+            : `Starts in ${String(countdown).replace(' away', '')}`;
+    }
 }
 
 // Hosts kept having to dig the bare URL back out of the copied invitation text to build a QR
@@ -993,9 +1062,10 @@ async function copyPlayerLinkOnly() {
 function populateShareLinks() {
     const shareSection = document.querySelector('.share-section');
     const copyButton = document.getElementById('copyPlayerLink');
+    const shareButton = document.getElementById('sharePlayerLink');
 
     if (!shareSection || !copyButton) return;
-    
+
     // Check if game is expired or cancelled
     const gameStatus = GameUtils.getGameStatus(gameData);
     const shouldDisable = !gameStatus.canJoin || gameData.cancelled;
@@ -1019,6 +1089,16 @@ function populateShareLinks() {
     
     setButtonState(copyButton, shouldDisable);
 
+    // The share sheet is the phone's, not ours: offer it only where the browser has one, and
+    // never on a game whose invitation is no longer allowed out.
+    const canShare = !shouldDisable &&
+        typeof InvitationGenerator !== 'undefined' &&
+        InvitationGenerator.canShareInvitation();
+    if (shareButton) {
+        shareButton.hidden = !canShare;
+        shareButton.disabled = !canShare;
+    }
+
     // Only the line under the copy button changes. This used to write into the section's first
     // paragraph by position, which silently overwrote whatever copy the page actually had.
     const note = shareSection.querySelector('.center-copy-section .save-suggestion');
@@ -1027,34 +1107,72 @@ function populateShareLinks() {
         ? (gameData.cancelled
             ? 'This game has been cancelled. Invitations can no longer be shared.'
             : 'This game has ended. Invitations can no longer be shared.')
-        : 'Anyone you tick above is recorded as invited when you copy.';
+        : (canShare
+            ? 'Anyone you tick above is recorded as invited when you share or copy.'
+            : 'Anyone you tick above is recorded as invited when you copy.');
+    updateInviteNoteVisibility();
+}
+
+// Nothing to tick means nothing to explain. The note is only true once the roster has
+// checkboxes in it, and a host with an empty roster should not be told about a rule
+// they cannot yet trigger.
+function updateInviteNoteVisibility() {
+    const note = document.querySelector('.share-section .center-copy-section .save-suggestion');
+    if (!note) return;
+
+    // A cancelled or ended game replaces this line with its own explanation, which always applies.
+    if (GameUtils.getGameStatus(gameData || {}).canEdit === false) {
+        note.hidden = false;
+        return;
+    }
+    note.hidden = document.querySelectorAll(
+        '#intendedInviteeList .roster-player-checkbox'
+    ).length === 0;
 }
 
 
-async function copyPlayerInvitation(buttonId) {
-    // Check if game is expired or cancelled
+// Both send paths need the same two answers: may this invitation still go out, and what does
+// the generator need that the server response does not already spell out?
+function invitationGameData() {
     if (!GameUtils.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so its invitation can no longer be shared.', 'error');
-        return;
+        return null;
     }
-    
+
     if (gameData.cancelled) {
         showStatus('This game is cancelled, so its invitation can no longer be shared.', 'error');
-        return;
+        return null;
     }
-    
-    console.log('[COPY] Original game data from server:', gameData);
-    
-    // Make sure we include registrationMode from the server data
-    const gameDataForInvitation = {
+
+    return {
         ...gameData,
         registrationMode: gameData.registrationMode || 'fcfs', // Ensure it exists
         organizerPlaying: gameData.organizerPlaying !== false // Ensure boolean
     };
-    
-    console.log('[COPY] Game data prepared for invitation:', gameDataForInvitation);
-    console.log('[COPY] Registration mode being passed:', gameDataForInvitation.registrationMode);
-    
+}
+
+// The phone's own share sheet, carrying the same text the copy button produces. Recording only
+// happens if the share really went through, so backing out of the sheet invites nobody.
+async function sharePlayerInvitation(buttonId) {
+    const gameDataForInvitation = invitationGameData();
+    if (!gameDataForInvitation) return;
+
+    const shared = await InvitationGenerator.shareInvitation(
+        gameDataForInvitation,
+        gameId,
+        buttonId || 'sharePlayerLink',
+        null,
+        hostToken
+    );
+    if (!shared) return;
+
+    await recordCopiedInvitees();
+}
+
+async function copyPlayerInvitation(buttonId) {
+    const gameDataForInvitation = invitationGameData();
+    if (!gameDataForInvitation) return;
+
     await InvitationGenerator.copyInvitationToClipboard(
         gameDataForInvitation,
         gameId,
