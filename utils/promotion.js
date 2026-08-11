@@ -96,7 +96,9 @@ function recordOutPlayer(game, player, { wasConfirmed = false, wasWaitlisted = f
  */
 function departureAlertType(game, wasConfirmed) {
   const nobodyWasPromoted = game.registrationMode === 'waitlist';
-  if (wasConfirmed && nobodyWasPromoted && (game.waitlist || []).length > 0) {
+  // Applies whether or not anyone is waiting: with an empty applicant list the host still
+  // has to act (invite somebody), and the alert copy already covers that case.
+  if (wasConfirmed && nobodyWasPromoted) {
     return 'spotOpenedWaitlistMode';
   }
   return 'playerCancels';

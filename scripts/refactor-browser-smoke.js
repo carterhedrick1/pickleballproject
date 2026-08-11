@@ -247,10 +247,13 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     );
     await cdp.sleep(2500);
     const noImageResult = await desktop.evaluate(`(async () => {
-      const gameId = new URLSearchParams(location.search).get('id');
+      const params = new URLSearchParams(location.search);
+      const gameId = params.get('id');
       const response = await fetch('/api/games/' + gameId + '/court-images');
       const library = await response.json();
-      const gameResponse = await fetch('/api/games/' + gameId);
+      // The token matters here: notificationPreferences is host-only, so the
+      // public (token-less) response no longer carries it.
+      const gameResponse = await fetch('/api/games/' + gameId + '?token=' + params.get('token'));
       const game = await gameResponse.json();
       return {
         gameId,
