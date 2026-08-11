@@ -68,7 +68,25 @@ async function sendCategorySMS(
   });
 }
 
-async function sendOrganizerNotification(gameId, game, eventType, playerName = null) {
+/**
+ * What the host is told when a player drops out of a first-come game.
+ *
+ * A full game with a waitlist refills itself in the same instant, so "0 spots now available"
+ * on its own read as a contradiction and never named the replacement. The alert has to say
+ * who took the spot, because that is the part the host would otherwise have to go and look up.
+ */
+function playerCancelledAlert({ playerName, locationText, gameDate, spotsLeft, promotedName }) {
+  const opening = `HOST ALERT: ${playerName} cancelled their spot for your pickleball game at ${locationText} on ${gameDate}.`;
+  const spots = `${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} now available.`;
+
+  if (!promotedName) return `${opening} ${spots}`;
+  if (spotsLeft <= 0) {
+    return `${opening} ${promotedName} moved up from the waitlist to take it, so your game is still full.`;
+  }
+  return `${opening} ${promotedName} moved up from the waitlist. ${spots}`;
+}
+
+async function sendOrganizerNotification(gameId, game, eventType, playerName = null, options = {}) {
   try {
     if (!game.hostPhone) {
       if (DEBUG) console.log('[DEBUG] No hostPhone found, skipping notification');
@@ -109,8 +127,13 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
       case 'playerCancels':
         if (prefs.playerCancels === true && playerName) {
           shouldSend = true;
-          const spotsLeft = parseInt(game.totalPlayers) - game.players.length;
-          message = `HOST ALERT: ${playerName} cancelled their spot for your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} now available.`;
+          message = playerCancelledAlert({
+            playerName,
+            locationText,
+            gameDate,
+            spotsLeft: parseInt(game.totalPlayers) - game.players.length,
+            promotedName: options.promotedName || null
+          });
         }
         break;
       case 'spotOpenedWaitlistMode': {
@@ -153,7 +176,8 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
           TIME: gameTime,
           SPOTS_LEFT: parseInt(game.totalPlayers) - game.players.length,
           WAITLIST_COUNT: (game.waitlist || []).length,
-          TOTAL_PLAYERS: game.totalPlayers
+          TOTAL_PLAYERS: game.totalPlayers,
+          PROMOTED_NAME: options.promotedName || ''
         },
         {
           game,
@@ -873,7 +897,8 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
         gameId,
         game,
         departureAlertType(game, result.previousStatus === 'confirmed'),
-        result.player.name
+        result.player.name,
+        { promotedName: promotedPlayer?.name || null }
       );
     }
 
@@ -916,6 +941,7 @@ module.exports = {
   sendSMSWithRetry,
   handleIncomingSMS,
   sendOrganizerNotification,
+  playerCancelledAlert,
   formatPhoneNumber,
   formatDateForSMS,
   formatTimeForSMS,
