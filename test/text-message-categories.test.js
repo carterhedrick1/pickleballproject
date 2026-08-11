@@ -11,9 +11,9 @@ const {
   normalizeDraftConfig
 } = require('../text-message-categories');
 
-test('defines all 15 editable text message categories with current previews', () => {
-  assert.equal(TEXT_MESSAGE_CATEGORIES.length, 15);
-  assert.equal(new Set(TEXT_MESSAGE_CATEGORIES.map((category) => category.id)).size, 15);
+test('defines all 16 editable text message categories with current previews', () => {
+  assert.equal(TEXT_MESSAGE_CATEGORIES.length, 16);
+  assert.equal(new Set(TEXT_MESSAGE_CATEGORIES.map((category) => category.id)).size, 16);
   TEXT_MESSAGE_CATEGORIES.forEach((category) => {
     assert.ok(category.title);
     assert.ok(category.addTitle);
@@ -28,10 +28,10 @@ test('defines all 15 editable text message categories with current previews', ()
   });
 });
 
-test("keeps You're In live while the other 14 category rotations are drafts", () => {
+test("keeps You're In live while the other 15 category rotations are drafts", () => {
   const live = TEXT_MESSAGE_CATEGORIES.filter((category) => category.live);
   assert.deepEqual(live.map((category) => category.id), ['youre-in']);
-  assert.equal(TEXT_MESSAGE_CATEGORIES.filter((category) => !category.live).length, 14);
+  assert.equal(TEXT_MESSAGE_CATEGORIES.filter((category) => !category.live).length, 15);
 });
 
 test('normalizes bulk message additions without merging their bodies', () => {

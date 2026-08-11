@@ -53,6 +53,43 @@ function joinedTooRecentlyForReminder(player, nowMs = Date.now()) {
   return nowMs - contactedAt < RECENT_SIGNUP_QUIET_MS;
 }
 
+// Two reminders, and the windows do not overlap. A player who is due both at once - which is
+// what happens on a game created the same afternoon it is played - would otherwise get two
+// texts in the same pass, which is the thing reminders are supposed to avoid. So the
+// 24-hour reminder stops being eligible once the game-day reminder takes over.
+const REMINDER_KINDS = Object.freeze([
+  {
+    type: 'twenty_four_hours',
+    leadHours: 24,
+    categoryId: 'upcoming-reminder',
+    eventId: 'upcoming-game-reminder'
+  },
+  {
+    type: 'game_day',
+    leadHours: 2,
+    categoryId: 'game-day-reminder',
+    eventId: 'game-day-reminder'
+  }
+]);
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * The window a reminder kind may be sent in: from its own lead time until the next, shorter
+ * lead time takes over. The last kind runs until the game starts.
+ * @returns {{ opensAt: number, closesAt: number }} epoch ms in the game's own wall clock
+ */
+function reminderWindow(kind, gameStartMs) {
+  const shorterLeads = REMINDER_KINDS
+    .map((other) => other.leadHours)
+    .filter((leadHours) => leadHours < kind.leadHours);
+  const nextLead = shorterLeads.length ? Math.max(...shorterLeads) : 0;
+  return {
+    opensAt: gameStartMs - kind.leadHours * HOUR_MS,
+    closesAt: gameStartMs - nextLead * HOUR_MS
+  };
+}
+
 function describeGameDay(game, centralNow) {
   const dateKey = (date) =>
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -88,115 +125,121 @@ async function checkAndSendReminders() {
       if (game.cancelled) continue;
 
       const gameTime = new Date(`${game.date}T${game.time}:00`);
-      const reminderTime = new Date(gameTime.getTime() - (24 * 60 * 60 * 1000));
 
-      if (centralNow >= reminderTime && isGameUpcoming(game.date, game.time)) {
-        const confirmedPlayers = game.players || [];
-        const rosterSignature = confirmedPlayers
-          .map((player) => player.phone)
-          .filter(Boolean)
-          .sort()
-          .join(',');
-        const cacheKey = `${gameId}_${game.date}_${game.time}_${rosterSignature}`;
-        if (sentRemindersCache.has(cacheKey)) continue;
+      for (const kind of REMINDER_KINDS) {
+        const { opensAt, closesAt } = reminderWindow(kind, gameTime.getTime());
 
-        let remindersSent = 0;
-        let outstanding = 0;
-        const maxRemindersPerGame = 20;
+        if (centralNow >= opensAt && centralNow < closesAt && isGameUpcoming(game.date, game.time)) {
+          const confirmedPlayers = game.players || [];
+          const rosterSignature = confirmedPlayers
+            .map((player) => player.phone)
+            .filter(Boolean)
+            .sort()
+            .join(',');
+          const cacheKey = `${gameId}_${kind.type}_${game.date}_${game.time}_${rosterSignature}`;
+          if (sentRemindersCache.has(cacheKey)) continue;
 
-        for (const player of confirmedPlayers) {
-          if (remindersSent >= maxRemindersPerGame) {
-            console.warn(`[REMINDER] Hit per-game limit of ${maxRemindersPerGame} for game ${gameId}`);
-            outstanding++;
-            break;
-          }
-          if (remindersSentThisRun >= MAX_REMINDERS_PER_RUN) {
-            console.warn(`[REMINDER] Hit per-run limit of ${MAX_REMINDERS_PER_RUN}; remaining reminders retry on the next check`);
-            outstanding++;
-            break;
-          }
-          if (!player.phone) continue;
+          let remindersSent = 0;
+          let outstanding = 0;
+          const maxRemindersPerGame = 20;
 
-          if (joinedTooRecentlyForReminder(player)) {
-            if (DEBUG) {
-              console.log(`[REMINDER] ${player.phone} signed up within the last ${RECENT_SIGNUP_QUIET_HOURS}h; holding their reminder`);
+          for (const player of confirmedPlayers) {
+            if (remindersSent >= maxRemindersPerGame) {
+              console.warn(`[REMINDER] Hit per-game limit of ${maxRemindersPerGame} for game ${gameId}`);
+              outstanding++;
+              break;
             }
-            // Left outstanding on purpose: the game must not be cached as finished, so this
-            // player is reconsidered once the quiet window passes.
-            outstanding++;
-            continue;
-          }
-
-          const playerKey = `${gameId}|${player.phone}`;
-          if (remindedPlayersCache.has(playerKey)) continue;
-
-          const priorAttempts = reminderAttempts.get(playerKey)?.count || 0;
-          if (priorAttempts >= MAX_SEND_ATTEMPTS) continue;
-
-          let alreadySent;
-          try {
-            alreadySent = await hasReminderBeenSent(
-              gameId,
-              player.phone,
-              'twenty_four_hours'
-            );
-          } catch (error) {
-            console.error(`[REMINDER] Could not check reminder status for ${player.phone}, skipping:`, error.message);
-            outstanding++;
-            continue;
-          }
-          if (alreadySent) continue;
-
-          const gameDay = describeGameDay(game, centralNow);
-          const defaultMessage =
-            `Reminder: Your pickleball game is ${gameDay} ` +
-            `at ${formatTimeForSMS(game.time)} — ${formatLocationForSMS(game)}. ` +
-            'Looking forward to seeing you! Reply 2 for details, or 9 to cancel.';
-          let message = await resolveTextMessage(
-            'upcoming-reminder',
-            defaultMessage,
-            {
-              LOCATION: formatLocationForSMS(game),
-              DATE: formatDateForSMS(game.date),
-              TIME: formatTimeForSMS(game.time),
-              DAY: gameDay
-            },
-            {
-              game,
-              gameId,
-              recipientPhone: player.phone
+            if (remindersSentThisRun >= MAX_REMINDERS_PER_RUN) {
+              console.warn(`[REMINDER] Hit per-run limit of ${MAX_REMINDERS_PER_RUN}; remaining reminders retry on the next check`);
+              outstanding++;
+              break;
             }
-          );
-          message = await appendCustomReplyInstructions(message, 'player');
+            if (!player.phone) continue;
 
-          reminderAttempts.set(playerKey, {
-            count: priorAttempts + 1,
-            at: Date.now()
-          });
-          const smsResult = await smsHandler.sendSMS(player.phone, message, gameId, {
-            eventId: 'upcoming-game-reminder'
-          });
+            if (joinedTooRecentlyForReminder(player)) {
+              if (DEBUG) {
+                console.log(`[REMINDER] ${player.phone} signed up within the last ${RECENT_SIGNUP_QUIET_HOURS}h; holding their reminder`);
+              }
+              // Left outstanding on purpose: the game must not be cached as finished, so this
+              // player is reconsidered once the quiet window passes.
+              outstanding++;
+              continue;
+            }
 
-          if (smsResult.success) {
-            remindedPlayersCache.set(playerKey, Date.now());
-            remindersSent++;
-            remindersSentThisRun++;
+            const playerKey = `${gameId}|${kind.type}|${player.phone}`;
+            if (remindedPlayersCache.has(playerKey)) continue;
+
+            const priorAttempts = reminderAttempts.get(playerKey)?.count || 0;
+            if (priorAttempts >= MAX_SEND_ATTEMPTS) continue;
+
+            let alreadySent;
             try {
-              await markReminderSent(gameId, player.phone, 'twenty_four_hours');
+              alreadySent = await hasReminderBeenSent(
+                gameId,
+                player.phone,
+                kind.type
+              );
             } catch (error) {
-              console.error(`[REMINDER] Sent reminder to ${player.phone} but failed to log it:`, error.message);
+              console.error(`[REMINDER] Could not check reminder status for ${player.phone}, skipping:`, error.message);
+              outstanding++;
+              continue;
             }
-          } else if (priorAttempts + 1 >= MAX_SEND_ATTEMPTS) {
-            console.error(`[REMINDER] Giving up on ${player.phone} for game ${gameId} after ${MAX_SEND_ATTEMPTS} attempts:`, smsResult.error);
-          } else {
-            console.error(`[REMINDER] Failed to send reminder to ${player.phone}, will retry:`, smsResult.error);
-            outstanding++;
-          }
-        }
+            if (alreadySent) continue;
 
-        if (outstanding === 0) sentRemindersCache.set(cacheKey, Date.now());
-        if (remindersSent > 0) {
-          console.log(`[REMINDER] Sent ${remindersSent} reminder(s) for game ${gameId}`);
+            const gameDay = describeGameDay(game, centralNow);
+            const defaultMessage = kind.type === 'game_day'
+              ? `Your pickleball game starts at ${formatTimeForSMS(game.time)} ` +
+                `— ${formatLocationForSMS(game)}. Reply 9 now if you can't make it, ` +
+                'so somebody else can take the spot.'
+              : `Reminder: Your pickleball game is ${gameDay} ` +
+                `at ${formatTimeForSMS(game.time)} — ${formatLocationForSMS(game)}. ` +
+                'Looking forward to seeing you! Reply 2 for details, or 9 to cancel.';
+            let message = await resolveTextMessage(
+              kind.categoryId,
+              defaultMessage,
+              {
+                LOCATION: formatLocationForSMS(game),
+                DATE: formatDateForSMS(game.date),
+                TIME: formatTimeForSMS(game.time),
+                DAY: gameDay
+              },
+              {
+                game,
+                gameId,
+                recipientPhone: player.phone
+              }
+            );
+            message = await appendCustomReplyInstructions(message, 'player');
+
+            reminderAttempts.set(playerKey, {
+              count: priorAttempts + 1,
+              at: Date.now()
+            });
+            const smsResult = await smsHandler.sendSMS(player.phone, message, gameId, {
+              eventId: kind.eventId
+            });
+
+            if (smsResult.success) {
+              remindedPlayersCache.set(playerKey, Date.now());
+              remindersSent++;
+              remindersSentThisRun++;
+              try {
+                await markReminderSent(gameId, player.phone, kind.type);
+              } catch (error) {
+                console.error(`[REMINDER] Sent reminder to ${player.phone} but failed to log it:`, error.message);
+              }
+            } else if (priorAttempts + 1 >= MAX_SEND_ATTEMPTS) {
+              console.error(`[REMINDER] Giving up on ${player.phone} for game ${gameId} after ${MAX_SEND_ATTEMPTS} attempts:`, smsResult.error);
+            } else {
+              console.error(`[REMINDER] Failed to send reminder to ${player.phone}, will retry:`, smsResult.error);
+              outstanding++;
+            }
+          }
+
+          if (outstanding === 0) sentRemindersCache.set(cacheKey, Date.now());
+          if (remindersSent > 0) {
+            console.log(`[REMINDER] Sent ${remindersSent} ${kind.type} reminder(s) for game ${gameId}`);
+          }
         }
       }
     }

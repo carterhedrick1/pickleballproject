@@ -70,7 +70,8 @@ function makeGame(hours, extra = {}) {
   await db.saveGame(ids.tooEarly, makeGame(30), 'tok2', null);          // >24h away
   await db.saveGame(ids.past, makeGame(-5), 'tok3', null);              // already happened
   await db.saveGame(ids.cancelled, makeGame(10, { cancelled: true }), 'tok4', null);
-  await db.saveGame(ids.today, makeGame(2), 'tok5', null);              // later today
+  await db.saveGame(ids.today, makeGame(6), 'tok5', null);              // later today, still
+                                                                        // inside the 24-hour window rather than the game-day one
 
   console.log('\n=== Run 1: catch-up should fire for missed reminders ===');
   sent = [];
@@ -97,7 +98,7 @@ function makeGame(hours, extra = {}) {
     return r1.find((s) => s.message.includes(`at ${label}`));
   };
 
-  for (const hours of [2, 12]) {
+  for (const hours of [6, 12]) {
     const word = expectedWord(hours);
     const msg = messageFor(hours);
     // A reminder only goes out inside 24 hours, so the answer is always today or tomorrow -

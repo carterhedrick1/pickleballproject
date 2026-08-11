@@ -30,7 +30,8 @@
     "docs": "npm run docs:copy && npm run docs:screens",
     "docs:copy": "node scripts/extract-copy.js",
     "docs:screens": "node scripts/capture-screens.js",
-    "docs:publish": "node scripts/publish-docs.js"
+    "docs:publish": "node scripts/publish-docs.js",
+    "verify:game-day": "node verify/reminder-game-day.js"
   },
   "dependencies": {
     "compression": "^1.8.1",
