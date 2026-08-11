@@ -119,6 +119,32 @@ function cdp(ws, method, params = {}) {
         return true;
       })()
     `);
+
+    // The RSVP now answers before the text has been sent, so there is a moment in between.
+    // It must not look like success: the page cannot promise a text it has not sent yet.
+    await sleep(700);
+    const whileSending = await evaluate(`
+      (() => {
+        const vis = (id) => {
+          const el = document.getElementById(id);
+          return el ? getComputedStyle(el).display !== 'none' : false;
+        };
+        return {
+          pendingVisible: vis('smsPending'),
+          pendingText: (document.getElementById('smsPendingText') || {}).textContent || '',
+          nextStepsVisible: vis('nextStepsSection'),
+        };
+      })()
+    `);
+
+    whileSending.pendingVisible && /Sending your confirmation text/.test(whileSending.pendingText)
+      ? ok('while the text is still sending, the page says so')
+      : bad(`no "sending" note while the text was in flight: ${JSON.stringify(whileSending)}`);
+
+    !whileSending.nextStepsVisible
+      ? ok('"What\'s Next?" waits until a text has actually gone out')
+      : bad('"What\'s Next?" promised a text before one had been sent');
+
     await sleep(3500);
 
     const screen = await evaluate(`

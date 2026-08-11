@@ -773,19 +773,13 @@
                 // The action itself is saved either way, but the page used to promise a text
                 // unconditionally. If the text did not go out, say so here instead of leaving
                 // the player waiting for a message that is never coming.
-                const smsWarning = document.getElementById('smsWarning');
-                const smsWarningText = document.getElementById('smsWarningText');
-                const smsFailed = data.sms && data.sms.success === false;
-
-                if (smsWarning && smsWarningText) {
-                    if (smsFailed) {
-                        smsWarningText.textContent = data.action === 'out'
-                            ? "Heads up: we couldn't send your confirmation text, so you won't get one. Your response was still recorded - the organizer can see you're out."
-                            : "Heads up: we couldn't send your confirmation text, so you won't get one. Your spot is still saved - but you won't get text reminders or be able to reply 2 or 9. Let the organizer know so they can check your number.";
-                        smsWarning.style.display = 'block';
-                    } else {
-                        smsWarning.style.display = 'none';
-                    }
+                //
+                // The server now answers before the text has been sent, so the outcome arrives
+                // a moment later: showTextOutcome is called again when it does.
+                const textPending = Boolean(data.sms && data.sms.pending);
+                showTextOutcome(data, textPending ? 'pending' : (data.sms ? 'sent' : 'none'));
+                if (textPending) {
+                    watchTextDelivery(data);
                 }
 
                 confirmLocation.textContent = gameData.location;
@@ -804,30 +798,104 @@
                     }
                 }
 
-                // Handle "What's Next?" section visibility
-                const nextStepsSection = document.getElementById('nextStepsSection');
-                const seeWhosPlayingInstruction = document.getElementById('seeWhosPlayingInstruction');
+                // Scroll to top to show confirmation
+                window.scrollTo(0, 0);
+            }
 
-                if (nextStepsSection) {
-                    // Every bullet in "What's Next?" describes something that happens by text.
-                    // With no text going out, the whole list is untrue, so hide it rather than
-                    // tell the player to reply to a message they will never receive.
-                    if (data.action === 'out' || smsFailed || !data.sms) {
-                        nextStepsSection.style.display = 'none';
+            /**
+             * Shows where the confirmation text has got to: 'pending', 'sent', 'failed', or
+             * 'none' when no text was ever going to be sent.
+             *
+             * "What's Next?" belongs here too. Every line of it describes something that
+             * happens by text, so the list is only true once a text has actually gone out.
+             */
+            function showTextOutcome(data, outcome) {
+                const warning = document.getElementById('smsWarning');
+                const warningText = document.getElementById('smsWarningText');
+                const pending = document.getElementById('smsPending');
+                const pendingText = document.getElementById('smsPendingText');
+                const nextSteps = document.getElementById('nextStepsSection');
+                const seeWhosPlaying = document.getElementById('seeWhosPlayingInstruction');
+                const leaving = data.action === 'out';
+
+                if (warning && warningText) {
+                    if (outcome === 'failed') {
+                        warningText.textContent = leaving
+                            ? "Heads up: we couldn't send your confirmation text, so you won't get one. Your response was still recorded - the organizer can see you're out."
+                            : "Heads up: we couldn't send your confirmation text, so you won't get one. Your spot is still saved - but you won't get text reminders or be able to reply 2 or 9. Let the organizer know so they can check your number.";
+                        warning.style.display = 'block';
                     } else {
-                        nextStepsSection.style.display = 'block';
-                        
+                        warning.style.display = 'none';
+                    }
+                }
+
+                if (pending && pendingText) {
+                    if (outcome === 'pending' || outcome === 'slow') {
+                        pendingText.textContent = outcome === 'slow'
+                            ? "Your text is taking longer than usual. Your spot is saved either way - if nothing arrives, tell the organizer to check your number."
+                            : 'Sending your confirmation text…';
+                        pending.style.display = 'block';
+                    } else {
+                        pending.style.display = 'none';
+                    }
+                }
+
+                if (nextSteps) {
+                    if (leaving || outcome !== 'sent') {
+                        nextSteps.style.display = 'none';
+                    } else {
+                        nextSteps.style.display = 'block';
                         // Hide "text 2" instruction for waitlist games
-                        if (seeWhosPlayingInstruction && gameData.registrationMode === 'waitlist') {
-                            seeWhosPlayingInstruction.style.display = 'none';
-                        } else if (seeWhosPlayingInstruction) {
-                            seeWhosPlayingInstruction.style.display = 'block';
+                        if (seeWhosPlaying && gameData.registrationMode === 'waitlist') {
+                            seeWhosPlaying.style.display = 'none';
+                        } else if (seeWhosPlaying) {
+                            seeWhosPlaying.style.display = 'block';
                         }
                     }
                 }
-                
-                // Scroll to top to show confirmation
-                window.scrollTo(0, 0);
+            }
+
+            /**
+             * Asks the server how the confirmation text turned out, backing off as it goes.
+             *
+             * A text normally lands in a second or two, so the first couple of checks answer
+             * for nearly everybody; the later ones cover a provider retry. The intervals widen
+             * deliberately - the game API is rate limited, and a tight poll would spend a
+             * player's whole allowance on this one question.
+             */
+            function watchTextDelivery(data) {
+                const ticket = data.sms && data.sms.ticket;
+                if (!ticket) return;
+                const waits = [1200, 1500, 2000, 3000, 4000, 5000, 6000, 7000];
+                let attempt = 0;
+
+                const check = () => {
+                    fetch(`/api/games/${gameId}/text-status?ticket=${encodeURIComponent(ticket)}`)
+                        .then(response => (response.ok ? response.json() : null))
+                        .then(result => {
+                            // Somebody who has already navigated on does not need an update.
+                            const confirmation = document.getElementById('confirmationSection');
+                            if (!confirmation || confirmation.style.display === 'none') return;
+
+                            if (result && (result.status === 'sent' || result.status === 'failed')) {
+                                showTextOutcome(data, result.status);
+                                return;
+                            }
+                            if (attempt < waits.length) {
+                                setTimeout(check, waits[attempt++]);
+                            } else {
+                                // Out of patience rather than out of luck: the send may still
+                                // be in progress, so say that instead of claiming it failed.
+                                showTextOutcome(data, 'slow');
+                            }
+                        })
+                        .catch(() => {
+                            // A failed check says nothing about the text itself. Leave the
+                            // pending line up rather than invent an outcome.
+                        });
+                };
+
+                setTimeout(check, waits[attempt++]);
             }
 
             window.showGameDetails = function() {

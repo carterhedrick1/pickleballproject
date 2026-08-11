@@ -48,6 +48,21 @@ async function req(method, p, body) {
   return { status: res.status, json, text };
 }
 
+/**
+ * Waits for a send ticket to resolve, the way the confirmation screen does.
+ * Returns null if it never settles, which is itself a failure worth reporting.
+ */
+async function settledTicket(gameId, ticket, timeoutMs = 15000) {
+  if (!ticket) return null;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const check = await req('GET', `/api/games/${gameId}/text-status?ticket=${ticket}`);
+    if (check.json && check.json.status !== 'pending') return check.json;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Part A: retry policy, in-process. global fetch is stubbed, so no request ever
 // leaves this process regardless of what is in .env.
@@ -143,14 +158,21 @@ async function retryPolicyChecks() {
     ? ok('the signup itself still succeeds (HTTP 201)')
     : bad(`signup returned HTTP ${join.status}`);
 
-  // This is the heart of it: the client is told the text failed, so the page can say so.
-  join.json?.sms && join.json.sms.success === false
-    ? ok(`response reports the SMS failure (sms.success=false, error="${join.json.sms.error}")`)
-    : bad(`response did not report an SMS failure: sms=${JSON.stringify(join.json?.sms)}`);
+  // The response no longer waits for the text, so it hands back a ticket instead of an
+  // outcome. The page reports the failure from what that ticket resolves to - if the ticket
+  // never resolves, the player is back to being told nothing.
+  join.json?.sms?.pending && join.json.sms.ticket
+    ? ok('the response returns a send ticket without waiting for the text')
+    : bad(`no send ticket in the response: sms=${JSON.stringify(join.json?.sms)}`);
 
-  join.json?.sms?.attempts === 2
+  const joinOutcome = await settledTicket(gameId, join.json?.sms?.ticket);
+  joinOutcome?.status === 'failed'
+    ? ok('the ticket reports the SMS failure, so the page can say so')
+    : bad(`ticket did not report a failure: ${JSON.stringify(joinOutcome)}`);
+
+  joinOutcome?.attempts === 2
     ? ok('the failed text was retried once before giving up (attempts=2)')
-    : bad(`expected 2 attempts, got ${join.json?.sms?.attempts}`);
+    : bad(`expected 2 attempts, got ${joinOutcome?.attempts}`);
 
   const after = await req('GET', `/api/games/${gameId}`);
   (after.json?.players || []).some((p) => p.name === 'Failing Phone')
@@ -163,12 +185,13 @@ async function retryPolicyChecks() {
   });
 
   out.status === 201 ? ok('the "out" response is recorded (HTTP 201)') : bad(`out returned HTTP ${out.status}`);
-  out.json?.sms && out.json.sms.success === false
-    ? ok('response reports the SMS failure')
-    : bad(`out did not report an SMS failure: sms=${JSON.stringify(out.json?.sms)}`);
-  out.json?.sms?.attempts === 2
+  const outOutcome = await settledTicket(gameId, out.json?.sms?.ticket);
+  outOutcome?.status === 'failed'
+    ? ok('the ticket reports the SMS failure')
+    : bad(`out ticket did not report a failure: ${JSON.stringify(outOutcome)}`);
+  outOutcome?.attempts === 2
     ? ok('the failed text was retried once (attempts=2)')
-    : bad(`expected 2 attempts, got ${out.json?.sms?.attempts}`);
+    : bad(`expected 2 attempts, got ${outOutcome?.attempts}`);
 
   const afterOut = await req('GET', `/api/games/${gameId}`);
   (afterOut.json?.outPlayers || []).some((p) => p.name === 'Out Person')

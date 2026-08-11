@@ -16,6 +16,7 @@ function recipientHash(phoneNumber) {
 }
 
 async function logSmsEvent({
+  id = null,
   eventId,
   gameId = null,
   phoneNumber,
@@ -24,7 +25,7 @@ async function logSmsEvent({
   error = null
 }) {
   const params = [
-    crypto.randomUUID(),
+    id || crypto.randomUUID(),
     eventId,
     gameId || null,
     recipientHash(phoneNumber),
@@ -171,8 +172,38 @@ async function getSmsEventMetrics() {
   };
 }
 
+/**
+ * One text's outcome, by the id its sender chose in advance.
+ *
+ * The RSVP page holds that id while the text is still being sent, so it can report what
+ * actually happened without naming a phone number to ask about. An unknown id simply has no
+ * row yet, which is the same answer as "still sending".
+ */
+async function getSmsEventById(id) {
+  if (!id) return null;
+  const query = isProduction
+    ? 'SELECT event_id, game_id, status, attempts, error, created_at FROM sms_events WHERE id = $1'
+    : 'SELECT event_id, game_id, status, attempts, error, created_at FROM sms_events WHERE id = ?';
+
+  const rows = isProduction
+    ? await withPgClient(async (client) => (await client.query(query, [id])).rows)
+    : await sqliteAll(query, [id]);
+
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    eventId: row.event_id,
+    gameId: row.game_id,
+    status: row.status,
+    attempts: Number(row.attempts) || 1,
+    error: row.error || null,
+    createdAt: toIso(row.created_at)
+  };
+}
+
 module.exports = {
   logSmsEvent,
+  getSmsEventById,
   getSmsEventMetrics,
   getSmsEventsForGame,
   recipientHash
