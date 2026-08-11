@@ -49,11 +49,16 @@ function makeGame(hours, players, extra = {}) {
   };
 }
 
-const player = (n) => ({
+// Hours, not days: the quiet window below is measured in hours.
+const hoursAgo = (hours) => new Date(Date.now() - hours * 3600 * 1000).toISOString();
+
+// Settled players signed up well before the reminder window, which is the ordinary case.
+// A player who signed up minutes ago is a separate case, tested at the end of this file.
+const player = (n, joinedAt = hoursAgo(30)) => ({
   id: `p${n}`,
   name: `Player ${n}`,
   phone: `+1555222000${n}`,
-  joinedAt: new Date().toISOString(),
+  joinedAt,
 });
 
 const textsTo = (phone) => sent.filter((s) => s.phone === phone).length;
@@ -113,6 +118,30 @@ const textsTo = (phone) => sent.filter((s) => s.phone === phone).length;
   textsTo('+15552220004') === 0
     ? ok('player who left before the check was not texted')
     : bad('texted a player who is no longer on the roster');
+
+  console.log('\n=== A player who signs up minutes ago is not "reminded" about it ===');
+  // The double-text: joining a game already inside the 24-hour window produced a "You're IN"
+  // text and then, a couple of minutes later, a reminder about the game they had just chosen.
+  const g4 = await db.getGame(gameId);
+  g4.players.push(player(5, new Date().toISOString()));
+  await db.saveGame(gameId, g4, 'tok-lj', null);
+  sent = [];
+  await checkAndSendReminders();
+  textsTo('+15552220005') === 0
+    ? ok('signup from moments ago was not immediately reminded')
+    : bad(`fresh signup got ${textsTo('+15552220005')} reminder(s) minutes after joining`);
+
+  console.log('\n=== ...but is reminded once the quiet window has passed ===');
+  // Held, not dropped. Backdating the signup is how "three hours later" happens in a test.
+  const g5 = await db.getGame(gameId);
+  const held = g5.players.find((p) => p.phone === '+15552220005');
+  held.joinedAt = hoursAgo(4);
+  await db.saveGame(gameId, g5, 'tok-lj', null);
+  sent = [];
+  await checkAndSendReminders();
+  textsTo('+15552220005') === 1
+    ? ok('held reminder was delivered on a later check, exactly once')
+    : bad(`expected 1 reminder after the quiet window, got ${textsTo('+15552220005')}`);
 
   console.log('\n=== The durable log agrees with what was sent ===');
   for (const n of [1, 2, 3]) {

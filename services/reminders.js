@@ -18,7 +18,40 @@ const MAX_REMINDERS_PER_RUN = 50;
 const MAX_SEND_ATTEMPTS = 3;
 let reminderCheckInProgress = false;
 
+// Joining a game that is already inside the 24-hour window used to produce two texts within a
+// couple of minutes: the "You're IN" confirmation and then a reminder about a game the player
+// had only just chosen. Nobody needs reminding about something they did minutes ago, so a
+// player stays quiet for a while after their last signup text.
+const RECENT_SIGNUP_QUIET_HOURS = 3;
+const RECENT_SIGNUP_QUIET_MS = RECENT_SIGNUP_QUIET_HOURS * 60 * 60 * 1000;
+
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
+
+/**
+ * When this player was last texted about joining. A promotion off the waitlist is its own
+ * "you're in" text, so it counts as freshly told just as much as an original signup.
+ * @returns {number|null} epoch milliseconds, or null when the roster entry carries no timestamp
+ */
+function lastSignupContact(player) {
+  const stamps = [player.joinedAt, player.promotedAt]
+    .map((value) => (value ? new Date(value).getTime() : NaN))
+    .filter((value) => Number.isFinite(value));
+  return stamps.length ? Math.max(...stamps) : null;
+}
+
+/**
+ * True when this player heard from us about joining too recently to want a reminder.
+ * Roster entries with no timestamp (host-added players, older rows) are reminded as before:
+ * an unknown join time must not silence anyone.
+ * @param {object} player
+ * @param {number} [nowMs] real epoch milliseconds - NOT the shifted Central-time clock, which
+ *   is a wall-clock stand-in and cannot be compared against a stored ISO timestamp
+ */
+function joinedTooRecentlyForReminder(player, nowMs = Date.now()) {
+  const contactedAt = lastSignupContact(player);
+  if (contactedAt === null) return false;
+  return nowMs - contactedAt < RECENT_SIGNUP_QUIET_MS;
+}
 
 function describeGameDay(game, centralNow) {
   const dateKey = (date) =>
@@ -83,6 +116,16 @@ async function checkAndSendReminders() {
             break;
           }
           if (!player.phone) continue;
+
+          if (joinedTooRecentlyForReminder(player)) {
+            if (DEBUG) {
+              console.log(`[REMINDER] ${player.phone} signed up within the last ${RECENT_SIGNUP_QUIET_HOURS}h; holding their reminder`);
+            }
+            // Left outstanding on purpose: the game must not be cached as finished, so this
+            // player is reconsidered once the quiet window passes.
+            outstanding++;
+            continue;
+          }
 
           const playerKey = `${gameId}|${player.phone}`;
           if (remindedPlayersCache.has(playerKey)) continue;
@@ -185,5 +228,7 @@ function resetReminderState() {
 module.exports = {
   checkAndSendReminders,
   describeGameDay,
-  resetReminderState
+  joinedTooRecentlyForReminder,
+  resetReminderState,
+  RECENT_SIGNUP_QUIET_HOURS
 };

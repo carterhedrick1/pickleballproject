@@ -34,8 +34,11 @@ function makeGame(hours, phones) {
     duration: 90, totalPlayers: 8, message: '', registrationMode: 'fcfs',
     waitlist: [], outPlayers: [], cancelled: false, created: new Date().toISOString(),
     notificationPreferences: {},
+    // Signed up two days ago: a signup from minutes ago is held back from the 24-hour
+    // reminder on purpose, and these tests are about duplicate sends, not join recency.
     players: phones.map((phone, i) => ({
-      id: 'p' + i, name: 'Player ' + i, phone, joinedAt: new Date().toISOString(),
+      id: 'p' + i, name: 'Player ' + i, phone,
+      joinedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
     })),
   };
 }
