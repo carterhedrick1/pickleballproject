@@ -213,7 +213,8 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
       'TIME',
       'SPOTS_LEFT',
       'WAITLIST_COUNT',
-      'TOTAL_PLAYERS'
+      'TOTAL_PLAYERS',
+      'PROMOTED_NAME'
     ],
     defaultDetailsTemplate: DEFAULT_TEXT_TOKEN,
     maxLength: 240,

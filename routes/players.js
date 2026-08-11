@@ -180,7 +180,8 @@ module.exports = function mountPlayerRoutes(app) {
             gameId,
             game,
             departureAlertType(game, result.previousStatus === 'confirmed'),
-            departing.name
+            departing.name,
+            { promotedName: result.promotedPlayer?.name || null }
           );
         }
 
