@@ -19,7 +19,7 @@ const DEFAULT_MESSAGES = Object.freeze([
   "You're IN. Your thumbs performed admirably.",
   "You're IN. You've been flagged for a surprise DUPR audit.",
   "You're IN. A background check was run, and we're choosing to overlook it.",
-  "You're IN. Two people immediately checked who else is playing.",
+  "You're IN. Somebody immediately checked who else is playing.",
   "You're IN. Somewhere, a waitlist is coping."
 ]);
 const DEFAULT_DETAILS_TEMPLATE =
