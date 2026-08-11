@@ -193,7 +193,7 @@ async function checkAndSendReminders() {
                 'so somebody else can take the spot.'
               : `Reminder: Your pickleball game is ${gameDay} ` +
                 `at ${formatTimeForSMS(game.time)} — ${formatLocationForSMS(game)}. ` +
-                'Looking forward to seeing you! Reply 2 for details, or 9 to cancel.';
+                'Reply 2 for details, or 9 to cancel.';
             let message = await resolveTextMessage(
               kind.categoryId,
               defaultMessage,
