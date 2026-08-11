@@ -18,12 +18,6 @@
             </div>
         </div>
 
-        <nav class="host-nav">
-            <a href="/my-games.html" aria-current="page">My Games</a>
-            <a href="/roster.html">Roster</a>
-            <a href="/stats.html">Stats</a>
-        </nav>
-
         <div id="status" class="status" style="display: none;"></div>
 
         <div class="content-section">
@@ -49,6 +43,10 @@
 
             <div id="gamesBody" style="display: none;">
                 <p class="summary-line" id="summaryLine"></p>
+
+                <!-- Nothing coming up, but a history of games: the next thing this host wants is
+                     last week's game again. Filled in by my-games.js. -->
+                <div id="runItAgainCard" class="run-again-card" hidden></div>
 
                 <h3 class="section-subtitle" id="upcomingHeading">Upcoming Games</h3>
                 <div id="upcomingList"></div>

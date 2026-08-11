@@ -891,8 +891,7 @@ button:disabled,
 
 .tabs-container,
 .tabs,
-.mobile-tab-container,
-.host-nav {
+.mobile-tab-container {
     background: var(--canvas) !important;
     border-color: var(--border) !important;
 }
@@ -916,23 +915,6 @@ button:disabled,
     border-bottom-color: var(--surface) !important;
     box-shadow: none !important;
     color: var(--brand) !important;
-}
-
-.host-nav a {
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
-    color: var(--text-muted) !important;
-}
-
-.host-nav a:hover {
-    border-color: var(--brand-border) !important;
-    color: var(--brand) !important;
-}
-
-.host-nav a[aria-current="page"] {
-    background: var(--brand) !important;
-    border-color: var(--brand) !important;
-    color: var(--surface) !important;
 }
 
 .collapsible-header {

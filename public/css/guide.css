@@ -17,9 +17,6 @@
         font-synthesis: none;
     }
     
-    .page-header h1 {
-        font-weight: 700 !important;
-    }
 }
 
 * {
@@ -45,50 +42,161 @@ body {
     overflow: hidden;
 }
 
-.page-header {
-    background: var(--brand);
-    color: var(--surface);
-    padding: 20px 32px 16px;
-    margin: 0;
-    position: relative;
-    overflow: hidden;
-    min-height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* ---------------------------------------------------------------------------
+   Hero. Slogan, the three steps, the button. This is the whole product on one
+   screen, so it has to hold up on a 390px phone and on a 2560px monitor where
+   the card used to be mostly empty.
+   --------------------------------------------------------------------------- */
+
+.hero {
+    background: var(--surface);
     border-radius: 20px 20px 0 0;
-}
-
-.page-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-repeat: repeat;
-    background-size: 200px 100px;
-}
-
-.page-header .header-content {
+    border-bottom: 1px solid var(--border);
+    padding: 40px 40px;
     text-align: center;
-    z-index: 2;
-    position: relative;
 }
 
-.page-header h1 {
+/* The page's own wordmark. The site header carries a small one too, but this is the h1 the
+   page is actually about, and the slogan under it is what turns it into a hero rather than
+   a band with nothing in it. */
+.hero-wordmark {
+    color: var(--ink);
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0 0 10px;
+}
+
+.hero-line {
+    color: var(--text-muted);
     font-size: 22px;
     font-weight: 600;
-    margin: 0 0 4px 0;
-    text-shadow: 0 2px 4px color-mix(in srgb, var(--ink) 30%, transparent);
-    letter-spacing: -0.01em;
+    line-height: 1.35;
+    margin: 0 auto;
+    max-width: 620px;
+    text-wrap: balance;
 }
 
-.page-header .subtitle {
+.hero-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    list-style: none;
+    margin: 32px 0 0;
+    padding: 0;
+    text-align: left;
+}
+
+.hero-step {
+    background: var(--canvas);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    position: relative;
+}
+
+/* The arrows between the steps are decoration, so they are drawn rather than typed
+   and they disappear the moment the steps stack. */
+.hero-step + .hero-step::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-top: 2px solid var(--border-strong);
+    border-right: 2px solid var(--border-strong);
+    transform: translateY(-50%) rotate(45deg);
+}
+
+.hero-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--brand);
+    color: var(--surface);
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.hero-step-title {
+    color: var(--ink);
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0 0 4px;
+}
+
+.hero-step-detail {
+    color: var(--text-muted);
     font-size: 14px;
-    opacity: 0.9;
-    font-weight: 400;
-    text-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 20%, transparent);
+    line-height: 1.45;
+    margin: 0;
+}
+
+.hero .back-btn {
+    margin-top: 32px;
+}
+
+@media (max-width: 720px) {
+    .hero {
+        padding: 28px 24px 32px;
+    }
+
+    .hero-wordmark {
+        font-size: 26px;
+    }
+
+    .hero-line {
+        font-size: 19px;
+    }
+
+    .hero-steps {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-top: 24px;
+    }
+
+    /* Stacked steps read top to bottom on their own; the side arrow would point nowhere. */
+    .hero-step + .hero-step::before {
+        display: none;
+    }
+
+    .hero-step {
+        display: grid;
+        grid-template-columns: 30px minmax(0, 1fr);
+        column-gap: 12px;
+        align-items: center;
+        padding: 14px 16px;
+    }
+
+    .hero-step-number {
+        grid-row: 1 / span 2;
+        margin-bottom: 0;
+    }
+
+    .hero .back-btn {
+        margin-top: 24px;
+    }
+}
+
+@media (max-width: 380px) {
+    .hero {
+        padding: 24px 16px 28px;
+    }
+
+    .hero-wordmark {
+        font-size: 24px;
+    }
+
+    .hero-line {
+        font-size: 18px;
+    }
 }
 
 /* How It Works (collapsed table of contents) */
@@ -1546,19 +1654,6 @@ body {
         margin: 0;
     }
 
-    .page-header {
-        padding: 24px 24px 20px;
-        border-radius: 16px 16px 0 0;
-    }
-
-    .page-header h1 {
-        font-size: 26px;
-    }
-
-    .page-header .subtitle {
-        font-size: 16px;
-    }
-
     .toc-section,
     .content-section {
         padding: 24px;
@@ -1714,10 +1809,6 @@ body {
         border-radius: 0;
         box-shadow: none;
         margin: 0;
-    }
-
-    .page-header {
-        border-radius: 0;
     }
 
     .toc-section {

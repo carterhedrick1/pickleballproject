@@ -48,6 +48,20 @@
                 <div id="gameSummaryMeta" class="game-summary-meta"></div>
             </div>
 
+            <!-- Inside 24 hours the host stops recruiting and starts running the game, so the two
+                 day-of actions come up to the top. Same functions as the Communication tab. -->
+            <div id="gameDayCard" class="game-day-card" hidden>
+                <div class="game-day-heading">
+                    <h2 class="game-day-title">Game Day</h2>
+                    <span id="gameDayWhen" class="game-day-when"></span>
+                </div>
+                <div class="game-day-actions">
+                    <button type="button" id="gameDayReminder" class="btn-secondary">Send Game Reminder</button>
+                    <button type="button" id="gameDayLocation" class="btn-secondary">Send Location Details</button>
+                </div>
+                <button type="button" id="gameDayLog" class="game-day-link">See What Was Sent</button>
+            </div>
+
             <!-- Mobile Tab Selection -->
             <div class="mobile-tab-container">
                 <select id="tabSelector" class="mobile-tab-selector">
@@ -74,7 +88,14 @@
                     <section class="roster-picker" aria-labelledby="intendedInviteesTitle">
                         <h2 class="section-title" id="intendedInviteesTitle">Text Your Invitations</h2>
                         <div id="intendedInviteeStatus" class="roster-picker-status" aria-live="polite">Loading your roster...</div>
-                        <div id="intendedInviteeList" class="roster-picker-list"></div>
+                        <!-- On a phone this list grows to its full height. Where it is capped, the
+                             fade and the count below it say so, because a host with twelve
+                             regulars must never send to five of them by accident. -->
+                        <div class="roster-picker-scroll">
+                            <div id="intendedInviteeList" class="roster-picker-list"></div>
+                            <div id="intendedInviteeFade" class="roster-picker-fade" aria-hidden="true" hidden></div>
+                        </div>
+                        <p id="intendedInviteeMore" class="roster-picker-more" aria-live="polite" hidden></p>
                         <div class="invite-actions">
                             <button type="button" id="textInvitations" disabled>Text The Invitation</button>
                         </div>
@@ -104,7 +125,12 @@
                 <div class="share-section">
                     <h3 class="share-title">Or Share Your Game Yourself</h3>
                     <div class="center-copy-section">
-                        <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
+                        <!-- Share is the phone's own send sheet, so it only appears where the
+                             browser actually has one. Copy is always there as the fallback. -->
+                        <div class="share-buttons">
+                            <button id="sharePlayerLink" class="copy-btn" hidden>Share The Invitation</button>
+                            <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
+                        </div>
                         <p class="save-suggestion">Anyone you tick above is recorded as invited when you copy.</p>
                     </div>
                     <div class="player-link-section">

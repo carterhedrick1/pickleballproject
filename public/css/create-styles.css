@@ -457,15 +457,16 @@
             box-shadow: 0 4px 16px color-mix(in srgb, var(--brand) 30%, transparent);
         }
 
-        /* SMS info styling */
+        /* SMS consent note. It is a disclosure, not a warning: nothing has gone wrong and
+           there is nothing to fix, so it reads as quiet fine print rather than an alert. */
         .sms-info {
-    background: var(--warning-soft);
-    border: 1px solid var(--warning);
+    background: var(--canvas);
+    border: 1px solid var(--border);
     padding: 14px;
     border-radius: 10px;
     margin-top: 10px;
     font-size: 13px;
-    color: var(--warning);
+    color: var(--text-muted);
     line-height: 1.4;
 }
 

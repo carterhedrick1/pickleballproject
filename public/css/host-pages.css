@@ -71,38 +71,8 @@ body {
     text-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 20%, transparent);
 }
 
-/* Links across to the other two host pages. */
-.host-nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    padding: 14px 32px;
-    background: var(--canvas);
-    border-bottom: 1px solid var(--border);
-}
-
-.host-nav a {
-    color: var(--ink);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    padding: 6px 14px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-}
-
-.host-nav a:hover {
-    border-color: var(--brand);
-    color: var(--brand);
-}
-
-.host-nav a[aria-current="page"] {
-    background: var(--brand);
-    border-color: var(--brand);
-    color: var(--surface);
-}
+/* The pill row that used to sit here repeated the shared header's own links, so a host saw
+   My Games / Roster / Stats twice on every one of these pages. The header carries them. */
 
 /* Content ----------------------------------------------------------------- */
 
@@ -137,6 +107,47 @@ body {
 .muted {
     color: var(--text-muted);
     font-size: 14px;
+}
+
+/* Nothing upcoming, but there is a history: offer last week's game back. */
+.run-again-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    background: var(--brand-soft);
+    border: 1px solid var(--brand-border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 24px;
+}
+
+.run-again-copy {
+    flex: 1 1 220px;
+    min-width: 0;
+}
+
+.run-again-title {
+    color: var(--brand);
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 4px;
+}
+
+.run-again-detail {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: 0;
+}
+
+.run-again-card .btn {
+    flex: 0 0 auto;
+}
+
+/* display:flex above would otherwise beat the browser's own [hidden] rule. */
+.run-again-card[hidden] {
+    display: none;
 }
 
 /* Cards ------------------------------------------------------------------- */
@@ -543,10 +554,6 @@ details.past-games > summary {
 
     .content-section {
         padding: 20px;
-    }
-
-    .host-nav {
-        padding: 12px 16px;
     }
 
     .status,

@@ -91,8 +91,41 @@ function render() {
         ? `Past & Cancelled Games (${past.length})`
         : `Past Games (${past.length})`;
 
+    renderRunItAgain(upcoming, past);
     renderInto('upcomingList', upcoming);
     renderInto('pastList', past);
+}
+
+/** The repeat flow's link, built the one way, so the card and the past cards cannot drift. */
+function repeatGameLink(game) {
+    return `/create.html?repeat=${encodeURIComponent(game.gameId)}` +
+        `&token=${encodeURIComponent(game.hostToken)}`;
+}
+
+// A host with a history but nothing coming up is the most common way this page is opened, and
+// until now it answered with an empty Upcoming heading. Their last game is almost always the
+// next one, so offer it directly rather than making them scroll into Past Games to find it.
+function renderRunItAgain(upcoming, past) {
+    const card = document.getElementById('runItAgainCard');
+    if (!card) return;
+
+    // past is sorted newest first by render().
+    const lastGame = past[0];
+    if (upcoming.length || !lastGame) {
+        card.hidden = true;
+        card.innerHTML = '';
+        return;
+    }
+
+    card.innerHTML = `
+        <div class="run-again-copy">
+            <h3 class="run-again-title">Nothing Coming Up</h3>
+            <p class="run-again-detail">Last game: ${esc(lastGame.location)},
+                ${formatDateForDisplay(lastGame.date)} at ${formatTime(lastGame.time)}.</p>
+        </div>
+        <a class="btn btn-primary" href="${repeatGameLink(lastGame)}">Run It Again</a>
+    `;
+    card.hidden = false;
 }
 
 function renderInto(containerId, games) {
@@ -141,7 +174,7 @@ function gameCard(game) {
         <div class="game-badges">${badges.join('')}</div>
         <div class="card-actions">
             <a class="btn btn-primary" href="${game.managementLink}">Manage</a>
-            ${isPast ? `<a class="btn" href="/create.html?repeat=${encodeURIComponent(game.gameId)}&token=${encodeURIComponent(game.hostToken)}">Run It Again</a>` : ''}
+            ${isPast ? `<a class="btn" href="${repeatGameLink(game)}">Run It Again</a>` : ''}
             <button type="button" class="btn" id="copyButton-${game.gameId}">Copy Invitation</button>
             <button type="button" class="btn" data-notes-toggle>Notes</button>
             ${canDelete ? '<button type="button" class="btn btn-danger" data-delete>Delete</button>' : ''}
