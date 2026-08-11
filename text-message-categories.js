@@ -102,9 +102,9 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'Sent once to confirmed players when their game enters the 24-hour reminder window.',
     preview:
-      'Reminder: Your pickleball game is tomorrow at 9:00 AM — Oak Park Courts. Looking forward to seeing you! Reply 2 for details, or 9 to cancel.',
+      'Reminder: Your pickleball game is tomorrow at 9:00 AM — Oak Park Courts. Reply 2 for details, or 9 to cancel.',
     defaultDetailsTemplate:
-      'Reminder: Your pickleball game is {DAY} at {TIME} — {LOCATION}. Looking forward to seeing you! Reply 2 for details, or 9 to cancel.',
+      'Reminder: Your pickleball game is {DAY} at {TIME} — {LOCATION}. Reply 2 for details, or 9 to cancel.',
     tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'DAY'],
     maxLength: 240,
     detailsMaxLength: DETAILS_MAX_LENGTH

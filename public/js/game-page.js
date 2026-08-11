@@ -381,15 +381,13 @@
                 
             function updatePlayerList() {
                 const playersList = document.getElementById('players');
-                const spotsAvailable = document.getElementById('spotsAvailable');
-                const spotsAvailableBar = document.getElementById('spotsAvailableBar');
                 const spotsFullContainer = document.getElementById('spotsFullContainer');
                 const waitlistCount = document.getElementById('waitlistCount');
                 const joinSectionTitle = document.getElementById('joinSectionTitle');
                 const joinButton = document.getElementById('joinButton');
                 const playerListSection = document.getElementById('playerList');
-                
-                if (!playersList || !spotsAvailable) {
+
+                if (!playersList) {
                     return;
                 }
                 
@@ -402,9 +400,11 @@
                         playerListSection.style.display = 'none';
                     }
                     
-                    // Update join section for waitlist mode - CHANGED: Now just shows "Join This Game" and "IN"
+                    // Approval mode: tapping IN sends an application rather than taking a spot,
+                    // so the heading says so. The buttons stay IN and OUT - they are the whole
+                    // point of the app, and the help text under the form explains the review.
                     if (joinSectionTitle && joinButton) {
-                        joinSectionTitle.textContent = 'Join This Game';
+                        joinSectionTitle.textContent = 'Apply For This Game';
                         joinButton.textContent = 'IN';
                     }
                     
@@ -460,22 +460,12 @@
                 const waitlistLength = gameData.waitlist ? gameData.waitlist.length : 0;
                 
                 if (availableSpots > 0) {
-                    // Show spots available
-                    spotsAvailable.textContent = availableSpots;
-                    spotsAvailableBar.style.display = 'block';
                     spotsFullContainer.style.display = 'none';
                     joinSectionTitle.textContent = 'Join This Game';
                     joinButton.textContent = 'IN';
-                    
-                    // FIXED: Update spots text to be singular/plural
-                    const spotsText = document.getElementById('spotsText');
-                    if (spotsText) {
-                        spotsText.textContent = availableSpots === 1 ? 'spot' : 'spots';
-                    }
-                    
                 } else {
-                    // Show game is full with waitlist info
-                    spotsAvailableBar.style.display = 'none';
+                    // Show the waitlist pitch. The "Game Is Full" notice itself lives in the
+                    // hero card at the top of the page.
                     spotsFullContainer.style.display = 'block';
                     waitlistCount.textContent = waitlistLength;
                     const waitlistCountWord = document.getElementById('waitlistCountWord');
@@ -501,6 +491,21 @@
             // change it), this browser knows them but they have not answered this game (fill
             // the form in for them), or nobody is known (the plain form, exactly as before).
             // ---------------------------------------------------------------------------
+
+            /**
+             * Whether a player signing up right now will still get a reminder text.
+             *
+             * The server holds reminders for three hours after a signup, so somebody who joins
+             * a game starting sooner than that hears nothing more before it begins. Read off
+             * the browser clock, which is close enough for a three-hour boundary.
+             */
+            function remindersAreComing() {
+                const QUIET_HOURS = 3;
+                if (!gameData || !gameData.date || !gameData.time) return true;
+                const start = new Date(`${gameData.date}T${gameData.time}:00`);
+                if (Number.isNaN(start.getTime())) return true;
+                return start.getTime() - Date.now() > QUIET_HOURS * 60 * 60 * 1000;
+            }
 
             function gameIsFull() {
                 return gameData
@@ -732,15 +737,22 @@
                             ? `Application Cancelled`
                             : `Removed From The Waitlist`;
                     } else {
+                        // One thank-you is enough: the title already says it, so the sentence
+                        // under it says what actually happened instead of thanking them twice.
                         confirmTitle.textContent = "Thanks For Letting Us Know!";
-                        confirmMessage.textContent = `We've recorded that you can't make this game. Thanks for letting everyone know.`;
+                        confirmMessage.textContent = `The organizer knows you can't make this one.`;
                         confirmStatus.textContent = `Marked as "Out"`;
                     }
                 } else if (data.status === 'confirmed') {
                     // Regular confirmed player
                     confirmationSection.classList.remove('waitlist', 'out');
                     confirmTitle.textContent = "You're In!";
-                    confirmMessage.textContent = `Awesome! You are Player ${data.position} of ${data.totalPlayers}. Get ready to play.`;
+                    // The reminder half of this sentence is only true when a reminder is
+                    // actually coming. A game a couple of hours away never sends one, and
+                    // promising a text that never arrives is the thing we are fixing.
+                    confirmMessage.textContent = remindersAreComing()
+                        ? `Your spot is held. The details are on their way by text, and a reminder before the game so you can't claim you forgot.`
+                        : `Your spot is held. The details are on their way by text.`;
                     confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
                 } else if (data.status === 'waitlist') {
                     // Waitlisted player
