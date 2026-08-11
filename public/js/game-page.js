@@ -125,6 +125,8 @@
                         }
                     }
                     
+                    renderHero(gameStatus);
+
                     // Populate game details
                     document.getElementById('location').textContent = gameData.location;
 
@@ -200,6 +202,53 @@
                     showStatus(message, 'error');
                 });
 
+            /**
+             * The hero: whose game, when, where, and whether there is room. This is the only
+             * part of the page most players read, so it is rebuilt on every refresh - a time
+             * change or the last spot going has to show up here, not just in the details below.
+             */
+            function renderHero(gameStatus) {
+                const host = String(gameData.organizerName || '').trim();
+                // "Organizer" is the placeholder the server falls back to, and naming a game
+                // after a placeholder is worse than not naming it at all.
+                const named = host && host.toLowerCase() !== 'organizer';
+                document.getElementById('heroTitle').textContent = named
+                    ? `${host}${host.endsWith('s') ? "'" : "'s"} Pickleball Game`
+                    : 'Pickleball Game';
+
+                document.getElementById('heroWhen').textContent =
+                    `${PageUtils.formatLocalDate(gameData.date, {
+                        weekday: 'long', month: 'long', day: 'numeric'
+                    })} at ${formatTime(gameData.time)}`;
+                document.getElementById('heroWhere').textContent = gameData.location || '';
+
+                // A cancelled or finished game already says so in the notice right below, and
+                // saying it twice in a row reads like two different problems.
+                const spots = document.getElementById('heroSpots');
+                if (!gameStatus.canJoin) {
+                    spots.hidden = true;
+                    return;
+                }
+
+                const open = parseInt(gameData.totalPlayers) - (gameData.players || []).length;
+                if (gameData.registrationMode === 'waitlist') {
+                    // Approval mode hides the roster from players, so a count would give away
+                    // what the rest of the page deliberately does not show.
+                    spots.textContent = 'Applications Open';
+                    spots.className = 'hero-spots';
+                } else if (open <= 0) {
+                    spots.textContent = 'Game Is Full';
+                    spots.className = 'hero-spots is-full';
+                } else if (open === 1) {
+                    spots.textContent = 'One Spot Left';
+                    spots.className = 'hero-spots is-last-call';
+                } else {
+                    spots.textContent = `${open} Spots Left`;
+                    spots.className = 'hero-spots';
+                }
+                spots.hidden = false;
+            }
+
             function showGameStatusWarning(gameStatus) {
                 const warningSection = document.getElementById('gameStatusWarning');
                 const warningTitle = document.getElementById('warningTitle');
@@ -220,11 +269,6 @@
                 
                 // Show the warning
                 warningSection.style.display = 'block';
-
-                // "Join the fun on the court" under the title is an invitation, and this game
-                // is not one any more.
-                const subtitle = document.querySelector('.section-header .subtitle');
-                if (subtitle) subtitle.style.display = 'none';
 
                 // Update page title to indicate status
                 if (gameStatus.type === 'expired') {
@@ -264,7 +308,9 @@
                         // Only update if data actually changed
                         if (oldData !== newData) {
                             gameData = data;
-                            
+
+                            renderHero(GameUtils.getGameStatus(gameData));
+
                             // Update all the game details - TIMEZONE FIXED
                             document.getElementById('location').textContent = gameData.location;
                             document.getElementById('date').textContent = formatDate(gameData.date);
@@ -675,9 +721,16 @@
                             : `Your spot has been cancelled and opened up for the next player. Thanks for the heads-up.`;
                         confirmStatus.textContent = `Spot Cancelled`;
                     } else if (data.cancelled) {
+                        // Approval-mode games never call it a waitlist to the player - they
+                        // applied - and the text they are about to get says "application" too.
+                        const applied = gameData.registrationMode === 'waitlist';
                         confirmTitle.textContent = "You're Out";
-                        confirmMessage.textContent = `We've taken you off the list for this game. Thanks for letting us know.`;
-                        confirmStatus.textContent = `Removed From The Waitlist`;
+                        confirmMessage.textContent = applied
+                            ? `We've withdrawn your application for this game. Thanks for letting us know.`
+                            : `We've taken you off the list for this game. Thanks for letting us know.`;
+                        confirmStatus.textContent = applied
+                            ? `Application Cancelled`
+                            : `Removed From The Waitlist`;
                     } else {
                         confirmTitle.textContent = "Thanks For Letting Us Know!";
                         confirmMessage.textContent = `We've recorded that you can't make this game. Thanks for letting everyone know.`;
@@ -780,6 +833,9 @@
                     .then(response => response.json())
                     .then(updatedData => {
                         gameData = updatedData;
+                        // Their answer just changed how many spots are left, and the hero is
+                        // the first thing they see coming back from the confirmation screen.
+                        renderHero(GameUtils.getGameStatus(gameData));
                         updatePlayerList();
                     })
                     .catch(error => {

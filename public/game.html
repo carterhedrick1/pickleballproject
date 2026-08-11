@@ -11,10 +11,15 @@
 </head>
 <body class="page-game">
     <div class="container">
+        <!-- The whole invitation at a glance: whose game, when, where, and whether there is
+             room. Everything a player needs to decide sits here, and the IN/OUT buttons that
+             follow are the next thing on the screen. The full record is further down. -->
         <div class="section-header">
             <div class="header-content">
-                <h1>Pickleball Game</h1>
-                <div class="subtitle">Join the fun on the court</div>
+                <h1 id="heroTitle">Pickleball Game</h1>
+                <div class="subtitle" id="heroWhen">Getting the details...</div>
+                <div class="hero-where" id="heroWhere"></div>
+                <div class="hero-spots" id="heroSpots" hidden></div>
             </div>
         </div>
         
@@ -31,6 +36,55 @@
                     <h3 id="warningTitle">Game No Longer Available</h3>
                     <p id="warningMessage">This game has ended and is no longer accepting registrations.</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Where a returning player stands, shown instead of the form once this browser has
+             RSVP'd once. The whole point is that answering again is one tap, not a form. -->
+        <div id="yourStatusSection" class="section your-status-section" style="display: none;">
+            <div class="your-status-card">
+                <h2 class="your-status-title" id="yourStatusTitle"></h2>
+                <p class="your-status-detail" id="yourStatusDetail"></p>
+                <p class="your-status-name" id="yourStatusName"></p>
+                <button type="button" id="yourStatusAction" class="your-status-action"></button>
+                <p class="your-status-note" id="yourStatusNote" style="display: none;"></p>
+                <button type="button" id="notYouButton" class="your-status-switch"></button>
+            </div>
+        </div>
+
+        <!-- Sign Up Section -->
+        <div id="signupForm" class="section signup-section" style="display: none;">
+            <h2 class="section-title" id="joinSectionTitle">Join This Game</h2>
+
+            <!-- Shown when this browser knows the player but they have not answered this
+                 particular game yet: the form is already filled in, so IN is still one tap. -->
+            <div class="known-player-strip" id="knownPlayerStrip" style="display: none;">
+                <span id="knownPlayerText"></span>
+                <button type="button" id="knownPlayerSwitch" class="your-status-switch">Not You?</button>
+            </div>
+
+            <form id="joinForm">
+                <div class="form-group">
+                    <label for="playerName">Your Name:</label>
+                    <input type="text" id="playerName" name="playerName" placeholder="Enter your full name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phoneNumber">Phone Number:</label>
+                    <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="(555) 123-4567" autocomplete="tel" inputmode="tel" pattern="[0-9\s\(\)\-\+\.]*" maxlength="20" required>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit" id="joinButton" data-action="join">IN</button>
+                    <div class="button-or">or</div>
+                    <button type="submit" id="outButton" data-action="out" class="btn-out">OUT</button>
+                </div>
+            </form>
+            
+            <div class="form-help-text">
+                <span id="waitlistModeInfo" style="display: none;"><strong>How It Works:</strong> The organizer will review all applications and select players. You'll be notified if you're selected.<br><br></span>
+                <strong>Need to cancel later?</strong> Just reply "9" to any text message you receive about this game.<br><br>
+                <strong>Can't make it?</strong> Please still tap "OUT". It stops your reminder texts and tells the organizer to look for someone else.
             </div>
         </div>
 
@@ -99,55 +153,6 @@
         <div id="photosSection" class="section photos-section" style="display: none;">
             <h2 class="section-title">Photos</h2>
             <div id="photoGallery" class="photo-gallery"></div>
-        </div>
-
-        <!-- Where a returning player stands, shown instead of the form once this browser has
-             RSVP'd once. The whole point is that answering again is one tap, not a form. -->
-        <div id="yourStatusSection" class="section your-status-section" style="display: none;">
-            <div class="your-status-card">
-                <h2 class="your-status-title" id="yourStatusTitle"></h2>
-                <p class="your-status-detail" id="yourStatusDetail"></p>
-                <p class="your-status-name" id="yourStatusName"></p>
-                <button type="button" id="yourStatusAction" class="your-status-action"></button>
-                <p class="your-status-note" id="yourStatusNote" style="display: none;"></p>
-                <button type="button" id="notYouButton" class="your-status-switch"></button>
-            </div>
-        </div>
-
-        <!-- Sign Up Section -->
-        <div id="signupForm" class="section signup-section" style="display: none;">
-            <h2 class="section-title" id="joinSectionTitle">Join This Game</h2>
-
-            <!-- Shown when this browser knows the player but they have not answered this
-                 particular game yet: the form is already filled in, so IN is still one tap. -->
-            <div class="known-player-strip" id="knownPlayerStrip" style="display: none;">
-                <span id="knownPlayerText"></span>
-                <button type="button" id="knownPlayerSwitch" class="your-status-switch">Not You?</button>
-            </div>
-
-            <form id="joinForm">
-                <div class="form-group">
-                    <label for="playerName">Your Name:</label>
-                    <input type="text" id="playerName" name="playerName" placeholder="Enter your full name" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="phoneNumber">Phone Number:</label>
-                    <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="(555) 123-4567" autocomplete="tel" inputmode="tel" pattern="[0-9\s\(\)\-\+\.]*" maxlength="20" required>
-                </div>
-                
-                <div class="button-group">
-                    <button type="submit" id="joinButton" data-action="join">IN</button>
-                    <div class="button-or">or</div>
-                    <button type="submit" id="outButton" data-action="out" class="btn-out">OUT</button>
-                </div>
-            </form>
-            
-            <div class="form-help-text">
-                <span id="waitlistModeInfo" style="display: none;"><strong>How It Works:</strong> The organizer will review all applications and select players. You'll be notified if you're selected.<br><br></span>
-                <strong>Need to cancel later?</strong> Just reply "9" to any text message you receive about this game.<br><br>
-                <strong>Can't make it?</strong> Please still tap "OUT". It stops your reminder texts and tells the organizer to look for someone else.
-            </div>
         </div>
 
         <!-- Confirmation Section (Initially Hidden) -->

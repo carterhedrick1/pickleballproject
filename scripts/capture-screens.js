@@ -470,7 +470,7 @@ function buildScreens(fx) {
 
     { file: 'game-open', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.open.gameId}`,
       title: 'Spots still open',
-      note: 'A first-come game with 2 of 6 spots left. The roster is public and the form offers IN or OUT.' },
+      note: 'A first-come game with 2 of 6 spots left. Whose game it is, when, where and how much room is left all sit at the top, with IN or OUT immediately under them; the full details and the public roster follow below.' },
     { file: 'game-joined', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.open.gameId}`,
       title: 'After tapping IN',
       note: 'The confirmation replaces the whole page. Reached by really signing up — note the phone number is required.',

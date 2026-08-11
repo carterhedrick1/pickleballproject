@@ -134,6 +134,49 @@
             text-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 20%, transparent);
         }
 
+        /* The hero's when/where/spots. The date and time reuse .subtitle, but they are the
+           single most important line on the page, so they are sized up rather than down. */
+        .section-header #heroWhen {
+            font-size: 19px;
+            font-weight: 600;
+            opacity: 1;
+            margin-top: 6px;
+        }
+
+        .section-header .hero-where {
+            margin-top: 4px;
+            font-size: 15px;
+            opacity: 0.92;
+        }
+
+        .section-header .hero-spots {
+            display: inline-block;
+            margin-top: 14px;
+            padding: 6px 16px;
+            border-radius: 999px;
+            background: var(--brand-soft);
+            color: var(--brand);
+            border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent);
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+
+        /* One spot left is the only state worth shouting about: it is still available, and it
+           will not be for long. */
+        .section-header .hero-spots.is-last-call {
+            background: var(--brand);
+            color: var(--surface);
+            border-color: var(--brand);
+        }
+
+        /* Full borrows the amber the roster's own "Game Is Full" bar uses, so the two agree. */
+        .section-header .hero-spots.is-full {
+            background: var(--warning-soft);
+            color: var(--warning);
+            border-color: color-mix(in srgb, var(--warning) 35%, transparent);
+        }
+
         /* Section styling */
         .section {
             padding: 32px;
@@ -890,6 +933,12 @@
 
             .section-header .subtitle {
                 font-size: 13px;
+            }
+
+            /* Deliberately not shrunk with the rest: on a phone this is the line that has to
+               survive being read at arm's length in a car park. */
+            .section-header #heroWhen {
+                font-size: 18px;
             }
 
             .section {
