@@ -110,6 +110,22 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     detailsMaxLength: DETAILS_MAX_LENGTH
   },
   {
+    id: 'game-day-reminder',
+    title: 'Game Day Reminder',
+    addTitle: 'Add A Game Day Reminder Text',
+    listTitle: 'Game Day Reminder Texts',
+    recipient: 'Confirmed Player',
+    description:
+      'Sent once to confirmed players about two hours before the game starts. Kept separate from the 24-hour reminder because a text written around "tomorrow" is wrong this close to the start.',
+    preview:
+      "Your pickleball game starts at 9:00 AM — Oak Park Courts. Reply 9 now if you can't make it, so somebody else can take the spot.",
+    defaultDetailsTemplate:
+      "Your pickleball game starts at {TIME} — {LOCATION}. Reply 9 now if you can't make it, so somebody else can take the spot.",
+    tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'DAY'],
+    maxLength: 240,
+    detailsMaxLength: DETAILS_MAX_LENGTH
+  },
+  {
     id: 'game-cancelled',
     title: 'Entire Game Cancelled',
     addTitle: 'Add An Entire Game Cancelled Text',

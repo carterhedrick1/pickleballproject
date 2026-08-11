@@ -45,6 +45,12 @@ const SMS_EVENT_DEFINITIONS = Object.freeze([
     description: 'A confirmed player receives the scheduled reminder before an upcoming game.'
   },
   {
+    id: 'game-day-reminder',
+    title: 'Game Day Reminder',
+    recipient: 'Confirmed Player',
+    description: 'A confirmed player is reminded about two hours before the game starts.'
+  },
+  {
     id: 'entire-game-cancelled',
     title: 'Entire Game Cancelled',
     recipient: 'Confirmed And Waitlisted Players',
