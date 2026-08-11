@@ -7,6 +7,7 @@
 // mixed-race.js exist to prove that ordering holds.
 
 const {
+  getGame,
   recordRosterSighting
 } = require('../database');
 
@@ -29,6 +30,7 @@ const {
   departureAlertType
 } = require('../utils/promotion');
 const { routeFailed } = require('../utils/route-error');
+const { describePlayerStatus } = require('../domain/player-transitions');
 const {
   joinGame,
   joinGameAsHost,
@@ -304,6 +306,32 @@ module.exports = function mountPlayerRoutes(app) {
   });
 
 
+
+  // What this phone number's own status is in this game.
+  //
+  // The game page asks on load so somebody who has RSVP'd before sees where they stand instead
+  // of an empty form. It answers only about the number in the request and never lists anybody
+  // else, so it exposes no more than the roster the same page already shows - but it is a POST
+  // rather than a GET so the number stays out of URLs, logs and referrers, and production rate
+  // limiting keeps it from being walked through a range of numbers.
+  app.post('/api/games/:id/player-status', async (req, res) => {
+    const gameId = req.params.id;
+    try {
+      const phone = formatPhoneNumber(req.body && req.body.phone);
+      if (phone.length !== 10) {
+        return res.status(400).json({ error: 'A 10-digit phone number is required.' });
+      }
+
+      const game = await getGame(gameId);
+      if (!game) {
+        return res.status(404).json({ error: 'Game not found' });
+      }
+
+      res.json(describePlayerStatus(game, phone));
+    } catch (error) {
+      routeFailed(req, res, error, 'Failed to look up your status');
+    }
+  });
 
   // Add player manually (host function)
   app.post('/api/games/:id/manual-player', async (req, res) => {

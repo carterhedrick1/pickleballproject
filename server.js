@@ -80,8 +80,18 @@ const generalLimiter = rateLimit({
   message: { error: 'Too many requests. Please slow down.' }
 });
 
+// A player's own status lookup answers "is this number in this game", so it is the one read
+// worth limiting harder than the rest: a legitimate page open asks once and then twice a
+// minute while it stays open, and nothing honest needs more.
+const playerStatusLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many requests. Please slow down.' }
+});
+
 if (isProduction) {
   app.use('/api/games', generalLimiter);
+  app.post('/api/games/:id/player-status', playerStatusLimiter);
   app.post('/api/games', createGameLimiter);
   console.log('Rate limiting enabled for production');
 } else {

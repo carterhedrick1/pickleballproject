@@ -86,6 +86,24 @@ const signUpAsPlayer = (fx) => async (p) => {
   await cdp.sleep(2600);
 };
 
+/**
+ * Puts the browser in the state a player is in every time after their first answer: the page
+ * remembers them, so it opens on their own status rather than an empty form. Reloading is the
+ * point - it proves the card survives closing the page and tapping the text link again.
+ */
+const returnAsRememberedPlayer = (fx) => async (p) => {
+  // The signup is a no-op if the screen before this one already put Sam on the roster, so the
+  // identity is written directly rather than relying on that signup having gone through.
+  await signUpAsPlayer(fx)(p);
+  await p.evaluate(`(() => {
+    localStorage.setItem('inorout-player', JSON.stringify({
+      name: 'Sam Rivera', phone: '${fx.JOIN_PHONE}'
+    }));
+    location.reload();
+  })()`);
+  await cdp.sleep(2600);
+};
+
 const clickTab = (i) => async (p) => {
   await p.evaluate(`document.querySelectorAll('.tab')[${i}].click()`);
   await cdp.sleep(1000);
@@ -457,6 +475,11 @@ function buildScreens(fx) {
       title: 'After tapping IN',
       note: 'The confirmation replaces the whole page. Reached by really signing up — note the phone number is required.',
       act: signUpAsPlayer(fx) },
+    { file: 'game-returning', of: '/game.html?id=…', size: 'narrow',
+      url: `/game.html?id=${fx.open.gameId}`,
+      title: 'Opening the link again',
+      note: 'Once this browser has answered once, the link opens on the player\'s own status instead of a blank form. Changing their mind is one tap, and nothing has to be typed again.',
+      act: returnAsRememberedPlayer(fx) },
     { file: 'game-full', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.full.gameId}`,
       title: 'Game full',
       note: 'Same file, different state: the signup form becomes a waitlist signup.' },

@@ -54,6 +54,39 @@
             // a failure here must never stop the game itself from rendering.
             loadGamePhotos(gameId);
 
+            // Who this browser belongs to, and where they stand in this game. Started here
+            // rather than after the game arrives so the two requests overlap: the signup area
+            // is only revealed once both have landed, which is what stops a returning player
+            // seeing an empty form for a moment before their status replaces it.
+            let identity = PlayerIdentity.read();
+            let playerStatus = null;
+            let statusReady = fetchPlayerStatus();
+
+            function fetchPlayerStatus() {
+                if (!identity) {
+                    playerStatus = null;
+                    return Promise.resolve(null);
+                }
+                const asked = identity.phone;
+                return fetch(`/api/games/${gameId}/player-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: asked })
+                })
+                    .then(response => (response.ok ? response.json() : null))
+                    .then(result => {
+                        // The player may have pressed "Not You?" while this was in flight.
+                        if (!identity || identity.phone !== asked) return playerStatus;
+                        playerStatus = result;
+                        return result;
+                    })
+                    .catch(() => {
+                        // A failed lookup just means the ordinary signup form, which still works.
+                        playerStatus = null;
+                        return null;
+                    });
+            }
+
             fetch(`/api/games/${gameId}`)
                 .then(response => {
                     if (!response.ok) {
@@ -141,10 +174,19 @@
                     
                     // Hide the status message since game loaded successfully
                     statusDiv.style.display = 'none';
-                    
+
                     // Set up event handlers (only for active games)
                     if (gameStatus.canJoin) {
                         setupEventHandlers();
+                        setupIdentityHandlers();
+                        // A remembered player should never see the blank form flash up before
+                        // their status replaces it, so the signup area stays hidden until the
+                        // lookup started at page load has answered.
+                        if (identity && signupSection) {
+                            signupSection.style.display = 'none';
+                        }
+                        await statusReady;
+                        applyIdentityView();
                     }
                 })
                 .catch(error => {
@@ -238,10 +280,14 @@
                             }
                             
                             updatePlayerList();
-                            
+
                             // Show subtle update notification
                             showUpdateNotification();
                         }
+
+                        // Always, even when the game itself is unchanged: this is how a
+                        // waitlisted player who was just promoted sees it without reloading.
+                        refreshIdentityView();
                     })
                     .catch(error => {
                         console.error("Silent refresh failed:", error);
@@ -401,12 +447,210 @@
                 }
             }
 
+            // ---------------------------------------------------------------------------
+            // The returning player
+            //
+            // Everything below decides between three shapes for the signup area: this
+            // browser's player already has an answer in this game (show it, with one tap to
+            // change it), this browser knows them but they have not answered this game (fill
+            // the form in for them), or nobody is known (the plain form, exactly as before).
+            // ---------------------------------------------------------------------------
+
+            function gameIsFull() {
+                return gameData
+                    && (parseInt(gameData.totalPlayers) - (gameData.players || []).length) <= 0;
+            }
+
+            /** What the one-tap button on the status card does, and what it should say. */
+            function statusCardPlan(status) {
+                const approvalMode = gameData.registrationMode === 'waitlist';
+
+                if (status.status === 'confirmed') {
+                    return {
+                        mood: 'is-in',
+                        title: "You're IN",
+                        detail: status.totalPlayers
+                            ? `Player ${status.position} of ${status.totalPlayers}`
+                            : 'You have a spot in this game',
+                        // The organizer's seat is reserved by the game itself, and the roster
+                        // refuses to give it up - so offering the button would only produce an
+                        // error. Point at the tool that can actually do it instead.
+                        action: status.isOrganizer ? null : 'out',
+                        actionLabel: "Can't Make It? Tap OUT",
+                        note: status.isOrganizer
+                            ? "You're the organizer of this game. Use your management link to change it."
+                            : ''
+                    };
+                }
+
+                if (status.status === 'waitlist' && approvalMode) {
+                    return {
+                        mood: 'is-waiting',
+                        title: 'Your Application Is In',
+                        detail: 'The organizer is still picking players. You’ll get a text either way.',
+                        action: 'out',
+                        actionLabel: 'Cancel My Application'
+                    };
+                }
+
+                if (status.status === 'waitlist') {
+                    return {
+                        mood: 'is-waiting',
+                        title: "You're On The Waitlist",
+                        detail: status.position
+                            ? `Number ${status.position} in line. If a spot opens up it is yours, and we’ll text you.`
+                            : 'If a spot opens up we’ll text you.',
+                        action: 'out',
+                        actionLabel: 'Leave The Waitlist'
+                    };
+                }
+
+                // They told us they were out. Getting back in is the whole reason this card
+                // exists for them, so the button is the loud one.
+                return {
+                    mood: 'is-out',
+                    title: "You're OUT",
+                    detail: 'You told us you can’t make this one.',
+                    action: 'in',
+                    actionLabel: approvalMode
+                        ? 'Apply Again'
+                        : gameIsFull()
+                            ? 'Changed Your Mind? Join The Waitlist'
+                            : "Changed Your Mind? Tap IN"
+                };
+            }
+
+            function applyIdentityView() {
+                const statusSection = document.getElementById('yourStatusSection');
+                const signupSection = document.getElementById('signupForm');
+                const strip = document.getElementById('knownPlayerStrip');
+                if (!statusSection || !signupSection) return;
+
+                const known = Boolean(identity);
+                const answered = known && playerStatus
+                    && ['confirmed', 'waitlist', 'out'].includes(playerStatus.status);
+
+                // "Join The Waitlist! Don't worry, you can still sign up" is a pitch aimed at
+                // somebody with no spot. Telling it to a player who already holds one, or is
+                // already waiting, reads as though their answer did not register.
+                const waitlistPitch = document.querySelector('#spotsFullContainer .waitlist-info');
+                if (waitlistPitch) {
+                    const alreadySorted = answered
+                        && ['confirmed', 'waitlist'].includes(playerStatus.status);
+                    waitlistPitch.style.display = alreadySorted ? 'none' : '';
+                }
+
+                if (!known) {
+                    statusSection.style.display = 'none';
+                    if (strip) strip.style.display = 'none';
+                    signupSection.style.display = 'block';
+                    return;
+                }
+
+                // The roster is the authority on their name: the host may have corrected it.
+                if (answered && playerStatus.name && playerStatus.name !== identity.name) {
+                    identity = { name: playerStatus.name, phone: identity.phone };
+                    PlayerIdentity.save(identity);
+                }
+
+                if (!answered) {
+                    // Known, but a stranger to this particular game: fill the form in for them.
+                    statusSection.style.display = 'none';
+                    signupSection.style.display = 'block';
+                    document.getElementById('playerName').value = identity.name;
+                    document.getElementById('phoneNumber').value = PlayerIdentity.prettyPhone(identity.phone);
+                    if (strip) {
+                        document.getElementById('knownPlayerText').textContent =
+                            `Answering as ${identity.name} · ${PlayerIdentity.prettyPhone(identity.phone)}`;
+                        strip.style.display = 'flex';
+                    }
+                    return;
+                }
+
+                const plan = statusCardPlan(playerStatus);
+                statusSection.className = `section your-status-section ${plan.mood}`;
+                document.getElementById('yourStatusTitle').textContent = plan.title;
+                document.getElementById('yourStatusDetail').textContent = plan.detail;
+                document.getElementById('yourStatusName').textContent =
+                    `${identity.name} · ${PlayerIdentity.prettyPhone(identity.phone)}`;
+
+                // Hidden with the attribute rather than a style: design-system.css forces
+                // display on every button with !important, which an inline style cannot beat,
+                // and [hidden] is the escape it provides for exactly this.
+                const actionButton = document.getElementById('yourStatusAction');
+                actionButton.disabled = false;
+                actionButton.hidden = !plan.action;
+                if (plan.action) {
+                    actionButton.textContent = plan.actionLabel;
+                    actionButton.dataset.action = plan.action;
+                }
+
+                const note = document.getElementById('yourStatusNote');
+                if (plan.note) {
+                    note.textContent = plan.note;
+                    note.style.display = 'block';
+                } else {
+                    note.style.display = 'none';
+                }
+
+                document.getElementById('notYouButton').textContent =
+                    `Not ${PlayerIdentity.firstName(identity.name)}?`;
+
+                statusSection.style.display = 'block';
+                signupSection.style.display = 'none';
+                if (strip) strip.style.display = 'none';
+            }
+
+            /** Hands the page back to somebody who is not the remembered player. */
+            function forgetPlayer() {
+                PlayerIdentity.clear();
+                identity = null;
+                playerStatus = null;
+                statusReady = Promise.resolve(null);
+                document.getElementById('playerName').value = '';
+                document.getElementById('phoneNumber').value = '';
+                applyIdentityView();
+                document.getElementById('playerName').focus();
+            }
+
+            function setupIdentityHandlers() {
+                const actionButton = document.getElementById('yourStatusAction');
+                if (actionButton && !actionButton.dataset.wired) {
+                    actionButton.dataset.wired = 'true';
+                    actionButton.addEventListener('click', () => {
+                        if (!identity) return;
+                        actionButton.disabled = true;
+                        actionButton.textContent = 'Saving...';
+                        submitRsvp(identity.name, identity.phone, actionButton.dataset.action)
+                            .catch(() => {
+                                // submitRsvp has already shown the error; give the button back.
+                                applyIdentityView();
+                            });
+                    });
+                }
+
+                [document.getElementById('notYouButton'), document.getElementById('knownPlayerSwitch')]
+                    .forEach(button => {
+                        if (button && !button.dataset.wired) {
+                            button.dataset.wired = 'true';
+                            button.addEventListener('click', forgetPlayer);
+                        }
+                    });
+            }
+
+            /** Refreshes this player's own standing, then redraws the signup area. */
+            function refreshIdentityView() {
+                statusReady = fetchPlayerStatus();
+                return statusReady.then(applyIdentityView);
+            }
+
             // FIXED showConfirmation function for public/game.html
             function showConfirmation(data) {
                 // Hide other sections
                 document.getElementById('gameDetails').style.display = 'none';
                 document.getElementById('playerList').style.display = 'none';
                 document.getElementById('signupForm').style.display = 'none';
+                document.getElementById('yourStatusSection').style.display = 'none';
                 document.querySelector('.section-header').style.display = 'none';
                 
                 // Show confirmation section
@@ -527,10 +771,10 @@
                 document.getElementById('playerList').style.display = 'block';
                 document.getElementById('signupForm').style.display = 'block';
                 document.querySelector('.section-header').style.display = 'block';
-                
+
                 // Hide confirmation section
                 document.getElementById('confirmationSection').style.display = 'none';
-                
+
                 // Refresh the game data to show updated player list
                 fetch(`/api/games/${gameId}`)
                     .then(response => response.json())
@@ -540,8 +784,11 @@
                     })
                     .catch(error => {
                         console.error('Error refreshing game data:', error);
-                    });
-            }       
+                    })
+                    // Their answer is the reason they were on the confirmation screen, so the
+                    // card behind it has to show the new one rather than the old one.
+                    .then(refreshIdentityView);
+            }
 
             // Client-side phone validation
             function validatePhoneClientSide(phoneNumber) {
@@ -557,29 +804,15 @@
                 return false;
             }
             
-            function setupEventHandlers() {
-                // Set up join form submission
-                const joinForm = document.getElementById('joinForm');
-                joinForm.addEventListener('submit', event => {
-                    event.preventDefault();
-                    const playerName = document.getElementById('playerName').value;
-                    const phoneNumber = document.getElementById('phoneNumber').value;
-                    
-                    // Pre-validate on client side for better error messages
-                    if (phoneNumber && !validatePhoneClientSide(phoneNumber)) {
-                        const isChromeIOS = /CriOS/.test(navigator.userAgent);
-                        const errorMsg = isChromeIOS 
-                            ? 'Please check your phone number format. Try entering just the 10 digits (e.g., 5551234567) or with dashes (555-123-4567).'
-                            : 'Please enter a valid US phone number (e.g., (555) 123-4567)';
-                        
-                        showStatus(errorMsg, 'error');
-                        return;
-                    }
-                    
-                    showStatus('Processing your request...', 'info');
-                    
-                    // Send the player data to the server
-                    fetch(`/api/games/${gameId}/players`, {
+            /**
+             * The one path an answer takes, whether it came from the form or from the one-tap
+             * button on a returning player's status card.
+             */
+            function submitRsvp(playerName, phoneNumber, action) {
+                showStatus('Processing your request...', 'info');
+
+                // Send the player data to the server
+                return fetch(`/api/games/${gameId}/players`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -587,7 +820,7 @@
                         body: JSON.stringify({
                             name: playerName,
                             phone: phoneNumber,
-                            action: event.submitter.dataset.action || 'join'
+                            action: action || 'join'
                         })
                     })
                     .then(async response => {
@@ -600,14 +833,20 @@
                     .then(data => {
                         // Hide status message
                         statusDiv.style.display = 'none';
-                        
+
+                        // Remember them for next time. This is the only place an identity is
+                        // captured: they have just proved the number works by using it.
+                        if (PlayerIdentity.save({ name: playerName, phone: phoneNumber })) {
+                            identity = PlayerIdentity.read();
+                        }
+
                         // Show confirmation page
                         showConfirmation(data);
-                        
+
                         // Clear the form
                         document.getElementById('playerName').value = '';
                         document.getElementById('phoneNumber').value = '';
-                        
+
                         // Update game data in background
                         fetch(`/api/games/${gameId}`)
                             .then(response => response.json())
@@ -621,10 +860,39 @@
                     .catch(error => {
                         console.error('Error joining game:', error);
                         showStatus(error.message, 'error');
+                        throw error;
+                    });
+            }
+
+            function setupEventHandlers() {
+                // Set up join form submission
+                const joinForm = document.getElementById('joinForm');
+                joinForm.addEventListener('submit', event => {
+                    event.preventDefault();
+                    const playerName = document.getElementById('playerName').value;
+                    const phoneNumber = document.getElementById('phoneNumber').value;
+
+                    // Pre-validate on client side for better error messages
+                    if (phoneNumber && !validatePhoneClientSide(phoneNumber)) {
+                        const isChromeIOS = /CriOS/.test(navigator.userAgent);
+                        const errorMsg = isChromeIOS
+                            ? 'Please check your phone number format. Try entering just the 10 digits (e.g., 5551234567) or with dashes (555-123-4567).'
+                            : 'Please enter a valid US phone number (e.g., (555) 123-4567)';
+
+                        showStatus(errorMsg, 'error');
+                        return;
+                    }
+
+                    submitRsvp(
+                        playerName,
+                        phoneNumber,
+                        event.submitter.dataset.action || 'join'
+                    ).catch(() => {
+                        // Already reported to the player by submitRsvp.
                     });
                 });
             }
-            
+
             function formatTime(timeStr) {
                 return PageUtils.formatTime12Hour(timeStr);
             }

@@ -28,6 +28,52 @@ function findExistingPlayer(game, phone) {
   return null;
 }
 
+/**
+ * Where a phone number stands in this game, for the player holding that phone.
+ *
+ * The game page asks this on load so a returning player sees their own status instead of an
+ * empty signup form. It reports only the caller's own row - never anybody else's - because the
+ * only thing proving who they are is that they typed this number into the form once already.
+ *
+ * @returns {{status: 'confirmed'|'waitlist'|'out'|'none', name?: string, position?: number|null,
+ *   totalPlayers?: number, hidePosition?: boolean, isOrganizer?: boolean}}
+ */
+function describePlayerStatus(game, phone) {
+  if (!game || !phone) return { status: 'none' };
+
+  const confirmedIndex = (game.players || []).findIndex((player) => player.phone === phone);
+  if (confirmedIndex >= 0) {
+    const player = game.players[confirmedIndex];
+    return {
+      status: 'confirmed',
+      name: player.name || '',
+      position: confirmedIndex + 1,
+      totalPlayers: parseInt(game.totalPlayers, 10) || game.players.length,
+      isOrganizer: player.isOrganizer === true
+    };
+  }
+
+  const waitingIndex = (game.waitlist || []).findIndex((player) => player.phone === phone);
+  if (waitingIndex >= 0) {
+    // Approval mode keeps the queue private: the host picks whoever they want, so a position
+    // number would imply an order that does not decide anything.
+    const approvalMode = game.registrationMode === 'waitlist';
+    return {
+      status: 'waitlist',
+      name: game.waitlist[waitingIndex].name || '',
+      position: approvalMode ? null : waitingIndex + 1,
+      hidePosition: approvalMode
+    };
+  }
+
+  const departed = (game.outPlayers || []).find((player) => player.phone === phone);
+  if (departed) {
+    return { status: 'out', name: departed.name || '' };
+  }
+
+  return { status: 'none' };
+}
+
 function joinPlayer(game, playerData, { forceWaitlist = false, id, now } = {}) {
   const existing = findExistingPlayer(game, playerData.phone);
   if (existing) {
@@ -231,6 +277,7 @@ function promotePlayer(game, playerId, { now } = {}) {
 
 module.exports = {
   findExistingPlayer,
+  describePlayerStatus,
   joinPlayer,
   leavePlayer,
   removePlayer,
