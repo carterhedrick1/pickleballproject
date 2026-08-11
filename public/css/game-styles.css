@@ -588,6 +588,28 @@
             text-align: right;
         }
 
+        /* Secondary to "Back To Game Details": useful, but not the main way out of this screen. */
+        .add-to-calendar-btn {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            margin: 20px 0 0;
+            padding: 14px 20px;
+            background: var(--surface);
+            color: var(--brand);
+            border: 2px solid var(--brand);
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .add-to-calendar-btn:hover {
+            background: color-mix(in srgb, var(--brand) 8%, var(--surface));
+        }
+
         .next-steps {
             background: color-mix(in srgb, var(--surface) 90%, transparent);
             border-radius: 12px;

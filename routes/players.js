@@ -37,7 +37,10 @@ const {
   promoteFromWaitlist,
   removeFromGame
 } = require('../services/player-service');
-const { buildSelectedPlayerMessage } = require('../services/youre-in-rotation');
+const {
+  buildSelectedPlayerMessage,
+  buildPromotionMessage
+} = require('../services/youre-in-rotation');
 const { resolveTextMessage } = require('../services/text-message-rotation');
 const { appendCustomReplyInstructions } = require('../sms-reply-options');
 
@@ -156,7 +159,7 @@ module.exports = function mountPlayerRoutes(app) {
 
         if (result.promotedPlayer?.phone) {
           const promoted = result.promotedPlayer;
-          const promoMessage = await buildSelectedPlayerMessage(
+          const promoMessage = await buildPromotionMessage(
             game,
             game.players.length,
             promoted.phone,
@@ -493,7 +496,7 @@ module.exports = function mountPlayerRoutes(app) {
       const player = result.player;
       let smsResult = null;
       if (player.phone) {
-        const message = await buildSelectedPlayerMessage(
+        const message = await buildPromotionMessage(
           game,
           game.players.length,
           player.phone,
@@ -580,7 +583,7 @@ module.exports = function mountPlayerRoutes(app) {
       // Send promotion SMS if someone was promoted from waitlist (this already exists in the logic)
       let promotionSmsResult = null;
       if (result.promotedPlayer?.phone) {
-        const message = await buildSelectedPlayerMessage(
+        const message = await buildPromotionMessage(
           game,
           game.players.length,
           result.promotedPlayer.phone,

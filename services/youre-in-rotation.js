@@ -26,20 +26,24 @@ async function buildYoureInMessage(details, values = {}, random) {
   return youreInMessages.build(await loadYoureInConfig(), details, values, random);
 }
 
-async function buildSelectedPlayerMessage(
+/**
+ * What changed for a player who was waiting, said before the game facts.
+ *
+ * A promoted player reads the same rotating "You're IN" opening as a fresh signup, so without
+ * this line there is nothing in the text to tell them their status moved. In approval mode
+ * nobody is promoted automatically - the host chose them - so it says so.
+ */
+function promotionLead(game) {
+  return game.registrationMode === 'waitlist'
+    ? 'The organizer picked you.'
+    : "A spot opened up, so you're off the waitlist.";
+}
+
+async function buildRosterMessage(
   game,
   position,
-  recipientPhone = null,
-  gameId = null,
-  random
+  { recipientPhone = null, gameId = null, random, promoted = false } = {}
 ) {
-  if (typeof recipientPhone === 'function') {
-    random = recipientPhone;
-    recipientPhone = null;
-  } else if (typeof gameId === 'function') {
-    random = gameId;
-    gameId = null;
-  }
   const location = formatLocationForSMS(game);
   const date = formatDateForSMS(game.date);
   const time = formatTimeForSMS(game.time);
@@ -52,16 +56,17 @@ async function buildSelectedPlayerMessage(
     TOTAL_PLAYERS: game.totalPlayers
   };
   const config = await loadYoureInConfig();
-  const legacyMessage = youreInMessages.build(
-    config,
-    details,
-    values,
-    random
-  );
-  const deterministicDetails = youreInMessages.renderTemplate(config.detailsTemplate, {
+  // The lead is attached to the rendered details rather than to the text handed in as
+  // {DEFAULT_TEXT}, so a custom details template cannot end up stating it twice.
+  const renderedDetails = youreInMessages.renderTemplate(config.detailsTemplate, {
     ...values,
     DEFAULT_TEXT: details
   }).trim();
+  const deterministicDetails = promoted
+    ? `${promotionLead(game)} ${renderedDetails}`.trim()
+    : renderedDetails;
+  // Matches what youreInMessages.build() produces, with the promotion lead included.
+  const legacyMessage = `${youreInMessages.choose(config, random)}\n\n${deterministicDetails}`.trim();
   const result = await resolveRandomizedMessage({
     personalityId: game.personalityId,
     surfaceId: 'youre-in',
@@ -82,9 +87,45 @@ async function buildSelectedPlayerMessage(
   return appendCustomReplyInstructions(result.text, 'player');
 }
 
+/** The text for somebody who just signed up and got a spot straight away. */
+async function buildSelectedPlayerMessage(
+  game,
+  position,
+  recipientPhone = null,
+  gameId = null,
+  random
+) {
+  if (typeof recipientPhone === 'function') {
+    random = recipientPhone;
+    recipientPhone = null;
+  } else if (typeof gameId === 'function') {
+    random = gameId;
+    gameId = null;
+  }
+  return buildRosterMessage(game, position, { recipientPhone, gameId, random });
+}
+
+/** The text for somebody moved onto the roster from the waitlist or applicant list. */
+async function buildPromotionMessage(
+  game,
+  position,
+  recipientPhone = null,
+  gameId = null,
+  random
+) {
+  return buildRosterMessage(game, position, {
+    recipientPhone,
+    gameId,
+    random,
+    promoted: true
+  });
+}
+
 module.exports = {
   ASSET_NAME,
   loadYoureInConfig,
   buildYoureInMessage,
-  buildSelectedPlayerMessage
+  promotionLead,
+  buildSelectedPlayerMessage,
+  buildPromotionMessage
 };
