@@ -33,7 +33,10 @@ const {
   departureAlertType
 } = require('../utils/promotion');
 const { routeFailed } = require('../utils/route-error');
-const { describePlayerStatus } = require('../domain/player-transitions');
+const {
+  describePlayerStatus,
+  findUnreachableRosterEntry
+} = require('../domain/player-transitions');
 const {
   joinGame,
   joinGameAsHost,
@@ -154,12 +157,21 @@ module.exports = function mountPlayerRoutes(app) {
         // reports how the text went by asking about the ticket handed to it below.
         const textTicket = playerData.phone ? crypto.randomUUID() : null;
 
+        // Nothing was taken off the roster. Usually that is fine - somebody who never said IN
+        // is allowed to say they can't make it. But if the host typed this person in without a
+        // phone number, their entry is still sitting on the roster and their OUT could not
+        // touch it, so the page has to say that instead of implying they are off the list.
+        const strandedEntry = result.previousStatus
+          ? null
+          : findUnreachableRosterEntry(game, playerData.name);
+
         res.status(201).json({
           action: 'out',
           cancelled: Boolean(result.previousStatus),
           wasConfirmed: result.previousStatus === 'confirmed',
           playerId: result.outEntry.id,
           promoted: result.promotedPlayer?.name || null,
+          stillOnRoster: Boolean(strandedEntry),
           sms: textTicket ? { pending: true, ticket: textTicket } : null
         });
 

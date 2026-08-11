@@ -739,9 +739,19 @@
                     } else {
                         // One thank-you is enough: the title already says it, so the sentence
                         // under it says what actually happened instead of thanking them twice.
-                        confirmTitle.textContent = "Thanks For Letting Us Know!";
-                        confirmMessage.textContent = `The organizer knows you can't make this one.`;
-                        confirmStatus.textContent = `Marked as "Out"`;
+                        if (data.stillOnRoster) {
+                            // The organizer added them by hand with no phone number, so there
+                            // is a roster entry their OUT could not reach. Saying "you're out"
+                            // here would leave them expecting a spot to open that never does,
+                            // and thanking them for it would be thanking them for nothing.
+                            confirmTitle.textContent = "We Couldn't Match Your Number";
+                            confirmMessage.textContent = "The organizer added you to this game by hand, so we have no number to match you by and you are still on their list. Ask them to take you off.";
+                            confirmStatus.textContent = 'Still On The List';
+                        } else {
+                            confirmTitle.textContent = "Thanks For Letting Us Know!";
+                            confirmMessage.textContent = `The organizer knows you can't make this one.`;
+                            confirmStatus.textContent = `Marked as "Out"`;
+                        }
                     }
                 } else if (data.status === 'confirmed') {
                     // Regular confirmed player
