@@ -50,7 +50,8 @@ const { resolveTextMessage } = require('../services/text-message-rotation');
 const { appendCustomReplyInstructions } = require('../sms-reply-options');
 const { buildRandomizedInvitation } = require('../services/invitation-message');
 const { inviteStatus } = require('../public/js/invite-status');
-const { buildSelectedPlayerMessage } = require('../services/youre-in-rotation');
+const { buildPromotionMessage } = require('../services/youre-in-rotation');
+const { buildGameCalendar, calendarFileName } = require('../utils/calendar-invite');
 
 function creationRequestId(req) {
   const value = String(req.get('Idempotency-Key') || '').trim();
@@ -224,6 +225,33 @@ module.exports = function mountGameRoutes(app) {
     }
   });
 
+  // The calendar entry behind the confirmation screen's Add To Calendar button. Public for the
+  // same reason the game page is: anyone holding the link can already read the date and court.
+  // It carries no roster and no phone numbers.
+  app.get('/api/games/:id/calendar.ics', async (req, res) => {
+    try {
+      const gameId = req.params.id;
+      const game = await getGame(gameId);
+      if (!game) {
+        return res.status(404).json({ error: 'Game not found' });
+      }
+
+      const calendar = buildGameCalendar(game, {
+        gameId,
+        gameUrl: `${req.protocol}://${req.get('host')}/game.html?id=${gameId}`
+      });
+      if (!calendar) {
+        return res.status(400).json({ error: 'This game has no scheduled date and time yet.' });
+      }
+
+      res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${calendarFileName(game)}"`);
+      res.send(calendar);
+    } catch (error) {
+      routeFailed(req, res, error, 'Failed to build calendar entry');
+    }
+  });
+
   app.put('/api/games/:id', async (req, res) => {
     const gameId = req.params.id;
     const releaseLock = await acquireGameLock(gameId);
@@ -321,7 +349,7 @@ module.exports = function mountGameRoutes(app) {
 
       for (const player of promoted) {
         if (!player.phone) continue;
-        const promotionMessage = await buildSelectedPlayerMessage(
+        const promotionMessage = await buildPromotionMessage(
           game,
           game.players.indexOf(player) + 1,
           player.phone,

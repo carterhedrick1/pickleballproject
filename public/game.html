@@ -19,7 +19,21 @@
         </div>
         
         <div id="status" style="display: none;"></div>
-        
+
+        <!-- Game Status Warning (for expired/cancelled games).
+             Sits above the details on purpose: on a phone the details card fills the first
+             screen, so a warning below it is a warning nobody sees before they read the
+             date and time and assume the game is on. -->
+        <div id="gameStatusWarning" class="game-status-warning" style="display: none;">
+            <div class="warning-content">
+                <div class="warning-icon"></div>
+                <div class="warning-text">
+                    <h3 id="warningTitle">Game No Longer Available</h3>
+                    <p id="warningMessage">This game has ended and is no longer accepting registrations.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Game Details Section -->
         <div id="gameDetails" class="section">
             <h2 class="section-title">Game Details</h2>
@@ -53,17 +67,6 @@
             </div>
         </div>
 
-        <!-- Game Status Warning (for expired/cancelled games) -->
-        <div id="gameStatusWarning" class="game-status-warning" style="display: none;">
-            <div class="warning-content">
-                <div class="warning-icon"></div>
-                <div class="warning-text">
-                    <h3 id="warningTitle">Game No Longer Available</h3>
-                    <p id="warningMessage">This game has ended and is no longer accepting registrations.</p>
-                </div>
-            </div>
-        </div>
-        
         <!-- Players Section -->
         <div id="playerList" class="section players-section" style="display: none;">
             <h2 class="section-title">Players</h2>
@@ -152,6 +155,12 @@
                     <span class="confirmation-detail-value" id="confirmStatus"></span>
                 </div>
             </div>
+
+            <!-- Only offered to players who actually hold a spot. Downloads through the
+                 server so phones treat it as a calendar file rather than a page. -->
+            <a id="addToCalendarBtn" class="add-to-calendar-btn" href="#" style="display: none;">
+                Add To Calendar
+            </a>
 
             <!-- Only show "What's Next?" if not marked as "out" -->
             <div class="next-steps" id="nextStepsSection">

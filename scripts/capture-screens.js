@@ -463,6 +463,9 @@ function buildScreens(fx) {
     { file: 'game-approval', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.approval.gameId}`,
       title: 'Approval mode',
       note: 'The roster is hidden. Everyone applies and waits to be picked.' },
+    { file: 'game-cancelled', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.lapsed.gameId}`,
+      title: 'Cancelled game',
+      note: 'The same link after the host called it off. The notice sits above the details so it is the first thing on the screen, and the signup form is gone.' },
 
     { file: 'manage-invite', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}&tab=Invite`,

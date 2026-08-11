@@ -178,7 +178,12 @@
                 
                 // Show the warning
                 warningSection.style.display = 'block';
-                
+
+                // "Join the fun on the court" under the title is an invitation, and this game
+                // is not one any more.
+                const subtitle = document.querySelector('.section-header .subtitle');
+                if (subtitle) subtitle.style.display = 'none';
+
                 // Update page title to indicate status
                 if (gameStatus.type === 'expired') {
                     document.title = '[ENDED] ' + document.title;
@@ -476,7 +481,20 @@
 
                 confirmLocation.textContent = gameData.location;
                 confirmDateTime.textContent = `${formatDate(gameData.date)} at ${formatTime(gameData.time)}`;
-                
+
+                // Only somebody holding a spot gets the calendar entry. Saving a game you are
+                // waiting for, applying to, or have just pulled out of would put something on
+                // their calendar that is not true yet, or not true any more.
+                const addToCalendarBtn = document.getElementById('addToCalendarBtn');
+                if (addToCalendarBtn) {
+                    if (data.action !== 'out' && data.status === 'confirmed') {
+                        addToCalendarBtn.href = `/api/games/${gameId}/calendar.ics`;
+                        addToCalendarBtn.style.display = 'block';
+                    } else {
+                        addToCalendarBtn.style.display = 'none';
+                    }
+                }
+
                 // Handle "What's Next?" section visibility
                 const nextStepsSection = document.getElementById('nextStepsSection');
                 const seeWhosPlayingInstruction = document.getElementById('seeWhosPlayingInstruction');

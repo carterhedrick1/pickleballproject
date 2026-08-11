@@ -11,7 +11,7 @@ const { isGameUpcoming, isGameRecentlyFinished } = require('../utils/central-tim
 const { departureAlertType } = require('../utils/promotion');
 const { leaveGame } = require('./player-service');
 const { sendSMS, sendSMSWithRetry } = require('./sms-client');
-const { buildSelectedPlayerMessage } = require('./youre-in-rotation');
+const { buildPromotionMessage } = require('./youre-in-rotation');
 const { resolveTextMessage } = require('./text-message-rotation');
 const {
   findActiveReplyOption,
@@ -850,7 +850,7 @@ async function cancelPlayerFromGame(gameId, staleGame, player, status, fromNumbe
     if (promotedPlayer && promotedPlayer.phone) {
       // Only first-come games reach this point, so there is no approval-mode wording to pick
       // between any more - promoteNextFromWaitlist never promotes in approval mode.
-      const promotionMessage = await buildSelectedPlayerMessage(
+      const promotionMessage = await buildPromotionMessage(
         game,
         game.players.length,
         promotedPlayer.phone,
