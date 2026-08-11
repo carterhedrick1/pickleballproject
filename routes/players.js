@@ -276,17 +276,25 @@ module.exports = function mountPlayerRoutes(app) {
 
       // Send organizer notifications (now after saving)
       if (result.status === 'confirmed') {
-        // Always send player joined notification first
-        await sendOrganizerNotification(gameId, game, 'playerJoins', playerData.name);
-        
-        // Check if game is now full
-        if (game.players.length === parseInt(game.totalPlayers)) {
-          await sendOrganizerNotification(gameId, game, 'gameFull');
-        }
-        // Only send "one spot left" if they DON'T have "player joins" enabled
-        else if (game.players.length === parseInt(game.totalPlayers) - 1) {
-          if (!game.notificationPreferences?.playerJoins) {
-            await sendOrganizerNotification(gameId, game, 'oneSpotLeft');
+        const fillsTheGame = game.players.length === parseInt(game.totalPlayers);
+        const prefs = game.notificationPreferences || {};
+
+        // A signup that fills the game is one piece of news. Told as one text when the host
+        // wants both alerts; otherwise each preference still gets exactly what it asked for.
+        if (fillsTheGame && prefs.playerJoins === true && prefs.gameFull === true) {
+          await sendOrganizerNotification(gameId, game, 'playerJoinsAndFills', playerData.name);
+        } else {
+          // Always send player joined notification first
+          await sendOrganizerNotification(gameId, game, 'playerJoins', playerData.name);
+
+          if (fillsTheGame) {
+            await sendOrganizerNotification(gameId, game, 'gameFull');
+          }
+          // Only send "one spot left" if they DON'T have "player joins" enabled
+          else if (game.players.length === parseInt(game.totalPlayers) - 1) {
+            if (!prefs.playerJoins) {
+              await sendOrganizerNotification(gameId, game, 'oneSpotLeft');
+            }
           }
         }
       } else if (result.status === 'waitlist') {
