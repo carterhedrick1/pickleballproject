@@ -101,9 +101,30 @@
             <div id="photoGallery" class="photo-gallery"></div>
         </div>
 
+        <!-- Where a returning player stands, shown instead of the form once this browser has
+             RSVP'd once. The whole point is that answering again is one tap, not a form. -->
+        <div id="yourStatusSection" class="section your-status-section" style="display: none;">
+            <div class="your-status-card">
+                <h2 class="your-status-title" id="yourStatusTitle"></h2>
+                <p class="your-status-detail" id="yourStatusDetail"></p>
+                <p class="your-status-name" id="yourStatusName"></p>
+                <button type="button" id="yourStatusAction" class="your-status-action"></button>
+                <p class="your-status-note" id="yourStatusNote" style="display: none;"></p>
+                <button type="button" id="notYouButton" class="your-status-switch"></button>
+            </div>
+        </div>
+
         <!-- Sign Up Section -->
         <div id="signupForm" class="section signup-section" style="display: none;">
             <h2 class="section-title" id="joinSectionTitle">Join This Game</h2>
+
+            <!-- Shown when this browser knows the player but they have not answered this
+                 particular game yet: the form is already filled in, so IN is still one tap. -->
+            <div class="known-player-strip" id="knownPlayerStrip" style="display: none;">
+                <span id="knownPlayerText"></span>
+                <button type="button" id="knownPlayerSwitch" class="your-status-switch">Not You?</button>
+            </div>
+
             <form id="joinForm">
                 <div class="form-group">
                     <label for="playerName">Your Name:</label>
@@ -181,6 +202,7 @@
 
     <script src="/js/page-utils.js"></script>
     <script src="/js/game-utils.js"></script>
+    <script src="/js/player-identity.js"></script>
     <script src="/js/game-page.js"></script>
     <script src="/js/slogans.js"></script>
     <script src="/js/footer.js"></script>

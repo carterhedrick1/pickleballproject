@@ -5,7 +5,8 @@ const {
   leavePlayer,
   removePlayer,
   movePlayerToWaitlist,
-  promotePlayer
+  promotePlayer,
+  describePlayerStatus
 } = require('../domain/player-transitions');
 
 const NOW = '2026-07-27T12:00:00.000Z';
@@ -155,5 +156,87 @@ describe('player transitions', () => {
 
     // Everyone else still moves normally.
     assert.equal(removePlayer(value, 'one').status, 'removed');
+  });
+});
+
+describe('describing a player their own status', () => {
+  it('tells a confirmed player their place on the roster', () => {
+    const value = game({
+      totalPlayers: 6,
+      players: [
+        { name: 'Host', phone: '1111111111', isOrganizer: true },
+        { name: 'Priya Patel', phone: '3125550101' }
+      ]
+    });
+
+    assert.deepEqual(describePlayerStatus(value, '3125550101'), {
+      status: 'confirmed',
+      name: 'Priya Patel',
+      position: 2,
+      totalPlayers: 6,
+      isOrganizer: false
+    });
+  });
+
+  it('flags the organizer, who cannot drop their own reserved spot', () => {
+    const value = game({
+      players: [{ name: 'Host', phone: '1111111111', isOrganizer: true }]
+    });
+    assert.equal(describePlayerStatus(value, '1111111111').isOrganizer, true);
+  });
+
+  it('gives a waiting player their number in the queue', () => {
+    const value = game({
+      players: [{ name: 'Host', phone: '1111111111' }],
+      waitlist: [
+        { name: 'Grace', phone: '2222222222' },
+        { name: 'Henry', phone: '3333333333' }
+      ]
+    });
+
+    assert.deepEqual(describePlayerStatus(value, '3333333333'), {
+      status: 'waitlist',
+      name: 'Henry',
+      position: 2,
+      hidePosition: false
+    });
+  });
+
+  it('hides the queue position in approval mode, where the host picks', () => {
+    const value = game({
+      registrationMode: 'waitlist',
+      waitlist: [{ name: 'Ivy', phone: '2222222222' }]
+    });
+
+    const status = describePlayerStatus(value, '2222222222');
+    assert.equal(status.status, 'waitlist');
+    assert.equal(status.position, null);
+    assert.equal(status.hidePosition, true);
+  });
+
+  it('remembers somebody who said they are out', () => {
+    const value = game({
+      outPlayers: [{ name: 'Marcus Webb', phone: '4444444444', wasConfirmed: true }]
+    });
+    assert.deepEqual(describePlayerStatus(value, '4444444444'), {
+      status: 'out',
+      name: 'Marcus Webb'
+    });
+  });
+
+  it('reports nobody for a stranger, a missing number, or a missing game', () => {
+    const value = game({ players: [{ name: 'Priya', phone: '3125550101' }] });
+    assert.deepEqual(describePlayerStatus(value, '9999999999'), { status: 'none' });
+    assert.deepEqual(describePlayerStatus(value, ''), { status: 'none' });
+    assert.deepEqual(describePlayerStatus(null, '3125550101'), { status: 'none' });
+  });
+
+  it('prefers the live roster over an older out entry for the same phone', () => {
+    // Somebody who tapped OUT and then signed up again is IN, not out.
+    const value = game({
+      players: [{ name: 'Priya Patel', phone: '3125550101' }],
+      outPlayers: [{ name: 'Priya Patel', phone: '3125550101', wasConfirmed: true }]
+    });
+    assert.equal(describePlayerStatus(value, '3125550101').status, 'confirmed');
   });
 });

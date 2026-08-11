@@ -588,6 +588,109 @@
             text-align: right;
         }
 
+        /* A returning player's own status, in place of the signup form. */
+        .your-status-card {
+            text-align: center;
+            padding: 8px 0 4px;
+        }
+
+        .your-status-title {
+            margin: 0 0 8px;
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--brand);
+        }
+
+        .your-status-section.is-out .your-status-title,
+        .your-status-section.is-waiting .your-status-title {
+            color: var(--ink);
+        }
+
+        .your-status-detail {
+            margin: 0 0 4px;
+            font-size: 16px;
+            color: var(--ink);
+        }
+
+        .your-status-name {
+            margin: 0 0 20px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* The page's base button style shouts in capitals for IN and OUT. These labels are
+           sentences, so they keep the casing they were written in. */
+        .your-status-action {
+            width: 100%;
+            padding: 16px 20px;
+            border: none;
+            border-radius: 12px;
+            background: var(--brand);
+            color: var(--surface);
+            font-size: 17px;
+            font-weight: 700;
+            text-transform: none;
+            letter-spacing: normal;
+            cursor: pointer;
+        }
+
+        /* Leaving is never the loud option, whatever the player's current status is. */
+        .your-status-section.is-in .your-status-action,
+        .your-status-section.is-waiting .your-status-action {
+            background: var(--surface);
+            color: var(--danger);
+            border: 2px solid var(--danger);
+        }
+
+        .your-status-action:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .your-status-note {
+            margin: 16px 0 0;
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        /* A quiet escape hatch, not a button: everything the base button style adds is undone. */
+        .your-status-switch {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 4px;
+            background: none;
+            border: none;
+            box-shadow: none;
+            width: auto;
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: normal;
+            color: var(--text-muted);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .known-player-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: color-mix(in srgb, var(--surface) 80%, transparent);
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .known-player-strip .your-status-switch {
+            margin-top: 0;
+        }
+
         /* Secondary to "Back To Game Details": useful, but not the main way out of this screen. */
         .add-to-calendar-btn {
             display: block;
