@@ -81,6 +81,13 @@ const SMS_EVENT_DEFINITIONS = Object.freeze([
     description: 'An opted-in organizer is alerted when a confirmed player joins.'
   },
   {
+    id: 'host-player-joined-filled',
+    title: 'Host Alert: Player Joined And Filled The Game',
+    recipient: 'Organizer',
+    description:
+      'An organizer opted into both join and full alerts is told once when the last spot goes.'
+  },
+  {
     id: 'host-player-cancelled',
     title: 'Host Alert: Player Cancelled',
     recipient: 'Organizer',

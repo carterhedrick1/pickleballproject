@@ -124,6 +124,16 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
           message = `HOST ALERT: ${playerName} just joined your pickleball game at ${locationText} on ${gameDate}. ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} remaining.`;
         }
         break;
+      case 'playerJoinsAndFills':
+        // The last signup used to arrive as two texts a second apart: "0 spots remaining"
+        // followed by "now FULL". Same news, told once. Only used when the host opted into
+        // both alerts; either one alone still sends its own version above and below.
+        if (prefs.playerJoins === true && prefs.gameFull === true && playerName) {
+          shouldSend = true;
+          const totalSpots = parseInt(game.totalPlayers);
+          message = `HOST ALERT: ${playerName} just joined your pickleball game at ${locationText} on ${gameDate}. That fills it — all ${totalSpots} ${totalSpots === 1 ? 'spot is' : 'spots are'} taken.`;
+        }
+        break;
       case 'playerCancels':
         if (prefs.playerCancels === true && playerName) {
           shouldSend = true;
@@ -187,6 +197,7 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
       );
       const hostEventIds = {
         playerJoins: 'host-player-joined',
+        playerJoinsAndFills: 'host-player-joined-filled',
         playerCancels: 'host-player-cancelled',
         gameFull: 'host-game-full',
         oneSpotLeft: 'host-one-spot-left',
