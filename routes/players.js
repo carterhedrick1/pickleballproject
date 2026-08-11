@@ -6,9 +6,12 @@
 // out, so nobody waits behind an SMS round trip. verify/signup-race.js, capacity-race.js and
 // mixed-race.js exist to prove that ordering holds.
 
+const crypto = require('crypto');
+
 const {
   getGame,
-  recordRosterSighting
+  recordRosterSighting,
+  getSmsEventById
 } = require('../database');
 
 const {
@@ -47,6 +50,21 @@ const { resolveTextMessage } = require('../services/text-message-rotation');
 const { appendCustomReplyInstructions } = require('../sms-reply-options');
 
 module.exports = function mountPlayerRoutes(app) {
+  /**
+   * Work that carries on after the browser has its answer.
+   *
+   * The response is already sent, so there is nobody left to show an error to: anything that
+   * throws in here must land in the log rather than as an unhandled rejection that could take
+   * the process down.
+   */
+  function afterResponding(label, work) {
+    Promise.resolve()
+      .then(work)
+      .catch((error) => {
+        console.error(`[SERVER] Post-response work failed (${label}):`, error);
+      });
+  }
+
   // Quietly builds the host's roster as people sign up. A roster row is a nicety - a failure
   // here must never turn a successful signup into an error, so it only logs.
   async function noteRosterSighting(hostPhone, playerData, isAndroid) {
@@ -112,6 +130,7 @@ module.exports = function mountPlayerRoutes(app) {
           playerData,
           { recordUnknown: true, protectOrganizer: true }
         );
+
         if (result.status === 'game_not_found') {
           return res.status(404).json({ error: 'Game not found' });
         }
@@ -128,6 +147,23 @@ module.exports = function mountPlayerRoutes(app) {
         const locationText = formatLocationForSMS(game);
         await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
 
+        // The RSVP is saved. Everything below is telling people about it, and none of it needs
+        // to happen before the player's own browser hears back: a text takes a second or two on
+        // a good day and twenty-five on a bad one, and the player spent all of it watching a
+        // spinner over a decision the database had already recorded. The confirmation screen
+        // reports how the text went by asking about the ticket handed to it below.
+        const textTicket = playerData.phone ? crypto.randomUUID() : null;
+
+        res.status(201).json({
+          action: 'out',
+          cancelled: Boolean(result.previousStatus),
+          wasConfirmed: result.previousStatus === 'confirmed',
+          playerId: result.outEntry.id,
+          promoted: result.promotedPlayer?.name || null,
+          sms: textTicket ? { pending: true, ticket: textTicket } : null
+        });
+
+        afterResponding(`cancellation texts for game ${gameId}`, async () => {
         let smsResult = null;
         if (playerData.phone) {
           let message;
@@ -155,8 +191,12 @@ module.exports = function mountPlayerRoutes(app) {
             }
           );
           smsResult = await sendSMSWithRetry(playerData.phone, message, gameId, {
-            eventId: 'player-cancelled'
+            eventId: 'player-cancelled',
+            ticket: textTicket
           });
+          if (!smsResult.success) {
+            console.error(`[SERVER] ${playerData.name} left game ${gameId} but the confirmation text to ${playerData.phone} failed:`, smsResult.error);
+          }
         }
 
         if (result.promotedPlayer?.phone) {
@@ -184,15 +224,9 @@ module.exports = function mountPlayerRoutes(app) {
             { promotedName: result.promotedPlayer?.name || null }
           );
         }
-
-        return res.status(201).json({
-          action: 'out',
-          cancelled: Boolean(result.previousStatus),
-          wasConfirmed: result.previousStatus === 'confirmed',
-          playerId: result.outEntry.id,
-          promoted: result.promotedPlayer?.name || null,
-          sms: smsResult
         });
+
+        return;
       }
 
       const result = await joinGame(gameId, playerData);
@@ -215,6 +249,21 @@ module.exports = function mountPlayerRoutes(app) {
       const game = result.game;
       await noteRosterSighting(game.hostPhone, playerData, isAndroid ? 1 : 0);
 
+      // Same as the cancellation path above: the spot is saved, so the browser hears back now
+      // and learns how the text went by asking about this ticket.
+      const joinTicket = playerData.phone ? crypto.randomUUID() : null;
+
+      res.status(201).json({
+        status: result.status,
+        position: result.position,
+        playerId: result.player.id,
+        reason: result.reason,
+        hidePosition: result.hidePosition,
+        totalPlayers: result.totalPlayers,
+        sms: joinTicket ? { pending: true, ticket: joinTicket } : null
+      });
+
+      afterResponding(`signup texts for game ${gameId}`, async () => {
       // Send confirmation SMS to the player
       let smsResult = null;
       if (playerData.phone) {
@@ -259,15 +308,16 @@ module.exports = function mountPlayerRoutes(app) {
         }
         message = await appendCustomReplyInstructions(message, 'player');
         
-        // Retries once, and the result is reported to the client so the page can say the text
-        // did not go out rather than silently promising one. The signup itself is already saved
-        // and stays valid either way.
+        // Retries once, and the outcome is recorded under the ticket the page is holding, so
+        // it can say the text did not go out rather than silently promising one. The signup
+        // itself is already saved and stays valid either way.
         smsResult = await sendSMSWithRetry(playerData.phone, message, gameId, {
           eventId: result.status === 'confirmed'
             ? 'player-confirmed'
             : game.registrationMode === 'waitlist'
               ? 'application-submitted'
-              : 'player-waitlisted'
+              : 'player-waitlisted',
+          ticket: joinTicket
         });
         if (!smsResult.success) {
           console.error(`[SERVER] ${playerData.name} joined game ${gameId} but the confirmation text to ${playerData.phone} failed:`, smsResult.error);
@@ -303,18 +353,8 @@ module.exports = function mountPlayerRoutes(app) {
           await sendOrganizerNotification(gameId, game, 'waitlistStarts', playerData.name);
         }
       }
-
-      // Send response back to client (ONLY ONE RESPONSE!)
-      res.status(201).json({ 
-        status: result.status,
-        position: result.position,
-        playerId: result.player.id,
-        reason: result.reason,
-        hidePosition: result.hidePosition,
-        totalPlayers: result.totalPlayers,
-        sms: smsResult
       });
-      
+
     } catch (error) {
       routeFailed(req, res, error, error.message || 'Failed to add player');
     }
@@ -345,6 +385,36 @@ module.exports = function mountPlayerRoutes(app) {
       res.json(describePlayerStatus(game, phone));
     } catch (error) {
       routeFailed(req, res, error, 'Failed to look up your status');
+    }
+  });
+
+  // How the text for one RSVP turned out.
+  //
+  // The RSVP response now comes back before its confirmation text has been sent, so the page
+  // asks here to find out whether the text made it - the honest "we couldn't send your
+  // confirmation text" warning depends on this answer. The ticket is a random id minted for
+  // that one send and known only to the browser that made the request, so it names no phone
+  // number and reveals nothing about a game to anyone who does not already hold it.
+  app.get('/api/games/:id/text-status', async (req, res) => {
+    try {
+      const ticket = String(req.query.ticket || '').trim();
+      if (!/^[0-9a-fA-F-]{36}$/.test(ticket)) {
+        return res.status(400).json({ error: 'A send ticket is required.' });
+      }
+
+      const event = await getSmsEventById(ticket);
+      // No row yet means the send is still in flight. It also means an invented ticket learns
+      // nothing it could not have guessed.
+      if (!event || event.gameId !== req.params.id) {
+        return res.json({ status: 'pending' });
+      }
+
+      res.json({
+        status: event.status === 'failed' ? 'failed' : 'sent',
+        attempts: event.attempts
+      });
+    } catch (error) {
+      routeFailed(req, res, error, 'Failed to check the confirmation text');
     }
   });
 

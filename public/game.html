@@ -162,6 +162,12 @@
                 <span id="smsWarningText"></span>
             </div>
 
+            <!-- The RSVP is saved before the text goes out, so this holds the place of the
+                 "What's Next?" list until we know whether the text actually arrived. -->
+            <div class="sms-pending" id="smsPending" style="display: none;">
+                <span id="smsPendingText">Sending your confirmation text…</span>
+            </div>
+
             <div class="confirmation-details">
                 <div class="confirmation-detail">
                     <span class="confirmation-detail-label">Location:</span>
