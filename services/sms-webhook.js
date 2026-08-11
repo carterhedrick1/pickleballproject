@@ -456,13 +456,15 @@ async function handleCancellationSelection(fromNumber, cleanedFromNumber, select
       await cancelPlayerFromGame(id, game, player, status, fromNumber);
       await clearLastCommand(cleanedFromNumber);
     } else {
+      // Keep the saved cancellation_selection context: this reply tells them to answer
+      // with a number, so wiping the context here would turn their next "2" into the
+      // top-level game-details command instead of cancelling game 2.
       await sendCategorySMS(
         'cancellation-help',
         fromNumber,
         `That wasn't one of the numbers on the list. Reply with a number from the list, or text "9" to start over.`,
         { GAME_COUNT: playerGames.length }
       );
-      await clearLastCommand(cleanedFromNumber);
     }
   } catch (error) {
     console.error('Error in handleCancellationSelection:', error);
@@ -685,7 +687,9 @@ async function getUserGames(cleanedFromNumber, allGames) {
   }
   
   console.log(`[SMS DEBUG] Final result: ${userGames.length} games for user ${cleanedFromNumber}`);
-  return userGames;
+  // Soonest game first, and the same order every time. Database order shifts whenever a game
+  // is re-saved, which used to renumber the reply list between two texts.
+  return userGames.sort(compareGameEntries);
 }
 
 // Helper function to get player's games (for cancellation)
@@ -709,8 +713,9 @@ async function getPlayerGames(cleanedFromNumber, allGames) {
       });
     }
   }
-  
-  return playerGames;
+
+  // Same stable soonest-first order as getUserGames, for the same reason.
+  return playerGames.sort(compareGameEntries);
 }
 
 async function buildGameDetailsMessage(game, role, cleanedFromNumber) {

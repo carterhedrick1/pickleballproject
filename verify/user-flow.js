@@ -102,6 +102,17 @@ async function req(method, path, body, extraHeaders) {
   'hostToken' in (pub.json || {}) ? bad('hostToken LEAKED on token-less GET') : ok('no token -> hostToken absent');
   pub.status === 200 ? ok('no token -> still HTTP 200 (players can view)') : bad(`no token -> HTTP ${pub.status}`);
   (pub.json || {}).location ? ok('no token -> game details still present') : bad('no token -> game details missing');
+  const pubGame = pub.json || {};
+  ('hostPhone' in pubGame || 'organizerPhone' in pubGame || 'notificationPreferences' in pubGame)
+    ? bad('host contact/settings LEAKED on token-less GET')
+    : ok('no token -> host phone and settings absent');
+  const pubPeople = [...(pubGame.players || []), ...(pubGame.waitlist || []), ...(pubGame.outPlayers || [])];
+  pubPeople.some((p) => p && 'phone' in p)
+    ? bad('player phone numbers LEAKED on token-less GET')
+    : ok('no token -> player phone numbers absent');
+  (pubGame.players || []).every((p) => typeof p.name === 'string')
+    ? ok('no token -> player names still present for the roster list')
+    : bad('no token -> player names missing, game page roster would break');
 
   const asHost = await req('GET', `/api/games/${gameId}?token=${hostToken}`);
   asHost.json?.hostToken === hostToken ? ok('correct token -> hostToken returned (dashboard works)') : bad('correct token -> hostToken MISSING, host dashboard would break');
@@ -164,7 +175,9 @@ async function req(method, path, body, extraHeaders) {
 
   console.log('\n8b. Which phone somebody signed up on is recorded');
   await req('POST', `/api/games/${gameId}/players`, { name: 'Pixel Pat' }, { 'User-Agent': ANDROID_UA });
-  const withPat = (await req('GET', `/api/games/${gameId}`)).json || {};
+  // Read back with the host token: device flags are host-roster data, and the public
+  // (token-less) response strips them along with phone numbers.
+  const withPat = (await req('GET', `/api/games/${gameId}?token=${hostToken}`)).json || {};
   const everyone = [...(withPat.players || []), ...(withPat.waitlist || []), ...(withPat.outPlayers || [])];
   const pat = everyone.find((p) => p.name === 'Pixel Pat');
   const alice = everyone.find((p) => p.name === 'Alice');

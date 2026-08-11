@@ -204,7 +204,20 @@ module.exports = function mountGameRoutes(app) {
       }
 
       // hostNotes are the host's private reminders ("gate code 4417") - never public.
-      const { hostToken, hostNotes, invitedPlayers, ...publicGame } = game;
+      // Phone numbers are stripped everywhere below: this response goes to anyone holding
+      // the shareable game link, and the player page only ever shows names.
+      const {
+        hostToken,
+        hostNotes,
+        invitedPlayers,
+        hostPhone,
+        organizerPhone,
+        notificationPreferences,
+        ...publicGame
+      } = game;
+      publicGame.players = (game.players || []).map(({ name, isOrganizer }) => ({ name, isOrganizer }));
+      publicGame.waitlist = (game.waitlist || []).map(({ name }) => ({ name }));
+      publicGame.outPlayers = (game.outPlayers || []).map(({ name }) => ({ name }));
       res.json(publicGame);
     } catch (error) {
       routeFailed(req, res, error, 'Failed to fetch game');

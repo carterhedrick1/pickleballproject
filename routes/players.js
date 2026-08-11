@@ -597,15 +597,12 @@ module.exports = function mountPlayerRoutes(app) {
         }
       }
 
-  // Send organizer notification for cancellation. In approval mode, removing a confirmed player
-  // leaves a spot only the host can fill, so they are told that rather than "someone cancelled".
-  if (removedPlayer && !removedPlayer.isOrganizer) {
-    await sendOrganizerNotification(
-      gameId, game, departureAlertType(game, removalType === 'confirmed'), removedPlayer.name
-    );
-  }
+  // No organizer alert here, deliberately: this route only runs from the host's own
+  // management page (the token check above proves it), so the removal is something the
+  // host just did themselves. Texting them "X cancelled their spot" misstates who acted.
+  // Departure alerts still go out when the player leaves on their own (OUT tap, reply 9).
 
-  res.json({ 
+  res.json({
     status: result.status,
     from: result.previousStatus,
     removedPlayer: result.player,
