@@ -32,6 +32,8 @@ function offsetGame(hours) {
   };
 }
 
+const daysAgo = (days) => new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+
 function makeGame(hours, extra = {}) {
   const { date, time } = offsetGame(hours);
   return {
@@ -40,9 +42,12 @@ function makeGame(hours, extra = {}) {
     totalPlayers: 4, message: '', registrationMode: 'fcfs', waitlist: [], outPlayers: [],
     cancelled: false, created: new Date().toISOString(),
     notificationPreferences: {},
+    // Signed up two days ago. Recent signups are deliberately held back from the 24-hour
+    // reminder (see verify/reminder-late-joiner.js), so settled players are what this
+    // catch-up test needs on the roster.
     players: [
-      { id: 'p1', name: 'Player One', phone: '+15551110001', joinedAt: new Date().toISOString() },
-      { id: 'p2', name: 'Player Two', phone: '+15551110002', joinedAt: new Date().toISOString() },
+      { id: 'p1', name: 'Player One', phone: '+15551110001', joinedAt: daysAgo(2) },
+      { id: 'p2', name: 'Player Two', phone: '+15551110002', joinedAt: daysAgo(2) },
     ],
     ...extra,
   };
@@ -86,9 +91,10 @@ function makeGame(hours, extra = {}) {
   const centralToday = offsetGame(0).date;
   const expectedWord = (hours) => (offsetGame(hours).date === centralToday ? 'today' : 'tomorrow');
   // Both games are at Test Court, so they are told apart by the start time in the message.
+  // Match on the time alone: what follows it is location wording that has changed before.
   const messageFor = (hours) => {
     const label = smsHandler.formatTimeForSMS(offsetGame(hours).time);
-    return r1.find((s) => s.message.includes(`at ${label} at`));
+    return r1.find((s) => s.message.includes(`at ${label}`));
   };
 
   for (const hours of [2, 12]) {
