@@ -137,6 +137,28 @@ function locatePlayer(game, { playerId, phone } = {}) {
   return null;
 }
 
+/**
+ * A roster entry that this person plausibly is, but that tapping OUT cannot remove.
+ *
+ * locatePlayer matches on player id or phone number. A player the host typed in without a
+ * number has neither, so their own OUT finds nothing, records a separate "out" entry, and
+ * leaves them on the roster - the player believes they are off, the host still sees them
+ * playing, and neither of them is told. This spots that specific disagreement so it can be
+ * said out loud rather than papered over.
+ *
+ * Deliberately does NOT remove anybody: the game page shows the roster to anyone holding the
+ * link, so matching a name alone would let a stranger drop a player from the game.
+ */
+function findUnreachableRosterEntry(game, name) {
+  const wanted = String(name || '').trim().toLowerCase();
+  if (!wanted) return null;
+
+  const entries = [...(game.players || []), ...(game.waitlist || [])];
+  return entries.find((entry) => (
+    !entry.phone && String(entry.name || '').trim().toLowerCase() === wanted
+  )) || null;
+}
+
 function leavePlayer(
   game,
   identity,
@@ -277,6 +299,7 @@ function promotePlayer(game, playerId, { now } = {}) {
 
 module.exports = {
   findExistingPlayer,
+  findUnreachableRosterEntry,
   describePlayerStatus,
   joinPlayer,
   leavePlayer,
