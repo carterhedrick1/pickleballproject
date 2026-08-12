@@ -14,7 +14,6 @@
         <div class="page-header">
             <div class="header-content">
                 <h1>Roster</h1>
-                <div class="subtitle">Everyone you play with</div>
             </div>
         </div>
 
@@ -24,7 +23,7 @@
             <div id="phoneGate" class="phone-gate" style="display: none;">
                 <div id="phoneStep">
                     <h3>Verify Your Host Number</h3>
-                    <p>Enter the phone number you host with. We’ll text you a verification code.</p>
+                    <p>We’ll text you a verification code.</p>
                     <input type="tel" id="phoneInput" placeholder="(555) 123-4567" autocomplete="tel">
                     <br>
                     <button type="button" class="btn btn-primary" id="sendCodeBtn">Send Verification Code</button>
@@ -45,9 +44,8 @@
 
                 <div class="roster-row" id="rosterAdd">
                     <h3 class="section-subtitle">Add A Player</h3>
-                    <p class="roster-meta">Add someone before their first game and you can text them invitations right away. Everyone who joins one of your games is added automatically.</p>
                     <label for="addPlayerName">Name</label>
-                    <input type="text" id="addPlayerName" placeholder="Their name" maxlength="100">
+                    <input type="text" id="addPlayerName" maxlength="100">
                     <label for="addPlayerPhone">Phone Number</label>
                     <input type="tel" id="addPlayerPhone" placeholder="(555) 123-4567" autocomplete="off">
                     <div class="card-actions" style="margin-top: 12px;">
@@ -65,7 +63,7 @@
                 </div>
 
                 <p class="muted" style="margin-top: 28px;">
-                    Roster for <span id="whichPhone"></span>.
+                    <span id="whichPhone"></span>
                     <button type="button" class="switch-number" id="switchNumber">Not You? Switch Number</button>
                 </p>
             </div>
@@ -220,7 +218,6 @@
             const nameInput = document.createElement('input');
             nameInput.type = 'text';
             nameInput.value = player.name || '';
-            nameInput.placeholder = 'Their name';
             nameLabel.appendChild(nameInput);
 
             const phone = document.createElement('div');

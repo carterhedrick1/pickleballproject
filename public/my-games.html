@@ -14,7 +14,6 @@
         <div class="page-header">
             <div class="header-content">
                 <h1>My Games</h1>
-                <div class="subtitle">Every game you've hosted</div>
             </div>
         </div>
 
@@ -25,7 +24,7 @@
             <div id="phoneGate" class="phone-gate" style="display: none;">
                 <div id="phoneStep">
                     <h3>Verify Your Host Number</h3>
-                    <p>Enter the phone number you host with. We’ll text you a verification code.</p>
+                    <p>We’ll text you a verification code.</p>
                     <input type="tel" id="phoneInput" placeholder="(555) 123-4567" autocomplete="tel">
                     <br>
                     <button type="button" class="btn btn-primary" id="sendCodeBtn">Send Verification Code</button>
@@ -63,7 +62,7 @@
                 </div>
 
                 <p class="muted" style="margin-top: 28px;">
-                    Showing games hosted with <span id="whichPhone"></span>.
+                    <span id="whichPhone"></span>
                     <button type="button" class="switch-number" id="switchNumber">Not You? Switch Number</button>
                     &middot;
                     <button type="button" class="switch-number" id="textMeLinks">Text Me My Links</button>
@@ -71,9 +70,6 @@
             </div>
         </div>
 
-        <div class="footer-note">
-            Verify your number once and your games open on any device.
-        </div>
     </div>
 
     <script src="/js/page-utils.js"></script>
