@@ -1049,6 +1049,13 @@ button:active {
     font-weight: 600;
 }
 
+.delivery-error {
+    grid-column: 1 / -1;
+    color: var(--danger);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
 .invite-actions {
     display: flex;
     flex-wrap: wrap;

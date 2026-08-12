@@ -2,7 +2,11 @@ const PERMANENT_SMS_ERRORS = [
   'out of quota',
   'invalid phone number',
   'invalid api key',
-  'message too long'
+  'message too long',
+  // A landline can never receive a text and an unsubscribed number stays opted out
+  // until the person themselves texts START, so retrying only burns credits.
+  'landline',
+  'unsubscribed'
 ];
 
 const { normalizeSmsEventId } = require('../sms-event-catalog');

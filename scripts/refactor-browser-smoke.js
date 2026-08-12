@@ -888,6 +888,10 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
           (event) => event.status === 'failed' && event.attempts === 3 &&
             event.event === 'Upcoming Game Reminder'
         ),
+        // The failure reason must be readable in the row itself - a tooltip does not
+        // exist on a phone, where hosts actually read this log.
+        showsTheReason: [...document.querySelectorAll('.delivery-row.failed .delivery-error')]
+          .some((element) => element.textContent === 'Carrier rejected the message'),
         leaksHashes: JSON.stringify(raw).includes('recipientHash'),
         unauthorizedStatus: unauthorized.status,
         readOnly: !document.querySelector('.delivery-row button, .delivery-row input')
@@ -900,6 +904,10 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     assert(
       deliveryLog.showsTheFailure && deliveryLog.readOnly && !deliveryLog.leaksHashes,
       'a failed text is shown with its attempts, read-only, and no recipient hashes'
+    );
+    assert(
+      deliveryLog.showsTheReason,
+      'a failed text displays the provider reason in the row, not only a tooltip'
     );
     assert(
       deliveryLog.unauthorizedStatus === 403,

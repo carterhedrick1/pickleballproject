@@ -1,6 +1,11 @@
 const { describe, it, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
-const { sendSMS, SMS_PROVIDER_TIMEOUT_MS } = require('../services/sms-client');
+const {
+  sendSMS,
+  sendSMSWithRetry,
+  isPermanentSmsError,
+  SMS_PROVIDER_TIMEOUT_MS
+} = require('../services/sms-client');
 
 const ORIGINAL_ENV = {
   DATABASE_URL: process.env.DATABASE_URL,
@@ -84,6 +89,40 @@ describe('SMS environment safety', () => {
     const result = await sendSMS('5551234567', 'Game created', 'production-game-id');
 
     assert.equal(result.success, true);
+    assert.equal(calls, 1);
+  });
+});
+
+describe('permanent SMS failures', () => {
+  it('recognises errors that no retry can fix', () => {
+    for (const error of [
+      'Out of quota',
+      'Invalid phone number',
+      'Cannot send to a landline',
+      'This number has unsubscribed and must text START to resubscribe'
+    ]) {
+      assert.equal(isPermanentSmsError(error), true, error);
+    }
+    assert.equal(isPermanentSmsError('Temporary provider hiccup'), false);
+    assert.equal(isPermanentSmsError(null), false);
+  });
+
+  it('does not retry a landline or unsubscribed number', async () => {
+    process.env.DATABASE_URL = 'postgres://production.example/database';
+    delete process.env.ALLOW_LOCAL_SMS;
+    delete process.env.SMS_SIMULATE_FAILURE;
+    process.env.TEXTBELT_API_KEY = 'test-key';
+    process.env.BASE_URL = 'https://inorout.club';
+    let calls = 0;
+    global.fetch = async () => {
+      calls++;
+      return { json: async () => ({ success: false, error: 'Cannot send to a landline' }) };
+    };
+
+    const result = await sendSMSWithRetry('5551234567', 'Game created', 'production-game-id');
+
+    assert.equal(result.success, false);
+    assert.equal(result.permanent, true);
     assert.equal(calls, 1);
   });
 });

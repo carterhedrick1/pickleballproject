@@ -532,11 +532,19 @@ function renderDeliveryLog(events, counts) {
         const outcome = document.createElement('div');
         outcome.className = 'delivery-status';
         outcome.textContent = DELIVERY_STATUS_TEXT[event.status] || event.status;
-        if (event.status === 'failed' && event.error) {
-            outcome.title = event.error;
-        }
 
         row.append(who, what, outcome);
+
+        // The provider's reason is the answer to "why didn't it send?" - a tooltip
+        // alone would hide it from every phone, where hosts actually read this log.
+        if (event.status === 'failed' && event.error) {
+            outcome.title = event.error;
+            const reason = document.createElement('div');
+            reason.className = 'delivery-error';
+            reason.textContent = event.error;
+            row.appendChild(reason);
+        }
+
         list.appendChild(row);
     });
 }
