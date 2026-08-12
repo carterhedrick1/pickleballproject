@@ -1182,7 +1182,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
             'Do not change the app until I explicitly say'
           ) &&
           document.getElementById('randomizerReusablePrompt').value.includes('Paragraph 9:') &&
-          document.getElementById('randomizerPromptSurface').options.length === 19 &&
+          document.getElementById('randomizerPromptSurface').options.length === 22 &&
           document.querySelectorAll('#randomizerPromptParagraphs textarea').length === 9 &&
           document.querySelectorAll('[data-share-paragraph]').length === 9 &&
           !document.querySelector('#randomizerPromptParagraphs textarea').readOnly &&
@@ -1190,7 +1190,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
           Boolean(document.getElementById('randomizerSavePrompt')),
         savedPrompts:
           promptSavedStatus &&
-          savedPromptSections.length === 18 &&
+          savedPromptSections.length === 21 &&
           savedPromptSections.every((sections) => sections[8] === promptSections[8]),
         allCategoryScope,
         targetPlayers: document.getElementById('randomizerRulePlayer').options.length,
@@ -1208,10 +1208,12 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         messageRandomizer.collapsibleSections === 7 &&
         messageRandomizer.onlyPreviewExpanded &&
         messageRandomizer.personality === 'realist' &&
-        messageRandomizer.surfaces === 18 &&
+        messageRandomizer.surfaces === 21 &&
         messageRandomizer.messages >= 41 &&
-        messageRandomizer.slogans === 19 &&
-        messageRandomizer.youreIn === 22 &&
+        // At least the bundled seed counts; one extra row remains in databases that
+        // predate the DUPR line removal until it is archived through the dev editors.
+        messageRandomizer.slogans >= 18 &&
+        messageRandomizer.youreIn >= 21 &&
         messageRandomizer.favoriteLabels &&
         messageRandomizer.reusablePrompt &&
         messageRandomizer.savedPrompts &&
