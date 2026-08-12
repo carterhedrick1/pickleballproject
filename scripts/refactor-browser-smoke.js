@@ -120,8 +120,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         scriptExternal: [...document.scripts].some(
           (script) => new URL(script.src).pathname === '/js/create.js'
         ),
-        personality: document.getElementById('personalityId')?.value,
-        personalityChoices: document.getElementById('personalityId')?.options.length,
+        personalityControlGone: !document.getElementById('personalityId'),
         headerSlogan: document.querySelector('.header-slogan')?.textContent.trim(),
         footerSlogan: document.querySelector('.footer-slogan')?.textContent.trim(),
         localNotice: document.querySelector('.local-preview-notice')?.textContent.trim(),
@@ -143,8 +142,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     );
     assert(createReady.scriptExternal, 'create page uses its external script');
     assert(
-      createReady.personality === 'realist' && createReady.personalityChoices === 1,
-      'create form loads the enabled Realist personality'
+      createReady.personalityControlGone,
+      'create form offers no personality choice - Realist is applied automatically'
     );
     assert(
       createReady.headerSlogan &&
@@ -406,7 +405,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
           !document.body.innerText.includes(['Court', 'Number'].join(' ')),
         additionalPlayers: document.getElementById('players').value,
         additionalPlayersHelp: document.getElementById('playersHelp').textContent,
-        personality: document.getElementById('personalityId').value,
+        personalityControlGone: !document.getElementById('personalityId'),
         intendedInviteeChoices: document.querySelectorAll(
           '#intendedInviteeList .roster-player-checkbox'
         ).length,
@@ -432,13 +431,13 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       'management shows five additional players for a six-player game with the host playing'
     );
     assert(
-      manageReady.personality === 'realist' &&
+      manageReady.personalityControlGone &&
         // Two seeded roster players plus the out player, who joined the host's roster by
         // texting that they could not make it.
         manageReady.intendedInviteeChoices === 3 &&
         manageReady.inviteeExplainerGone &&
         manageReady.inviteScoreboard === 'Nobody has been invited yet.',
-      'management edits Realist and offers the roster to invite without an explainer paragraph'
+      'management offers no personality choice and offers the roster to invite without an explainer paragraph'
     );
     assert(manageReady.imageUpdateCopy,
       'court image copy explains that the existing player link updates automatically');

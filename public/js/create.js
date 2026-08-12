@@ -29,7 +29,7 @@
                 updatePlayersHelp();
             });
             updatePlayersHelp();
-            const ready = Promise.all([loadMessagePersonalities(), setupLocationPicker()]);
+            const ready = setupLocationPicker();
             document.querySelectorAll('[data-checkbox-id]').forEach((element) => {
                 element.addEventListener('click', (event) => {
                     toggleNotification(element, element.dataset.checkboxId, event);
@@ -113,12 +113,6 @@
                 updatePlayersHelp();
 
                 document.getElementById('message').value = game.message || '';
-                const personality = document.getElementById('personalityId');
-                if (game.personalityId &&
-                    [...personality.options].some((option) => option.value === game.personalityId)) {
-                    personality.value = game.personalityId;
-                    personality.dispatchEvent(new Event('change', { bubbles: true }));
-                }
 
                 setRegistrationMode(game.registrationMode || 'fcfs');
 
@@ -145,36 +139,6 @@
                         'We could not load that game, so this form is blank. Fill it in as usual.';
                     notice.hidden = false;
                 }
-            }
-        }
-
-        async function loadMessagePersonalities() {
-            const select = document.getElementById('personalityId');
-            const help = document.getElementById('personalityHelp');
-            try {
-                const response = await fetch('/api/message-personalities');
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                const personalities = Array.isArray(data.personalities) ? data.personalities : [];
-                if (!personalities.length) throw new Error('No enabled personalities');
-                select.innerHTML = '';
-                personalities.forEach((personality) => {
-                    const option = document.createElement('option');
-                    option.value = personality.id;
-                    option.textContent = personality.name;
-                    option.dataset.description = personality.description || '';
-                    option.selected = personality.isDefault === true;
-                    select.appendChild(option);
-                });
-                const updateHelp = () => {
-                    help.textContent = select.selectedOptions[0]?.dataset.description ||
-                        'This sets the tone of the texts we send for this game.';
-                };
-                select.addEventListener('change', updateHelp);
-                updateHelp();
-            } catch (error) {
-                // The built-in Realist option keeps game creation available during an API failure.
-                console.warn('Could not load message personalities:', error);
             }
         }
 
@@ -533,7 +497,7 @@ async function createGame(e) {
         playersNeeded,
         message: formData.get('message'),
         registrationMode: formData.get('registrationMode'),
-        personalityId: formData.get('personalityId') || 'realist',
+        personalityId: 'realist',
         notificationPreferences: notificationPreferences,
         hostPhone: formData.get('organizerPhone')
     };

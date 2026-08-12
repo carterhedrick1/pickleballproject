@@ -162,9 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
-    // Fetch game data, and start the personality list alongside it - the dropdown
-    // needs no game data, so the two requests should never queue behind each other.
-    fetchManagePersonalityList().catch(() => {});
     fetchGameData();
 
     // Loaded once rather than with every roster refresh: the log is a look-back, and it has
@@ -315,9 +312,6 @@ async function fetchGameData() {
         }
         
         // Populate game details (this will set notification preferences).
-        // The personality dropdown fills itself in when its own request lands;
-        // nothing below depends on it, so the page must not wait for it.
-        loadManagePersonalities();
         populateGameDetails();
         updateGameSummary();
         updatePlayerLinkField();
@@ -368,55 +362,6 @@ function showCreationNotice() {
     params.delete('created');
     const cleanUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
     window.history.replaceState({}, '', cleanUrl);
-}
-
-let managePersonalityListPromise;
-
-function fetchManagePersonalityList() {
-    if (!managePersonalityListPromise) {
-        managePersonalityListPromise = fetch('/api/message-personalities').then((response) => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.json();
-        }).catch((error) => {
-            // A failed request is not cached, so a later refresh can try again.
-            managePersonalityListPromise = null;
-            throw error;
-        });
-    }
-    return managePersonalityListPromise;
-}
-
-async function loadManagePersonalities() {
-    const select = document.getElementById('personalityId');
-    const help = document.getElementById('personalityHelp');
-    if (!select) return;
-    try {
-        const data = await fetchManagePersonalityList();
-        const personalities = Array.isArray(data.personalities) ? data.personalities : [];
-        if (!personalities.length) throw new Error('No enabled personalities');
-        select.innerHTML = '';
-        personalities.forEach((personality) => {
-            const option = document.createElement('option');
-            option.value = personality.id;
-            option.textContent = personality.name;
-            option.dataset.description = personality.description || '';
-            select.appendChild(option);
-        });
-        select.value = gameData.personalityId || personalities.find(
-            (personality) => personality.isDefault
-        )?.id || personalities[0].id;
-        const updateHelp = () => {
-            const description = select.selectedOptions[0]?.dataset.description || '';
-            help.textContent = [description, 'Changing this affects future copy only.']
-                .filter(Boolean)
-                .join(' ');
-        };
-        select.addEventListener('change', updateHelp);
-        updateHelp();
-    } catch (error) {
-        select.value = gameData.personalityId || 'realist';
-        help.textContent = 'Changing this affects future copy only.';
-    }
 }
 
 function showExpiredGameWarning(statusType) {
@@ -668,8 +613,7 @@ function populateGameDetails() {
     );
     updateOrganizerPlayingCopy();
     document.getElementById('message').value = gameData.message || '';
-    document.getElementById('personalityId').value = gameData.personalityId || 'realist';
-    
+
     // Set notification preferences with explicit error handling
     console.log('[CLIENT] Setting notification preferences...');
     
@@ -767,7 +711,7 @@ async function updateGameDetails() {
             playersNeeded: document.getElementById('players').value,
             organizerPlaying: document.getElementById('organizerPlaying').checked,
             message: document.getElementById('message').value,
-            personalityId: document.getElementById('personalityId').value,
+            personalityId: gameData.personalityId || 'realist',
             notificationPreferences: formattedPreferences,
             // The server only acts on this when the court, date, time, or duration actually
             // changed, so leaving it checked never texts anyone about a copy edit.
@@ -821,7 +765,7 @@ async function updateGameDetails() {
                 document.getElementById('organizerPlaying').checked
             ),
             message: document.getElementById('message').value,
-            personalityId: document.getElementById('personalityId').value,
+            personalityId: gameData.personalityId || 'realist',
             // Keep other existing properties like id, hostToken, created, etc.
         };
         
