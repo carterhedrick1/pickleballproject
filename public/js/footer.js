@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="footer-section">
                         <h4>Connect</h4>
                         <p>Email: <a href="mailto:support@inorout.club">support@inorout.club</a></p>
-                        <p><small>Response within 48 hours</small></p>
+                        <p><small>Response time... Never</small></p>
                     </div>
                 </div>
                 
