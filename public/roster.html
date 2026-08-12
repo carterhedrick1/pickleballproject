@@ -60,7 +60,7 @@
 
                 <div id="emptyState" class="no-games" style="display: none;">
                     <h3>Nobody Yet</h3>
-                    <p>Add your regulars above, or host a game and your roster builds itself &mdash; everyone who signs up lands here.</p>
+                    <p class="realist-line" id="emptyRealistLine" style="display: none;"></p>
                     <a href="/create.html" class="create-game-btn">Create A Game</a>
                 </div>
 
@@ -186,10 +186,27 @@
                 ? `${roster.length} ${roster.length === 1 ? 'person' : 'people'} you've played with.`
                 : '';
             document.getElementById('emptyState').style.display = roster.length ? 'none' : 'block';
+            if (!roster.length) fillEmptyRealistLine();
 
             const list = document.getElementById('rosterList');
             list.innerHTML = '';
             roster.forEach((player) => list.appendChild(rosterRow(player)));
+        }
+
+        // A Realist line for the empty state. Fail-silent, and empty until the surface
+        // is enabled in the Developer Area, so a quiet API changes nothing here.
+        function fillEmptyRealistLine() {
+            const line = document.getElementById('emptyRealistLine');
+            if (!line) return;
+            fetch('/api/random-message?surface=empty-roster')
+                .then((response) => (response.ok ? response.json() : null))
+                .then((data) => {
+                    const text = data && data.text ? String(data.text).trim() : '';
+                    if (!text) return;
+                    line.textContent = text;
+                    line.style.display = 'block';
+                })
+                .catch(() => {});
         }
 
         function rosterRow(player) {

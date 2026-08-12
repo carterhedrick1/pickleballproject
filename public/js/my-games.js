@@ -23,6 +23,22 @@ function showStatus(message, type) {
 
 const prettyPhone = HostVerification.prettyPhone;
 
+// A Realist line for the empty state. Fail-silent, and empty until the surface
+// is enabled in the Developer Area, so a quiet API changes nothing here.
+function fillEmptyRealistLine() {
+    const line = document.getElementById('emptyRealistLine');
+    if (!line) return;
+    fetch('/api/random-message?surface=empty-my-games')
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+            const text = data && data.text ? String(data.text).trim() : '';
+            if (!text) return;
+            line.textContent = text;
+            line.style.display = 'block';
+        })
+        .catch(() => {});
+}
+
 /** Field-by-field parse: new Date('YYYY-MM-DD') is UTC and shows the day before here. */
 function formatDateForDisplay(dateStr) {
     return PageUtils.formatLocalDate(dateStr, {
@@ -83,6 +99,7 @@ function render() {
         : '';
 
     document.getElementById('emptyState').style.display = total ? 'none' : 'block';
+    if (!total) fillEmptyRealistLine();
     document.getElementById('upcomingHeading').style.display = upcoming.length ? 'block' : 'none';
     document.getElementById('pastWrapper').style.display = past.length ? 'block' : 'none';
     // Cancelled games land in this group too, and a cancelled game dated next Thursday

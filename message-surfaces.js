@@ -20,6 +20,36 @@ const BASE_SURFACES = [
     allowEmpty: true,
     targetedGroupCopy: true,
     autoPublishEligible: true
+  },
+  {
+    id: 'empty-my-games',
+    name: 'Empty My Games',
+    purpose: 'Personality line on the My Games page before any game exists.',
+    allowedTokens: [],
+    maxLength: 240,
+    allowEmpty: true,
+    targetedGroupCopy: false,
+    autoPublishEligible: false
+  },
+  {
+    id: 'empty-roster',
+    name: 'Empty Roster',
+    purpose: 'Personality line on the Roster page before anybody is on it.',
+    allowedTokens: [],
+    maxLength: 240,
+    allowEmpty: true,
+    targetedGroupCopy: false,
+    autoPublishEligible: false
+  },
+  {
+    id: 'post-create-success',
+    name: 'Post-Create Success',
+    purpose: 'Personality line shown to the host right after creating a game.',
+    allowedTokens: [],
+    maxLength: 240,
+    allowEmpty: true,
+    targetedGroupCopy: false,
+    autoPublishEligible: false
   }
 ];
 

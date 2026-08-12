@@ -340,6 +340,15 @@ body > .container {
     font-weight: 720 !important;
 }
 
+/* One Realist line dropped into a page moment (game details, confirmation,
+   empty states, post-create). Filled from the message rotation, fail-silent. */
+.realist-line {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 15px;
+    margin: 0 0 14px;
+}
+
 .muted,
 .summary-line,
 .footer-note,

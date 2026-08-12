@@ -359,6 +359,22 @@ function showCreationNotice() {
     }
 
     showStatus(notice.message, notice.type);
+
+    // One Realist line for the moment the game exists. Fail-silent, and empty until
+    // the surface is enabled in the Developer Area.
+    const realistLine = document.getElementById('postCreateRealistLine');
+    if (realistLine) {
+        fetch(`/api/random-message?surface=post-create-success&gameId=${encodeURIComponent(gameId)}`)
+            .then((response) => (response.ok ? response.json() : null))
+            .then((data) => {
+                const text = data && data.text ? String(data.text).trim() : '';
+                if (!text) return;
+                realistLine.textContent = text;
+                realistLine.style.display = 'block';
+            })
+            .catch(() => {});
+    }
+
     params.delete('created');
     const cleanUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
     window.history.replaceState({}, '', cleanUrl);

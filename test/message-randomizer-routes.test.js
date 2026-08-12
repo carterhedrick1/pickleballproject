@@ -34,7 +34,14 @@ test('validates configurable ratios and surface overrides', () => {
 test('the public random-message route serves exactly the on-page surfaces', () => {
   assert.deepEqual(
     [...PUBLIC_RANDOM_MESSAGE_SURFACES].sort(),
-    ['game-details', 'site-slogan', 'youre-in']
+    [
+      'empty-my-games',
+      'empty-roster',
+      'game-details',
+      'post-create-success',
+      'site-slogan',
+      'youre-in'
+    ]
   );
   // Every public surface must be a real one, and SMS-only surfaces stay private.
   for (const surfaceId of PUBLIC_RANDOM_MESSAGE_SURFACES) {

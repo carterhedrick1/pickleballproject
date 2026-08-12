@@ -296,7 +296,14 @@ async function validateTargetRule(database, body = {}, existing = null) {
 
 // Surfaces a public page may read. Everything else (SMS categories, drafts)
 // stays behind Developer authentication.
-const PUBLIC_RANDOM_MESSAGE_SURFACES = new Set(['site-slogan', 'game-details', 'youre-in']);
+const PUBLIC_RANDOM_MESSAGE_SURFACES = new Set([
+  'site-slogan',
+  'game-details',
+  'youre-in',
+  'empty-my-games',
+  'empty-roster',
+  'post-create-success'
+]);
 
 function mountPublicRandomizerRoutes(app) {
   const database = require('../database');

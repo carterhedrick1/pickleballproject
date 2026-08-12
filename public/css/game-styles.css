@@ -197,14 +197,6 @@
             display: inline-block;
         }
 
-        /* One Realist line above the details and on the confirmation screen. */
-        .realist-line {
-            color: var(--text-muted);
-            font-style: italic;
-            font-size: 15px;
-            margin: 0 0 14px;
-        }
-
         /* Game details styling */
         .game-info {
             background: var(--canvas);

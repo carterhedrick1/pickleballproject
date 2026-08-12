@@ -5,7 +5,8 @@ const {
   normalizeMessageText,
   readMigrationCopy,
   REALIST_INVITATION_OPENING_DRAFTS,
-  REALIST_GAME_DETAILS_DRAFTS
+  REALIST_GAME_DETAILS_DRAFTS,
+  REALIST_PAGE_MOMENT_DRAFTS
 } = require('../database/message-randomizer');
 const {
   extractTokens,
@@ -23,10 +24,12 @@ const {
 const { getMessageSurface, MESSAGE_SURFACES } = require('../message-surfaces');
 
 test('defines every stable surface once', () => {
-  assert.equal(MESSAGE_SURFACES.length, 18);
-  assert.equal(new Set(MESSAGE_SURFACES.map((surface) => surface.id)).size, 18);
+  assert.equal(MESSAGE_SURFACES.length, 21);
+  assert.equal(new Set(MESSAGE_SURFACES.map((surface) => surface.id)).size, 21);
   assert.equal(getMessageSurface('site-slogan').allowedTokens[0], 'NAME');
   assert.equal(getMessageSurface('youre-in').id, 'youre-in');
+  assert.equal(getMessageSurface('empty-my-games').allowEmpty, true);
+  assert.equal(getMessageSurface('post-create-success').targetedGroupCopy, false);
 });
 
 test('normalizes whitespace and punctuation-only message differences', () => {
@@ -81,6 +84,23 @@ test('keeps the 9 owner-approved Realist game details drafts valid and unique', 
     );
     assert.equal(normalized.has(result.normalized), false, `Duplicate draft: ${text}`);
     normalized.add(result.normalized);
+  }
+});
+
+test('keeps the page-moment drafts valid, unique, and on real surfaces', () => {
+  for (const [surfaceId, drafts] of Object.entries(REALIST_PAGE_MOMENT_DRAFTS)) {
+    const surface = getMessageSurface(surfaceId);
+    assert.ok(surface, `${surfaceId} is a defined surface`);
+    const normalized = new Set();
+    assert.ok(drafts.length >= 8, `${surfaceId} ships enough drafts to rotate`);
+    for (const text of drafts) {
+      const result = validateGeneratedCandidate(text, { surface });
+      assert.equal(result.valid, true, `${text}: ${result.reason}`);
+      assert.equal(text.length <= surface.maxLength, true, `Too long: ${text}`);
+      assert.equal(extractTokens(text).length, 0, `Unexpected token: ${text}`);
+      assert.equal(normalized.has(result.normalized), false, `Duplicate draft: ${text}`);
+      normalized.add(result.normalized);
+    }
   }
 });
 
