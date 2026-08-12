@@ -189,8 +189,7 @@ async function checkAndSendReminders() {
             const gameDay = describeGameDay(game, centralNow);
             const defaultMessage = kind.type === 'game_day'
               ? `Your pickleball game starts at ${formatTimeForSMS(game.time)} ` +
-                `— ${formatLocationForSMS(game)}. Reply 9 now if you can't make it, ` +
-                'so somebody else can take the spot.'
+                `— ${formatLocationForSMS(game)}. Reply 9 now if you can't make it.`
               : `Reminder: Your pickleball game is ${gameDay} ` +
                 `at ${formatTimeForSMS(game.time)} — ${formatLocationForSMS(game)}. ` +
                 'Reply 2 for details, or 9 to cancel.';

@@ -577,7 +577,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
           '/game.html?id=${fx.open.gameId}'
         ),
         invitationHasDetails: invitation.message?.includes('Oak Park Courts') &&
-          invitation.message?.includes('do not reply to this text message')
+          !invitation.message?.includes('do not reply to this text message')
       };
     })()`);
     assert(

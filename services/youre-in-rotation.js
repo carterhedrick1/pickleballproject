@@ -47,7 +47,7 @@ async function buildRosterMessage(
   const location = formatLocationForSMS(game);
   const date = formatDateForSMS(game.date);
   const time = formatTimeForSMS(game.time);
-  const details = `Pickleball at ${location} on ${date} at ${time}! You are Player ${position} of ${game.totalPlayers}. Reply 2 for who is playing and game details or 9 to cancel.`;
+  const details = `Pickleball at ${location} on ${date} at ${time}! You are Player ${position} of ${game.totalPlayers}. Reply 2 for who is playing and game details, or 9 to cancel.`;
   const values = {
     LOCATION: location,
     DATE: date,

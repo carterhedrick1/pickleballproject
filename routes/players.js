@@ -185,7 +185,7 @@ module.exports = function mountPlayerRoutes(app) {
             const statusText = game.registrationMode === 'waitlist' ? 'application' : 'waitlist spot';
             message = `Your pickleball ${statusText} at ${locationText} on ${gameDate} at ${gameTime} has been cancelled. Thanks for letting us know!`;
           } else {
-            message = `Thanks for letting us know you can't make the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. We appreciate the heads-up!`;
+            message = `Thanks for letting us know you can't make the pickleball game at ${locationText} on ${gameDate} at ${gameTime}.`;
           }
           message = await resolveTextMessage(
             'player-cancellation',
@@ -295,10 +295,10 @@ module.exports = function mountPlayerRoutes(app) {
           // Handle waitlist mode vs regular waitlist
           if (result.hidePosition || game.registrationMode === 'waitlist') {
             // Waitlist mode - don't show position, don't mention "2" for details
-            message = `Thanks for signing up for pickleball at ${locationText} on ${gameDate} at ${gameTime}! The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.`;
+            message = `Thanks for signing up for pickleball at ${locationText} on ${gameDate} at ${gameTime}! The organizer picks the players - you'll get a text either way. Reply 9 to cancel your application.`;
           } else {
             // Regular waitlist - show position, allow details
-            message = `You've been added to the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up. Reply 2 for game details, or 9 to cancel.`;
+            message = `You're #${result.position} on the waitlist for pickleball at ${locationText} on ${gameDate} at ${gameTime}. Reply 2 for game details, or 9 to cancel.`;
           }
           message = await resolveTextMessage(
             game.registrationMode === 'waitlist'
@@ -480,8 +480,8 @@ module.exports = function mountPlayerRoutes(app) {
           // Approval mode keeps positions hidden until the organizer selects players, so the
           // host-added path has to branch the same way the self-signup path does.
           message = (result.hidePosition || game.registrationMode === 'waitlist')
-            ? `You've been added as an applicant for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. The organizer will review applications and select players. You'll be notified if selected. Reply 9 to cancel your application.`
-            : `You've been added to the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. You are #${result.position} on the waitlist. We'll notify you if a spot opens up. Reply 2 for details, or 9 to cancel.`;
+            ? `You've been added as an applicant for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. The organizer picks the players - you'll get a text either way. Reply 9 to cancel your application.`
+            : `You're #${result.position} on the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. Reply 2 for details, or 9 to cancel.`;
           message = await resolveTextMessage(
             game.registrationMode === 'waitlist'
               ? 'application-confirmation'
@@ -563,7 +563,7 @@ module.exports = function mountPlayerRoutes(app) {
         const waitlistIndex = (game.waitlist || []).findIndex((entry) => entry.id === player.id);
         const waitlistPosition = waitlistIndex >= 0 ? waitlistIndex + 1 : (game.waitlist || []).length;
         const defaultMessage = game.registrationMode === 'waitlist'
-          ? `You've been moved back to the applicant list for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. The organizer will let you know if you're selected. Reply 9 to cancel your application.`
+          ? `You've been moved back to the applicant list for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. Reply 9 to cancel your application.`
           : `You've been moved to the waitlist for the pickleball game at ${locationText} on ${gameDate} at ${gameTime}. You are #${waitlistPosition} on the waitlist. Reply 2 for details, or 9 to cancel.`;
         const message = await resolveTextMessage(
           'roster-status-change',

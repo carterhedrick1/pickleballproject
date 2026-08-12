@@ -31,7 +31,8 @@ test('deterministic invitation preserves every operational detail and instructio
   assert.match(message, /Duration: 90 minutes/);
   assert.match(message, /Spots: 3/);
   assert.match(message, /Bring water\./);
-  assert.match(message, /do not reply to this text message/);
+  // The "do not reply" lecture is gone on purpose: replying 1/2/9 is how the app works.
+  assert.doesNotMatch(message, /do not reply/i);
   assert.match(message, /First 3 to respond are in\./);
 });
 
@@ -72,6 +73,6 @@ test('randomized invitation adds one stored opening without changing determinist
     database
   );
   assert.match(result.text, /^The group chat needs a decision\.\n\nLet us know/);
-  assert.match(result.text, /Reply|do not reply/i);
+  assert.match(result.text, /Location: Oak Park Courts/);
   assert.equal(events[0].gameId, 'game-1');
 });

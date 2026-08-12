@@ -43,8 +43,6 @@ Time: ${formatInvitationTime(game.time)}
 Duration: ${game.duration} minutes
 ${spotsText}: ${availableSpots}
 ${game.message ? `\n${game.message}` : ''}
-
-Even if you can't make it, your response helps us plan and find additional players if needed. Please use the link above to respond — do not reply to this text message.
 ${firstComeMessage}
 
 `;

@@ -153,8 +153,8 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
         shouldSend = true;
         const waiting = (game.waitlist || []).length;
         const waitlistText = waiting === 0
-          ? 'Nobody has applied yet — open your management link to invite a replacement.'
-          : `You have ${waiting} ${waiting === 1 ? 'person' : 'people'} on your waitlist — open your management link to pick a replacement.`;
+          ? 'Nobody has applied yet.'
+          : `You have ${waiting} ${waiting === 1 ? 'person' : 'people'} on your waitlist.`;
         message = `HOST ALERT: ${playerName || 'A player'} gave up their confirmed spot for your pickleball game at ${locationText} on ${gameDate}. ${waitlistText}`;
         break;
       }
@@ -254,7 +254,7 @@ async function handleIncomingSMS(req, res) {
         await sendCategorySMS(
           'cancellation-help',
           fromNumber,
-          `Reply "1" for your management link, "2" for game details, or "9" to cancel your spot. If you need anything else, reach out to the organizer.`
+          `Reply "1" for your management link, "2" for game details, or "9" to cancel your spot.`
         );
       }
       await clearLastCommand(cleanedFromNumber);
@@ -464,8 +464,8 @@ async function handleGameDetailsSelection(fromNumber, cleanedFromNumber, selecti
         'game-details',
         fromNumber,
         userGames.length === 1
-          ? `That wasn't one of the numbers on the list. Reply 1, or text "2" to see the game again.`
-          : `That wasn't one of the numbers on the list. Reply with a number from 1 to ${userGames.length}, or text "2" to see the list again.`,
+          ? `Reply 1, or text "2" to see the game again.`
+          : `Reply with a number from 1 to ${userGames.length}, or text "2" to see the list again.`,
         { GAME_COUNT: userGames.length }
       );
     }
@@ -787,7 +787,6 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
   } else {
     // Waitlist mode - hide player info from waitlist users only
     responseMessage += `Player selection is still in progress.\n`;
-    responseMessage += `The organizer will review all applications and select players.\n`;
   }
   
   if (role === 'host') {
@@ -814,7 +813,7 @@ async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
 
 // Helper function to build game list message
 async function buildGameListMessage(userGames) {
-  let responseMessage = `You have ${userGames.length} upcoming games. Reply with just the number (1, 2, 3, etc.) to see details:\n\n`;
+  let responseMessage = `You have ${userGames.length} upcoming games. Reply with a number to see details:\n\n`;
   
   userGames.forEach(({ game, role }, index) => {
     const gameDate = formatDateForSMS(game.date);

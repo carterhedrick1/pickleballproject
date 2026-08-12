@@ -34,7 +34,7 @@
                 <div class="warning-icon"></div>
                 <div class="warning-text">
                     <h3 id="warningTitle">Game No Longer Available</h3>
-                    <p id="warningMessage">This game has ended and is no longer accepting registrations.</p>
+                    <p id="warningMessage">This game has ended.</p>
                 </div>
             </div>
         </div>
@@ -66,7 +66,7 @@
             <form id="joinForm">
                 <div class="form-group">
                     <label for="playerName">Your Name:</label>
-                    <input type="text" id="playerName" name="playerName" placeholder="Enter your full name" required>
+                    <input type="text" id="playerName" name="playerName" required>
                 </div>
                 
                 <div class="form-group">
@@ -80,12 +80,6 @@
                     <button type="submit" id="outButton" data-action="out" class="btn-out">OUT</button>
                 </div>
             </form>
-            
-            <div class="form-help-text">
-                <span id="waitlistModeInfo" style="display: none;"><strong>How It Works:</strong> The organizer will review all applications and select players. You'll be notified if you're selected.<br><br></span>
-                <strong>Need to cancel later?</strong> Just reply "9" to any text message you receive about this game.<br><br>
-                <strong>Can't make it?</strong> Please still tap "OUT". It stops your reminder texts and tells the organizer to look for someone else.
-            </div>
         </div>
 
         <!-- Game Details Section -->
@@ -133,8 +127,6 @@
                 <div id="spotsFullContainer" style="display: none;">
                     <div class="waitlist-info">
                         <h4>Join The Waitlist!</h4>
-                        <p>Don't worry &mdash; you can still sign up to be on the waitlist.</p>
-                        <p>If someone cancels, you'll automatically get their spot and receive a text message.</p>
                         <p><strong>Currently <span id="waitlistCount">0</span> <span id="waitlistCountWord">people</span> waiting</strong></p>
                     </div>
                 </div>
@@ -155,9 +147,7 @@
         <div id="confirmationSection" class="confirmation-section" style="display: none;">
             <div class="confirmation-icon"></div>
             <h2 id="confirmationTitle">You're In!</h2>
-            <div class="confirmation-message" id="confirmationMessage">
-                Great! You've successfully joined the game.
-            </div>
+            <div class="confirmation-message" id="confirmationMessage"></div>
             <p class="realist-line" id="confirmationRealistLine" style="display: none;"></p>
 
             <div class="sms-warning" id="smsWarning" style="display: none;">
@@ -190,17 +180,6 @@
             <a id="addToCalendarBtn" class="add-to-calendar-btn" href="#" style="display: none;">
                 Add To Calendar
             </a>
-
-            <!-- Only show "What's Next?" if not marked as "out" -->
-            <div class="next-steps" id="nextStepsSection">
-                <h4>What's Next?</h4>
-                <ul>
-                    <li>You'll receive a confirmation text message shortly</li>
-                    <li id="seeWhosPlayingInstruction">Want to see who's playing? Just reply "2" to any text message before the game</li>
-                    <li>Need to cancel? Just reply "9" to any text message</li>
-                    <li>Game updates will be sent via text</li>
-                </ul>
-            </div>
 
             <button id="backToGameBtn" class="back-to-game-btn">
                 ← Back To Game Details

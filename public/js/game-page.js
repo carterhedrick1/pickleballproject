@@ -261,11 +261,11 @@
                 if (gameStatus.type === 'cancelled') {
                     warningSection.className = 'game-status-warning cancelled';
                     warningTitle.textContent = 'Game Cancelled';
-                    warningMessage.textContent = gameData.cancellationReason || 'This game has been cancelled and is no longer available.';
+                    warningMessage.textContent = gameData.cancellationReason || '';
                 } else if (gameStatus.type === 'expired') {
                     warningSection.className = 'game-status-warning expired';
                     warningTitle.textContent = 'Game Has Ended';
-                    warningMessage.textContent = 'This game has finished and is no longer accepting registrations. Check with the organizer for future games.';
+                    warningMessage.textContent = 'This game has finished.';
                 }
                 
                 // Show the warning
@@ -445,7 +445,7 @@
                     li.style.fontStyle = 'italic';
                     li.style.color = 'var(--text-muted)';
                     li.style.fontSize = '14px';
-                    li.textContent = 'None yet — be the first to join!';
+                    li.textContent = 'No players yet.';
                     playersList.appendChild(li);
                 } else {
                     // Add players to list
@@ -528,7 +528,7 @@
                         // refuses to give it up - so offering the button would only produce an
                         // error. Point at the tool that can actually do it instead.
                         action: status.isOrganizer ? null : 'out',
-                        actionLabel: "Can't Make It? Tap OUT",
+                        actionLabel: 'Tap OUT',
                         note: status.isOrganizer
                             ? "You're the organizer of this game. Use your management link to change it."
                             : ''
@@ -539,7 +539,7 @@
                     return {
                         mood: 'is-waiting',
                         title: 'Your Application Is In',
-                        detail: 'The organizer is still picking players. You’ll get a text either way.',
+                        detail: 'The organizer is still picking players.',
                         action: 'out',
                         actionLabel: 'Cancel My Application'
                     };
@@ -550,7 +550,7 @@
                         mood: 'is-waiting',
                         title: "You're On The Waitlist",
                         detail: status.position
-                            ? `Number ${status.position} in line. If a spot opens up it is yours, and we’ll text you.`
+                            ? `Number ${status.position} in line.`
                             : 'If a spot opens up we’ll text you.',
                         action: 'out',
                         actionLabel: 'Leave The Waitlist'
@@ -562,13 +562,13 @@
                 return {
                     mood: 'is-out',
                     title: "You're OUT",
-                    detail: 'You told us you can’t make this one.',
+                    detail: '',
                     action: 'in',
                     actionLabel: approvalMode
                         ? 'Apply Again'
                         : gameIsFull()
-                            ? 'Changed Your Mind? Join The Waitlist'
-                            : "Changed Your Mind? Tap IN"
+                            ? 'Join The Waitlist'
+                            : 'Tap IN'
                 };
             }
 
@@ -796,11 +796,11 @@
                     
                     if (data.hidePosition || gameData.registrationMode === 'waitlist') {
                         confirmTitle.textContent = "Application Submitted!";
-                        confirmMessage.textContent = `Thanks for signing up! The organizer will review all applications and select players. You'll be notified if you're selected.`;
+                        confirmMessage.textContent = `The organizer picks the players. You'll get a text either way.`;
                         confirmStatus.textContent = `Application Under Review`;
                     } else {
                         confirmTitle.textContent = "You're On The Waitlist!";
-                        confirmMessage.textContent = `The game is full, but you're #${data.position} on the waitlist. If someone cancels, you'll get their spot automatically!`;
+                        confirmMessage.textContent = `The game is full. If someone cancels, the spot is yours and we'll text you.`;
                         confirmStatus.textContent = `Waitlist Position #${data.position}`;
                     }
                 }
@@ -856,8 +856,8 @@
                 if (warning && warningText) {
                     if (outcome === 'failed') {
                         warningText.textContent = leaving
-                            ? "Heads up: we couldn't send your confirmation text, so you won't get one. Your response was still recorded - the organizer can see you're out."
-                            : "Heads up: we couldn't send your confirmation text, so you won't get one. Your spot is still saved - but you won't get text reminders or be able to reply 2 or 9. Let the organizer know so they can check your number.";
+                            ? "We couldn't send your confirmation text, but your response was recorded - the organizer can see you're out."
+                            : "We couldn't send your confirmation text. Your spot is saved, but no texts will reach you - let the organizer know so they can check your number.";
                         warning.style.display = 'block';
                     } else {
                         warning.style.display = 'none';
@@ -1082,12 +1082,7 @@
 
                     // Pre-validate on client side for better error messages
                     if (phoneNumber && !validatePhoneClientSide(phoneNumber)) {
-                        const isChromeIOS = /CriOS/.test(navigator.userAgent);
-                        const errorMsg = isChromeIOS
-                            ? 'Please check your phone number format. Try entering just the 10 digits (e.g., 5551234567) or with dashes (555-123-4567).'
-                            : 'Please enter a valid US phone number (e.g., (555) 123-4567)';
-
-                        showStatus(errorMsg, 'error');
+                        showStatus('Please enter a valid US phone number (e.g., (555) 123-4567)', 'error');
                         return;
                     }
 
