@@ -78,67 +78,6 @@ body {
     text-wrap: balance;
 }
 
-.hero-steps {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-    list-style: none;
-    margin: 32px 0 0;
-    padding: 0;
-    text-align: left;
-}
-
-.hero-step {
-    background: var(--canvas);
-    border: 1.5px solid var(--border);
-    border-radius: 14px;
-    padding: 20px;
-    position: relative;
-}
-
-/* The arrows between the steps are decoration, so they are drawn rather than typed
-   and they disappear the moment the steps stack. */
-.hero-step + .hero-step::before {
-    content: '';
-    position: absolute;
-    left: -12px;
-    top: 50%;
-    width: 8px;
-    height: 8px;
-    border-top: 2px solid var(--border-strong);
-    border-right: 2px solid var(--border-strong);
-    transform: translateY(-50%) rotate(45deg);
-}
-
-.hero-step-number {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 999px;
-    background: var(--brand);
-    color: var(--surface);
-    font-size: 15px;
-    font-weight: 700;
-    margin-bottom: 10px;
-}
-
-.hero-step-title {
-    color: var(--ink);
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 1.25;
-    margin: 0 0 4px;
-}
-
-.hero-step-detail {
-    color: var(--text-muted);
-    font-size: 14px;
-    line-height: 1.45;
-    margin: 0;
-}
-
 .hero .back-btn {
     margin-top: 32px;
 }
@@ -154,30 +93,6 @@ body {
 
     .hero-line {
         font-size: 19px;
-    }
-
-    .hero-steps {
-        grid-template-columns: 1fr;
-        gap: 10px;
-        margin-top: 24px;
-    }
-
-    /* Stacked steps read top to bottom on their own; the side arrow would point nowhere. */
-    .hero-step + .hero-step::before {
-        display: none;
-    }
-
-    .hero-step {
-        display: grid;
-        grid-template-columns: 30px minmax(0, 1fr);
-        column-gap: 12px;
-        align-items: center;
-        padding: 14px 16px;
-    }
-
-    .hero-step-number {
-        grid-row: 1 / span 2;
-        margin-bottom: 0;
     }
 
     .hero .back-btn {

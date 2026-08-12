@@ -448,7 +448,7 @@ function buildScreens(fx) {
   return [
     { file: 'index-landing', of: '/', size: 'wide', url: '/',
       title: 'The landing view',
-      note: 'What everyone lands on: a line from the slogan rotation, the whole product in three steps, and the one button. The detailed guide below it is a section picker — each section stays hidden until you tap a card.' },
+      note: 'What everyone lands on: a line from the slogan rotation and the one button. The detailed guide below it is a section picker — each section stays hidden until you tap a card.' },
     ...GUIDE_SECTIONS.map(([id, title, note]) => ({
       file: `index-guide-${id}`, of: '/', size: 'tall', url: '/',
       title: `Guide — ${title}`, note, act: openGuideSection(id),
@@ -600,7 +600,7 @@ function buildScreens(fx) {
 // How the gallery groups the screens. Order here is the order on the page.
 const GROUPS = [
   { of: '/', who: 'Anyone', lane: 'In the nav',
-    blurb: 'The homepage. It opens with the hero — a slogan, the three steps, and Create Game Now — and the detailed guide sits under it as a section picker, each section hidden until you tap a card. Those sections appear here as separate screens because that is how you actually meet them.' },
+    blurb: 'The homepage. It opens with the hero — a slogan and Create Game Now — and the detailed guide sits under it as a section picker, each section hidden until you tap a card. Those sections appear here as separate screens because that is how you actually meet them.' },
   { of: '/create.html', who: 'Organizers', lane: 'In the nav',
     blurb: 'One long form, then a share panel that replaces it.' },
   { of: '/game.html?id=…', who: 'Players', lane: 'Link only',
