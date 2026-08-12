@@ -16,7 +16,7 @@
                 <span></span><span></span><span></span><span></span><span></span>
             </div>
             <h2>Creating Your Game...</h2>
-            <p>We&rsquo;re setting up Game Management. Keep this page open.</p>
+            <p>We&rsquo;re setting up Game Management.</p>
         </div>
     </div>
 
@@ -109,21 +109,20 @@
                         <label for="organizerPhone">Your Phone Number:</label>
                         <input type="tel" id="organizerPhone" name="organizerPhone" required>
                         <div class="sms-info">
-                            By entering your number, you agree to receive a confirmation text where you can manage your game. Msg &amp; data rates may apply. See Terms &amp; Privacy.
+                            By entering your number, you agree to receive texts about this game. Msg &amp; data rates may apply. See Terms &amp; Privacy.
                         </div>
                     </div>
 
                     <div class="form-group">
                         <div class="checkbox-inline">
                             <input type="checkbox" id="organizerPlaying" name="organizerPlaying" checked>
-                            <label for="organizerPlaying">I will be playing in this game (uncheck if organizing for others)</label>
+                            <label for="organizerPlaying">I Will Be Playing In This Game</label>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="players">Number Of Additional Players Needed:</label>
+                        <label for="players" id="playersLabel">Players Needed (Besides You):</label>
                         <input type="number" id="players" name="players" value="3" min="1" max="50" required>
-                        <small id="playersHelp" style="color: var(--text-muted); font-size: 12px; margin-top: 5px; display: block;">You are already Player 1. Enter 3 for a four-player game.</small>
                     </div>
 
                     <div class="form-group">
@@ -147,7 +146,7 @@
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">First-Come First-Served</div>
-                                        <div class="notification-description">Spots fill in the order people sign up. Once it is full, everyone else waits. If someone drops out, the next person in line gets their spot automatically.</div>
+                                        <div class="notification-description">Spots fill in the order people sign up.</div>
                                     </div>
                                 </div>
                                 <div class="toggle-switch"></div>
@@ -159,7 +158,7 @@
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">Waitlist Mode</div>
-                                        <div class="notification-description">Everyone applies and you choose who's in. Nobody is added automatically, so if someone drops out you pick their replacement.</div>
+                                        <div class="notification-description">Everyone applies and you choose who's in.</div>
                                     </div>
                                 </div>
                                 <div class="toggle-switch"></div>
@@ -170,14 +169,12 @@
 
                     <div class="form-group notifications-section">
                         <label for="notifications">Organizer Notifications:</label>
-                        <small>Text messages we'll send you (optional)</small>
 
                         <div class="notification-option checked" data-checkbox-id="notifyGameFull">
                             <div class="notification-content">
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
                                     <div class="notification-title">Game Becomes Full</div>
-                                    <div class="notification-description">Text me once every spot is taken</div>
                                 </div>
                             </div>
                             <div class="toggle-switch"></div>
@@ -189,7 +186,6 @@
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
                                     <div class="notification-title">Someone Cancels Their Spot</div>
-                                    <div class="notification-description">Text me when a player drops out</div>
                                 </div>
                             </div>
                             <div class="toggle-switch"></div>
@@ -201,7 +197,6 @@
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
                                     <div class="notification-title">Someone Joins The Game</div>
-                                    <div class="notification-description">Text me every time a player signs up</div>
                                 </div>
                             </div>
                             <div class="toggle-switch"></div>
@@ -213,7 +208,6 @@
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
                                     <div class="notification-title">Only One Spot Remaining</div>
-                                    <div class="notification-description">Text me when there's one spot left to fill</div>
                                 </div>
                             </div>
                             <div class="toggle-switch"></div>
@@ -225,7 +219,6 @@
                                 <div class="notification-icon"></div>
                                 <div class="notification-text">
                                     <div class="notification-title">Waitlist Starts</div>
-                                    <div class="notification-description">Text me when the first person has to wait</div>
                                 </div>
                             </div>
                             <div class="toggle-switch"></div>

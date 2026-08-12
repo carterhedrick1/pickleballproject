@@ -67,8 +67,7 @@ function renderRosterAddPicker() {
     );
 
     if (hostRoster.length === 0) {
-        status.textContent =
-            'Your roster is empty. Add people on the Roster page, or they appear here automatically after joining one of your games with a phone number.';
+        status.textContent = 'Your roster is empty. Add people on the Roster page.';
         actions.hidden = true;
         return;
     }
@@ -179,7 +178,6 @@ function renderInvitePicker() {
     if (hostRosterState === 'loading' || hostRosterState === 'idle') {
         status.textContent = 'Loading your roster...';
         updateInviteSelectionState();
-        updateInviteNoteVisibility();
         return;
     }
 
@@ -187,7 +185,6 @@ function renderInvitePicker() {
         status.textContent = 'Could not load your roster. Please refresh the page to try again.';
         status.classList.add('error-text');
         updateInviteSelectionState();
-        updateInviteNoteVisibility();
         return;
     }
 
@@ -198,10 +195,9 @@ function renderInvitePicker() {
                 href: '/roster.html',
                 textContent: 'Roster page'
             }),
-            document.createTextNode(', or copy the invitation below into a group chat.')
+            document.createTextNode('.')
         );
         updateInviteSelectionState();
-        updateInviteNoteVisibility();
         return;
     }
 
@@ -238,7 +234,6 @@ function renderInvitePicker() {
 
     status.textContent = `${hostRoster.length} ${hostRoster.length === 1 ? 'person' : 'people'} on your roster.`;
     updateInviteSelectionState();
-    updateInviteNoteVisibility();
     updateInviteOverflowHint();
 }
 
@@ -433,7 +428,7 @@ function renderInvitations() {
                 ? `Texted ${person.textCount} times, last ${ago}`
                 : `Texted ${ago}`);
         } else {
-            meta.push('Invitation copied, not texted from here');
+            meta.push('Invitation copied');
         }
         if (person.lastTextStatus === 'failed') meta.push('The last text did not go through');
 

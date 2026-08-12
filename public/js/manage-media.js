@@ -268,7 +268,7 @@ async function selectCourtImage(imageId) {
             const data = await response.json().catch(() => ({}));
             throw new Error(data.error || 'Failed to select image');
         }
-        setCourtImageStatus('Player link updated with this image.', 'success');
+        setCourtImageStatus('Saved.', 'success');
         await loadCourtImages();
     } catch (error) {
         console.error('Error selecting court image:', error);
@@ -286,7 +286,7 @@ async function selectNoCourtImage() {
             const data = await response.json().catch(() => ({}));
             throw new Error(data.error || 'Failed to clear image');
         }
-        setCourtImageStatus('Player link updated to show no image.', 'success');
+        setCourtImageStatus('Saved.', 'success');
         await loadCourtImages();
     } catch (error) {
         console.error('Error clearing court image:', error);

@@ -127,27 +127,25 @@
                     const when = PageUtils.formatLocalDate(game.date, {
                         weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
                     });
-                    notice.textContent =
-                        `Copied from your ${game.location} game on ${when}. ` +
-                        'Check the date and anything else you want to change, then create it.';
+                    notice.textContent = `Copied from your ${game.location} game on ${when}.`;
                     notice.hidden = false;
                 }
             } catch (error) {
                 console.error('Could not repeat that game:', error);
                 if (notice) {
-                    notice.textContent =
-                        'We could not load that game, so this form is blank. Fill it in as usual.';
+                    notice.textContent = 'We could not load that game, so this form is blank.';
                     notice.hidden = false;
                 }
             }
         }
 
+        // The label carries the whole rule, so no helper sentence is needed under it.
         function updatePlayersHelp() {
             const organizerPlaying = document.getElementById('organizerPlaying').checked;
-            const help = document.getElementById('playersHelp');
-            help.textContent = organizerPlaying
-                ? 'You are already Player 1. Enter 3 for a four-player game.'
-                : 'Enter the total number of players you need. No organizer will be added.';
+            const label = document.getElementById('playersLabel');
+            label.textContent = organizerPlaying
+                ? 'Players Needed (Besides You):'
+                : 'Total Players Needed:';
         }
 
         // ---------------------------------------------------------------------------
@@ -299,7 +297,7 @@
                 return;
             }
 
-            setCourtImageStatus('Loading every photo saved for this court...');
+            setCourtImageStatus('Loading photos...');
             try {
                 const response = await fetch(
                     `/api/courts/${encodeURIComponent(normalizedName)}/library`
@@ -311,9 +309,7 @@
                 currentCourtImages = Array.isArray(data.images) ? data.images : [];
                 renderCourtImageGallery();
                 container.hidden = currentCourtImages.length === 0;
-                setCourtImageStatus(currentCourtImages.length
-                    ? `Showing all ${currentCourtImages.length} saved photo${currentCourtImages.length === 1 ? '' : 's'}.`
-                    : '');
+                setCourtImageStatus('');
             } catch (err) {
                 if (requestSerial !== courtImageRequestSerial) return;
                 currentCourtImages = [];
@@ -588,7 +584,7 @@ function rememberCreationNotice(gameId, hostSms, courtImageWarning) {
             type: 'warning',
             message: `Game created, but ${warnings.join(' and ')}. You can keep managing it here.`
         }
-        : { type: 'success', message: 'Game created. Invite your players below.' };
+        : { type: 'success', message: 'Game created.' };
 
     try {
         sessionStorage.setItem(`gameCreationNotice:${gameId}`, JSON.stringify(notice));

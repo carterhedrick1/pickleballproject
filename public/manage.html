@@ -16,7 +16,6 @@
         <div class="page-header">
             <div class="header-content">
                 <h1>Game Management</h1>
-                <div class="subtitle">Everything for this game in one place</div>
             </div>
         </div>
         
@@ -35,7 +34,7 @@
                 <div class="warning-icon"></div>
                 <div class="warning-text">
                     <h3>Game Has Ended</h3>
-                    <p>This game has finished. You can still view player information but cannot make changes or send new invitations.</p>
+                    <p>This game has finished.</p>
                 </div>
             </div>
         </div>
@@ -132,7 +131,6 @@
                             <button id="sharePlayerLink" class="copy-btn" hidden>Share The Invitation</button>
                             <button id="copyPlayerLink" class="copy-btn">Copy Invitation Message</button>
                         </div>
-                        <p class="save-suggestion">Anyone you tick above is recorded as invited when you copy.</p>
                     </div>
                     <div class="player-link-section">
                         <label for="playerLinkField">Player Link:</label>
@@ -173,20 +171,18 @@
                         <div class="form-group">
                             <div class="checkbox-inline">
                                 <input type="checkbox" id="organizerPlaying" name="organizerPlaying">
-                                <label for="organizerPlaying">I am playing in this game (uncheck to give up your spot)</label>
+                                <label for="organizerPlaying">I Am Playing In This Game</label>
                             </div>
-                            <div id="organizerPlayingHelp" class="form-help-text">You keep the management link either way.</div>
                         </div>
 
                         <div class="form-group">
-                            <label id="playersLabel" for="players">Number Of Additional Players Needed:</label>
+                            <label id="playersLabel" for="players">Players Needed (Besides You):</label>
                             <input type="number" id="players" name="players" min="1" max="50" required>
-                            <div id="playersHelp" class="form-help-text">You are already Player 1. Enter only the number of other players you need.</div>
                         </div>
                         
                         <div class="form-group">
                             <label for="message">Optional Message:</label>
-                            <textarea id="message" name="message" rows="3" placeholder="Any additional info for players..."></textarea>
+                            <textarea id="message" name="message" rows="3"></textarea>
                         </div>
 
                         <div class="form-group notify-change-group">
@@ -205,7 +201,6 @@
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">Game Becomes Full</div>
-                                        <div class="notification-description">Get notified when all spots are taken</div>
                                     </div>
                                 </div>
                                 <div class="toggle-switch"></div>
@@ -217,7 +212,6 @@
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">Someone Cancels Their Spot</div>
-                                        <div class="notification-description">Get notified when players cancel</div>
                                     </div>
                                 </div>
                                 <div class="toggle-switch"></div>
@@ -229,7 +223,6 @@
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">Someone Joins The Game</div>
-                                        <div class="notification-description">Get notified each time a player signs up</div>
                                     </div>
                                 </div>
                                 <div class="toggle-switch"></div>
@@ -243,7 +236,6 @@
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">Only One Spot Remaining</div>
-                                        <div class="notification-description">Get notified when almost full</div>
                                     </div>
                                 </div>
                                 <div class="toggle-switch"></div>
@@ -255,7 +247,6 @@
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
                                         <div class="notification-title">Waitlist Starts</div>
-                                        <div class="notification-description">Get notified when first person is waitlisted</div>
                                     </div>
                                 </div>
                                 <div class="toggle-switch"></div>
@@ -271,7 +262,6 @@
                 <!-- Court Images: let host manage court image library -->
                 <div class="form-section court-images-section">
                     <h2 class="section-title">Court Image</h2>
-                    <p class="court-images-intro">Players see the change on the link you already sent.</p>
 
                     <div id="courtImageGallery" class="court-image-gallery">
                         <div id="courtImageList" class="court-image-list"></div>
@@ -293,7 +283,6 @@
                      the settings for this game, at the bottom, marked as the end of the road. -->
                 <div class="form-section danger-section">
                     <h2 class="section-title">Cancel Game</h2>
-                    <p class="danger-warning">Every player gets a text saying the game is off.</p>
                     <div class="form-group">
                         <label for="cancellationReason">Reason For Cancellation:</label>
                         <textarea id="cancellationReason" rows="3" placeholder="e.g. Weather conditions, court unavailable..."></textarea>
@@ -413,7 +402,6 @@
                      exactly what a host wants to do then. -->
                 <div class="form-section photos-section">
                     <h2 class="section-title">Photos</h2>
-                    <p class="photos-intro">Anyone with your game link can see these.</p>
 
                     <div id="photoGrid" class="photo-grid"></div>
                     <p id="photoEmpty" class="photos-empty">No photos yet.</p>
@@ -440,7 +428,7 @@
                     <form id="announcementForm">
                         <div class="form-group">
                             <label for="announcementText">Message:</label>
-                            <textarea id="announcementText" name="announcementText" rows="4" placeholder="Type your message to players..." required></textarea>
+                            <textarea id="announcementText" name="announcementText" rows="4" required></textarea>
                         </div>
 
                         <div class="checkbox-option">
@@ -519,7 +507,7 @@
         
         <div id="unauthorizedMessage" class="unauthorized" style="display: none;">
             <h3>Unauthorized Access</h3>
-            <p>You do not have permission to manage this game. Please check the link you used, or ask the organizer to resend it.</p>
+            <p>Check the link you used, or ask the organizer to resend it.</p>
             <a href="/" class="create-game-btn">Back To Home</a>
         </div>
     </div>

@@ -349,7 +349,7 @@ function showCreationNotice() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('created') !== '1') return;
 
-    let notice = { type: 'success', message: 'Game created. Invite your players below.' };
+    let notice = { type: 'success', message: 'Game created.' };
     try {
         const saved = sessionStorage.getItem(`gameCreationNotice:${gameId}`);
         if (saved) notice = JSON.parse(saved);
@@ -390,8 +390,7 @@ function showExpiredGameWarning(statusType) {
         const body = warningSection.querySelector('p');
         if (title) title.textContent = 'Game Cancelled';
         if (body) {
-            body.textContent = 'Your players were texted that it is off. You can still view '
-                + 'everything here, but the game can no longer be changed.';
+            body.textContent = 'Your players were texted that it is off.';
         }
     }
     warningSection.style.display = 'block';
@@ -596,20 +595,15 @@ function setupEventListeners() {
 
 
 // The player-count field means "how many others" only while the host is playing, so its label
-// has to follow the tick box rather than waiting for a save.
+// has to follow the tick box rather than waiting for a save. The label carries the whole
+// rule; no helper sentence is needed under it.
 function updateOrganizerPlayingCopy() {
     const playing = document.getElementById('organizerPlaying')?.checked === true;
     const label = document.getElementById('playersLabel');
-    const help = document.getElementById('playersHelp');
     if (label) {
         label.textContent = playing
-            ? 'Number Of Additional Players Needed:'
-            : 'Number Of Players Needed:';
-    }
-    if (help) {
-        help.textContent = playing
-            ? 'You are already Player 1. Enter only the number of other players you need.'
-            : 'Enter the total number of players you need. No organizer will be added.';
+            ? 'Players Needed (Besides You):'
+            : 'Total Players Needed:';
     }
 }
 
@@ -1015,7 +1009,7 @@ async function copyPlayerLinkOnly() {
     } catch (error) {
         console.error('Could not copy the player link:', error);
         field.select();
-        showStatus('Could not copy automatically. The link is selected, so copy it by hand.', 'error');
+        showStatus('Could not copy. The text is selected, so copy it by hand.', 'error');
     }
 }
 
@@ -1059,35 +1053,6 @@ function populateShareLinks() {
         shareButton.disabled = !canShare;
     }
 
-    // Only the line under the copy button changes. This used to write into the section's first
-    // paragraph by position, which silently overwrote whatever copy the page actually had.
-    const note = shareSection.querySelector('.center-copy-section .save-suggestion');
-    if (!note) return;
-    note.textContent = shouldDisable
-        ? (gameData.cancelled
-            ? 'This game has been cancelled. Invitations can no longer be shared.'
-            : 'This game has ended. Invitations can no longer be shared.')
-        : (canShare
-            ? 'Anyone you tick above is recorded as invited when you share or copy.'
-            : 'Anyone you tick above is recorded as invited when you copy.');
-    updateInviteNoteVisibility();
-}
-
-// Nothing to tick means nothing to explain. The note is only true once the roster has
-// checkboxes in it, and a host with an empty roster should not be told about a rule
-// they cannot yet trigger.
-function updateInviteNoteVisibility() {
-    const note = document.querySelector('.share-section .center-copy-section .save-suggestion');
-    if (!note) return;
-
-    // A cancelled or ended game replaces this line with its own explanation, which always applies.
-    if (GameUtils.getGameStatus(gameData || {}).canEdit === false) {
-        note.hidden = false;
-        return;
-    }
-    note.hidden = document.querySelectorAll(
-        '#intendedInviteeList .roster-player-checkbox'
-    ).length === 0;
 }
 
 
@@ -1166,7 +1131,7 @@ function fallbackCopyMessage(text) {
         
     } catch (err) {
         console.error('Failed to copy text: ', err);
-        showStatus('Could not copy to clipboard. Select the message and copy it manually.', 'error');
+        showStatus('Could not copy. The text is selected, so copy it by hand.', 'error');
     }
     
     document.body.removeChild(textArea);

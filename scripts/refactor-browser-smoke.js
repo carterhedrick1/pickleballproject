@@ -290,7 +290,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     assert(
       createLanding.path === '/manage.html' && createLanding.tab === 'Invite' &&
         createLanding.heading === 'Game Management' && createLanding.inviteActive &&
-        createLanding.status === 'Game created. Invite your players below.' &&
+        createLanding.status === 'Game created.' &&
         createLanding.hasCopyInvitation,
       'successful creation lands directly on the Game Management Invite tab'
     );
@@ -404,7 +404,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         locationOnly: !document.getElementById('court' + 'Number') &&
           !document.body.innerText.includes(['Court', 'Number'].join(' ')),
         additionalPlayers: document.getElementById('players').value,
-        additionalPlayersHelp: document.getElementById('playersHelp').textContent,
+        playersLabel: document.getElementById('playersLabel').textContent,
         personalityControlGone: !document.getElementById('personalityId'),
         intendedInviteeChoices: document.querySelectorAll(
           '#intendedInviteeList .roster-player-checkbox'
@@ -413,8 +413,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         // the same honesty per person, where it can name who it applies to.
         inviteeExplainerGone: !document.querySelector('#intendedInviteesTitle + p'),
         inviteScoreboard: document.getElementById('inviteSummary')?.textContent,
-        imageUpdateCopy: document.querySelector('.court-images-intro')?.textContent
-          .includes('link you already sent'),
+        imageUpdateCopyGone: !document.querySelector('.court-images-intro'),
         manualPlayerSamplesRemoved:
           !document.getElementById('playerName').hasAttribute('placeholder') &&
           !document.getElementById('playerPhone').hasAttribute('placeholder'),
@@ -427,7 +426,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     assert(manageReady.locationOnly, 'management details use location without a separate court field');
     assert(
       manageReady.additionalPlayers === '5' &&
-        manageReady.additionalPlayersHelp.includes('Player 1'),
+        manageReady.playersLabel.includes('Besides You'),
       'management shows five additional players for a six-player game with the host playing'
     );
     assert(
@@ -439,8 +438,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         manageReady.inviteScoreboard === 'Nobody has been invited yet.',
       'management offers no personality choice and offers the roster to invite without an explainer paragraph'
     );
-    assert(manageReady.imageUpdateCopy,
-      'court image copy explains that the existing player link updates automatically');
+    assert(manageReady.imageUpdateCopyGone,
+      'court image section carries no explainer paragraph');
     assert(
       manageReady.manualPlayerSamplesRemoved,
       'manual player name and phone fields have no pre-populated sample text'
@@ -509,12 +508,12 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     })()`);
     assert(
       organizerSeat.before.checked &&
-        organizerSeat.before.label === 'Number Of Additional Players Needed:',
+        organizerSeat.before.label === 'Players Needed (Besides You):',
       'the host can see and change whether they are playing in their own game'
     );
     assert(
-      organizerSeat.afterLabel === 'Number Of Players Needed:' &&
-        organizerSeat.restoredLabel === 'Number Of Additional Players Needed:',
+      organizerSeat.afterLabel === 'Total Players Needed:' &&
+        organizerSeat.restoredLabel === 'Players Needed (Besides You):',
       'the player-count label follows the playing toggle before anything is saved'
     );
     assert(
