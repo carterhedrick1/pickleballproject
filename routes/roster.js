@@ -44,8 +44,10 @@ module.exports = function mountRosterRoutes(app) {
       const hostPhone = formatPhoneNumber(req.params.phone);
       const playerPhone = formatPhoneNumber(req.params.playerPhone);
 
-      if (!hostPhone || !playerPhone) {
-        return res.status(400).json({ error: 'A host phone number and a player phone number are required' });
+      // A number that is not exactly 10 digits can never be texted, and the send path
+      // silently drops it - so refuse to store one instead of creating a ghost entry.
+      if (hostPhone.length !== 10 || playerPhone.length !== 10) {
+        return res.status(400).json({ error: 'Phone numbers need all 10 digits' });
       }
 
       const { name, duprId, duprRating } = req.body || {};
