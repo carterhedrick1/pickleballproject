@@ -102,6 +102,7 @@
                     // Display game details
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('details').style.display = 'block';
+                    fillRealistLine('detailsRealistLine', 'game-details');
                     
                     // Show status warning only if game is expired or cancelled; hide it when active
                     const warningSection = document.getElementById('gameStatusWarning');
@@ -695,6 +696,23 @@
                 return statusReady.then(applyIdentityView);
             }
 
+            // A Realist one-liner from the same rotation that seasons the texts.
+            // Fail-silent: an empty line beats an error on a player-facing page.
+            function fillRealistLine(elementId, surfaceId, transform) {
+                const line = document.getElementById(elementId);
+                if (!line) return;
+                fetch(`/api/random-message?surface=${surfaceId}&gameId=${encodeURIComponent(gameId)}`)
+                    .then((response) => (response.ok ? response.json() : null))
+                    .then((data) => {
+                        let text = data && data.text ? String(data.text).trim() : '';
+                        if (transform) text = transform(text);
+                        if (!text) return;
+                        line.textContent = text;
+                        line.style.display = 'block';
+                    })
+                    .catch(() => {});
+            }
+
             // FIXED showConfirmation function for public/game.html
             function showConfirmation(data) {
                 // Hide other sections
@@ -707,7 +725,11 @@
                 // Show confirmation section
                 const confirmationSection = document.getElementById('confirmationSection');
                 confirmationSection.style.display = 'block';
-                
+
+                // The Realist line only fits a held spot; hide it for out/waitlist outcomes.
+                const realistLine = document.getElementById('confirmationRealistLine');
+                if (realistLine) realistLine.style.display = 'none';
+
                 const confirmTitle = document.getElementById('confirmationTitle');
                 const confirmMessage = document.getElementById('confirmationMessage');
                 const confirmStatus = document.getElementById('confirmStatus');
@@ -764,6 +786,9 @@
                         ? `Your spot is held. The details are on their way by text, and a reminder before the game so you can't claim you forgot.`
                         : `Your spot is held. The details are on their way by text.`;
                     confirmStatus.textContent = `Player ${data.position} of ${data.totalPlayers}`;
+                    // The "You're IN." prefix would repeat the title directly above it.
+                    fillRealistLine('confirmationRealistLine', 'youre-in',
+                        (text) => text.replace(/^You'?re IN[.!]?\s*/i, ''));
                 } else if (data.status === 'waitlist') {
                     // Waitlisted player
                     confirmationSection.classList.add('waitlist');

@@ -5,7 +5,8 @@ const {
   validatePersonalityUpdate,
   validateMessage,
   validateCodexPromptUpdate,
-  saveCodexPromptUpdate
+  saveCodexPromptUpdate,
+  PUBLIC_RANDOM_MESSAGE_SURFACES
 } = require('../routes/message-randomizer');
 const {
   DEFAULT_CODEX_PROMPT_SECTIONS,
@@ -28,6 +29,18 @@ test('validates configurable ratios and surface overrides', () => {
   assert.equal(validatePersonalityUpdate({
     surfaces: { imaginary: { enabled: true } }
   }).error, 'Unknown surface: imaginary.');
+});
+
+test('the public random-message route serves exactly the on-page surfaces', () => {
+  assert.deepEqual(
+    [...PUBLIC_RANDOM_MESSAGE_SURFACES].sort(),
+    ['game-details', 'site-slogan', 'youre-in']
+  );
+  // Every public surface must be a real one, and SMS-only surfaces stay private.
+  for (const surfaceId of PUBLIC_RANDOM_MESSAGE_SURFACES) {
+    assert.ok(getMessageSurface(surfaceId), `${surfaceId} is a defined surface`);
+  }
+  assert.equal(PUBLIC_RANDOM_MESSAGE_SURFACES.has('invitation-opening'), false);
 });
 
 test('message validation protects surface tokens and status values', () => {

@@ -1246,7 +1246,8 @@ async function seedRealistAndMigrateSavedMessages() {
   const initiallyEnabledSurfaces = new Set([
     'site-slogan',
     'invitation-opening',
-    'youre-in'
+    'youre-in',
+    'game-details'
   ]);
   for (const surface of MESSAGE_SURFACES) {
     const enabled = initiallyEnabledSurfaces.has(surface.id);

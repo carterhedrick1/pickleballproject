@@ -294,6 +294,10 @@ async function validateTargetRule(database, body = {}, existing = null) {
   return { fields };
 }
 
+// Surfaces a public page may read. Everything else (SMS categories, drafts)
+// stays behind Developer authentication.
+const PUBLIC_RANDOM_MESSAGE_SURFACES = new Set(['site-slogan', 'game-details', 'youre-in']);
+
 function mountPublicRandomizerRoutes(app) {
   const database = require('../database');
 
@@ -321,8 +325,9 @@ function mountPublicRandomizerRoutes(app) {
   });
 
   app.get('/api/random-message', async (req, res) => {
-    if (req.query.surface !== 'site-slogan') {
-      return res.status(400).json({ error: 'Only the public site slogan surface is available here.' });
+    const surfaceId = String(req.query.surface || '');
+    if (!PUBLIC_RANDOM_MESSAGE_SURFACES.has(surfaceId)) {
+      return res.status(400).json({ error: 'That message surface is not available here.' });
     }
     const exclude = String(req.query.exclude || '').split(',').filter(Boolean).slice(0, 50);
     const fallbackText = String(req.query.fallback || '');
@@ -331,7 +336,7 @@ function mountPublicRandomizerRoutes(app) {
     const result = await resolveRandomizedMessage({
       database,
       personalityId: req.query.personality || game?.personalityId || null,
-      surfaceId: 'site-slogan',
+      surfaceId,
       game,
       gameId,
       templateValues: { NAME: req.query.name || '' },
@@ -626,5 +631,6 @@ module.exports = {
   saveCodexPromptUpdate,
   validateTargetRule,
   mountPublicRandomizerRoutes,
-  mountDevRandomizerRoutes
+  mountDevRandomizerRoutes,
+  PUBLIC_RANDOM_MESSAGE_SURFACES
 };
