@@ -375,8 +375,6 @@ const GUIDE_SECTIONS = [
   ['game-modes', 'Game Modes Explained', 'First-come versus approval, side by side.'],
   ['creating-games', 'Creating Your First Game', 'Setup walkthrough for both modes.'],
   ['managing-players', 'Managing Your Game', 'Finding your management link, then running the roster.'],
-  ['sms-examples', 'Text Messages', 'Every message the app sends, by scenario.'],
-  ['player-experience', 'What Players See', 'Mock-ups of the invite page in both modes.'],
   ['tips-tricks', 'FAQs', 'Setup, management and troubleshooting questions.'],
 ];
 

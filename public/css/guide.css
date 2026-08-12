@@ -43,9 +43,8 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
-   Hero. Slogan, the three steps, the button. This is the whole product on one
-   screen, so it has to hold up on a 390px phone and on a 2560px monitor where
-   the card used to be mostly empty.
+   Hero. Slogan and the button. It has to hold up on a 390px phone and on a
+   2560px monitor where the card used to be mostly empty.
    --------------------------------------------------------------------------- */
 
 .hero {
@@ -431,116 +430,6 @@ body {
     margin: 16px 0;
 }
 
-/* SMS Flow Sections */
-.sms-flow-section {
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: 16px;
-    padding: 32px;
-    margin: 32px 0;
-    box-shadow: 0 4px 16px color-mix(in srgb, var(--ink) 6%, transparent);
-}
-
-.sms-flow-section.fcfs {
-    border-color: var(--brand);
-    background: var(--brand-soft);
-}
-
-.sms-flow-section.waitlist {
-    border-color: var(--warning);
-    background: var(--warning-soft);
-}
-
-.sms-flow-section.universal {
-    border-color: var(--brand);
-    background: var(--brand-soft);
-}
-
-.sms-flow-section.organizer {
-    border-color: var(--brand);
-    background: var(--brand-soft);
-}
-
-.flow-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid color-mix(in srgb, var(--ink) 10%, transparent);
-}
-
-.flow-icon {
-    font-size: 28px;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--surface);
-    font-weight: bold;
-}
-
-.sms-flow-section.fcfs .flow-icon {
-    background: var(--brand);
-}
-
-.sms-flow-section.waitlist .flow-icon {
-    background: var(--warning);
-}
-
-.sms-flow-section.universal .flow-icon {
-    background: var(--brand);
-}
-
-.sms-flow-section.organizer .flow-icon {
-    background: var(--brand);
-}
-
-.flow-title {
-    flex: 1;
-}
-
-.flow-title h3 {
-    margin: 0 0 4px 0;
-    font-size: 22px;
-    font-weight: 700;
-}
-
-.sms-flow-section.fcfs .flow-title h3 {
-    color: var(--brand);
-}
-
-.sms-flow-section.waitlist .flow-title h3 {
-    color: var(--warning);
-}
-
-.sms-flow-section.universal .flow-title h3 {
-    color: var(--brand);
-}
-
-.sms-flow-section.organizer .flow-title h3 {
-    color: var(--brand);
-}
-
-.flow-description {
-    margin: 0;
-    font-size: 14px;
-    opacity: 0.8;
-    color: var(--ink);
-}
-
-.flow-steps {
-    margin-top: 24px;
-}
-
-.flow-step {
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
-}
-
 /* Management Flow Sections */
 .management-flow-section {
     background: var(--surface);
@@ -705,13 +594,6 @@ body {
     color: var(--warning);
 }
 
-.mode-subtitle {
-    margin: 0;
-    font-size: 14px;
-    opacity: 0.8;
-    color: var(--ink);
-}
-
 .mode-steps {
     margin-top: 24px;
 }
@@ -802,115 +684,11 @@ body {
     color: var(--brand);
 }
 
-.creation-description {
-    margin: 0;
-    font-size: 14px;
-    opacity: 0.8;
-    color: var(--ink);
-}
-
 .creation-steps {
     margin-top: 24px;
 }
 
 .creation-step {
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
-}
-
-/* Player Experience Flow Sections */
-.player-flow-section {
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: 16px;
-    padding: 32px;
-    margin: 32px 0;
-    box-shadow: 0 4px 16px color-mix(in srgb, var(--ink) 6%, transparent);
-}
-
-.player-flow-section.fcfs-player {
-    border-color: var(--brand);
-    background: var(--brand-soft);
-}
-
-.player-flow-section.waitlist-player {
-    border-color: var(--warning);
-    background: var(--warning-soft);
-}
-
-.player-flow-section.universal-player {
-    border-color: var(--brand);
-    background: var(--brand-soft);
-}
-
-.player-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid color-mix(in srgb, var(--ink) 10%, transparent);
-}
-
-.player-icon {
-    font-size: 28px;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--surface);
-    font-weight: bold;
-}
-
-.player-flow-section.fcfs-player .player-icon {
-    background: var(--brand);
-}
-
-.player-flow-section.waitlist-player .player-icon {
-    background: var(--warning);
-}
-
-.player-flow-section.universal-player .player-icon {
-    background: var(--brand);
-}
-
-.player-title {
-    flex: 1;
-}
-
-.player-title h3 {
-    margin: 0 0 4px 0;
-    font-size: 22px;
-    font-weight: 700;
-}
-
-.player-flow-section.fcfs-player .player-title h3 {
-    color: var(--brand);
-}
-
-.player-flow-section.waitlist-player .player-title h3 {
-    color: var(--warning);
-}
-
-.player-flow-section.universal-player .player-title h3 {
-    color: var(--brand);
-}
-
-.player-description {
-    margin: 0;
-    font-size: 14px;
-    opacity: 0.8;
-    color: var(--ink);
-}
-
-.player-steps {
-    margin-top: 24px;
-}
-
-.player-step {
     margin-bottom: 24px;
     padding-bottom: 20px;
     border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
@@ -994,13 +772,6 @@ body {
 
 .faq-flow-section.troubleshooting-faq .faq-title h3 {
     color: var(--danger);
-}
-
-.faq-description {
-    margin: 0;
-    font-size: 14px;
-    opacity: 0.8;
-    color: var(--ink);
 }
 
 .faq-steps {
@@ -1210,112 +981,6 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
 }
 
-.mock-header {
-    background: var(--brand);
-    color: var(--surface);
-    padding: 20px 24px 16px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-
-.mock-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-repeat: repeat;
-    background-size: 100px 50px;
-}
-
-.mock-header h3 {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0 0 4px 0;
-    text-shadow: 0 2px 4px color-mix(in srgb, var(--ink) 30%, transparent);
-    position: relative;
-    z-index: 2;
-}
-
-.mock-header p {
-    font-size: 12px;
-    opacity: 0.9;
-    margin: 0;
-    text-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 20%, transparent);
-    position: relative;
-    z-index: 2;
-}
-
-.mock-content {
-    padding: 24px;
-}
-
-.mock-game-info {
-    background: var(--canvas);
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    border: 1px solid var(--border);
-}
-
-.mock-detail-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    padding: 6px 0;
-    border-bottom: 1px solid var(--canvas);
-}
-
-.mock-detail-row:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-}
-
-.mock-detail-label {
-    font-weight: 600;
-    color: var(--ink);
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.mock-detail-value {
-    color: var(--ink);
-    font-weight: 500;
-    font-size: 14px;
-    text-align: right;
-}
-
-.mock-players-section {
-    margin: 20px 0;
-}
-
-.mock-section-title {
-    color: var(--brand);
-    font-size: 18px;
-    font-weight: 700;
-    margin: 0 0 16px 0;
-    padding-bottom: 8px;
-    border-bottom: 3px solid var(--brand);
-    display: inline-block;
-}
-
-.mock-spots-available {
-    background: var(--brand);
-    color: var(--surface);
-    padding: 16px 20px;
-    border-radius: 12px;
-    text-align: center;
-    font-weight: 600;
-    margin-bottom: 16px;
-    font-size: 16px;
-    box-shadow: 0 4px 16px color-mix(in srgb, var(--brand) 30%, transparent);
-}
-
 .mock-spots-full {
     background: var(--warning);
     color: var(--surface);
@@ -1326,134 +991,6 @@ body {
     margin-bottom: 16px;
     font-size: 16px;
     box-shadow: 0 4px 16px color-mix(in srgb, var(--warning) 30%, transparent);
-}
-
-.mock-player-list {
-    background: var(--surface);
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 20px;
-    border: 1px solid var(--border);
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 5%, transparent);
-}
-
-.mock-player-list ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.mock-player-list li {
-    padding: 10px 0;
-    border-bottom: 1px solid var(--canvas);
-    color: var(--ink);
-    font-weight: 500;
-    font-size: 14px;
-}
-
-.mock-player-list li:last-child {
-    border-bottom: none;
-}
-
-.mock-join-section {
-    background: var(--surface);
-    padding: 20px;
-    border-radius: 12px;
-    margin-top: 20px;
-    border: 1px solid var(--border);
-}
-
-.mock-join-title {
-    color: var(--brand);
-    font-size: 18px;
-    font-weight: 700;
-    margin: 0 0 16px 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.mock-form-group {
-    margin-bottom: 16px;
-}
-
-.mock-form-group label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 600;
-    color: var(--ink);
-    font-size: 14px;
-}
-
-.mock-form-group input {
-    width: 100%;
-    padding: 12px 14px;
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    font-size: 14px;
-    box-sizing: border-box;
-    font-family: inherit;
-}
-
-.mock-button-group {
-    display: flex;
-    gap: 12px;
-    margin-top: 16px;
-    align-items: center;
-    background: var(--surface);
-    padding: 16px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-}
-
-.mock-button {
-    background: var(--brand);
-    color: var(--surface);
-    padding: 12px 20px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    flex: 1;
-    text-align: center;
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 30%, transparent);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.mock-button.secondary {
-    background: var(--surface);
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--ink) 30%, transparent);
-}
-
-.mock-button.danger {
-    background: var(--danger);
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--danger) 30%, transparent);
-}
-
-/* Waitlist mode notice */
-.waitlist-mode-notice {
-    background: var(--warning-soft);
-    border: 2px solid var(--warning);
-    border-radius: 12px;
-    padding: 16px;
-    margin: 16px 0;
-    text-align: center;
-}
-
-.waitlist-mode-notice h4 {
-    color: var(--warning);
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0 0 8px 0;
-}
-
-.waitlist-mode-notice p {
-    color: var(--warning);
-    font-size: 14px;
-    margin: 4px 0;
-    line-height: 1.4;
 }
 
 /* Highlight boxes */
@@ -1617,20 +1154,6 @@ body {
 
     .mock-interface {
         max-width: 100%;
-    }
-
-    .mock-content {
-        padding: 16px;
-    }
-
-    .mock-game-info {
-        padding: 16px;
-        margin-bottom: 16px;
-    }
-
-    .mock-join-section {
-        padding: 16px;
-        margin-top: 16px;
     }
 
     /* Mobile step list adjustments */
