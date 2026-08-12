@@ -534,7 +534,7 @@ function buildScreens(fx) {
 
     { file: 'roster-list', of: '/roster.html', size: 'narrow', url: '/roster.html',
       title: 'Everyone you play with',
-      note: 'Built automatically from who has signed up for the host\'s games. Names and DUPR details are the host\'s own and players never see them.',
+      note: 'Built automatically from who has signed up for the host\'s games. Names the host enters are their own and players never see them.',
       act: seedHostPhone(fx) },
 
     { file: 'stats-dashboard', of: '/stats.html', size: 'narrow', url: '/stats.html',
@@ -610,7 +610,7 @@ const GROUPS = [
   { of: '/my-games.html', who: 'Organizers', lane: 'In the nav',
     blurb: 'Asks for a phone number once, then loads that host’s whole history from the server — so it works on any device, not just the one the game was created on.' },
   { of: '/roster.html', who: 'Organizers', lane: 'In the nav',
-    blurb: 'Everyone who has ever signed up for one of this host’s games, built without anybody typing a list. The host can add names and DUPR details on top.' },
+    blurb: 'Everyone who has ever signed up for one of this host’s games, built without anybody typing a list. The host can add names on top.' },
   { of: '/stats.html', who: 'Organizers', lane: 'Linked from My Games',
     blurb: 'The patterns behind the games: who turns up, who waits, who drops out, and where and when this group actually plays.' },
   { of: '/dev.html', who: 'Developer', lane: 'Password protected',

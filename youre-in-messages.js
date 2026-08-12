@@ -17,7 +17,6 @@ const DEFAULT_MESSAGES = Object.freeze([
   "You're IN. Supply met demand. Do the math.",
   "You're IN. You're here because you're here.",
   "You're IN. Your thumbs performed admirably.",
-  "You're IN. You've been flagged for a surprise DUPR audit.",
   "You're IN. A background check was run, and we're choosing to overlook it.",
   "You're IN. Somebody immediately checked who else is playing.",
   "You're IN. Somewhere, a waitlist is coping."

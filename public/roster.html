@@ -72,7 +72,7 @@
         </div>
 
         <div class="footer-note">
-            Names and DUPR details you enter here are yours &mdash; players never see or edit them.
+            Names you enter here are yours &mdash; players never see or edit them.
         </div>
     </div>
 
@@ -206,25 +206,6 @@
             nameInput.placeholder = 'Their name';
             nameLabel.appendChild(nameInput);
 
-            const idLabel = document.createElement('label');
-            idLabel.textContent = 'DUPR ID (Optional)';
-            const idInput = document.createElement('input');
-            idInput.type = 'text';
-            idInput.value = player.duprId || '';
-            idInput.placeholder = 'e.g. ABC123';
-            idLabel.appendChild(idInput);
-
-            const ratingLabel = document.createElement('label');
-            ratingLabel.textContent = 'DUPR Rating (Optional)';
-            const ratingInput = document.createElement('input');
-            ratingInput.type = 'number';
-            ratingInput.step = '0.01';
-            ratingInput.min = '0';
-            ratingInput.max = '10';
-            ratingInput.value = player.duprRating == null ? '' : player.duprRating;
-            ratingInput.placeholder = 'e.g. 3.75';
-            ratingLabel.appendChild(ratingInput);
-
             const phone = document.createElement('div');
             phone.className = 'roster-phone';
             phone.textContent = prettyPhone(player.phone);
@@ -246,7 +227,7 @@
             const status = document.createElement('div');
             status.className = 'row-status';
 
-            row.append(nameLabel, idLabel, ratingLabel, phone, meta, actions, status);
+            row.append(nameLabel, phone, meta, actions, status);
 
             save.addEventListener('click', async () => {
                 status.style.color = 'var(--text-muted)';
@@ -259,8 +240,10 @@
                         headers: HostVerification.authHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify({
                             name: nameInput.value,
-                            duprId: idInput.value,
-                            duprRating: ratingInput.value
+                            // DUPR is hidden from the page for now, but the stored values must
+                            // ride along on every save or the server would blank them.
+                            duprId: player.duprId || '',
+                            duprRating: player.duprRating == null ? '' : player.duprRating
                         })
                     });
                     const data = await response.json().catch(() => ({}));

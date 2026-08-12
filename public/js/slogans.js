@@ -20,7 +20,6 @@
     'Commitment issues are not a calendar problem.',
     'You\'re not busy. You\'re indecisive.',
     'Two buttons. Pick one.',
-    'Quick responses will improve your DUPR Rating.',
     'Availability beats ability. Ask {NAME}.',
     'You found time to research a $280 paddle. Find 4 seconds to respond.',
     'You had time to read this. Find a second to respond.',

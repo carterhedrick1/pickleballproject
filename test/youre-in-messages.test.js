@@ -4,13 +4,13 @@ const assert = require('node:assert/strict');
 const youreInMessages = require('../youre-in-messages');
 
 test("ships the requested You're In rotation", () => {
-  assert.equal(youreInMessages.DEFAULT_MESSAGES.length, 22);
+  assert.equal(youreInMessages.DEFAULT_MESSAGES.length, 21);
   assert.equal(
     youreInMessages.DEFAULT_MESSAGES[0],
     "You're IN. The others have been warned."
   );
   assert.equal(
-    youreInMessages.DEFAULT_MESSAGES[21],
+    youreInMessages.DEFAULT_MESSAGES[20],
     "You're IN. Somewhere, a waitlist is coping."
   );
 });
@@ -38,7 +38,7 @@ test("normalizes editable You're In texts and falls back when empty", () => {
   );
   assert.equal(
     youreInMessages.normalizeConfig({ messages: [] }).messages.length,
-    22
+    21
   );
 });
 

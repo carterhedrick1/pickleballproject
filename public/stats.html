@@ -56,10 +56,6 @@
                 <h3 class="section-subtitle">Where And When</h3>
                 <div class="stat-grid" id="scheduleCards"></div>
 
-                <h3 class="section-subtitle">DUPR</h3>
-                <div class="stat-grid" id="duprCards"></div>
-                <p class="muted" id="duprNote"></p>
-
                 <div id="notesBlock"></div>
 
                 <p class="muted" style="margin-top: 24px;">
@@ -152,7 +148,7 @@
         }
 
         function render(stats) {
-            const { summary, fillRate, players, schedule, dupr, signupSpeed, notes } = stats;
+            const { summary, fillRate, players, schedule, signupSpeed, notes } = stats;
             const invitations = stats.invitations || { gamesCounted: 0, quiet: [] };
 
             document.getElementById('whichPhone').textContent = prettyPhone(stats.phoneNumber);
@@ -219,17 +215,6 @@
                 statCard(esc(schedule.favoriteDay?.name || '--'), 'Usual Day'),
                 statCard(prettyTime(schedule.favoriteTime?.name), 'Usual Start Time')
             ].join('');
-
-            document.getElementById('duprCards').innerHTML = [
-                statCard(dupr.ratedPlayers, 'Players With A Rating'),
-                statCard(dupr.min ?? '--', 'Lowest'),
-                statCard(dupr.average ?? '--', 'Average'),
-                statCard(dupr.max ?? '--', 'Highest')
-            ].join('');
-
-            document.getElementById('duprNote').textContent = dupr.ratedPlayers
-                ? 'Based on the ratings you have entered on your roster.'
-                : 'Add DUPR ratings on your Roster page and they will show up here.';
 
             // The caveats are shown, not hidden - a stat you cannot trust is worse than no stat.
             document.getElementById('notesBlock').innerHTML = (notes || [])

@@ -90,7 +90,6 @@
         );
 
         const metadata = [prettyPhone(player.phone || '')];
-        if (player.duprRating != null) metadata.push(`DUPR ${player.duprRating}`);
         metadata.push(...meta);
         details.appendChild(
             element(document, 'span', 'roster-player-meta', metadata.filter(Boolean).join(' · '))

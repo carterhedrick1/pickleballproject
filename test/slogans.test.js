@@ -4,14 +4,14 @@ const assert = require('node:assert/strict');
 const slogans = require('../public/js/slogans');
 
 test('ships the requested slogan and name rotation', () => {
-  assert.equal(slogans.DEFAULT_SLOGANS.length, 19);
+  assert.equal(slogans.DEFAULT_SLOGANS.length, 18);
   assert.deepEqual(slogans.DEFAULT_NAMES, ['Scott', 'Mike', 'Brett', 'Zac']);
   assert.equal(
-    slogans.DEFAULT_SLOGANS[15],
+    slogans.DEFAULT_SLOGANS[14],
     'Availability beats ability. Ask {NAME}.'
   );
   assert.equal(
-    slogans.DEFAULT_SLOGANS[18],
+    slogans.DEFAULT_SLOGANS[17],
     'Ignore this and you will be paddle-stacking at The Y next time.'
   );
 });
