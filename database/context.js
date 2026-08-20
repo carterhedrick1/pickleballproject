@@ -6,11 +6,33 @@ let db, pool;
 
 console.log(`Environment: ${isProduction ? 'Production (PostgreSQL)' : 'Local (SQLite)'}`);
 
+// Render's PostgreSQL requires TLS and presents a certificate the app does not pin, which
+// is why production connects with rejectUnauthorized: false. A PostgreSQL started for the
+// parity suite (npm run test:pg) usually has no TLS at all and refuses the handshake
+// outright, so the local case has to be able to say so.
+//
+// Explicit sslmode in the URL always wins; otherwise a loopback host means no TLS and
+// anything else - every real deployment - keeps it.
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+
+function postgresSslOption(connectionString) {
+  const secure = { rejectUnauthorized: false };
+  let parsed;
+  try {
+    parsed = new URL(connectionString);
+  } catch {
+    return secure;
+  }
+  const sslmode = parsed.searchParams.get('sslmode');
+  if (sslmode) return sslmode === 'disable' ? false : secure;
+  return LOOPBACK_HOSTS.has(parsed.hostname) ? false : secure;
+}
+
 if (isProduction) {
   const { Pool } = require('pg');
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: postgresSslOption(process.env.DATABASE_URL)
   });
   console.log('Using PostgreSQL for production');
 } else {
@@ -106,6 +128,7 @@ function closeDatabaseConnection() {
 
 module.exports = {
   isProduction,
+  postgresSslOption,
   pool,
   db,
   withPgClient,

@@ -1,4 +1,4 @@
-const { getGame, saveGame } = require('../database');
+const { updateGame } = require('../database');
 const { acquireGameLock } = require('../utils/game-lock');
 const { isHost } = require('../utils/host-auth');
 const { joinRejection } = require('../domain/join-policy');
@@ -10,61 +10,52 @@ const {
   promotePlayer
 } = require('../domain/player-transitions');
 
+/**
+ * Every roster change goes through here: load the game, decide, mutate, save.
+ *
+ * Two layers keep a change from being lost. The in-process lock queues requests for the
+ * same game behind each other, and updateGame() compares versions at the database, which is
+ * what protects a game from a second app instance. When the version check refuses a write,
+ * the whole body below runs again on the newer game - so a signup that raced with another
+ * signup is re-decided against the roster as it now stands, and can correctly come back as
+ * waitlisted rather than confirmed.
+ */
 async function runTransition(
   gameId,
   transition,
   args,
   { token, hostOnly = false, publicSignup = false } = {}
 ) {
+  const declined = (game, status) => ({
+    save: false,
+    result: {
+      game,
+      player: null,
+      previousStatus: null,
+      status,
+      promotedPlayer: null,
+      outEntry: null,
+      changed: false
+    }
+  });
+
   const releaseLock = await acquireGameLock(gameId);
   try {
-    const game = await getGame(gameId);
-    if (!game) {
-      return {
-        game: null,
-        player: null,
-        previousStatus: null,
-        status: 'game_not_found',
-        promotedPlayer: null,
-        outEntry: null,
-        changed: false
-      };
-    }
+    return await updateGame(gameId, (game) => {
+      if (!game) return declined(null, 'game_not_found');
 
-    // Definitive signup policy, enforced here inside the lock rather than in the browser:
-    // a direct API call must not be able to join a cancelled or finished game.
-    if (publicSignup) {
-      const blocked = joinRejection(game);
-      if (blocked) {
-        return {
-          game,
-          player: null,
-          previousStatus: null,
-          status: blocked,
-          promotedPlayer: null,
-          outEntry: null,
-          changed: false
-        };
+      // Definitive signup policy, enforced here inside the lock rather than in the browser:
+      // a direct API call must not be able to join a cancelled or finished game.
+      if (publicSignup) {
+        const blocked = joinRejection(game);
+        if (blocked) return declined(game, blocked);
       }
-    }
 
-    if (hostOnly && !isHost(game, token)) {
-      return {
-        game,
-        player: null,
-        previousStatus: null,
-        status: 'unauthorized',
-        promotedPlayer: null,
-        outEntry: null,
-        changed: false
-      };
-    }
+      if (hostOnly && !isHost(game, token)) return declined(game, 'unauthorized');
 
-    const result = transition(game, ...args);
-    if (result.changed) {
-      await saveGame(gameId, game, game.hostToken, game.hostPhone);
-    }
-    return result;
+      const result = transition(game, ...args);
+      return { save: Boolean(result.changed), result };
+    });
   } finally {
     releaseLock();
   }

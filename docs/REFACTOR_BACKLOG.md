@@ -43,26 +43,60 @@ files before starting. Work top to bottom unless something breaks in production 
   fields - console lines with stable prefixes are still how this app logs, and swapping
   that wholesale is low-value churn until something consumes structured logs.
 
+- **Explicit migrations instead of runtime schema creation** (was P2 item 4) - done
+  2026-08-20. `database/migrations/` holds the ordered list (`001-baseline-schema`,
+  `002-game-version`); `database/migration-runner.js` runs whatever is not yet recorded in
+  `schema_migrations`, one transaction per migration, and refuses a list with duplicate or
+  out-of-order ids. It takes a connection rather than reaching for the app's own, which is
+  what lets the tests migrate throwaway databases. PostgreSQL runs hold a session advisory
+  lock so two Render instances cannot migrate at once; SQLite uses BEGIN IMMEDIATE for the
+  same reason. `database/schema.js` is now three named stages (migrate, reference seeds,
+  message seeds) and `database/seeds.js` owns the seed courts, the retired-court repair and
+  `locationKey`/`isRetiredLocation`. Conditional column adds ask the catalog
+  (`addColumnIfMissing`) instead of catching "already exists" strings, which differ per
+  engine. Verified: a fresh database, a rerun, a database built from the pre-migration DDL,
+  a copy of the real 87-game local SQLite file, and - on real PostgreSQL 16 - a replica of
+  production's schema with rows in it (`test-pg/production-upgrade.test.js`). A schema diff
+  against live production confirmed the migrations reproduce production exactly, the only
+  differences being the two intended additions.
+
+- **Database-backed concurrency for game writes** (was P2 item 6) - done 2026-08-20.
+  `games.version` is a compare-and-swap token: `getGame` tags the game with the version it
+  was read at, and `saveGame` only writes when the stored version still matches, so no
+  call site had to change to become safe. `updateGame(gameId, apply)` adds the retry loop -
+  on a conflict it re-reads and re-applies - and `services/player-service.js` runs every
+  roster transition through it, so a signup that races another signup is re-decided against
+  the newer roster rather than overwriting it. `database/dev-rosters.js` bulk edits move the
+  version too. A refused write reaches a person as 409 with "This game just changed
+  somewhere else", never a 500 (`utils/route-error.js`). Proof:
+  `test/game-version-concurrency.test.js` (7 cases, deliberately bypassing the in-memory
+  lock) and the same expectations on PostgreSQL in `test/support/persistence-cases.js`.
+  Deliberately NOT done: the `game_participants` index table. The phone-based scans are
+  still fine at dozens of games, and it is a separate change with its own migration - see
+  the note left under item 5 below.
+
+- **PostgreSQL parity testing** (was P2 item 5) - done 2026-08-20. `npm run test:pg` runs
+  `test-pg/` against a disposable database named in `TEST_DATABASE_URL`; `npm test` and the
+  deployment gate do not know it exists. `scripts/run-postgres-tests.js` refuses a URL that
+  matches any other `*DATABASE_URL` in the environment (production included) or whose
+  database name does not look disposable, and prints the target before running.
+  `test/support/persistence-cases.js` holds the shared expectations - JSON round-trips,
+  BYTEA/BLOB photos, the delete transaction, reminder_log's primary key, and the whole
+  compare-and-swap story - and both `test/persistence-parity.test.js` (SQLite, in the gate)
+  and `test-pg/persistence-parity.test.js` run them. Verified against real PostgreSQL 16:
+  12 cases green. It immediately earned its keep - `database/context.js` forced
+  `ssl: rejectUnauthorized:false` on every connection, which Render needs and a local
+  PostgreSQL refuses outright; SSL is now chosen from the URL (explicit `sslmode` wins, then
+  loopback means no TLS, everything else keeps it).
+
 ## P2. Persistence and concurrency
 
-### 4. Explicit migrations instead of runtime schema creation
-`database/schema.js` mixes PostgreSQL and SQLite DDL, conditional ALTERs, cleanup, and
-seeds. Introduce an ordered, idempotent migration list with a `schema_migrations` table,
-separating schema / reference seeds / message seeds / one-time repairs. Must preserve
-production data; test against a fresh DB and a copy of the current production schema.
-
-### 5. PostgreSQL parity testing
-The unit suite is SQLite-only while production is PostgreSQL. Add an opt-in integration
-path (disposable database or container) for persistence, transactions, JSON handling and
-constraints. Do not make `npm test` depend on it.
-
-### 6. Database-backed concurrency for game writes
-`saveGame` rewrites the whole game JSON blob and the in-memory lock
-(`utils/game-lock.js`) only protects one process. Before the app can ever run two
-instances, add optimistic concurrency (a `version` column with compare-and-swap) or
-row-level locking in PostgreSQL. Add a concurrency test proving overlapping mutations
-cannot lose roster changes. Consider an incremental `game_participants` index table for
-the phone-based scans the SMS webhook does today.
+### 5. A `game_participants` index table (carried over)
+The SMS webhook still finds a caller's games by scanning every game's JSON in JavaScript
+(`services/sms-game-lookup.js`). Fine at dozens of games, wrong at thousands. When it stops
+being fine: add an incremental index table as migration `003`, keep it in step inside
+`saveGame`'s compare-and-swap write, and move the lookups to SQL. Both engines now have a
+migration path for it, and the parity suite is where the SQL would be proven.
 
 - **Decompose `services/sms-webhook.js`** (was P3 item 7) - done 2026-08-20 for the
   structural part. `services/sms-command-parser.js` classifies replies (unit-tested,
@@ -136,8 +170,11 @@ concurrent signup/capacity/mixed races and the signed reply-9 cancellation flow
 (`test/reminder-idempotency.test.js`). The local SQLite connection now sets a 5s busy
 timeout so parallel test workers and rigs sharing the file wait instead of failing.
 Still hand-run: the promotion-modes rig and the SMS-failure UI rigs (both slower,
-multi-server scenarios), and PostgreSQL persistence parity, which is its own item 5.
-The original verify rigs remain for interactive debugging.
+multi-server scenarios), and the PostgreSQL parity suite (`npm run test:pg`), which needs a
+disposable database the gate cannot assume exists. Run it before shipping anything that
+touches persistence. The original verify rigs remain for interactive debugging;
+`verify/user-flow.js` now derives its game date and its idempotency key instead of
+hardcoding them, so it neither expires nor blocks its own second run.
 
 ### 16. sqlite3 6.x major upgrade
 The 7 remaining `npm audit --omit=dev` advisories (1 critical) are all in sqlite3 5.x's
