@@ -6,7 +6,7 @@ const {
 // Resolve through the compatibility facade so the existing verification seam can replace
 // sendSMS before game-logic loads without ever contacting Textbelt.
 const smsHandler = require('../sms-handler');
-const { formatDateForSMS, formatTimeForSMS, formatLocationForSMS } = require('../utils/sms-format');
+const { formatDateForSMS, formatTimeForSMS, formatLocationForSMS, maskPhone } = require('../utils/sms-format');
 const { getCentralTimeNow, isGameUpcoming } = require('../utils/central-time');
 const { resolveTextMessage } = require('./text-message-rotation');
 const { appendCustomReplyInstructions } = require('../sms-reply-options');
@@ -158,7 +158,7 @@ async function checkAndSendReminders() {
 
             if (joinedTooRecentlyForReminder(player)) {
               if (DEBUG) {
-                console.log(`[REMINDER] ${player.phone} signed up within the last ${RECENT_SIGNUP_QUIET_HOURS}h; holding their reminder`);
+                console.log(`[REMINDER] ${maskPhone(player.phone)} signed up within the last ${RECENT_SIGNUP_QUIET_HOURS}h; holding their reminder`);
               }
               // Left outstanding on purpose: the game must not be cached as finished, so this
               // player is reconsidered once the quiet window passes.
@@ -180,7 +180,7 @@ async function checkAndSendReminders() {
                 kind.type
               );
             } catch (error) {
-              console.error(`[REMINDER] Could not check reminder status for ${player.phone}, skipping:`, error.message);
+              console.error(`[REMINDER] Could not check reminder status for ${maskPhone(player.phone)}, skipping:`, error.message);
               outstanding++;
               continue;
             }
@@ -225,12 +225,12 @@ async function checkAndSendReminders() {
               try {
                 await markReminderSent(gameId, player.phone, kind.type);
               } catch (error) {
-                console.error(`[REMINDER] Sent reminder to ${player.phone} but failed to log it:`, error.message);
+                console.error(`[REMINDER] Sent reminder to ${maskPhone(player.phone)} but failed to log it:`, error.message);
               }
             } else if (priorAttempts + 1 >= MAX_SEND_ATTEMPTS) {
-              console.error(`[REMINDER] Giving up on ${player.phone} for game ${gameId} after ${MAX_SEND_ATTEMPTS} attempts:`, smsResult.error);
+              console.error(`[REMINDER] Giving up on ${maskPhone(player.phone)} for game ${gameId} after ${MAX_SEND_ATTEMPTS} attempts:`, smsResult.error);
             } else {
-              console.error(`[REMINDER] Failed to send reminder to ${player.phone}, will retry:`, smsResult.error);
+              console.error(`[REMINDER] Failed to send reminder to ${maskPhone(player.phone)}, will retry:`, smsResult.error);
               outstanding++;
             }
           }

@@ -32,15 +32,16 @@ files before starting. Work top to bottom unless something breaks in production 
   client in the management-frontend item below; SMS links themselves still carry the
   token by design (they are the key).
 
-## P1. Architecture and testability
-
-### 3. Structured, redacted logging
-The request logger prints full URLs; several paths still print full phone numbers and
-request bodies (`[SMS DEBUG]` lines in `services/sms-webhook.js`, game-creation logging in
-`routes/games.js`, reminder debug output). The webhook entry log now masks to last-4 -
-apply the same standard everywhere via a small logging helper with consistent fields
-(gameId, eventId, status) and a DEBUG gate. The 500 handler already returns a generic
-message; keep it that way.
+- **Redacted logging** (was P1 item 3) - done 2026-08-20 for the personal-data part.
+  `maskPhone` in `utils/sms-format.js` is the one allowed log form (`***4567`); every
+  phone-bearing log line in `services/sms-client.js`, `services/reminders.js`,
+  `services/sms-webhook.js`, `database/messaging-reminders.js`, `routes/games.js` and
+  `routes/players.js` uses it, the `[SMS DEBUG]` scan-noise lines are DEBUG-gated, and
+  the create/update routes log field names instead of request bodies. Verified by
+  driving the SMS cancel rig and grepping the server log for full numbers (zero).
+  Deliberately NOT done: a structured logging library/abstraction with consistent
+  fields - console lines with stable prefixes are still how this app logs, and swapping
+  that wholesale is low-value churn until something consumes structured logs.
 
 ## P2. Persistence and concurrency
 

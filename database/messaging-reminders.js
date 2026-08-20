@@ -1,4 +1,5 @@
 const { isProduction, withPgClient, sqliteAll, sqliteGet, sqliteRun, sqlitePrepareRun } = require('./context');
+const { maskPhone } = require('../utils/sms-format');
 
 // ---------------------------------------------------------------------------
 // SMS context functions
@@ -21,7 +22,7 @@ async function saveLastCommand(phoneNumber, context) {
         VALUES (?, ?, CURRENT_TIMESTAMP)
       `, [phoneNumber, context]);
     }
-    console.log(`[SMS Context] Saved context for ${phoneNumber}: ${context}`);
+    console.log(`[SMS Context] Saved context for ${maskPhone(phoneNumber)}: ${context}`);
   } catch (err) {
     console.error('Error saving SMS context:', err);
     throw err;
@@ -36,12 +37,12 @@ async function getLastCommand(phoneNumber) {
         return result.rows;
       });
       const context = rows.length > 0 ? rows[0].last_command : null;
-      console.log(`[SMS Context] Retrieved context for ${phoneNumber}: ${context}`);
+      console.log(`[SMS Context] Retrieved context for ${maskPhone(phoneNumber)}: ${context}`);
       return context;
     } else {
       const row = await sqliteGet('SELECT last_command FROM sms_contexts WHERE phone_number = ?', [phoneNumber]);
       const context = row ? row.last_command : null;
-      console.log(`[SMS Context] Retrieved context for ${phoneNumber}: ${context}`);
+      console.log(`[SMS Context] Retrieved context for ${maskPhone(phoneNumber)}: ${context}`);
       return context;
     }
   } catch (err) {
@@ -59,7 +60,7 @@ async function clearLastCommand(phoneNumber) {
     } else {
       await sqliteRun('DELETE FROM sms_contexts WHERE phone_number = ?', [phoneNumber]);
     }
-    console.log(`[SMS Context] Cleared context for ${phoneNumber}`);
+    console.log(`[SMS Context] Cleared context for ${maskPhone(phoneNumber)}`);
   } catch (err) {
     console.error('Error clearing SMS context:', err);
     throw err;

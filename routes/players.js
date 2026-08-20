@@ -30,6 +30,7 @@ const {
 
 const { isGameUpcoming } = require('../utils/central-time');
 const { requestHostToken } = require('../utils/host-auth');
+const { maskPhone } = require('../utils/sms-format');
 const {
   departureAlertType
 } = require('../utils/promotion');
@@ -184,7 +185,7 @@ module.exports = function mountPlayerRoutes(app) {
             ticket: textTicket
           });
           if (!smsResult.success) {
-            console.error(`[SERVER] ${playerData.name} left game ${gameId} but the confirmation text to ${playerData.phone} failed:`, smsResult.error);
+            console.error(`[SERVER] ${playerData.name} left game ${gameId} but the confirmation text to ${maskPhone(playerData.phone)} failed:`, smsResult.error);
           }
         }
 
@@ -316,7 +317,7 @@ module.exports = function mountPlayerRoutes(app) {
           ticket: joinTicket
         });
         if (!smsResult.success) {
-          console.error(`[SERVER] ${playerData.name} joined game ${gameId} but the confirmation text to ${playerData.phone} failed:`, smsResult.error);
+          console.error(`[SERVER] ${playerData.name} joined game ${gameId} but the confirmation text to ${maskPhone(playerData.phone)} failed:`, smsResult.error);
         }
       }
 
