@@ -128,12 +128,15 @@ about (extend `scripts/lib/fixtures.js`) so no mutable dashboard data can change
 outcome.
 
 ### 15. Expand the default deployment gate
-Partially done 2026-08-20: `test/app-http.test.js` now covers webhook signature
-rejection, closed-signup rejection, and host-token authorization boundaries inside
-`npm test`, so every deploy checks them. Still only hand-run: the race rigs
-(`verify:races`), SMS cancellation flow (`verify:sms`), reminder idempotency
-(`verify:reminders` and friends), and promotion modes. Convert those into fast
-integration tests next - the createApp split makes that mechanical now.
+Mostly done 2026-08-20. Inside `npm test` on every deploy: webhook signature rejection,
+closed-signup rejection, host-token authorization boundaries (`test/app-http.test.js`),
+concurrent signup/capacity/mixed races and the signed reply-9 cancellation flow
+(`test/app-http-races.test.js`), and reminder idempotency across a simulated restart
+(`test/reminder-idempotency.test.js`). The local SQLite connection now sets a 5s busy
+timeout so parallel test workers and rigs sharing the file wait instead of failing.
+Still hand-run: the promotion-modes rig and the SMS-failure UI rigs (both slower,
+multi-server scenarios), and PostgreSQL persistence parity, which is its own item 5.
+The original verify rigs remain for interactive debugging.
 
 ### 16. sqlite3 6.x major upgrade
 The 7 remaining `npm audit --omit=dev` advisories (1 critical) are all in sqlite3 5.x's

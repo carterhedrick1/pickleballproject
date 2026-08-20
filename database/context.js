@@ -22,6 +22,14 @@ if (isProduction) {
       console.log('Connected to SQLite database');
     }
   });
+  // Several local processes share this file: the app, the verify rigs, and the parallel
+  // node --test workers. Two settings make that safe. WAL journal mode lets readers and
+  // writers coexist - in the default rollback mode, a connection upgrading a read to a
+  // write while another process writes gets an immediate SQLITE_BUSY that the busy
+  // handler deliberately never retries (deadlock avoidance). And the busy timeout makes
+  // plain writer-vs-writer contention wait its turn instead of failing.
+  db.run('PRAGMA journal_mode = WAL');
+  db.configure('busyTimeout', 5000);
 }
 
 // ---------------------------------------------------------------------------

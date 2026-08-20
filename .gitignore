@@ -3,7 +3,8 @@ node_modules
 .worktrees/
 .parallel-task.json
 .DS_Store
-pickleball.db
+# The database plus the -wal/-shm sidecar files WAL journal mode creates
+pickleball.db*
 PROJECT_NOTES.local.md
 PROJECT_NOTES.local.md.backup-*
 # Backups written by scripts/cleanup-test-games.js before it deletes anything
