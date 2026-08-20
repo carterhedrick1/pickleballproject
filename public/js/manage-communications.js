@@ -2,10 +2,10 @@
 
 async function postAnnouncement(message, recipients, { personalityWrapper = false } = {}) {
     const response = await fetch(
-        `/api/games/${gameId}/announcement-individual?token=${hostToken}`,
+        `/api/games/${gameId}/announcement-individual`,
         {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: hostAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
                 message,
                 recipients,
@@ -476,7 +476,7 @@ async function loadDeliveryLog() {
     if (refresh) refresh.disabled = true;
 
     try {
-        const response = await fetch(`/api/games/${gameId}/sms-events?token=${hostToken}`);
+        const response = await fetch(`/api/games/${gameId}/sms-events`, { headers: hostAuthHeaders() });
         if (!response.ok) throw new Error(`Server returned ${response.status}`);
         const data = await response.json();
         renderDeliveryLog(data.events || [], data.counts || {});

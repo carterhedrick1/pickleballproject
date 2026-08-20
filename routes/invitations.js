@@ -29,7 +29,7 @@ const {
 
 const { acquireGameLock } = require('../utils/game-lock');
 const { routeFailed } = require('../utils/route-error');
-const { isHost } = require('../utils/host-auth');
+const { isHost, requestHostToken } = require('../utils/host-auth');
 const { isGameUpcoming } = require('../utils/central-time');
 const { buildDeterministicInvitation } = require('../services/invitation-message');
 const { getVisibleHostRoster } = require('../services/host-roster');
@@ -63,7 +63,7 @@ module.exports = function mountInvitationRoutes(app) {
     try {
       const game = await getGame(gameId);
       if (!game) return res.status(404).json({ error: 'Game not found' });
-      if (!isHost(game, req.query.token)) {
+      if (!isHost(game, requestHostToken(req))) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
 

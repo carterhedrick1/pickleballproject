@@ -36,7 +36,7 @@ const {
 const { acquireGameLock } = require('../utils/game-lock');
 const { isGameUpcoming } = require('../utils/central-time');
 const { routeFailed } = require('../utils/route-error');
-const { isHost, requireVerifiedHostPhone } = require('../utils/host-auth');
+const { isHost, requireVerifiedHostPhone, requestHostToken } = require('../utils/host-auth');
 const { applyGameUpdate } = require('../utils/game-update');
 const { getVisibleHostRoster } = require('../services/host-roster');
 const {
@@ -186,7 +186,7 @@ module.exports = function mountGameRoutes(app) {
   app.get('/api/games/:id', async (req, res) => {
     try {
       const gameId = req.params.id;
-      const token = req.query.token;
+      const token = requestHostToken(req);
       
       const game = await getGame(gameId);
       

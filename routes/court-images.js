@@ -21,7 +21,7 @@ const {
 } = require('../database');
 
 const { routeFailed } = require('../utils/route-error');
-const { isHost } = require('../utils/host-auth');
+const { isHost, requestHostToken } = require('../utils/host-auth');
 const { PHOTO_TYPES, sniffImageType } = require('../utils/image-type');
 const { requireDevAuth } = require('./dev');
 
@@ -123,7 +123,7 @@ module.exports = function mountCourtImageRoutes(app) {
     async (req, res) => {
       try {
         const gameId = req.params.id;
-        const token = req.query.token;
+        const token = requestHostToken(req);
 
         const game = await getGame(gameId);
         if (!game) {
@@ -196,7 +196,7 @@ module.exports = function mountCourtImageRoutes(app) {
     try {
       const gameId = req.params.id;
       const imageId = req.params.imageId;
-      const token = req.query.token;
+      const token = requestHostToken(req);
 
       const game = await getGame(gameId);
       if (!game) {
@@ -216,7 +216,7 @@ module.exports = function mountCourtImageRoutes(app) {
   app.put('/api/games/:id/court-image-none', async (req, res) => {
     try {
       const gameId = req.params.id;
-      const token = req.query.token;
+      const token = requestHostToken(req);
 
       const game = await getGame(gameId);
       if (!game) {
@@ -237,7 +237,7 @@ module.exports = function mountCourtImageRoutes(app) {
     try {
       const gameId = req.params.id;
       const imageId = req.params.imageId;
-      const token = req.query.token;
+      const token = requestHostToken(req);
 
       const game = await getGame(gameId);
       if (!game) {

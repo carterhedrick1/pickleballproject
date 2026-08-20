@@ -22,16 +22,17 @@ files before starting. Work top to bottom unless something breaks in production 
   already lazy (no connection until first query); only SQLite's local file-open still
   happens at import, accepted as harmless.
 
-## P1. Architecture and testability
+- **Standardize host authentication transport** (was P1 item 2) - done 2026-08-20.
+  `requestHostToken` in `utils/host-auth.js` resolves X-Host-Token header, then
+  Authorization: Bearer, then the historical body/query transports; every `?token=` route
+  site uses it. The manage page captures the link token once, remembers it per game in
+  localStorage, strips it from the address bar, and sends X-Host-Token on the calls that
+  used query strings. The request logger and error capture redact `token=` values.
+  Remaining: body-token POST/PUT calls migrate to the header alongside the shared API
+  client in the management-frontend item below; SMS links themselves still carry the
+  token by design (they are the key).
 
-### 2. Standardize host authentication transport
-Host tokens ride in query strings (`manage.html?id=...&token=...`, `?token=` on many API
-GETs) and the request logger in `app.js` prints `req.url`, so tokens can land in logs
-and browser history. Move to: bootstrap from the management link once, strip the token
-from the URL bar via `history.replaceState`, send `Authorization: Bearer` afterwards,
-keep old links working during a transition, and never log token-bearing URLs. Central
-helper already exists (`utils/host-auth.js`) - extend it rather than adding a parallel
-mechanism.
+## P1. Architecture and testability
 
 ### 3. Structured, redacted logging
 The request logger prints full URLs; several paths still print full phone numbers and

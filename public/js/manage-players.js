@@ -364,7 +364,7 @@ async function recoverInvitationSend(phones, sendStartedAt) {
     for (const delay of retryDelays) {
         if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
         try {
-            const response = await fetch(`/api/games/${gameId}?token=${hostToken}`);
+            const response = await fetch(`/api/games/${gameId}`, { headers: hostAuthHeaders() });
             if (!response.ok) continue;
             const latestGame = await response.json();
             const recent = (latestGame.invitedPlayers || []).filter((person) =>
@@ -558,11 +558,11 @@ async function addPersonToRoster() {
 }
 
 async function postHostPlayer(player, addTo) {
-    const response = await fetch(`/api/games/${gameId}/manual-player?token=${hostToken}`, {
+    const response = await fetch(`/api/games/${gameId}/manual-player`, {
         method: 'POST',
-        headers: {
+        headers: hostAuthHeaders({
             'Content-Type': 'application/json'
-        },
+        }),
         body: JSON.stringify({
             name: player.name,
             phone: player.phone,
@@ -956,8 +956,9 @@ async function removePlayer(playerId) {
         try {
           showStatus('Removing player...', 'info');
           
-          const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
-            method: 'DELETE'
+          const response = await fetch(`/api/games/${gameId}/players/${playerId}`, {
+            method: 'DELETE',
+            headers: hostAuthHeaders()
           });
           
           if (!response.ok) {
@@ -1021,8 +1022,9 @@ async function removeWaitlisted(playerId) {
         try {
           showStatus('Removing from waitlist...', 'info');
           
-          const response = await fetch(`/api/games/${gameId}/players/${playerId}?token=${hostToken}`, {
-            method: 'DELETE'
+          const response = await fetch(`/api/games/${gameId}/players/${playerId}`, {
+            method: 'DELETE',
+            headers: hostAuthHeaders()
           });
           
           if (!response.ok) {
@@ -1089,8 +1091,9 @@ async function addOutPlayerBackToGame(playerId) {
 
         // Clearing the "out" entry second means a failure above leaves the roster untouched
         // rather than dropping the player off both lists.
-        await fetch(`/api/games/${gameId}/out-players/${playerId}?token=${hostToken}`, {
-          method: 'DELETE'
+        await fetch(`/api/games/${gameId}/out-players/${playerId}`, {
+          method: 'DELETE',
+          headers: hostAuthHeaders()
         });
 
         await fetchGameData();
@@ -1123,8 +1126,9 @@ async function removeOutPlayer(playerId) {
         try {
           showStatus('Removing player...', 'info');
           
-          const response = await fetch(`/api/games/${gameId}/out-players/${playerId}?token=${hostToken}`, {
-            method: 'DELETE'
+          const response = await fetch(`/api/games/${gameId}/out-players/${playerId}`, {
+            method: 'DELETE',
+            headers: hostAuthHeaders()
           });
           
           if (!response.ok) {

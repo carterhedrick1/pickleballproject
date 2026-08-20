@@ -117,12 +117,13 @@ async function uploadPhoto() {
     try {
         const blob = await resizePhoto(file);
         const caption = (captionInput && captionInput.value.trim()) || '';
-        const query = new URLSearchParams({ token: hostToken });
+        const query = new URLSearchParams();
         if (caption) query.set('caption', caption);
+        const queryString = query.toString();
 
-        const response = await fetch(`/api/games/${gameId}/photos?${query}`, {
+        const response = await fetch(`/api/games/${gameId}/photos${queryString ? `?${queryString}` : ''}`, {
             method: 'POST',
-            headers: { 'Content-Type': blob.type || 'image/jpeg' },
+            headers: hostAuthHeaders({ 'Content-Type': blob.type || 'image/jpeg' }),
             body: blob
         });
 
@@ -148,7 +149,7 @@ async function deletePhoto(photoId) {
 
     try {
         const response = await fetch(
-            `/api/games/${gameId}/photos/${photoId}?token=${hostToken}`, { method: 'DELETE' }
+            `/api/games/${gameId}/photos/${photoId}`, { method: 'DELETE', headers: hostAuthHeaders() }
         );
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
@@ -236,9 +237,9 @@ async function uploadCourtImage() {
     setCourtImageStatus('Uploading image...');
 
     try {
-        const response = await fetch(`/api/games/${gameId}/court-images?token=${hostToken}`, {
+        const response = await fetch(`/api/games/${gameId}/court-images`, {
             method: 'POST',
-            headers: { 'Content-Type': file.type || 'image/jpeg' },
+            headers: hostAuthHeaders({ 'Content-Type': file.type || 'image/jpeg' }),
             body: file
         });
 
@@ -261,8 +262,8 @@ async function uploadCourtImage() {
 async function selectCourtImage(imageId) {
     try {
         const response = await fetch(
-            `/api/games/${gameId}/court-image/${imageId}?token=${hostToken}`,
-            { method: 'PUT' }
+            `/api/games/${gameId}/court-image/${imageId}`,
+            { method: 'PUT', headers: hostAuthHeaders() }
         );
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
@@ -279,8 +280,8 @@ async function selectCourtImage(imageId) {
 async function selectNoCourtImage() {
     try {
         const response = await fetch(
-            `/api/games/${gameId}/court-image-none?token=${hostToken}`,
-            { method: 'PUT' }
+            `/api/games/${gameId}/court-image-none`,
+            { method: 'PUT', headers: hostAuthHeaders() }
         );
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
@@ -299,8 +300,8 @@ async function deleteCourtImage(imageId) {
 
     try {
         const response = await fetch(
-            `/api/games/${gameId}/court-images/${imageId}?token=${hostToken}`,
-            { method: 'DELETE' }
+            `/api/games/${gameId}/court-images/${imageId}`,
+            { method: 'DELETE', headers: hostAuthHeaders() }
         );
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));

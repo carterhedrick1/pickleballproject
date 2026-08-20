@@ -23,6 +23,7 @@ const {
 
 const { handleIncomingSMS } = require('./sms-handler');
 const { requireTextbeltSignature } = require('./utils/textbelt-webhook');
+const { redactTokenInUrl } = require('./utils/host-auth');
 const { checkAndSendReminders } = require('./services/reminders');
 const { routeFailed } = require('./utils/route-error');
 const { createDatabaseGate } = require('./utils/database-gate');
@@ -86,7 +87,9 @@ function createApp({
   app.use('/api', databaseGate);
 
   app.use((req, res, next) => {
-    console.log(`${req.method} ${req.url}`);
+    // Old-style links may still carry a host token in the query string; a log line must
+    // never become a copy of somebody's management credentials.
+    console.log(`${req.method} ${redactTokenInUrl(req.url)}`);
     next();
   });
 
@@ -197,12 +200,12 @@ function createApp({
     // status the error carries and keep it out of the error log, or malformed JSON from
     // one confused browser would bury the failures actually worth looking at.
     const status = err.status || err.statusCode || 500;
-    console.error(`Unhandled error on ${req.method} ${req.url}:`, err);
+    console.error(`Unhandled error on ${req.method} ${redactTokenInUrl(req.url)}:`, err);
     if (status >= 500) {
       logAppError('server', {
         message: err.message,
         stack: err.stack,
-        page: `${req.method} ${req.url}`,
+        page: `${req.method} ${redactTokenInUrl(req.url)}`,
         userAgent: req.headers['user-agent']
       });
     }
