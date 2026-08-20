@@ -1,6 +1,6 @@
 const { isProduction, withPgClient, sqliteAll, sqliteGet, sqliteRun, sqlitePrepareRun } = require('./context');
 
-const { locationKey, isRetiredLocation } = require('./schema');
+const { locationKey, isRetiredLocation } = require('./seeds');
 
 // ---------------------------------------------------------------------------
 // Location functions

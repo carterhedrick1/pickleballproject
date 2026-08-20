@@ -12,7 +12,21 @@
  */
 const { logAppError } = require('../database');
 
+// A save refused because the game moved on is not a fault: the caller read an older copy.
+// 409 says exactly that, and the wording tells a host what to do about it. Routes that
+// retry (everything roster-related, via updateGame) never reach here.
+const VERSION_CONFLICT_STATUS = 409;
+const VERSION_CONFLICT_MESSAGE =
+  'This game just changed somewhere else. Refresh the page and try that again.';
+
 function routeFailed(req, res, error, userMessage, status = 500) {
+  if (error && error.code === 'GAME_VERSION_CONFLICT') {
+    console.warn(`${req.method} ${req.url} refused a stale write:`, error.message);
+    if (res.headersSent) return;
+    res.status(VERSION_CONFLICT_STATUS).json({ error: VERSION_CONFLICT_MESSAGE });
+    return;
+  }
+
   console.error(`${req.method} ${req.url} failed:`, error);
 
   // Deliberately not awaited. logAppError has its own try/catch and never rejects, so this

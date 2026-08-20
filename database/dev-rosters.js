@@ -150,7 +150,10 @@ async function updateDeveloperPlayer(oldPhone, newPhone, name) {
           if (JSON.stringify(record.data) === before) continue;
           gameOccurrences += 1;
           await client.query(
-            'UPDATE games SET data = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            // version moves on every write to data, exactly as saveGame does. A signup that
+            // was read before this bulk edit must be refused rather than quietly restoring
+            // the player this just renamed or removed.
+            'UPDATE games SET data = $1, version = version + 1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
             [record.data, record.gameId]
           );
         }
@@ -175,7 +178,8 @@ async function updateDeveloperPlayer(oldPhone, newPhone, name) {
       if (JSON.stringify(record.data) === before) continue;
       gameOccurrences += 1;
       await sqliteRun(
-        'UPDATE games SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        // Same reason as the PostgreSQL branch: a write to data always moves the version.
+        'UPDATE games SET data = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [JSON.stringify(record.data), record.gameId]
       );
     }
@@ -202,7 +206,10 @@ async function deleteDeveloperPlayer(phone) {
           if (!removed) continue;
           gameOccurrences += removed;
           await client.query(
-            'UPDATE games SET data = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            // version moves on every write to data, exactly as saveGame does. A signup that
+            // was read before this bulk edit must be refused rather than quietly restoring
+            // the player this just renamed or removed.
+            'UPDATE games SET data = $1, version = version + 1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
             [record.data, record.gameId]
           );
         }
@@ -230,7 +237,8 @@ async function deleteDeveloperPlayer(phone) {
       if (!removed) continue;
       gameOccurrences += removed;
       await sqliteRun(
-        'UPDATE games SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        // Same reason as the PostgreSQL branch: a write to data always moves the version.
+        'UPDATE games SET data = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [JSON.stringify(record.data), record.gameId]
       );
     }

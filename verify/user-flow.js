@@ -14,6 +14,7 @@ const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 
 const ok = (m) => console.log(`  PASS  ${m}`);
 const bad = (m) => { console.log(`  FAIL  ${m}`); failures++; };
 let failures = 0;
+const daysFromNow = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 
 async function req(method, path, body, extraHeaders) {
   const res = await fetch(BASE + path, {
@@ -73,10 +74,15 @@ async function req(method, path, body, extraHeaders) {
   }
 
   console.log('\n3. Host creates a game (no phone -> no SMS)');
-  const createRequestId = 'verify-create-request-00000001';
+  // Two things have to stay true on every run, so both are derived rather than written down.
+  // The date must be in the future: a game that has already finished refuses sign-ups (410),
+  // which silently broke every step below once the hardcoded date went by. And the
+  // idempotency key must be new each run, because the same key maps to the same game id -
+  // a second run against the same database replays the first one's game instead of creating.
+  const createRequestId = `verify-create-request-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
   const createBody = {
     location: 'Homoly Home Court', organizerName: 'Scott',
-    organizerPlaying: true, date: '2026-08-15', time: '18:00', duration: 90,
+    organizerPlaying: true, date: daysFromNow(7), time: '18:00', duration: 90,
     totalPlayers: 4, message: 'Deploy verification game', registrationMode: 'fcfs',
   };
   const create = await req('POST', '/api/games', createBody, {
@@ -225,7 +231,7 @@ async function req(method, path, body, extraHeaders) {
     // A current game, joined by somebody on an Android phone.
     const live = await req('POST', '/api/games', {
       location: 'Homoly Home Court', organizerName: 'Scott', organizerPhone: HOST_PHONE,
-      organizerPlaying: false, date: '2026-08-20', time: '18:00', duration: 90,
+      organizerPlaying: false, date: daysFromNow(3), time: '18:00', duration: 90,
       totalPlayers: 4, message: 'Verification - host history game', registrationMode: 'fcfs',
     });
     localGameIds.push(live.json?.gameId);
