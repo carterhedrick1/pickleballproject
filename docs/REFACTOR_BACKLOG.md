@@ -10,20 +10,23 @@ item is scoped so one future task worktree can take it alone.
 Every item was re-verified on 2026-08-20; if much time has passed, re-check the named
 files before starting. Work top to bottom unless something breaks in production first.
 
-## P1. Architecture and testability
+## Completed since the list was written
 
-### 1. Separate Express app construction from process startup
-`server.js` still starts listening, starts reminder timers, and opens the database as a
-side effect of being imported (`app.listen` at the bottom, `setInterval` for reminders,
-`reminders.resetReminderState()` inside `game-logic.js` at require time). Split into
-`createApp(deps)` / `startServer()` / `startSchedulers()` / `shutdown()`. This unlocks real
-HTTP integration tests (today the webhook and eligibility tests over HTTP live in
-`verify/webhook-auth.js` and `verify/signup-eligibility.js`, which need a hand-started
-server). Preserve `npm start` behavior exactly.
+- **Separate app construction from process startup** (was P1 item 1) - done 2026-08-20.
+  `app.js` exports `createApp(options)`; `server.js` is startup-only
+  (`startServer`/`startSchedulers`/`stopSchedulers`/`shutdown`, process handlers, and a
+  `require.main` guard). `game-logic.js` no longer wipes reminder state at require time;
+  `verify/reminder-catchup.js` resets it explicitly. `test/app-http.test.js` now drives
+  the real app over HTTP inside `npm test`: webhook signature rejection, 410s for
+  cancelled/ended signups, duplicate tagging, and host-token 403s. Note the pg Pool was
+  already lazy (no connection until first query); only SQLite's local file-open still
+  happens at import, accepted as harmless.
+
+## P1. Architecture and testability
 
 ### 2. Standardize host authentication transport
 Host tokens ride in query strings (`manage.html?id=...&token=...`, `?token=` on many API
-GETs) and the global logger in `server.js` prints `req.url`, so tokens can land in logs
+GETs) and the request logger in `app.js` prints `req.url`, so tokens can land in logs
 and browser history. Move to: bootstrap from the management link once, strip the token
 from the URL bar via `history.replaceState`, send `Authorization: Bearer` afterwards,
 keep old links working during a transition, and never log token-bearing URLs. Central
@@ -123,11 +126,12 @@ about (extend `scripts/lib/fixtures.js`) so no mutable dashboard data can change
 outcome.
 
 ### 15. Expand the default deployment gate
-`verify:deploy` is unit tests + frontend smoke. The security rigs added in the P0 pass
-(`verify:webhook-auth`, `verify:signup-eligibility`) and the existing race/SMS/reminder
-rigs run only by hand. Once P1 item 1 lands, convert the important ones into fast
-integration tests inside `npm test`: authorization boundaries, webhook signature
-rejection, closed-signup rejection, concurrent mutations, reminder idempotency.
+Partially done 2026-08-20: `test/app-http.test.js` now covers webhook signature
+rejection, closed-signup rejection, and host-token authorization boundaries inside
+`npm test`, so every deploy checks them. Still only hand-run: the race rigs
+(`verify:races`), SMS cancellation flow (`verify:sms`), reminder idempotency
+(`verify:reminders` and friends), and promotion modes. Convert those into fast
+integration tests next - the createApp split makes that mechanical now.
 
 ### 16. sqlite3 6.x major upgrade
 The 7 remaining `npm audit --omit=dev` advisories (1 critical) are all in sqlite3 5.x's
