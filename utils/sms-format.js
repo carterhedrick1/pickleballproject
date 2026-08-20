@@ -5,6 +5,14 @@ function formatPhoneNumber(phoneNumber) {
   return cleaned;
 }
 
+// The one US phone rule for the whole app: valid when the digits alone are a 10-digit
+// number, or 11 digits with the leading country-code 1. Anything else cannot receive a
+// Textbelt message, so accepting it just records a number nobody can text.
+function isValidUsPhone(phoneNumber) {
+  const cleaned = String(phoneNumber == null ? '' : phoneNumber).replace(/\D/g, '');
+  return cleaned.length === 10 || (cleaned.length === 11 && cleaned.startsWith('1'));
+}
+
 function formatDateForSMS(dateStr) {
   const calendarDate = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr));
   const date = calendarDate
@@ -39,6 +47,7 @@ function formatLocationForSMS(game) {
 
 module.exports = {
   formatPhoneNumber,
+  isValidUsPhone,
   formatDateForSMS,
   formatTimeForSMS,
   formatLocationForSMS

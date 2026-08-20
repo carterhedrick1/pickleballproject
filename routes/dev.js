@@ -71,7 +71,12 @@ const {
   clearReplyOptionsCache
 } = require('../sms-reply-options');
 
-const DEV_PASSWORD = process.env.DEV_PASSWORD || 'vibe123';
+// The password comes from config.js, which only supplies the historical 'vibe123'
+// default outside production. In production with no real DEV_PASSWORD the whole area is
+// disabled rather than reachable with a password anyone can read out of this repository.
+const { config: appConfig } = require('../config');
+const DEV_PASSWORD = appConfig.devPassword;
+const DEV_AREA_ENABLED = appConfig.devAreaEnabled;
 const PRODUCTION_ROSTER_BASE_URL = String(
   process.env.PRODUCTION_ROSTER_BASE_URL || 'https://inorout.club'
 ).replace(/\/+$/, '');
@@ -89,6 +94,7 @@ const SLOGAN_ASSET_NAME = 'slogan-config';
 const SERVER_STARTED_AT = new Date();
 
 function expectedToken() {
+  if (!DEV_AREA_ENABLED || !DEV_PASSWORD) return null;
   return crypto.createHmac('sha256', DEV_PASSWORD).update('inorout-dev-area').digest('hex');
 }
 
@@ -109,8 +115,10 @@ function readCookie(req, name) {
 }
 
 function isAuthed(req) {
+  if (!DEV_AREA_ENABLED) return false;
   // The cookie is how the browser gets in; the header is how publish-docs.js gets in.
-  if (safeEqual(readCookie(req, COOKIE_NAME), expectedToken())) return true;
+  const expected = expectedToken();
+  if (expected && safeEqual(readCookie(req, COOKIE_NAME), expected)) return true;
   if (req.headers['x-dev-password'] && safeEqual(req.headers['x-dev-password'], DEV_PASSWORD)) return true;
   return false;
 }
@@ -371,6 +379,11 @@ module.exports = function mountDevRoutes(app) {
   // -------------------------------------------------------------------------
 
   app.post('/api/dev/login', loginLimiter, (req, res) => {
+    if (!DEV_AREA_ENABLED) {
+      return res.status(403).json({
+        error: 'The developer area is disabled: set a real DEV_PASSWORD environment variable on the server.'
+      });
+    }
     const password = (req.body && req.body.password) || '';
     if (!safeEqual(password, DEV_PASSWORD)) {
       return res.status(401).json({ error: 'Wrong password' });

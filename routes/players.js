@@ -95,34 +95,10 @@ module.exports = function mountPlayerRoutes(app) {
       try {
         playerData = validatePlayerData(name, phone);
       } catch (validationError) {
-        console.log('[SERVER] Validation error details:');
-        console.log('  - Error message:', validationError.message);
-        console.log('  - Phone input:', phone);
-        console.log('  - User agent:', req.headers['user-agent']);
-        
-        // Check if this might be a Chrome iOS specific issue
-        const userAgent = req.headers['user-agent'] || '';
-        const isChromeIOS = userAgent.includes('CriOS');
-        
-        if (isChromeIOS && validationError.message.includes('valid US phone number')) {
-          console.log('[SERVER] Detected Chrome iOS phone validation issue');
-          
-          // Try a more lenient validation for Chrome iOS
-          const cleaned = phone ? phone.replace(/\D/g, '') : '';
-          if (cleaned.length >= 10 && cleaned.length <= 15) {
-            console.log('[SERVER] Accepting phone number with lenient validation for Chrome iOS');
-            playerData = {
-              name: name ? name.trim() : '',
-              phone: cleaned.length === 11 && cleaned.startsWith('1') ? cleaned.substring(1) : cleaned
-            };
-          } else {
-            return res.status(400).json({ 
-              error: 'Please enter a valid phone number — 10 digits, no spaces or dashes (for example 5551234567).' 
-            });
-          }
-        } else {
-          return res.status(400).json({ error: validationError.message });
-        }
+        // The old Chrome-iOS fallback that accepted 10-15 digit numbers here is gone: it
+        // existed to work around the validator library rejecting formatted input, and the
+        // shared digits-only check in validatePlayerData no longer has that problem.
+        return res.status(400).json({ error: validationError.message });
       }
 
       playerData.isAndroid = isAndroid;
@@ -244,6 +220,13 @@ module.exports = function mountPlayerRoutes(app) {
       const result = await joinGame(gameId, playerData);
       if (result.status === 'game_not_found') {
         return res.status(404).json({ error: 'Game not found' });
+      }
+      // The browser hides the form for these, but the API is reachable without the browser.
+      if (result.status === 'game_cancelled') {
+        return res.status(410).json({ error: 'This game has been cancelled.', status: 'game_cancelled' });
+      }
+      if (result.status === 'game_ended') {
+        return res.status(410).json({ error: "This game has ended, so it's no longer accepting sign-ups.", status: 'game_ended' });
       }
       if (result.status === 'duplicate') {
         const message = result.duplicateStatus === 'confirmed'

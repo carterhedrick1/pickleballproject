@@ -218,14 +218,22 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
   }
 }
 
-// Main SMS webhook handler
+// Main SMS webhook handler. Signature verification happens before this runs
+// (utils/textbelt-webhook.js); this only has to cope with a well-signed but odd payload.
 async function handleIncomingSMS(req, res) {
   try {
-    const { fromNumber, text, data: gameId } = req.body;
-    
-    console.log(`Received SMS from ${fromNumber}: "${text}" for game ${gameId}`);
-    
+    const { fromNumber, text } = req.body || {};
+    const gameId = typeof req.body?.data === 'string' ? req.body.data : null;
+
+    if (typeof fromNumber !== 'string' || !fromNumber.trim() || typeof text !== 'string') {
+      return res.status(400).json({ error: 'Invalid webhook payload.' });
+    }
+
     const cleanedFromNumber = formatPhoneNumber(fromNumber);
+    // Last four digits only, and never the message text: replies can carry names and
+    // full numbers, and this log line runs for every inbound text.
+    console.log(`Received SMS reply for game ${gameId || 'unknown'} from ***${cleanedFromNumber.slice(-4)}`);
+
     const messageText = text.trim();
     const lastCommand = await getLastCommand(cleanedFromNumber);
 

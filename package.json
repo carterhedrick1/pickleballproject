@@ -17,6 +17,8 @@
     "verify:routes": "node verify/all-routes.js",
     "verify:stats": "node verify/stats.js",
     "verify:sms": "node verify/sms-cancel.js",
+    "verify:webhook-auth": "node verify/webhook-auth.js",
+    "verify:signup-eligibility": "node verify/signup-eligibility.js",
     "verify:reminders": "node verify/reminder-catchup.js",
     "verify:reminder-safety": "node verify/reminder-safety.js",
     "verify:late-joiner": "node verify/reminder-late-joiner.js",
@@ -39,8 +41,7 @@
     "express": "^4.18.2",
     "express-rate-limit": "^7.5.0",
     "pg": "^8.16.0",
-    "sqlite3": "^5.1.7",
-    "validator": "^13.15.0"
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
