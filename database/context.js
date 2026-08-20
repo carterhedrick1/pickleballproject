@@ -22,6 +22,10 @@ if (isProduction) {
       console.log('Connected to SQLite database');
     }
   });
+  // Several local processes share this file: the app, the verify rigs, and the parallel
+  // node --test workers. Without a busy timeout a second writer gets an instant
+  // SQLITE_BUSY error; with one it simply waits its turn.
+  db.configure('busyTimeout', 5000);
 }
 
 // ---------------------------------------------------------------------------
