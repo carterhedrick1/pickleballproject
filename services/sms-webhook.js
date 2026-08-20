@@ -1,22 +1,38 @@
-// SMS-related functions: incoming message handling, notifications, and reminders.
+// The SMS webhook's dispatcher and command handlers, plus organizer notifications.
+//
+// The pieces around it live in their own modules now: signature verification in
+// utils/textbelt-webhook.js, reply classification in services/sms-command-parser.js,
+// phone-to-game lookups in services/sms-game-lookup.js, and message building in
+// services/sms-composer.js. What stays here is the orchestration: which handler runs,
+// what it loads, and which texts go out.
 const {
   getAllGames,
   getGame,
-  getGameHostInfo,
   saveLastCommand,
   getLastCommand,
   clearLastCommand
 } = require('../database');
-const { isGameUpcoming, isGameRecentlyFinished } = require('../utils/central-time');
 const { departureAlertType } = require('../utils/promotion');
 const { leaveGame } = require('./player-service');
 const { sendSMS, sendSMSWithRetry } = require('./sms-client');
 const { buildPromotionMessage } = require('./youre-in-rotation');
 const { resolveTextMessage } = require('./text-message-rotation');
+const { parseSmsCommand } = require('./sms-command-parser');
+const {
+  compareGameEntries,
+  getUserHostGames,
+  getUserGames,
+  getPlayerGames
+} = require('./sms-game-lookup');
+const {
+  playerCancelledAlert,
+  buildGameDetailsMessage,
+  buildGameListMessage,
+  buildCancellationListMessage
+} = require('./sms-composer');
 const {
   findActiveReplyOption,
-  renderReplyOptionMessage,
-  appendCustomReplyInstructions
+  renderReplyOptionMessage
 } = require('../sms-reply-options');
 const {
   formatPhoneNumber,
@@ -67,24 +83,6 @@ async function sendCategorySMS(
   return sendSMS(to, message, gameId, {
     eventId: EVENT_ID_BY_CATEGORY[categoryId]
   });
-}
-
-/**
- * What the host is told when a player drops out of a first-come game.
- *
- * A full game with a waitlist refills itself in the same instant, so "0 spots now available"
- * on its own read as a contradiction and never named the replacement. The alert has to say
- * who took the spot, because that is the part the host would otherwise have to go and look up.
- */
-function playerCancelledAlert({ playerName, locationText, gameDate, spotsLeft, promotedName }) {
-  const opening = `HOST ALERT: ${playerName} cancelled their spot for your pickleball game at ${locationText} on ${gameDate}.`;
-  const spots = `${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} now available.`;
-
-  if (!promotedName) return `${opening} ${spots}`;
-  if (spotsLeft <= 0) {
-    return `${opening} ${promotedName} moved up from the waitlist to take it, so your game is still full.`;
-  }
-  return `${opening} ${promotedName} moved up from the waitlist. ${spots}`;
 }
 
 async function sendOrganizerNotification(gameId, game, eventType, playerName = null, options = {}) {
@@ -235,50 +233,47 @@ async function handleIncomingSMS(req, res) {
     // full numbers, and this log line runs for every inbound text.
     console.log(`Received SMS reply for game ${gameId || 'unknown'} from ***${cleanedFromNumber.slice(-4)}`);
 
-    const messageText = text.trim();
     const lastCommand = await getLastCommand(cleanedFromNumber);
+    const command = parseSmsCommand(text, lastCommand);
 
-    // Handle numbered responses first when we're expecting them
-    if (/^\d+$/.test(messageText) && lastCommand) {
-      await handleNumberResponse(fromNumber, cleanedFromNumber, messageText, lastCommand);
-    } 
-    // Handle primary commands
-    else if (messageText === '1') {
-      await clearLastCommand(cleanedFromNumber);
-      await handleManagementLinkRequest(fromNumber, cleanedFromNumber);
-    } 
-    else if (messageText === '2') {
-      await clearLastCommand(cleanedFromNumber);
-      await handleGameDetailsRequest(fromNumber, cleanedFromNumber);
-    } 
-    else if (messageText === '9') {
-      await clearLastCommand(cleanedFromNumber);
-      await handleCancellationRequest(fromNumber, cleanedFromNumber);
-    } 
-    else {
-      const customOption = await findActiveReplyOption(messageText);
-      if (customOption) {
-        await handleCustomReplyOption(fromNumber, cleanedFromNumber, customOption);
-      } else {
-        await sendCategorySMS(
-          'cancellation-help',
-          fromNumber,
-          `Reply "1" for your management link, "2" for game details, or "9" to cancel your spot.`
-        );
+    switch (command.type) {
+      case 'selection':
+        // The sender was just shown a numbered list; their reply answers it.
+        await handleNumberResponse(fromNumber, cleanedFromNumber, command);
+        break;
+      case 'management_links':
+        await clearLastCommand(cleanedFromNumber);
+        await handleManagementLinkRequest(fromNumber, cleanedFromNumber);
+        break;
+      case 'game_details':
+        await clearLastCommand(cleanedFromNumber);
+        await handleGameDetailsRequest(fromNumber, cleanedFromNumber);
+        break;
+      case 'cancellation':
+        await clearLastCommand(cleanedFromNumber);
+        await handleCancellationRequest(fromNumber, cleanedFromNumber);
+        break;
+      default: {
+        const customOption = await findActiveReplyOption(command.text);
+        if (customOption) {
+          await handleCustomReplyOption(fromNumber, cleanedFromNumber, customOption);
+        } else {
+          await sendCategorySMS(
+            'cancellation-help',
+            fromNumber,
+            `Reply "1" for your management link, "2" for game details, or "9" to cancel your spot.`
+          );
+        }
+        await clearLastCommand(cleanedFromNumber);
       }
-      await clearLastCommand(cleanedFromNumber);
     }
-    
+
     res.json({ success: true });
     
   } catch (error) {
     console.error('Error handling incoming SMS:', error);
     res.json({ success: true, message: "Error processing webhook, please try again or contact support." });
   }
-}
-
-function compareGameEntries(a, b) {
-  return `${a.game.date}T${a.game.time}`.localeCompare(`${b.game.date}T${b.game.time}`);
 }
 
 async function handleCustomReplyOption(fromNumber, cleanedFromNumber, option) {
@@ -344,14 +339,12 @@ async function handleCustomReplyOption(fromNumber, cleanedFromNumber, option) {
   }
 }
 
-// Handle numbered responses (1, 2, 3, etc.)
-async function handleNumberResponse(fromNumber, cleanedFromNumber, messageText, lastCommand) {
-  const selection = parseInt(messageText) - 1;
-  
-  if (lastCommand === 'details_selection') {
-    await handleGameDetailsSelection(fromNumber, cleanedFromNumber, selection);
-  } else if (lastCommand === 'cancellation_selection') {
-    await handleCancellationSelection(fromNumber, cleanedFromNumber, selection);
+// Handle numbered responses (1, 2, 3, etc.) answering a previously shown list
+async function handleNumberResponse(fromNumber, cleanedFromNumber, { index, context }) {
+  if (context === 'details_selection') {
+    await handleGameDetailsSelection(fromNumber, cleanedFromNumber, index);
+  } else if (context === 'cancellation_selection') {
+    await handleCancellationSelection(fromNumber, cleanedFromNumber, index);
   } else {
     await clearLastCommand(cleanedFromNumber);
     await sendCategorySMS(
@@ -521,50 +514,6 @@ async function handleCancellationSelection(fromNumber, cleanedFromNumber, select
   }
 }
 
-// Handle management link requests (command "1")
-async function getUserHostGames(cleanedFromNumber, allGames, { includeRecent = false } = {}) {
-  const gameEntries = Object.entries(allGames);
-  if (DEBUG) console.log(`[SMS DEBUG] Checking ${gameEntries.length} total games for host privileges for user ${maskPhone(cleanedFromNumber)}`);
-  
-  // Pre-fetch all host info in parallel for efficiency
-  const hostInfoPromises = gameEntries.map(async ([id, game]) => {
-    try {
-      const hostInfo = await getGameHostInfo(id);
-      return { id, hostInfo };
-    } catch (error) {
-      console.error(`Error getting host info for game ${id}:`, error);
-      return { id, hostInfo: null };
-    }
-  });
-  
-  const allHostInfo = await Promise.all(hostInfoPromises);
-  const hostInfoMap = new Map(allHostInfo.map(({ id, hostInfo }) => [id, hostInfo]));
-  
-  const hostGames = [];
-  
-  for (const [id, game] of gameEntries) {
-    const upcoming = isGameUpcoming(game.date, game.time);
-    // A host asking for their management link right after a game is usually there to add
-    // photos, so finished games stay reachable when the caller asks for them.
-    const recent = includeRecent && isGameRecentlyFinished(game.date, game.time);
-    if (!upcoming && !recent) {
-      if (DEBUG) console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
-      continue;
-    }
-
-    const hostInfo = hostInfoMap.get(id);
-    if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-      if (DEBUG) console.log(`[SMS DEBUG] User is host of game ${id}: ${game.location}`);
-      hostGames.push({ id, game, hostInfo, upcoming });
-    } else {
-      if (DEBUG) console.log(`[SMS DEBUG] User is NOT host of game ${id}: ${game.location}`);
-    }
-  }
-  
-  if (DEBUG) console.log(`[SMS DEBUG] Final result: ${hostGames.length} host games for user ${maskPhone(cleanedFromNumber)}`);
-  return hostGames;
-}
-
 // Handle game details requests (command "2")
 async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
   try {
@@ -666,199 +615,6 @@ async function handleCancellationRequest(fromNumber, cleanedFromNumber) {
       `Sorry, there was an error processing your cancellation request. Please try again.`
     );
   }
-}
-
-// Helper function to get user's games - OPTIMIZED VERSION
-async function getUserGames(cleanedFromNumber, allGames) {
-  const gameEntries = Object.entries(allGames);
-  if (DEBUG) console.log(`[SMS DEBUG] Checking ${gameEntries.length} total games for user ${maskPhone(cleanedFromNumber)}`);
-  
-  // Pre-fetch all host info in parallel for efficiency
-  const hostInfoPromises = gameEntries.map(async ([id, game]) => {
-    try {
-      const hostInfo = await getGameHostInfo(id);
-      return { id, hostInfo };
-    } catch (error) {
-      console.error(`Error getting host info for game ${id}:`, error);
-      return { id, hostInfo: null };
-    }
-  });
-  
-  const allHostInfo = await Promise.all(hostInfoPromises);
-  const hostInfoMap = new Map(allHostInfo.map(({ id, hostInfo }) => [id, hostInfo]));
-  
-  const userGames = [];
-  
-  for (const [id, game] of gameEntries) {
-    // Only check upcoming games
-    if (!isGameUpcoming(game.date, game.time)) {
-      if (DEBUG) console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
-      continue;
-    }
-    
-    let userRole = null;
-    
-    // Check confirmed players
-    const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber);
-    if (playerInConfirmed) {
-      userRole = playerInConfirmed.isOrganizer ? 'host' : 'confirmed';
-      if (DEBUG) console.log(`[SMS DEBUG] Found user in confirmed players: ${game.location} (${userRole})`);
-    }
-    
-    // Check waitlist
-    if (!userRole) {
-      const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
-      if (playerInWaitlist) {
-        userRole = 'waitlist';
-        if (DEBUG) console.log(`[SMS DEBUG] Found user in waitlist: ${game.location} (${userRole})`);
-      }
-    }
-    
-    // Check if they're the host
-    if (!userRole) {
-      const hostInfo = hostInfoMap.get(id);
-      if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-        userRole = 'host';
-        if (DEBUG) console.log(`[SMS DEBUG] Found user as host: ${game.location} (${userRole})`);
-      }
-    }
-    
-    if (userRole) {
-      userGames.push({ id, game, role: userRole });
-    } else {
-      if (DEBUG) console.log(`[SMS DEBUG] User not found in game: ${game.location}`);
-    }
-  }
-  
-  if (DEBUG) console.log(`[SMS DEBUG] Final result: ${userGames.length} games for user ${maskPhone(cleanedFromNumber)}`);
-  // Soonest game first, and the same order every time. Database order shifts whenever a game
-  // is re-saved, which used to renumber the reply list between two texts.
-  return userGames.sort(compareGameEntries);
-}
-
-// Helper function to get player's games (for cancellation)
-async function getPlayerGames(cleanedFromNumber, allGames) {
-  const playerGames = [];
-  
-  for (const [id, game] of Object.entries(allGames)) {
-    if (!isGameUpcoming(game.date, game.time)) {
-      continue;
-    }
-    
-    const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber && !p.isOrganizer);
-    const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
-    
-    if (playerInConfirmed || playerInWaitlist) {
-      playerGames.push({
-        id,
-        game,
-        player: playerInConfirmed || playerInWaitlist,
-        status: playerInConfirmed ? 'confirmed' : 'waitlist'
-      });
-    }
-  }
-
-  // Same stable soonest-first order as getUserGames, for the same reason.
-  return playerGames.sort(compareGameEntries);
-}
-
-async function buildGameDetailsMessage(game, role, cleanedFromNumber) {
-  const gameDate = formatDateForSMS(game.date);
-  const gameTime = formatTimeForSMS(game.time);
-  const locationText = formatLocationForSMS(game);
-
-  let responseMessage = `${locationText}\n${gameDate} at ${gameTime}\nDuration: ${game.duration} minutes\n\n`;
-  
-  // Show player details to confirmed players and hosts, even in waitlist mode
-  if (game.registrationMode !== 'waitlist' || role === 'host' || role === 'confirmed') {
-    responseMessage += `Confirmed Players (${game.players.length}/${game.totalPlayers}):\n`;
-    if (game.players.length === 0) {
-      responseMessage += `• None yet\n`;
-    } else {
-      game.players.forEach(player => {
-        responseMessage += `• ${player.name}${player.isOrganizer ? ' (Organizer)' : ''}\n`;
-      });
-    }
-    
-    // Only show waitlist info to hosts, not to confirmed players in waitlist mode
-    if (game.waitlist && game.waitlist.length > 0 && (game.registrationMode !== 'waitlist' || role === 'host')) {
-      responseMessage += `\nWaitlist (${game.waitlist.length}):\n`;
-      
-      // Check if game is in waitlist mode
-      if (game.registrationMode === 'waitlist') {
-        responseMessage += `• Applications under review\n`;
-      } else {
-        game.waitlist.forEach((player, index) => {
-          responseMessage += `• ${player.name} (#${index + 1})\n`;
-        });
-      }
-    }
-  } else {
-    // Waitlist mode - hide player info from waitlist users only
-    responseMessage += `Player selection is still in progress.\n`;
-  }
-  
-  if (role === 'host') {
-    responseMessage += `\nYou are: Host/Organizer\nReply "1" for management link`;
-  } else if (role === 'confirmed') {
-    responseMessage += `\nYou are: Confirmed Player\nReply "9" to cancel`;
-  } else if (role === 'waitlist') {
-    if (game.registrationMode === 'waitlist') {
-      responseMessage += `\nYou are: Application Submitted\nReply "9" to cancel application`;
-    } else {
-      const waitlistPosition = game.waitlist.findIndex(p => p.phone === cleanedFromNumber) + 1;
-      // findIndex returns -1 when the roster shifted between lookups, which would print "#0".
-      responseMessage += waitlistPosition > 0
-        ? `\nYou are: Waitlist #${waitlistPosition}\nReply "9" to cancel`
-        : `\nYou are: On the waitlist\nReply "9" to cancel`;
-    }
-  }
-
-  return appendCustomReplyInstructions(
-    responseMessage,
-    role === 'host' ? 'host' : 'player'
-  );
-}
-
-// Helper function to build game list message
-async function buildGameListMessage(userGames) {
-  let responseMessage = `You have ${userGames.length} upcoming games. Reply with a number to see details:\n\n`;
-  
-  userGames.forEach(({ game, role }, index) => {
-    const gameDate = formatDateForSMS(game.date);
-    const gameTime = formatTimeForSMS(game.time);
-    
-    let statusIcon = '';
-    let roleText = '';
-    
-    if (role === 'host') {
-      statusIcon = '';
-      roleText = ' (Host)';
-    } else if (role === 'confirmed') {
-      statusIcon = '';
-    } else {
-      statusIcon = '';
-    }
-    
-const locationText = formatLocationForSMS(game);
-responseMessage += `${index + 1}. ${statusIcon ? statusIcon + ' ' : ''}${locationText}${roleText}\n${gameDate} at ${gameTime}\n\n`;  });
-  
-  return responseMessage;
-}
-
-// Helper function to build cancellation list message
-async function buildCancellationListMessage(playerGames) {
-  let responseMessage = `You're signed up for ${playerGames.length} upcoming games. Reply with the number of the game you want to cancel:\n\n`;
-  
-  playerGames.forEach(({ game, status }, index) => {
-    const gameDate = formatDateForSMS(game.date);
-    const gameTime = formatTimeForSMS(game.time);
-    const statusText = status === 'confirmed' ? 'Confirmed' : 'Waitlist';
-    
-const locationText = formatLocationForSMS(game);
-responseMessage += `${index + 1}. ${locationText}\n${gameDate} at ${gameTime} (${statusText})\n\n`;  });
-  
-  return responseMessage;
 }
 
 // Helper function to cancel player from game

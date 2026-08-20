@@ -64,20 +64,21 @@ row-level locking in PostgreSQL. Add a concurrency test proving overlapping muta
 cannot lose roster changes. Consider an incremental `game_participants` index table for
 the phone-based scans the SMS webhook does today.
 
-## P3. Service decomposition
+- **Decompose `services/sms-webhook.js`** (was P3 item 7) - done 2026-08-20 for the
+  structural part. `services/sms-command-parser.js` classifies replies (unit-tested,
+  including the any-number-answers-a-pending-list rule), `services/sms-game-lookup.js`
+  owns the phone-to-game scans, `services/sms-composer.js` builds the reply texts, and
+  sms-webhook.js keeps only dispatch, handlers, and organizer notifications (~720 lines
+  from ~960). Deliberately NOT done: SQL-side `find*GamesForPhone` repository queries -
+  the JS scans are fine at dozens of games and SQL-side JSON queries belong with the
+  persistence work (P2), where a `game_participants` index table would serve both.
 
-### 7. Decompose `services/sms-webhook.js` (~960 lines)
-Transport is now separated (`utils/textbelt-webhook.js`), but the file still combines
-command parsing, conversation state, full-table game scans, roster transitions, message
-composition and delivery. Extract a command parser, per-command handlers (1/2/9/custom),
-and targeted repository queries (`findUpcomingGamesForPhone`, `findHostedGamesForPhone`,
-`findCancellableGamesForPhone`) to replace the getAllGames + per-game host-info scans.
+## P3. Service decomposition
 
 ### 8. Finish compatibility-facade migrations
 `database.js`, `sms-handler.js`, and `game-logic.js` are transitional facades; every
 module that loads one loads the whole persistence layer. Move callers to the specific
-repositories/services, then delete the facades. (`game-logic.js` also still triggers
-`resetReminderState()` on require - see P1 item 1.)
+repositories/services, then delete the facades.
 
 ### 9. Split `database/message-randomizer.js`
 Row mapping, CRUD, metrics, selection history, seeds, migrations, repairs and legacy sync
