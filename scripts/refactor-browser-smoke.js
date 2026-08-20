@@ -1645,37 +1645,60 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       result.cancelled = !document.querySelector('.youre-in-edit-form');
       return result;
     })()`);
+    // One combined assert here used to hide which of ~30 conditions failed, and its
+    // message-count pin was a literal 22 that went stale when the DUPR message was cut
+    // (588489c) - the smoke kept passing only because the primary database's saved
+    // youre-in-config still held the old count. The expected count now comes from the
+    // code's own default list, and each contract asserts separately so a failure names
+    // itself. Note: a saved youre-in-config in the local database still shadows the
+    // defaults; making this fully hermetic is tracked in the refactor backlog.
+    const expectedYoureInMessages = require('../youre-in-messages').DEFAULT_MESSAGES.length;
     assert(
-      youreInEditor.messages === 22 &&
+      youreInEditor.messages === expectedYoureInMessages &&
         youreInEditor.editButtons === youreInEditor.messages &&
         youreInEditor.startsWithYoureIn &&
-        youreInEditor.form &&
-        youreInEditor.dropdownOpened.label === 'Text Messaging' &&
+        youreInEditor.form,
+      `developer area lists every default You're IN message with edit controls (saw ${youreInEditor.messages}, expected ${expectedYoureInMessages})`
+    );
+    assert(
+      youreInEditor.dropdownOpened.label === 'Text Messaging' &&
         youreInEditor.dropdownOpened.expanded &&
         youreInEditor.dropdownOpened.visible &&
         youreInEditor.topLevelCategoryTabs === 0 &&
         youreInEditor.dropdownActive &&
         youreInEditor.dropdownClosed &&
-        youreInEditor.categoryTabs === 13 &&
-        youreInEditor.preview &&
-        youreInEditor.bulkFields === 2 &&
+        youreInEditor.categoryTabs === 13,
+      'text messaging dropdown opens, closes, and groups all 13 categories'
+    );
+    assert(youreInEditor.preview, 'text message preview renders a sample message');
+    assert(
+      youreInEditor.bulkFields === 2 &&
         youreInEditor.bulkButton === 'Add All 2 Openings' &&
-        youreInEditor.bulkPaste &&
-        youreInEditor.detailsEditor.form &&
+        youreInEditor.bulkPaste,
+      'bulk entry offers two openings and a paste box'
+    );
+    assert(
+      youreInEditor.detailsEditor.form &&
         youreInEditor.detailsEditor.value.includes('{LOCATION}') &&
         youreInEditor.detailsEditor.value.includes('{TOTAL_PLAYERS}') &&
-        youreInEditor.detailsEditor.save === 'Save Details' &&
-        youreInEditor.youreInLiveNote &&
+        youreInEditor.detailsEditor.save === 'Save Details',
+      'details template editor exposes its tokens and save control'
+    );
+    assert(
+      youreInEditor.youreInLiveNote &&
         youreInEditor.waitlistToggle.visible &&
         youreInEditor.waitlistToggle.off &&
         youreInEditor.waitlistToggle.fallback &&
         youreInEditor.waitlistToggle.tokens &&
-        youreInEditor.consecutiveToggleVisible &&
-        youreInEditor.focused &&
+        youreInEditor.consecutiveToggleVisible,
+      'randomizer mode toggles and fallback notes show per category'
+    );
+    assert(
+      youreInEditor.focused &&
         youreInEditor.save === 'Save' &&
         youreInEditor.cancel === 'Cancel' &&
         youreInEditor.cancelled,
-      'developer area dropdown shows all text categories, previews, bulk entry, and inline editing'
+      "inline You're IN editing focuses its field and can be cancelled"
     );
 
     const mobile = await browser.newPage({

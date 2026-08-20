@@ -1,6 +1,7 @@
 const { getGame, saveGame } = require('../database');
 const { acquireGameLock } = require('../utils/game-lock');
 const { isHost } = require('../utils/host-auth');
+const { joinRejection } = require('../domain/join-policy');
 const {
   joinPlayer,
   leavePlayer,
@@ -13,7 +14,7 @@ async function runTransition(
   gameId,
   transition,
   args,
-  { token, hostOnly = false } = {}
+  { token, hostOnly = false, publicSignup = false } = {}
 ) {
   const releaseLock = await acquireGameLock(gameId);
   try {
@@ -28,6 +29,23 @@ async function runTransition(
         outEntry: null,
         changed: false
       };
+    }
+
+    // Definitive signup policy, enforced here inside the lock rather than in the browser:
+    // a direct API call must not be able to join a cancelled or finished game.
+    if (publicSignup) {
+      const blocked = joinRejection(game);
+      if (blocked) {
+        return {
+          game,
+          player: null,
+          previousStatus: null,
+          status: blocked,
+          promotedPlayer: null,
+          outEntry: null,
+          changed: false
+        };
+      }
     }
 
     if (hostOnly && !isHost(game, token)) {
@@ -53,7 +71,7 @@ async function runTransition(
 }
 
 function joinGame(gameId, playerData, options) {
-  return runTransition(gameId, joinPlayer, [playerData, options]);
+  return runTransition(gameId, joinPlayer, [playerData, options], { publicSignup: true });
 }
 
 function joinGameAsHost(gameId, playerData, options, token) {

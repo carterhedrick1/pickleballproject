@@ -1,6 +1,5 @@
 // game-logic.js - Game creation and validation compatibility facade
-const validator = require('validator');
-const { formatPhoneNumber } = require('./utils/sms-format');
+const { formatPhoneNumber, isValidUsPhone } = require('./utils/sms-format');
 const reminders = require('./services/reminders');
 reminders.resetReminderState();
 const { checkAndSendReminders } = reminders;
@@ -12,75 +11,17 @@ const {
 } = require('./domain/player-transitions');
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 
-// Validation functions
+// Validation functions.
+//
+// The validator library is gone: its isMobilePhone check was wrapped in so many fallbacks
+// (a try/catch here, a lenient 10-15 digit branch in validatePlayerData, another in the
+// signup route) that any 10-15 digit string was accepted anyway. One shared digits-only
+// rule in utils/sms-format.js now decides, and it matches what Textbelt can deliver to.
+//
+// The old isGameExpired/checkGameNotExpired pair that lived here was dead code no route
+// called; the live signup cutoff is domain/join-policy.js, enforced by the player service.
 function isValidPhoneNumber(phoneNumber) {
-  if (!phoneNumber) return false;
-  
-  // More aggressive cleaning for Chrome iOS compatibility
-  const cleaned = ('' + phoneNumber)
-    .replace(/\D/g, '')  // Remove all non-digits
-    .trim();             // Remove whitespace
-
-  if (DEBUG) {
-    console.log('[PHONE VALIDATION] Original:', phoneNumber, 'Cleaned:', cleaned);
-  }
-  
-  // Check length first
-  if (cleaned.length === 10 || (cleaned.length === 11 && cleaned.startsWith('1'))) {
-    // Additional validation with the validator library
-    try {
-      const isValid = validator.isMobilePhone(phoneNumber, 'en-US');
-      if (DEBUG) console.log('[PHONE VALIDATION] Validator result:', isValid);
-      return isValid;
-    } catch (error) {
-      if (DEBUG) console.log('[PHONE VALIDATION] Validator error:', error);
-      return true;
-    }
-  }
-
-  if (DEBUG) console.log('[PHONE VALIDATION] Invalid length:', cleaned.length);
-  return false;
-}
-
-/**
- * Checks if a game has expired (finished)
- * @param {Object} game - Game object with date, time, duration
- * @returns {boolean} True if game has finished
- */
-function isGameExpired(game) {
-  if (!game.date || !game.time) return false;
-  
-  try {
-    // Create game start time
-    const gameDateTime = new Date(`${game.date}T${game.time}:00`);
-    
-    // Add duration to get end time
-    const duration = parseInt(game.duration) || 90; // Default 90 minutes
-    const gameEndTime = new Date(gameDateTime.getTime() + (duration * 60 * 1000));
-    
-    const now = new Date();
-    
-    // Game is expired if end time has passed
-    return gameEndTime < now;
-  } catch (error) {
-    console.error('[SERVER] Error checking game expiration:', error);
-    return false;
-  }
-}
-
-/**
- * Middleware function to check game expiration for player actions
- * @param {Object} game - Game object
- * @returns {Object} Error status and message
- */
-function checkGameNotExpired(game) {
-  if (isGameExpired(game)) {
-    return {
-      error: true,
-      message: "This game has already ended, so it's no longer accepting sign-ups."
-    };
-  }
-  return { error: false };
+  return isValidUsPhone(phoneNumber);
 }
 
 // Create game data function
@@ -155,19 +96,8 @@ function validatePlayerData(name, phone) {
     throw new Error('Player name is required.');
   }
   
-  if (cleanPhone) {
-    if (DEBUG) console.log('[VALIDATE PLAYER] Phone input:', cleanPhone);
-
-    // Try the standard validation first
-    if (!isValidPhoneNumber(cleanPhone)) {
-      // If that fails, try lenient validation for Chrome iOS
-      const cleaned = cleanPhone.replace(/\D/g, '');
-      if (cleaned.length >= 10 && cleaned.length <= 15) {
-        if (DEBUG) console.log('[VALIDATE PLAYER] Passed lenient validation for Chrome iOS');
-      } else {
-        throw new Error('Please enter a valid US phone number — for example 555-123-4567.');
-      }
-    }
+  if (cleanPhone && !isValidPhoneNumber(cleanPhone)) {
+    throw new Error('Please enter a valid US phone number — for example 555-123-4567.');
   }
 
   return {
@@ -224,7 +154,5 @@ module.exports = {
   checkExistingPlayer,
   addPlayerToGame,
   removePlayerFromGame,
-  isValidPhoneNumber,
-  isGameExpired,
-  checkGameNotExpired
+  isValidPhoneNumber
 };

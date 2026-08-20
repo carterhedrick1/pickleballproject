@@ -51,8 +51,32 @@ function isGameRecentlyFinished(gameDate, gameTime, days = 30) {
   return centralNow - gameDateTime <= days * 24 * 60 * 60 * 1000;
 }
 
+/**
+ * Checks if a game has completely finished (start + duration has passed).
+ * This is the server-side twin of the browser's isGameExpired in
+ * public/js/game-utils.js: the signup form closes at game END, not game start, so a late
+ * "IN" while people are already playing still counts.
+ * @param {string} gameDate - YYYY-MM-DD
+ * @param {string} gameTime - HH:MM
+ * @param {number|string} [durationMinutes=0]
+ * @param {Date} [centralNow] - injectable clock for tests
+ * @returns {boolean}
+ */
+function hasGameEnded(gameDate, gameTime, durationMinutes = 0, centralNow = getCentralTimeNow()) {
+  // An unscheduled game has not ended. Checked explicitly because V8's lenient parser
+  // turns the empty-string template ('T:00') into a real date in the year 2000.
+  if (!gameDate || !gameTime) return false;
+  const start = new Date(`${gameDate}T${gameTime}:00`);
+  if (isNaN(start.getTime())) return false;
+
+  const minutes = parseInt(durationMinutes, 10);
+  const end = new Date(start.getTime() + (Number.isFinite(minutes) ? minutes : 0) * 60000);
+  return centralNow > end;
+}
+
 module.exports = {
   getCentralTimeNow,
   isGameUpcoming,
-  isGameRecentlyFinished
+  isGameRecentlyFinished,
+  hasGameEnded
 };

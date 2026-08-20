@@ -10,6 +10,12 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+// Refuse to boot a misconfigured production process before anything else loads. A failed
+// boot leaves the previous deploy running on Render; serving with a broken configuration
+// would not. Warnings (including a disabled developer area) are logged, not fatal.
+const { assertStartupConfig } = require('./config');
+assertStartupConfig();
+
 const {
   initializeDatabase,
   logAppError,
@@ -18,6 +24,7 @@ const {
 } = require('./database');
 
 const { handleIncomingSMS } = require('./sms-handler');
+const { requireTextbeltSignature } = require('./utils/textbelt-webhook');
 const { checkAndSendReminders } = require('./game-logic');
 const { routeFailed } = require('./utils/route-error');
 const { createDatabaseGate } = require('./utils/database-gate');
@@ -47,7 +54,13 @@ const databaseGate = createDatabaseGate(initializeDatabase);
 
 // Middleware
 app.use(compression());
-app.use(express.json());
+// The raw body is kept alongside the parsed one because Textbelt's webhook signature
+// covers the exact bytes it sent; utils/textbelt-webhook.js verifies against req.rawBody.
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 // maxAge lets browsers and the CDN reuse CSS/images for an hour instead of
 // re-fetching all of them on every page view. HTML and JavaScript must be
 // revalidated together: otherwise a deploy can pair new markup with an old cached
@@ -161,8 +174,9 @@ mountPlayerRoutes(app);
 
 
 
-// SMS webhook (uses our SMS handler)
-app.post('/api/sms/webhook', express.json(), handleIncomingSMS);
+// SMS webhook. The signature gate rejects anything Textbelt did not sign - a forged
+// reply "9" would otherwise cancel a real player's spot.
+app.post('/api/sms/webhook', requireTextbeltSignature(), handleIncomingSMS);
 
 // ============================================================================
 // ERROR CAPTURE
