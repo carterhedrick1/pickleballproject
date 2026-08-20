@@ -118,10 +118,11 @@ describe('concurrent player mutations cannot lose roster changes', () => {
           })
         )
       );
+      const outcomes = results.map((r) => `${r.status}:${r.json?.status || JSON.stringify(r.json)}`);
       const confirmed = results.filter((r) => r.json?.status === 'confirmed').length;
       const waitlisted = results.filter((r) => r.json?.status === 'waitlist').length;
-      assert.equal(confirmed, 4, 'exactly capacity confirmed');
-      assert.equal(waitlisted, 8, 'everyone else waitlisted');
+      assert.equal(confirmed, 4, `exactly capacity confirmed (${outcomes.join(' | ')})`);
+      assert.equal(waitlisted, 8, `everyone else waitlisted (${outcomes.join(' | ')})`);
 
       const game = await readGame(fixture);
       assert.equal(game.players.length, 4);
