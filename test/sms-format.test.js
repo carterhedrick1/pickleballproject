@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { formatDateForSMS } = require('../utils/sms-format');
+const { formatDateForSMS, maskPhone } = require('../utils/sms-format');
 
 function formatDateInTimeZone(date, timeZone) {
   const script = [
@@ -14,6 +14,19 @@ function formatDateInTimeZone(date, timeZone) {
     encoding: 'utf8'
   });
 }
+
+describe('maskPhone', () => {
+  it('keeps only the last four digits for log lines', () => {
+    assert.equal(maskPhone('5551234567'), '***4567');
+    assert.equal(maskPhone('+1 (555) 123-4567'), '***4567');
+  });
+
+  it('says (no phone) rather than leaking a short fragment', () => {
+    assert.equal(maskPhone(''), '(no phone)');
+    assert.equal(maskPhone(null), '(no phone)');
+    assert.equal(maskPhone('123'), '(no phone)');
+  });
+});
 
 describe('SMS formatting', () => {
   it('keeps a game calendar date unchanged in every server time zone', () => {

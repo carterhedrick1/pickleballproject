@@ -20,6 +20,7 @@ const {
 } = require('../sms-reply-options');
 const {
   formatPhoneNumber,
+  maskPhone,
   formatDateForSMS,
   formatTimeForSMS,
   formatLocationForSMS
@@ -106,7 +107,7 @@ async function sendOrganizerNotification(gameId, game, eventType, playerName = n
     const locationText = formatLocationForSMS(game);
 
     if (DEBUG) {
-      console.log('[DEBUG] ORGANIZER NOTIFICATION:', { gameId, eventType, playerName, hostPhone: game.hostPhone });
+      console.log('[DEBUG] ORGANIZER NOTIFICATION:', { gameId, eventType, playerName, hostPhone: maskPhone(game.hostPhone) });
     }
 
     switch (eventType) {
@@ -374,8 +375,8 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
           : compareGameEntries(b, a);
       });
 
-    console.log(`[SMS] User ${cleanedFromNumber} has ${hostGames.length} host games`);
-    console.log(`[SMS DEBUG] Host games found:`, hostGames.map(g => `${g.game.location}`));
+    console.log(`[SMS] User ${maskPhone(cleanedFromNumber)} has ${hostGames.length} host games`);
+    if (DEBUG) console.log(`[SMS DEBUG] Host games found:`, hostGames.map(g => `${g.game.location}`));
     
     if (hostGames.length === 0) {
       await sendCategorySMS(
@@ -421,7 +422,7 @@ async function handleManagementLinkRequest(fromNumber, cleanedFromNumber) {
       
       // Check message length and truncate if needed
       if (responseMessage.length > 1500) {
-        console.log(`[SMS DEBUG] Message too long (${responseMessage.length} chars), sending shortened version`);
+        if (DEBUG) console.log(`[SMS DEBUG] Message too long (${responseMessage.length} chars), sending shortened version`);
         responseMessage = `You have ${hostGames.length} games you host — too many to list here. Visit inorout.club and open My Games to manage them.`;
       }
       
@@ -523,7 +524,7 @@ async function handleCancellationSelection(fromNumber, cleanedFromNumber, select
 // Handle management link requests (command "1")
 async function getUserHostGames(cleanedFromNumber, allGames, { includeRecent = false } = {}) {
   const gameEntries = Object.entries(allGames);
-  console.log(`[SMS DEBUG] Checking ${gameEntries.length} total games for host privileges for user ${cleanedFromNumber}`);
+  if (DEBUG) console.log(`[SMS DEBUG] Checking ${gameEntries.length} total games for host privileges for user ${maskPhone(cleanedFromNumber)}`);
   
   // Pre-fetch all host info in parallel for efficiency
   const hostInfoPromises = gameEntries.map(async ([id, game]) => {
@@ -547,20 +548,20 @@ async function getUserHostGames(cleanedFromNumber, allGames, { includeRecent = f
     // photos, so finished games stay reachable when the caller asks for them.
     const recent = includeRecent && isGameRecentlyFinished(game.date, game.time);
     if (!upcoming && !recent) {
-      console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
+      if (DEBUG) console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
       continue;
     }
 
     const hostInfo = hostInfoMap.get(id);
     if (hostInfo && hostInfo.phone === cleanedFromNumber) {
-      console.log(`[SMS DEBUG] User is host of game ${id}: ${game.location}`);
+      if (DEBUG) console.log(`[SMS DEBUG] User is host of game ${id}: ${game.location}`);
       hostGames.push({ id, game, hostInfo, upcoming });
     } else {
-      console.log(`[SMS DEBUG] User is NOT host of game ${id}: ${game.location}`);
+      if (DEBUG) console.log(`[SMS DEBUG] User is NOT host of game ${id}: ${game.location}`);
     }
   }
   
-  console.log(`[SMS DEBUG] Final result: ${hostGames.length} host games for user ${cleanedFromNumber}`);
+  if (DEBUG) console.log(`[SMS DEBUG] Final result: ${hostGames.length} host games for user ${maskPhone(cleanedFromNumber)}`);
   return hostGames;
 }
 
@@ -570,8 +571,8 @@ async function handleGameDetailsRequest(fromNumber, cleanedFromNumber) {
     const allGames = await getAllGames();
     const userGames = await getUserGames(cleanedFromNumber, allGames);
     
-    console.log(`[SMS] User ${cleanedFromNumber} has ${userGames.length} upcoming games`);
-    console.log(`[SMS DEBUG] Games found:`, userGames.map(g => `${g.game.location} (${g.role})`));
+    console.log(`[SMS] User ${maskPhone(cleanedFromNumber)} has ${userGames.length} upcoming games`);
+    if (DEBUG) console.log(`[SMS DEBUG] Games found:`, userGames.map(g => `${g.game.location} (${g.role})`));
     
     if (userGames.length === 0) {
       await sendCategorySMS(
@@ -670,7 +671,7 @@ async function handleCancellationRequest(fromNumber, cleanedFromNumber) {
 // Helper function to get user's games - OPTIMIZED VERSION
 async function getUserGames(cleanedFromNumber, allGames) {
   const gameEntries = Object.entries(allGames);
-  console.log(`[SMS DEBUG] Checking ${gameEntries.length} total games for user ${cleanedFromNumber}`);
+  if (DEBUG) console.log(`[SMS DEBUG] Checking ${gameEntries.length} total games for user ${maskPhone(cleanedFromNumber)}`);
   
   // Pre-fetch all host info in parallel for efficiency
   const hostInfoPromises = gameEntries.map(async ([id, game]) => {
@@ -691,7 +692,7 @@ async function getUserGames(cleanedFromNumber, allGames) {
   for (const [id, game] of gameEntries) {
     // Only check upcoming games
     if (!isGameUpcoming(game.date, game.time)) {
-      console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
+      if (DEBUG) console.log(`[SMS DEBUG] Skipping past game: ${game.location} on ${game.date}`);
       continue;
     }
     
@@ -701,7 +702,7 @@ async function getUserGames(cleanedFromNumber, allGames) {
     const playerInConfirmed = game.players.find(p => p.phone === cleanedFromNumber);
     if (playerInConfirmed) {
       userRole = playerInConfirmed.isOrganizer ? 'host' : 'confirmed';
-      console.log(`[SMS DEBUG] Found user in confirmed players: ${game.location} (${userRole})`);
+      if (DEBUG) console.log(`[SMS DEBUG] Found user in confirmed players: ${game.location} (${userRole})`);
     }
     
     // Check waitlist
@@ -709,7 +710,7 @@ async function getUserGames(cleanedFromNumber, allGames) {
       const playerInWaitlist = (game.waitlist || []).find(p => p.phone === cleanedFromNumber);
       if (playerInWaitlist) {
         userRole = 'waitlist';
-        console.log(`[SMS DEBUG] Found user in waitlist: ${game.location} (${userRole})`);
+        if (DEBUG) console.log(`[SMS DEBUG] Found user in waitlist: ${game.location} (${userRole})`);
       }
     }
     
@@ -718,18 +719,18 @@ async function getUserGames(cleanedFromNumber, allGames) {
       const hostInfo = hostInfoMap.get(id);
       if (hostInfo && hostInfo.phone === cleanedFromNumber) {
         userRole = 'host';
-        console.log(`[SMS DEBUG] Found user as host: ${game.location} (${userRole})`);
+        if (DEBUG) console.log(`[SMS DEBUG] Found user as host: ${game.location} (${userRole})`);
       }
     }
     
     if (userRole) {
       userGames.push({ id, game, role: userRole });
     } else {
-      console.log(`[SMS DEBUG] User not found in game: ${game.location}`);
+      if (DEBUG) console.log(`[SMS DEBUG] User not found in game: ${game.location}`);
     }
   }
   
-  console.log(`[SMS DEBUG] Final result: ${userGames.length} games for user ${cleanedFromNumber}`);
+  if (DEBUG) console.log(`[SMS DEBUG] Final result: ${userGames.length} games for user ${maskPhone(cleanedFromNumber)}`);
   // Soonest game first, and the same order every time. Database order shifts whenever a game
   // is re-saved, which used to renumber the reply list between two texts.
   return userGames.sort(compareGameEntries);

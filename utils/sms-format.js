@@ -13,6 +13,13 @@ function isValidUsPhone(phoneNumber) {
   return cleaned.length === 10 || (cleaned.length === 11 && cleaned.startsWith('1'));
 }
 
+// The one phone form allowed in a log line: enough to tell two players apart while never
+// writing a full number where logs are kept.
+function maskPhone(phoneNumber) {
+  const digits = String(phoneNumber == null ? '' : phoneNumber).replace(/\D/g, '');
+  return digits.length >= 4 ? `***${digits.slice(-4)}` : '(no phone)';
+}
+
 function formatDateForSMS(dateStr) {
   const calendarDate = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr));
   const date = calendarDate
@@ -48,6 +55,7 @@ function formatLocationForSMS(game) {
 module.exports = {
   formatPhoneNumber,
   isValidUsPhone,
+  maskPhone,
   formatDateForSMS,
   formatTimeForSMS,
   formatLocationForSMS

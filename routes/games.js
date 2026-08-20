@@ -27,6 +27,7 @@ const {
   formatTimeForSMS,
   formatLocationForSMS
 } = require('../sms-handler');
+const { maskPhone } = require('../utils/sms-format');
 
 const {
   createGameData,
@@ -89,7 +90,8 @@ module.exports = function mountGameRoutes(app) {
     const gameId = gameIdForCreation(requestId);
     let releaseCreateLock = () => {};
     try {
-      console.log('[SERVER] Received create game request:', req.body);
+      // Field names only: the body carries the organizer's phone number.
+      console.log(`[SERVER] Received create game request; fields: ${Object.keys(req.body || {}).join(', ') || '(none)'}`);
 
       // A deployment or brief network interruption can drop the response after the game was
       // saved. The browser retries with the same unpredictable key, which maps to the same game
@@ -130,10 +132,6 @@ module.exports = function mountGameRoutes(app) {
       // Make sure hostPhone is properly formatted and saved
       const formattedHostPhone = hostPhone ? formatPhoneNumber(hostPhone) : null;
       gameData.hostPhone = formattedHostPhone;
-      
-      console.log('[SERVER] Final game data before saving:');
-      console.log('  - hostPhone:', gameData.hostPhone);
-      console.log('  - notificationPreferences:', gameData.notificationPreferences);
       
       await saveGame(gameId, gameData, hostToken, formattedHostPhone);
       releaseCreateLock();
@@ -258,9 +256,10 @@ module.exports = function mountGameRoutes(app) {
     try {
       const { token, ...updateData } = req.body;
       
-      console.log('[SERVER] Updating game with data:', updateData);
-      console.log('[SERVER] Received notification preferences:', updateData.notificationPreferences);
-      
+      // Field names only: the body carries the host's phone number and private notes,
+      // which have no place in a log line.
+      console.log(`[SERVER] Updating game ${gameId}; fields: ${Object.keys(updateData).join(', ') || '(none)'}`);
+
       const game = await getGame(gameId);
       if (!game) {
         return res.status(404).json({ error: 'Game not found' });
@@ -299,7 +298,6 @@ module.exports = function mountGameRoutes(app) {
       }
 
       const changed = changedFields(before, game);
-      console.log('[SERVER] Saving game with notification preferences:', game.notificationPreferences);
 
       await saveGame(gameId, game, game.hostToken, game.hostPhone);
 
@@ -312,7 +310,6 @@ module.exports = function mountGameRoutes(app) {
 
       // Verify the save worked by reading it back
       const savedGame = await getGame(gameId);
-      console.log('[SERVER] Verified saved notification preferences:', savedGame.notificationPreferences);
       releaseLock();
 
       // Texts go out after the lock is released so nobody else waits on a TextBelt round trip.
@@ -615,18 +612,16 @@ module.exports = function mountGameRoutes(app) {
     }
   });
 
-  // Add these endpoints to your server.js file, around line 400-500 where your other API endpoints are
-
   // Get management links for a specific phone number
   app.get(
     '/api/games/by-phone/:phone',
     requireVerifiedHostPhone(),
     async (req, res) => {
-    console.log(`[PHONE LOOKUP] Looking up games for phone: ${req.params.phone}`);
+    console.log(`[PHONE LOOKUP] Looking up games for phone ${maskPhone(req.params.phone)}`);
     
     try {
       const phoneNumber = formatPhoneNumber(req.params.phone);
-      console.log(`[PHONE LOOKUP] Formatted phone: ${phoneNumber}`);
+      console.log(`[PHONE LOOKUP] Formatted phone ${maskPhone(phoneNumber)}`);
 
       // ?all=1 is the full host history (My Games). Without it the response keeps its old
       // shape: cancelled games drop off after a week.
@@ -680,7 +675,7 @@ module.exports = function mountGameRoutes(app) {
       // Sort by date (newest first)
       hostGames.sort((a, b) => new Date(b.date) - new Date(a.date));
       
-      console.log(`[PHONE LOOKUP] Found ${hostGames.length} games for phone ${phoneNumber}`);
+      console.log(`[PHONE LOOKUP] Found ${hostGames.length} games for phone ${maskPhone(phoneNumber)}`);
       
       res.json({
         phoneNumber,
@@ -699,7 +694,7 @@ module.exports = function mountGameRoutes(app) {
     '/api/games/lookup-and-notify',
     requireVerifiedHostPhone(),
     async (req, res) => {
-    console.log(`[PHONE LOOKUP SMS] Looking up and notifying phone: ${req.body.phone}`);
+    console.log(`[PHONE LOOKUP SMS] Looking up and notifying phone ${maskPhone(req.body.phone)}`);
     
     try {
       const { phone, sendSms = false } = req.body;

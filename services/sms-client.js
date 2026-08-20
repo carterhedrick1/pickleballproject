@@ -10,6 +10,7 @@ const PERMANENT_SMS_ERRORS = [
 ];
 
 const { normalizeSmsEventId } = require('../sms-event-catalog');
+const { maskPhone } = require('../utils/sms-format');
 
 // A provider connection must finish before the hosting proxy gives up on the browser request.
 // Callers turn this into an ordinary failed text, so one stalled provider response cannot leave
@@ -42,7 +43,7 @@ async function recordSmsResult(to, gameId, eventId, result, attempts = 1, ticket
 async function performSendSMS(to, message, gameId = null) {
   try {
     if (process.env.SMS_SIMULATE_FAILURE === '1') {
-      console.log(`[DEV MODE] Simulating SMS failure to ${to}`);
+      console.log(`[DEV MODE] Simulating SMS failure to ${maskPhone(to)}`);
       return { success: false, error: 'simulated failure', simulated: true };
     }
 
@@ -52,12 +53,12 @@ async function performSendSMS(to, message, gameId = null) {
     // where commands 1, 2 and 9 cannot find it. Keep local sends simulated unless a developer
     // explicitly opts in while using a reachable callback (for example, a tunnel).
     if (!process.env.DATABASE_URL && process.env.ALLOW_LOCAL_SMS !== '1') {
-      console.log(`[DEV MODE] SMS would be sent to ${to}: ${message}`);
+      console.log(`[DEV MODE] SMS would be sent to ${maskPhone(to)}: ${message}`);
       return { success: true, dev: true, localSafety: true };
     }
 
     if (!process.env.TEXTBELT_API_KEY) {
-      console.log(`[DEV MODE] SMS would be sent to ${to}: ${message}`);
+      console.log(`[DEV MODE] SMS would be sent to ${maskPhone(to)}: ${message}`);
       return { success: true, dev: true };
     }
 
@@ -82,7 +83,7 @@ async function performSendSMS(to, message, gameId = null) {
     const result = await response.json();
 
     if (result.success) {
-      console.log(`SMS sent to ${to}. TextID: ${result.textId}`);
+      console.log(`SMS sent to ${maskPhone(to)}. TextID: ${result.textId}`);
       return { success: true, textId: result.textId };
     }
 
@@ -126,19 +127,19 @@ async function sendSMSWithRetry(
     }
 
     if (isPermanentSmsError(result.error)) {
-      console.error(`[SMS] Permanent failure to ${to}, not retrying: ${result.error}`);
+      console.error(`[SMS] Permanent failure to ${maskPhone(to)}, not retrying: ${result.error}`);
       const finalResult = { ...result, attempts, permanent: true };
       await recordSmsResult(to, gameId, eventId, finalResult, attempts, ticket);
       return finalResult;
     }
 
     if (attempts <= retries) {
-      console.warn(`[SMS] Send to ${to} failed (${result.error}); retrying once`);
+      console.warn(`[SMS] Send to ${maskPhone(to)} failed (${result.error}); retrying once`);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   } while (attempts <= retries);
 
-  console.error(`[SMS] Giving up on ${to} after ${attempts} attempt(s): ${result.error}`);
+  console.error(`[SMS] Giving up on ${maskPhone(to)} after ${attempts} attempt(s): ${result.error}`);
   const finalResult = { ...result, attempts };
   await recordSmsResult(to, gameId, eventId, finalResult, attempts, ticket);
   return finalResult;
