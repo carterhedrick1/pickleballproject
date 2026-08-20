@@ -1,8 +1,10 @@
 // game-logic.js - Game creation and validation compatibility facade
+//
+// This used to call resetReminderState() at require time, which meant merely importing a
+// validation helper wiped the reminder dedup caches. Rigs that want a clean reminder
+// state (verify/reminder-catchup.js) now call resetReminderState() themselves.
 const { formatPhoneNumber, isValidUsPhone } = require('./utils/sms-format');
-const reminders = require('./services/reminders');
-reminders.resetReminderState();
-const { checkAndSendReminders } = reminders;
+const { checkAndSendReminders } = require('./services/reminders');
 const PlayerCapacity = require('./public/js/player-capacity');
 const {
   findExistingPlayer,

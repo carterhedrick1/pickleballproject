@@ -122,11 +122,12 @@ function makeGame(hours, extra = {}) {
   r2.length === 0 ? ok('no duplicate reminders on a second run') : bad(`resent ${r2.length} reminders`);
 
   console.log('\n=== Run 3 (simulating a process restart: in-memory caches cleared) ===');
-  // Durable reminder_log must be what prevents resends, not the in-memory cache.
-  delete require.cache[require.resolve(ROOT + '/game-logic')];
-  const fresh = require(ROOT + '/game-logic');
+  // Durable reminder_log must be what prevents resends, not the in-memory cache. This
+  // used to simulate the restart by re-requiring game-logic, whose import wiped the
+  // caches as a side effect; the reset is explicit now.
+  require(ROOT + '/services/reminders').resetReminderState();
   sent = [];
-  await fresh.checkAndSendReminders();
+  await checkAndSendReminders();
   const r3 = sent.filter((s) => s.phone.startsWith('+1555111'));
   r3.length === 0
     ? ok('still no duplicates after a restart (reminder_log is authoritative)')
