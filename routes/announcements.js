@@ -20,7 +20,7 @@ const {
 const { acquireGameLock } = require('../utils/game-lock');
 const { findOnGame } = require('../utils/game-audience');
 const { routeFailed } = require('../utils/route-error');
-const { isHost } = require('../utils/host-auth');
+const { isHost, requestHostToken } = require('../utils/host-auth');
 const { resolveTextMessage } = require('../services/text-message-rotation');
 
 module.exports = function mountAnnouncementRoutes(app) {
@@ -114,7 +114,7 @@ module.exports = function mountAnnouncementRoutes(app) {
     const releaseLock = await acquireGameLock(gameId);
     try {
       const playerId = req.params.playerId;
-      const token = req.query.token;
+      const token = requestHostToken(req);
 
       const game = await getGame(gameId);
       if (!game) {

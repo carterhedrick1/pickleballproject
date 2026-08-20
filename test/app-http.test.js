@@ -110,6 +110,85 @@ describe('app over HTTP: webhook signature gate', () => {
   });
 });
 
+describe('app over HTTP: host token transport', () => {
+  let fixture; // { gameId, hostToken }
+
+  before(async () => {
+    fixture = (await req('POST', '/api/games', gameBody('HTTP Token Transport Court'))).json;
+    assert.ok(fixture.gameId, 'fixture game was created');
+  });
+
+  after(async () => {
+    await req('DELETE', `/api/games/${fixture.gameId}`, {
+      token: fixture.hostToken,
+      reason: 'transport test cleanup'
+    });
+    await req('DELETE', `/api/games/${fixture.gameId}/permanent`, { token: fixture.hostToken });
+  });
+
+  it('grants the host view via the X-Host-Token header, with no token in the URL', async () => {
+    const res = await req('GET', `/api/games/${fixture.gameId}`, null, {
+      'X-Host-Token': fixture.hostToken
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.json.hostToken, fixture.hostToken);
+    assert.ok(res.json.notificationPreferences, 'host-only fields are present');
+  });
+
+  it('grants the host view via Authorization: Bearer as well', async () => {
+    const res = await req('GET', `/api/games/${fixture.gameId}`, null, {
+      Authorization: `Bearer ${fixture.hostToken}`
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.json.hostToken, fixture.hostToken);
+  });
+
+  it('rejects a wrong header token with 403 instead of falling back to the public view', async () => {
+    const res = await req('GET', `/api/games/${fixture.gameId}`, null, {
+      'X-Host-Token': 'not-the-host'
+    });
+    assert.equal(res.status, 403);
+  });
+
+  it('serves the public view, without host-only fields, when no token is sent', async () => {
+    const res = await req('GET', `/api/games/${fixture.gameId}`);
+    assert.equal(res.status, 200);
+    assert.equal(res.json.hostToken, undefined);
+    assert.equal(res.json.notificationPreferences, undefined);
+    assert.equal(res.json.hostNotes, undefined);
+  });
+
+  it('still honors the old query-string transport for existing links', async () => {
+    const res = await req('GET', `/api/games/${fixture.gameId}?token=${fixture.hostToken}`);
+    assert.equal(res.status, 200);
+    assert.equal(res.json.hostToken, fixture.hostToken);
+  });
+
+  it('authorizes a roster removal through the header, the shape the manage page sends', async () => {
+    const joined = await req('POST', `/api/games/${fixture.gameId}/players`, {
+      name: 'Transport Test Player',
+      phone: '5558880009'
+    });
+    assert.equal(joined.status, 201);
+
+    const denied = await req(
+      'DELETE',
+      `/api/games/${fixture.gameId}/players/${joined.json.playerId}`,
+      null,
+      { 'X-Host-Token': 'not-the-host' }
+    );
+    assert.equal(denied.status, 403);
+
+    const removed = await req(
+      'DELETE',
+      `/api/games/${fixture.gameId}/players/${joined.json.playerId}`,
+      null,
+      { 'X-Host-Token': fixture.hostToken }
+    );
+    assert.equal(removed.status, 200);
+  });
+});
+
 describe('app over HTTP: signup eligibility and authorization', () => {
   let cancelled; // { gameId, hostToken } - cancelled during the tests
   let ended; // { gameId, hostToken } - moved into the past during the tests

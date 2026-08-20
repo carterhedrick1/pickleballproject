@@ -34,6 +34,36 @@ function bearerToken(req) {
   return match ? match[1] : '';
 }
 
+/**
+ * Where a request may carry its game host token, in preference order.
+ *
+ * The X-Host-Token header is the intended transport (the roster routes already use it),
+ * with Authorization: Bearer accepted for curl and tests. The body and query forms are
+ * the historical transports and stay accepted so old pages and links keep working - but
+ * a token in a query string lands in logs and browser history, which is why the
+ * management page no longer sends one and the request logger redacts any that arrive.
+ *
+ * @param {import('express').Request} req
+ * @returns {string} the supplied token, or '' when the request carries none
+ */
+function requestHostToken(req) {
+  const headerToken = String(req.headers?.['x-host-token'] || '').trim();
+  if (headerToken) return headerToken;
+  const bearer = bearerToken(req);
+  if (bearer) return bearer;
+  if (req.body && typeof req.body.token === 'string' && req.body.token) return req.body.token;
+  if (req.query && typeof req.query.token === 'string' && req.query.token) return req.query.token;
+  return '';
+}
+
+/**
+ * Strips token values out of a URL before it is logged. The request logger runs for every
+ * call, and an old-style link or client may still put the host token in the query string.
+ */
+function redactTokenInUrl(url) {
+  return String(url).replace(/([?&]token=)[^&]*/gi, '$1[redacted]');
+}
+
 function requireVerifiedHostPhone({ allowGameToken = false } = {}) {
   return async function verifyHostPhoneRequest(req, res, next) {
     const phone = formatPhoneNumber(req.params.phone || req.body?.phone);
@@ -62,4 +92,4 @@ function requireVerifiedHostPhone({ allowGameToken = false } = {}) {
   };
 }
 
-module.exports = { isHost, requireVerifiedHostPhone };
+module.exports = { isHost, requireVerifiedHostPhone, requestHostToken, redactTokenInUrl };

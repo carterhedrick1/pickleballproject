@@ -17,7 +17,7 @@ const {
 } = require('../database');
 
 const { routeFailed } = require('../utils/route-error');
-const { isHost } = require('../utils/host-auth');
+const { isHost, requestHostToken } = require('../utils/host-auth');
 const { PHOTO_TYPES, MAX_PHOTOS_PER_GAME, sniffImageType } = require('../utils/image-type');
 
 module.exports = function mountPhotoRoutes(app) {
@@ -35,7 +35,7 @@ module.exports = function mountPhotoRoutes(app) {
     async (req, res) => {
       try {
         const gameId = req.params.id;
-        const token = req.query.token;
+        const token = requestHostToken(req);
 
         const game = await getGame(gameId);
         if (!game) {
@@ -109,7 +109,7 @@ module.exports = function mountPhotoRoutes(app) {
   app.delete('/api/games/:id/photos/:photoId', async (req, res) => {
     try {
       const gameId = req.params.id;
-      const token = req.query.token;
+      const token = requestHostToken(req);
 
       // getGameHostInfo rather than getGame: this only needs the token, not the whole blob.
       const hostInfo = await getGameHostInfo(gameId);

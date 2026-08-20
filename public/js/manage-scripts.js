@@ -152,11 +152,13 @@ function toggleCollapsible(sectionId) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Get game ID and host token from URL
+    // Get game ID from the URL; the host token comes from the URL once and is then kept
+    // out of it (see captureHostToken), so copying the address bar can no longer hand
+    // control of the game to whoever the URL is pasted to.
     const urlParams = new URLSearchParams(window.location.search);
     gameId = urlParams.get('id');
-    hostToken = urlParams.get('token');
-    
+    hostToken = captureHostToken(gameId, urlParams);
+
     if (!gameId || !hostToken) {
         showUnauthorized();
         return;
@@ -177,6 +179,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // Restore the active tab after everything is loaded
     setTimeout(restoreActiveTab, 100);
 });
+
+const HOST_TOKEN_STORAGE_PREFIX = 'inorout.hostToken.';
+
+/**
+ * The management link is the host's key, and it arrives with the token in the query
+ * string (that is how the SMS link has always worked, and it keeps working). Once seen,
+ * the token is remembered per game on this device and stripped from the address bar, so
+ * browser history and copied URLs no longer carry it. A revisit without the token on the
+ * same device falls back to the remembered one; a new device needs the SMS link again.
+ */
+function captureHostToken(gameId, urlParams) {
+    let token = urlParams.get('token') || '';
+    try {
+        if (token && gameId) {
+            localStorage.setItem(HOST_TOKEN_STORAGE_PREFIX + gameId, token);
+        } else if (!token && gameId) {
+            token = localStorage.getItem(HOST_TOKEN_STORAGE_PREFIX + gameId) || '';
+        }
+    } catch (storageError) {
+        // Storage blocked (private mode): the URL token still runs this page view.
+    }
+    if (urlParams.get('token')) {
+        try {
+            const url = new URL(window.location);
+            url.searchParams.delete('token');
+            history.replaceState(history.state, '', url);
+        } catch (historyError) {
+            // A browser that cannot rewrite the URL simply keeps the old behavior.
+        }
+    }
+    return token;
+}
+
+/** Headers that prove host-ness to the API without putting the token in a URL. */
+function hostAuthHeaders(extra = {}) {
+    return hostToken ? { ...extra, 'X-Host-Token': hostToken } : { ...extra };
+}
 
 function restoreActiveTab() {
     // A tab named in the URL wins (new games link straight to Invite), then the tab
@@ -277,7 +316,7 @@ function openTabFromSelect(tabName) {
 
 async function fetchGameData() {
     try {
-        const response = await fetch(`/api/games/${gameId}?token=${hostToken}`);
+        const response = await fetch(`/api/games/${gameId}`, { headers: hostAuthHeaders() });
         
         if (!response.ok) {
             if (response.status === 403) {
@@ -804,11 +843,11 @@ async function cancelGame() {
         
         showStatus('Cancelling game...', 'info');
         
-        const response = await fetch(`/api/games/${gameId}?token=${hostToken}`, {
+        const response = await fetch(`/api/games/${gameId}`, {
             method: 'DELETE',
-            headers: {
+            headers: hostAuthHeaders({
                 'Content-Type': 'application/json'
-            },
+            }),
             body: JSON.stringify({
                 reason,
                 token: hostToken

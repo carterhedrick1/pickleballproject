@@ -7,7 +7,7 @@
  */
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { isHost } = require('../utils/host-auth.js');
+const { isHost, requestHostToken, redactTokenInUrl } = require('../utils/host-auth.js');
 
 const TOKEN = 'a'.repeat(64);
 const game = { hostToken: TOKEN };
@@ -44,5 +44,66 @@ describe('isHost', () => {
   it('does not accept a token that only loosely matches', () => {
     assert.strictEqual(isHost({ hostToken: '0' }, 0), false);
     assert.strictEqual(isHost({ hostToken: '1' }, true), false);
+  });
+});
+
+describe('requestHostToken', () => {
+  const req = ({ headers = {}, body, query } = {}) => ({ headers, body, query });
+
+  it('prefers the X-Host-Token header, the intended transport', () => {
+    assert.strictEqual(
+      requestHostToken(req({
+        headers: { 'x-host-token': 'header-token', authorization: 'Bearer bearer-token' },
+        body: { token: 'body-token' },
+        query: { token: 'query-token' }
+      })),
+      'header-token'
+    );
+  });
+
+  it('accepts Authorization: Bearer for curl and tests', () => {
+    assert.strictEqual(
+      requestHostToken(req({ headers: { authorization: 'Bearer bearer-token' } })),
+      'bearer-token'
+    );
+  });
+
+  it('still accepts the historical body and query transports', () => {
+    assert.strictEqual(requestHostToken(req({ body: { token: 'body-token' } })), 'body-token');
+    assert.strictEqual(requestHostToken(req({ query: { token: 'query-token' } })), 'query-token');
+  });
+
+  it('prefers the body over the query when both are present', () => {
+    assert.strictEqual(
+      requestHostToken(req({ body: { token: 'body-token' }, query: { token: 'query-token' } })),
+      'body-token'
+    );
+  });
+
+  it('returns an empty string for a request carrying no token anywhere', () => {
+    assert.strictEqual(requestHostToken(req()), '');
+    assert.strictEqual(requestHostToken(req({ body: {}, query: {} })), '');
+  });
+
+  it('ignores non-string token shapes rather than coercing them', () => {
+    assert.strictEqual(requestHostToken(req({ body: { token: 123 }, query: { token: ['a', 'b'] } })), '');
+  });
+});
+
+describe('redactTokenInUrl', () => {
+  it('masks a token in the query string, wherever it sits', () => {
+    assert.strictEqual(
+      redactTokenInUrl('/api/games/g1?token=secret123'),
+      '/api/games/g1?token=[redacted]'
+    );
+    assert.strictEqual(
+      redactTokenInUrl('/manage.html?id=g1&token=secret123&tab=Invite'),
+      '/manage.html?id=g1&token=[redacted]&tab=Invite'
+    );
+  });
+
+  it('leaves token-less URLs untouched', () => {
+    assert.strictEqual(redactTokenInUrl('/api/games/g1?ticket=abc'), '/api/games/g1?ticket=abc');
+    assert.strictEqual(redactTokenInUrl('/api/health'), '/api/health');
   });
 });

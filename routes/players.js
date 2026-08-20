@@ -29,6 +29,7 @@ const {
 } = require('../game-logic');
 
 const { isGameUpcoming } = require('../utils/central-time');
+const { requestHostToken } = require('../utils/host-auth');
 const {
   departureAlertType
 } = require('../utils/promotion');
@@ -635,7 +636,7 @@ module.exports = function mountPlayerRoutes(app) {
     const gameId = req.params.id;
     try {
       const playerId = req.params.playerId;
-      const token = req.query.token;
+      const token = requestHostToken(req);
       const result = await removeFromGame(gameId, playerId, token);
       if (result.status === 'game_not_found') {
         return res.status(404).json({ error: 'Game not found' });

@@ -90,7 +90,8 @@
             const notice = document.getElementById('repeatNotice');
             try {
                 const response = await fetch(
-                    `/api/games/${encodeURIComponent(gameId)}?token=${encodeURIComponent(token || '')}`
+                    `/api/games/${encodeURIComponent(gameId)}`,
+                    { headers: token ? { 'X-Host-Token': token } : {} }
                 );
                 if (!response.ok) throw new Error(`Server returned ${response.status}`);
                 const game = await response.json();
@@ -441,8 +442,8 @@ async function saveCourtImageChoice(gameId, hostToken, selectedValue) {
     if (selectedValue && selectedValue !== 'none') {
         try {
             const selectResponse = await fetch(
-                `/api/games/${encodeURIComponent(gameId)}/court-image/${encodeURIComponent(selectedValue)}?token=${encodeURIComponent(hostToken)}`,
-                { method: 'PUT' }
+                `/api/games/${encodeURIComponent(gameId)}/court-image/${encodeURIComponent(selectedValue)}`,
+                { method: 'PUT', headers: { 'X-Host-Token': hostToken } }
             );
             if (!selectResponse.ok) {
                 const selectData = await selectResponse.json().catch(() => ({}));

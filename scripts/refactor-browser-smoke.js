@@ -250,9 +250,10 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       const gameId = params.get('id');
       const response = await fetch('/api/games/' + gameId + '/court-images');
       const library = await response.json();
-      // The token matters here: notificationPreferences is host-only, so the
-      // public (token-less) response no longer carries it.
-      const gameResponse = await fetch('/api/games/' + gameId + '?token=' + params.get('token'));
+      // The token matters here: notificationPreferences is host-only, so the public
+      // response no longer carries it. The manage page strips the token from the URL at
+      // load, so the page's own captured token (via hostAuthHeaders) is the way in.
+      const gameResponse = await fetch('/api/games/' + gameId, { headers: hostAuthHeaders() });
       const game = await gameResponse.json();
       return {
         gameId,
@@ -386,6 +387,10 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       `${local.baseUrl}/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`
     );
     await cdp.sleep(500);
+    const manageTokenHidden = await desktop.evaluate(
+      `(() => !location.search.includes('token='))()`
+    );
+    assert(manageTokenHidden, 'the management page removes the host token from the address bar');
     const manageReady = await desktop.evaluate(`(() => {
       const name = [...document.querySelectorAll('.player-name')]
         .find((node) => node.textContent.startsWith('<img'));
