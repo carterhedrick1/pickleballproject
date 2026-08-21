@@ -9,7 +9,8 @@
 //
 // Reads public/*.html directly. Nothing is started and nothing is written outside docs/.
 // Text the app generates while running - rosters, status messages, every SMS - is not in here;
-// that lives in public/js/ and sms-handler.js.
+// that lives in public/js/ and, for the texts, in the message services and the editable
+// rotations behind the developer area.
 
 const fs = require('fs');
 const path = require('path');
@@ -162,7 +163,7 @@ ${index}  </nav>
 </section>
 ${body}
 <section class="notes">
-  <div class="note"><h3>Not shown here</h3><p>Anything the app writes while running: player names and rosters, status and error messages, and every text message it sends. Those live in <span class="path">public/js/</span> and <span class="path">sms-handler.js</span>.</p></div>
+  <div class="note"><h3>Not shown here</h3><p>Anything the app writes while running: player names and rosters, status and error messages, and every text message it sends. Those live in <span class="path">public/js/</span>, and the texts come from <span class="path">services/</span> and the editable rotations in the developer area.</p></div>
   <div class="note"><h3>Freshness</h3><p>${generatedNote('For a line-by-line view instead, open copy-deck.html.')}</p></div>
 </section>
 </div>`,

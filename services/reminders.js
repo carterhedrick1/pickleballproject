@@ -6,7 +6,7 @@ const { hasReminderBeenSent, markReminderSent } = require('../database/messaging
 // reaching Textbelt in those runs.
 const smsClient = require('./sms-client');
 const { formatDateForSMS, formatTimeForSMS, formatLocationForSMS, maskPhone } = require('../utils/sms-format');
-const { getCentralTimeNow, isGameUpcoming } = require('../utils/central-time');
+const { centralDateKey, centralWallClock, gameStart, isGameUpcoming } = require('../public/js/central-time');
 const { resolveTextMessage } = require('./text-message-rotation');
 const { appendCustomReplyInstructions } = require('../sms-reply-options');
 
@@ -76,7 +76,7 @@ const HOUR_MS = 60 * 60 * 1000;
 /**
  * The window a reminder kind may be sent in: from its own lead time until the next, shorter
  * lead time takes over. The last kind runs until the game starts.
- * @returns {{ opensAt: number, closesAt: number }} epoch ms in the game's own wall clock
+ * @returns {{ opensAt: number, closesAt: number }} real epoch milliseconds
  */
 function reminderWindow(kind, gameStartMs) {
   const shorterLeads = REMINDER_KINDS
@@ -89,17 +89,14 @@ function reminderWindow(kind, gameStartMs) {
   };
 }
 
-function describeGameDay(game, centralNow) {
-  const dateKey = (date) =>
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-  if (game.date === dateKey(centralNow)) return 'today';
-  const tomorrow = new Date(
-    centralNow.getFullYear(),
-    centralNow.getMonth(),
-    centralNow.getDate() + 1
-  );
-  if (game.date === dateKey(tomorrow)) return 'tomorrow';
+/**
+ * "today", "tomorrow", or the date itself - decided on the Central Time calendar, which is the
+ * one a player is looking at. This used to read the local fields of a Date that had been shifted
+ * to pretend it was Central; centralDateKey asks the timezone directly instead.
+ */
+function describeGameDay(game, now) {
+  if (game.date === centralDateKey(now, 0)) return 'today';
+  if (game.date === centralDateKey(now, 1)) return 'tomorrow';
   return `on ${formatDateForSMS(game.date)}`;
 }
 
@@ -113,22 +110,26 @@ async function checkAndSendReminders() {
   try {
     console.log('[REMINDER] Checking for games that need reminders...');
     const allGames = await getAllGames();
-    const centralNow = getCentralTimeNow();
+    // A real instant now, on both sides of every comparison below. The old pairing - a "now"
+    // shifted into Central's wall clock against a naive parse of the game's - agreed with
+    // itself but named no moment, so a stored ISO timestamp could not be compared with it.
+    const now = new Date();
     let remindersSentThisRun = 0;
 
     if (DEBUG) {
-      console.log(`[REMINDER] Current Central time: ${centralNow.toLocaleString()}`);
+      console.log(`[REMINDER] Current Central time: ${JSON.stringify(centralWallClock(now))}`);
     }
 
     for (const [gameId, game] of Object.entries(allGames)) {
       if (game.cancelled) continue;
 
-      const gameTime = new Date(`${game.date}T${game.time}:00`);
+      const startsAt = gameStart(game);
+      if (!startsAt) continue;
 
       for (const kind of REMINDER_KINDS) {
-        const { opensAt, closesAt } = reminderWindow(kind, gameTime.getTime());
+        const { opensAt, closesAt } = reminderWindow(kind, startsAt.getTime());
 
-        if (centralNow >= opensAt && centralNow < closesAt && isGameUpcoming(game.date, game.time)) {
+        if (now >= opensAt && now < closesAt && isGameUpcoming(game.date, game.time, now)) {
           const confirmedPlayers = game.players || [];
           const rosterSignature = confirmedPlayers
             .map((player) => player.phone)
@@ -185,7 +186,7 @@ async function checkAndSendReminders() {
             }
             if (alreadySent) continue;
 
-            const gameDay = describeGameDay(game, centralNow);
+            const gameDay = describeGameDay(game, now);
             const defaultMessage = kind.type === 'game_day'
               ? `Your pickleball game starts at ${formatTimeForSMS(game.time)} ` +
                 `— ${formatLocationForSMS(game)}. Reply 9 now if you can't make it.`

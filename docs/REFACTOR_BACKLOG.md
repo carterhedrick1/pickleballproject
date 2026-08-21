@@ -214,13 +214,50 @@ migration path for it, and the parity suite is where the SQL would be proven.
   Also `verify/all-routes.js` (42 routes, no 500s), `verify/user-flow.js`,
   `verify/signup-eligibility.js` and `verify/roster-locations.js` against a worktree server.
 
-### 11. One canonical Central Time model
-Four time implementations still exist: `utils/central-time.js` (shifted-central model, now
-also the signup cutoff via `hasGameEnded`), manual DST offset math in
-`public/js/game-utils.js`, browser-local `getTimeUntilGame`, and assorted `new Date()`
-parsing. Replace with one well-tested module (or server-provided canonical status
-timestamps) covering upcoming/started/ended/recently-finished/reminder windows, with
-CST/CDT transition tests. Until then, keep server and browser cutoffs matched by hand.
+- **One canonical Central Time model** (was P4 item 11) - done 2026-08-21.
+  `public/js/central-time.js` is the only implementation, loaded by the pages as
+  `window.CentralTime` and required by the server the way `player-capacity.js` and
+  `invite-status.js` already were. `utils/central-time.js` and `public/js/game-utils.js` are
+  deleted. It exports the conversion (`wallClockToInstant`, `centralOffsetMs`,
+  `centralWallClock`, `centralDateKey`), the windows (`isGameUpcoming`, `hasGameStarted`,
+  `hasGameEnded`, `isGameRecentlyFinished`, `gameStart`, `gameEnd`) and what the pages ask for
+  (`getGameStatus`, `getTimeUntilGame`).
+
+  There were five implementations, not four. The fifth - `utils/calendar-invite.js` - was the
+  only correct one, and it is the one kept: it asks `Intl.DateTimeFormat` what offset
+  America/Chicago really had at that instant, then converts in two passes so the hour a clock
+  moves lands on the right side. Nothing does offset arithmetic by hand any more, so the next
+  change to the DST rules arrives with the platform's timezone data instead of a patch.
+  calendar-invite.js now imports it under its old local name.
+
+  Three bugs fell out of the merge rather than being hunted for:
+  - A game ending after midnight never expired. The browser built its end time by adding the
+    duration to the start hour, so 23:00 + 120 minutes became the string "25:00:00", which
+    parses as Invalid Date, which the code read as "not expired". The signup form stayed open
+    on it for ever.
+  - The countdown was built in the *browser's* timezone, so a player in New York was told a
+    game was an hour further away than it was.
+  - `new Date(game.date)` in the two host-lookup routes read a bare YYYY-MM-DD as UTC
+    midnight - up to six hours from when the game was scheduled - and decided the 7-day and
+    30-day windows on it. Those now start from the same Central wall clock as everything else,
+    and the sorts order by the moment a game starts, so two games on one day come back in the
+    order they are played.
+
+  The signup cutoff no longer needs matching by hand: `domain/join-policy.js` and the game page
+  call the same `hasGameEnded`. `services/reminders.js` compares real instants on both sides
+  instead of a "now" shifted into Central against a naive parse of the game's wall clock, and
+  names today and tomorrow with `centralDateKey`.
+
+  Proof: `test/central-time.test.js` (22 cases, every "now" written in UTC so the fixture means
+  the same thing in any timezone) covers both clock changes in 2026 - the 02:00-03:00 gap on
+  2026-03-08 and the repeated 01:30 on 2026-11-01 - plus the midnight-crossing game and the
+  countdown. `test/join-policy.test.js` measures a game running through the spring-forward gap
+  in real hours. 399 tests, 103 browser-smoke assertions, all four reminder rigs, the
+  signup-eligibility rig (the cutoff itself), user-flow, all-routes and stats.
+
+  Folded in while the docs were being regenerated: the copy deck and `docs/README.md` both told
+  the reader the app's running copy lives in "public/js/ and sms-handler.js", a file deleted two
+  tasks ago.
 
 ## P5. Frontend decomposition
 

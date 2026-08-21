@@ -8,7 +8,7 @@
 // whole JSON blobs. At this app's scale (dozens of games) that is fine; SQL-side lookup
 // tables are the refactor backlog's persistence item if scale ever changes.
 const { getGameHostInfo } = require('../database/games');
-const { isGameUpcoming, isGameRecentlyFinished } = require('../utils/central-time');
+const { isGameUpcoming, isGameRecentlyFinished } = require('../public/js/central-time');
 const { maskPhone } = require('../utils/sms-format');
 
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';

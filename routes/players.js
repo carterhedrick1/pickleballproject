@@ -18,7 +18,7 @@ const { sendOrganizerNotification } = require('../services/sms-webhook');
 const { validatePlayerData } = require('../domain/player-validation');
 const { usPhone } = require('../utils/request-validation');
 
-const { isGameUpcoming } = require('../utils/central-time');
+const { isGameUpcoming } = require('../public/js/central-time');
 const { requestHostToken } = require('../utils/host-auth');
 const {
   formatPhoneNumber,

@@ -8,7 +8,7 @@
 // partly knowable, it says so in `notes` rather than quietly presenting a half-truth - and the
 // stats that still need data the app does not record are left as nulls under `parked`.
 
-const { isGameUpcoming } = require('./utils/central-time');
+const { isGameUpcoming } = require('./public/js/central-time');
 const { inviteStatus } = require('./public/js/invite-status');
 
 /**

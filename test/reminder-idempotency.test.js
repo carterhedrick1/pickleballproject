@@ -20,20 +20,15 @@ smsClient.sendSMS = async (phone, message, gameId, options) => {
 const { initializeDatabase } = require('../database/schema');
 const { saveGame, deleteGamePermanently } = require('../database/games');
 const { checkAndSendReminders, resetReminderState } = require('../services/reminders');
-const { getCentralTimeNow } = require('../utils/central-time');
+const { centralWallClock } = require('../public/js/central-time');
 
 const GAME_ID = 'gate-reminder-idem-test';
 const PHONES = ['5554440001', '5554440002'];
 const mine = () => sent.filter((s) => String(s.phone).startsWith('555444'));
 
-// A date/time N hours from "now" in the same wall-clock frame the reminder system uses.
+// A date/time N hours from now, written the way a game stores it: the Central wall clock.
 function offsetGame(hours) {
-  const t = new Date(getCentralTimeNow().getTime() + hours * 3600 * 1000);
-  const p = (n) => String(n).padStart(2, '0');
-  return {
-    date: `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`,
-    time: `${p(t.getHours())}:${p(t.getMinutes())}`
-  };
+  return centralWallClock(new Date(Date.now() + hours * 3600 * 1000));
 }
 
 before(async () => {
