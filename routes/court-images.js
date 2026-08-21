@@ -23,7 +23,22 @@ const { getGame } = require('../database/games');
 const { routeFailed } = require('../utils/route-error');
 const { isHost, requestHostToken } = require('../utils/host-auth');
 const { PHOTO_TYPES, sniffImageType } = require('../utils/image-type');
+const { requiredText } = require('../utils/request-validation');
+const { LOCATION_MAX } = require('../domain/game-validation');
 const { requireDevAuth } = require('./dev');
+
+/**
+ * The court name out of the path, bounded by the same limit a game's location is.
+ *
+ * These routes used to call decodeURIComponent on the parameter, which Express has already
+ * decoded - a second decode. A court whose name contains a per-cent sign ("50% Off Courts")
+ * arrived here as "50%", which decodeURIComponent throws a URIError on, and the host got a
+ * 500 for a court they had simply named awkwardly. A genuinely malformed escape never gets
+ * this far: Express refuses it with its own 400 while decoding the path.
+ */
+function courtNameFromPath(value) {
+  return requiredText(value, 'The court name', { max: LOCATION_MAX });
+}
 
 module.exports = function mountCourtImageRoutes(app) {
   // Court images (dev only). Uses the developer area's own sign-in rather than a second copy of
@@ -35,7 +50,7 @@ module.exports = function mountCourtImageRoutes(app) {
     express.raw({ type: PHOTO_TYPES, limit: '5mb' }),
     async (req, res) => {
       try {
-        const courtName = decodeURIComponent(req.params.courtName);
+        const courtName = courtNameFromPath(req.params.courtName);
         const mimeType = sniffImageType(req.body);
         if (!mimeType) {
           return res.status(400).json({
@@ -64,7 +79,7 @@ module.exports = function mountCourtImageRoutes(app) {
 
   app.get('/api/courts/:courtName/image', async (req, res) => {
     try {
-      const courtName = decodeURIComponent(req.params.courtName);
+      const courtName = courtNameFromPath(req.params.courtName);
       const photo = await getCourtImage(courtName);
       if (!photo || !photo.image_data) {
         return res.status(404).json({ error: 'No image for this court' });
@@ -88,7 +103,7 @@ module.exports = function mountCourtImageRoutes(app) {
 
   app.get('/api/courts/:courtName/library', async (req, res) => {
     try {
-      const courtName = decodeURIComponent(req.params.courtName);
+      const courtName = courtNameFromPath(req.params.courtName);
       const images = await getCourtImagesLibrary(courtName);
       res.json({
         images: images.map((img) => ({

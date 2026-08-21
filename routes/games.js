@@ -24,11 +24,17 @@ const {
   formatDateForSMS,
   formatTimeForSMS,
   formatLocationForSMS,
-  maskPhone,
-  isValidUsPhone
+  maskPhone
 } = require('../utils/sms-format');
 
 const { createGameData } = require('../domain/game-factory');
+const {
+  validateGameCreate,
+  validateGameUpdate,
+  validateHostNotes,
+  validateCancellationReason
+} = require('../domain/game-validation');
+const { list } = require('../utils/request-validation');
 
 const { acquireGameLock } = require('../utils/game-lock');
 const { isGameUpcoming } = require('../utils/central-time');
@@ -49,6 +55,11 @@ const { buildRandomizedInvitation } = require('../services/invitation-message');
 const { inviteStatus } = require('../public/js/invite-status');
 const { buildPromotionMessage } = require('../services/youre-in-rotation');
 const { buildGameCalendar, calendarFileName } = require('../utils/calendar-invite');
+
+// The host's own intended-invitee list. The friendly cap is what a host with a large roster
+// reads; the looser one only refuses a body nobody could have ticked.
+const MAX_INTENDED_INVITEES = 200;
+const MAX_INVITEE_LIST_ENTRIES = 1000;
 
 function creationRequestId(req) {
   const value = String(req.get('Idempotency-Key') || '').trim();
@@ -108,27 +119,22 @@ module.exports = function mountGameRoutes(app) {
 
       const hostToken = crypto.randomBytes(32).toString('hex');
 
-      // Create game data using our game logic
-      const gameData = createGameData(req.body);
+      // Everything the factory reads is checked and normalized first - dates, times, duration,
+      // capacity, the registration mode and both phone fields - so createGameData never has to
+      // decide what `parseInt(undefined)` should mean. A bad field throws and the catch below
+      // turns it into a 400.
+      const gameForm = validateGameCreate(req.body);
+      const gameData = createGameData(gameForm);
       gameData.hostToken = hostToken;
       const requestedPersonality = await getPersonality(gameData.personalityId);
       if (!requestedPersonality?.enabled) {
         const defaultPersonality = await getDefaultPersonality();
         gameData.personalityId = defaultPersonality?.id || 'realist';
       }
-      
-      const hostPhone = req.body.hostPhone || req.body.organizerPhone;
 
-      if (hostPhone && !isValidUsPhone(hostPhone)) {
-        return res.status(400).json({ 
-          error: 'Please enter a valid US phone number for the organizer.' 
-        });
-      }    
-      
-      // Make sure hostPhone is properly formatted and saved
-      const formattedHostPhone = hostPhone ? formatPhoneNumber(hostPhone) : null;
+      const formattedHostPhone = gameForm.hostPhone;
       gameData.hostPhone = formattedHostPhone;
-      
+
       await saveGame(gameId, gameData, hostToken, formattedHostPhone);
       releaseCreateLock();
 
@@ -141,7 +147,7 @@ module.exports = function mountGameRoutes(app) {
 
       // Send confirmation SMS to host
       let smsResult = null;
-      if (hostPhone) {
+      if (formattedHostPhone) {
         const gameDate = formatDateForSMS(gameData.date);
         const gameTime = formatTimeForSMS(gameData.time);
         const locationText = formatLocationForSMS(gameData);
@@ -250,21 +256,27 @@ module.exports = function mountGameRoutes(app) {
     const gameId = req.params.id;
     const releaseLock = await acquireGameLock(gameId);
     try {
-      const { token, ...updateData } = req.body;
-      
+      const { token, ...submitted } = req.body || {};
+
       // Field names only: the body carries the host's phone number and private notes,
       // which have no place in a log line.
-      console.log(`[SERVER] Updating game ${gameId}; fields: ${Object.keys(updateData).join(', ') || '(none)'}`);
+      console.log(`[SERVER] Updating game ${gameId}; fields: ${Object.keys(submitted).join(', ') || '(none)'}`);
 
       const game = await getGame(gameId);
       if (!game) {
         return res.status(404).json({ error: 'Game not found' });
       }
-      
+
       if (!isHost(game, token)) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
-      
+
+      // Checked after the token, so a caller without one learns nothing about the game from
+      // the shape of the answer, and before applyGameUpdate, because this route is a blanket
+      // apply of whatever the host's form sent: a duration of "" or a date of "soon" used to
+      // be written straight onto the game.
+      const updateData = validateGameUpdate(submitted);
+
       if (Object.prototype.hasOwnProperty.call(updateData, 'personalityId')) {
         const personality = await getPersonality(updateData.personalityId);
         if (!personality?.enabled) {
@@ -413,10 +425,17 @@ module.exports = function mountGameRoutes(app) {
       if (!isHost(game, req.body && req.body.token)) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
-      const requestedPhones = Array.isArray(req.body && req.body.playerPhones)
-        ? req.body.playerPhones.map(formatPhoneNumber).filter((phone) => phone.length === 10)
-        : [];
-      if (requestedPhones.length > 200) {
+      // The list shape is checked before the entries are: a body sending playerPhones as a
+      // string used to be read as "nobody selected" and silently emptied the invitee list.
+      const submittedPhones = list(
+        (req.body && req.body.playerPhones) || [],
+        'The intended invitees',
+        { max: MAX_INVITEE_LIST_ENTRIES }
+      );
+      const requestedPhones = submittedPhones
+        .map(formatPhoneNumber)
+        .filter((phone) => phone.length === 10);
+      if (requestedPhones.length > MAX_INTENDED_INVITEES) {
         return res.status(400).json({ error: 'Choose up to 200 intended invitees.' });
       }
       const roster = await getVisibleHostRoster(game.hostPhone);
@@ -472,7 +491,7 @@ module.exports = function mountGameRoutes(app) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
 
-      game.hostNotes = String(hostNotes == null ? '' : hostNotes).slice(0, 5000);
+      game.hostNotes = validateHostNotes(hostNotes);
       await saveGame(gameId, game, game.hostToken, game.hostPhone);
       releaseLock();
 
@@ -489,19 +508,23 @@ module.exports = function mountGameRoutes(app) {
     const gameId = req.params.id;
     const releaseLock = await acquireGameLock(gameId);
     try {
-      const { token, reason } = req.body;
-      
+      const { token, reason } = req.body || {};
+
       const game = await getGame(gameId);
       if (!game) {
         return res.status(404).json({ error: 'Game not found' });
       }
-      
+
       if (!isHost(game, token)) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
-      
+
+      // Every player on the game is about to be told this, so it is bounded text, not
+      // whatever the body contained.
+      const cancellationReason = validateCancellationReason(reason);
+
       game.cancelled = true;
-      game.cancellationReason = reason;
+      game.cancellationReason = cancellationReason;
       game.cancelledAt = new Date().toISOString();
       await saveGame(gameId, game, game.hostToken, game.hostPhone);
       releaseLock();
@@ -509,10 +532,10 @@ module.exports = function mountGameRoutes(app) {
       // Notify all players
       const gameDate = formatDateForSMS(game.date);
       const gameTime = formatTimeForSMS(game.time);
-      const cancellationReason = String(reason || '').trim().replace(/[.!?]+$/, '');
+      const reasonForSms = cancellationReason.replace(/[.!?]+$/, '');
       // Only add the "Reason:" clause when the host actually gave one, and never double-punctuate
       // a reason the host already ended with a period.
-      const reasonClause = cancellationReason ? ` Reason: ${cancellationReason}.` : '';
+      const reasonClause = reasonForSms ? ` Reason: ${reasonForSms}.` : '';
       const locationText = formatLocationForSMS(game);
       const defaultCancellationMessage = `CANCELLED: Your pickleball game at ${locationText} on ${gameDate} at ${gameTime} is off.${reasonClause}`;
       const cancellationMessage = await resolveTextMessage(
@@ -522,7 +545,7 @@ module.exports = function mountGameRoutes(app) {
           LOCATION: locationText,
           DATE: gameDate,
           TIME: gameTime,
-          REASON: cancellationReason
+          REASON: reasonForSms
         },
         {
           game,

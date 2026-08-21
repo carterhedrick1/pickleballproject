@@ -16,6 +16,7 @@ const { sendSMS, sendSMSWithRetry } = require('../services/sms-client');
 const { sendOrganizerNotification } = require('../services/sms-webhook');
 
 const { validatePlayerData } = require('../domain/player-validation');
+const { usPhone } = require('../utils/request-validation');
 
 const { isGameUpcoming } = require('../utils/central-time');
 const { requestHostToken } = require('../utils/host-auth');
@@ -85,21 +86,21 @@ module.exports = function mountPlayerRoutes(app) {
   app.post('/api/games/:id/players', async (req, res) => {
     const gameId = req.params.id;
     try {
-      const { name, phone, action } = req.body;
+      const { name, phone, action } = req.body || {};
       const isAndroid = /Android/i.test(req.headers['user-agent'] || '');
-      let playerData;
 
-      try {
-        playerData = validatePlayerData(name, phone);
-      } catch (validationError) {
-        // The old Chrome-iOS fallback that accepted 10-15 digit numbers here is gone: it
-        // existed to work around the validator library rejecting formatted input, and the
-        // shared digits-only check in validatePlayerData no longer has that problem.
-        return res.status(400).json({ error: validationError.message });
-      }
+      // The old Chrome-iOS fallback that accepted 10-15 digit numbers here is gone: it existed
+      // to work around the validator library rejecting formatted input, and the shared
+      // digits-only check in validatePlayerData no longer has that problem. The route no
+      // longer catches the failure either - routeFailed answers a ValidationError with 400
+      // and the validator's own wording, which is what the host's manual-add route needed too.
+      const playerData = validatePlayerData(name, phone);
 
       playerData.isAndroid = isAndroid;
 
+      // action is deliberately left unchecked: it is a two-way switch where 'out' means leave
+      // and everything else means join, and the pages in front of it have sent 'in', 'join'
+      // and null over the years. Narrowing it would reject callers that work today.
       if (action === 'out') {
         const result = await leaveGame(
           gameId,
@@ -348,7 +349,10 @@ module.exports = function mountPlayerRoutes(app) {
       });
 
     } catch (error) {
-      routeFailed(req, res, error, error.message || 'Failed to add player');
+      // A validation failure answers 400 with its own wording inside routeFailed. Anything
+      // else is a fault here, and a player should read a sentence rather than whatever an
+      // internal error happened to say.
+      routeFailed(req, res, error, 'Failed to add player');
     }
   });
 
@@ -364,10 +368,9 @@ module.exports = function mountPlayerRoutes(app) {
   app.post('/api/games/:id/player-status', async (req, res) => {
     const gameId = req.params.id;
     try {
-      const phone = formatPhoneNumber(req.body && req.body.phone);
-      if (phone.length !== 10) {
-        return res.status(400).json({ error: 'A 10-digit phone number is required.' });
-      }
+      const phone = usPhone(req.body && req.body.phone, 'A phone number', {
+        message: 'A 10-digit phone number is required.'
+      });
 
       const game = await getGame(gameId);
       if (!game) {
@@ -414,8 +417,11 @@ module.exports = function mountPlayerRoutes(app) {
   app.post('/api/games/:id/manual-player', async (req, res) => {
     const gameId = req.params.id;
     try {
-      const { name, phone, addTo, token } = req.body;
+      const { name, phone, addTo, token } = req.body || {};
       const playerData = validatePlayerData(name, phone);
+      // addTo is left unchecked for the same reason action is on the signup route: it is a
+      // two-way switch where only 'waitlist' means anything, and the callers in front of it
+      // send 'add' (the manage page radio), 'confirmed' (the HTTP tests) or nothing at all.
       const forceWaitlist = addTo === 'waitlist';
       const result = await joinGameAsHost(
         gameId,
@@ -504,7 +510,10 @@ module.exports = function mountPlayerRoutes(app) {
         totalPlayers: result.totalPlayers
       });
     } catch (error) {
-      routeFailed(req, res, error, error.message || 'Failed to add player');
+      // A validation failure answers 400 with its own wording inside routeFailed. Anything
+      // else is a fault here, and a player should read a sentence rather than whatever an
+      // internal error happened to say.
+      routeFailed(req, res, error, 'Failed to add player');
     }
   });
 

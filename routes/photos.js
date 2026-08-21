@@ -18,6 +18,10 @@ const { getGame, getGameHostInfo } = require('../database/games');
 const { routeFailed } = require('../utils/route-error');
 const { isHost, requestHostToken } = require('../utils/host-auth');
 const { PHOTO_TYPES, MAX_PHOTOS_PER_GAME, sniffImageType } = require('../utils/image-type');
+const { optionalText } = require('../utils/request-validation');
+
+// Matches the maxlength on the caption box in manage.html.
+const PHOTO_CAPTION_MAX = 200;
 
 module.exports = function mountPhotoRoutes(app) {
   // ---------------------------------------------------------------------------
@@ -51,6 +55,11 @@ module.exports = function mountPhotoRoutes(app) {
           });
         }
 
+        // The caption input is maxlength=200, so a longer one is a hand-made request. It used
+        // to be silently cut in half instead of being told no. Checked before the count query
+        // below, so a request that cannot succeed does not reach the database first.
+        const caption = optionalText(req.query.caption, 'The caption', { max: PHOTO_CAPTION_MAX });
+
         // A 13th photo slipping through two simultaneous uploads is not worth a lock for.
         const existing = await countPhotosForGame(gameId);
         if (existing >= MAX_PHOTOS_PER_GAME) {
@@ -60,7 +69,6 @@ module.exports = function mountPhotoRoutes(app) {
         }
 
         const photoId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
-        const caption = (req.query.caption || '').toString().slice(0, 200);
 
         await savePhoto(photoId, gameId, mimeType, req.body, caption, game.organizerName);
 

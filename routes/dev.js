@@ -48,7 +48,10 @@ const {
   buildDeveloperRosters,
   chooseDeveloperRosterSource
 } = require('../utils/dev-rosters');
-const { formatPhoneNumber } = require('../utils/sms-format');
+// isValidUsPhone is the app's one phone rule. The roster editors below used to spell their own
+// version of it (`formatPhoneNumber(value).length !== 10`), which happens to agree with it
+// today and was a second rule waiting to drift.
+const { formatPhoneNumber, isValidUsPhone } = require('../utils/sms-format');
 const { PHOTO_TYPES, sniffImageType } = require('../utils/image-type');
 const sloganModule = require('../public/js/slogans');
 const youreInMessages = require('../youre-in-messages');
@@ -783,7 +786,7 @@ module.exports = function mountDevRoutes(app) {
     const newPhone = formatPhoneNumber(req.body && req.body.phone);
     const name = String((req.body && req.body.name) || '').trim();
 
-    if (oldPhone.length !== 10 || newPhone.length !== 10) {
+    if (!isValidUsPhone(req.params.phone) || !isValidUsPhone(req.body && req.body.phone)) {
       return res.status(400).json({ error: 'Enter a 10-digit US phone number.' });
     }
     if (!name) return res.status(400).json({ error: 'Enter the player’s name.' });
@@ -822,7 +825,7 @@ module.exports = function mountDevRoutes(app) {
   app.delete('/api/dev/players/:phone', requireDevAuth, async (req, res) => {
     const phone = formatPhoneNumber(req.params.phone);
     const confirmation = formatPhoneNumber(req.body && req.body.confirmPhone);
-    if (phone.length !== 10 || confirmation !== phone) {
+    if (!isValidUsPhone(req.params.phone) || confirmation !== phone) {
       return res.status(400).json({ error: 'Confirm the player’s phone number before deleting.' });
     }
 
@@ -850,7 +853,7 @@ module.exports = function mountDevRoutes(app) {
   app.delete('/api/dev/hosts/:phone', requireDevAuth, async (req, res) => {
     const phone = formatPhoneNumber(req.params.phone);
     const confirmation = formatPhoneNumber(req.body && req.body.confirmPhone);
-    if (phone.length !== 10 || confirmation !== phone) {
+    if (!isValidUsPhone(req.params.phone) || confirmation !== phone) {
       return res.status(400).json({ error: 'Confirm the host’s phone number before deleting.' });
     }
 
