@@ -348,15 +348,57 @@ migration path for it, and the parity suite is where the SQL would be proven.
 
 ## P6. Quality gates
 
-### 14. Make the browser smoke fixtures hermetic
-Diagnosed 2026-08-20: the old combined dev-area assertion failed because its "22 You're
-IN messages" pin captured a count that included a since-deleted DUPR message, and the
-smoke kept passing only while the primary database's saved `youre-in-config` still held
-the old list. The assertion is now split into focused asserts and the count pin follows
-`DEFAULT_MESSAGES.length`, but a saved `youre-in-config` in the local database still
-shadows the defaults. The real fix: have the smoke seed/reset the dev assets it asserts
-about (extend `scripts/lib/fixtures.js`) so no mutable dashboard data can change the
-outcome.
+- **Make the browser smoke fixtures hermetic** (was P6 item 14) - done 2026-08-21. The fix
+  turned out to be smaller and stronger than seeding individual dev assets: give the processes
+  that assert their own database, and nothing a developer has saved locally can reach an
+  assertion in the first place. `database/context.js` reads `SQLITE_DB_FILE` (defaulting to
+  `pickleball.db` as before), and two callers set it.
+
+  `scripts/lib/local-server.js` takes `start({ isolatedDatabase: true })`, which puts an empty
+  SQLite file in a temp directory and lets the app migrate and seed it at boot exactly as it
+  would any new database; `stop()` deletes the directory. The browser smoke asks for one, so it
+  no longer sweeps fixture rows at all - the whole database goes. Screenshots deliberately do
+  *not*: `npm run docs` should photograph the app a developer actually has, and changing the
+  data behind the gallery is a visible change, not a quality-gate one. The SQLite-touching
+  fixtures helpers take the file to open and both scripts pass `server.dbFile`, which is always
+  set, so neither has to know which kind of server it started.
+
+  Proof that the class of bug is dead, rather than that the smoke happens to pass: a
+  `youre-in-config` holding three messages and a leftover court were written into the shared
+  local database, and the smoke was run twice against it. On the isolated database it passed
+  102/102 with "saw 21, expected 21"; with `isolatedDatabase: false` - the old code path - the
+  same poison failed it at "saw 3, expected 21" after 89 asserts. That is the exact 2026-08-20
+  failure, reproduced on demand and then fixed.
+
+  **The `--test-concurrency=1` stopgap is reverted.** `test/support/database-template.mjs` is a
+  `--test-global-setup` hook that builds one migrated, seeded template, and
+  `test/support/isolated-database.mjs` is a `--import` preload that copies it per test file and
+  points `SQLITE_DB_FILE` at the copy. A template rather than per-file migration because
+  migrating costs ~50ms and a dozen log lines each time while copying the finished 240kb file
+  costs about a millisecond and says nothing. Running one file by hand still uses the working
+  directory's `pickleball.db`, as it always did.
+
+  Measured rather than assumed, 10 runs each on this branch:
+  - the stopgap as it shipped (serialized files, shared database): 0 failures, **4.66s**
+  - parallel files on a shared database (the flake the stopgap was hiding): **6 of 10 runs
+    failed**, every one `SQLITE_BUSY: database is locked`
+  - parallel files, one database each (now): **0 of 10 failed**, zero `SQLITE_BUSY`, **0.83s**
+
+  So the 3.6 seconds the stopgap cost are back and the underlying contention is gone rather
+  than serialized around. Note `npm run test:pg` keeps its own `--test-concurrency=1` for an
+  unrelated reason - those suites share one PostgreSQL database and one of them creates and
+  drops a schema - so that one is not a stopgap and should stay.
+
+  Two things fell out that were not asked for. `npm test` no longer writes to the developer's
+  `pickleball.db` at all, and the global setup clears `DATABASE_URL` before building the
+  template, so a developer with a production URL in their environment can no longer point the
+  deployment gate at PostgreSQL - verified by running the suite with a hostile `DATABASE_URL`
+  set and watching all 421 tests stay on SQLite.
+
+  Verified: 421 tests, 103 browser-smoke assertions, `npm run test:pg` 12/12 on real
+  PostgreSQL 16, the three race rigs and all four reminder rigs, roster-locations, all-routes
+  (42 routes, no 500s), and `npm run docs:screens` (40 screens) - because a capture-screens
+  breakage does not show up in `verify:deploy`.
 
 ### 15. Expand the default deployment gate
 Mostly done 2026-08-20. Inside `npm test` on every deploy: webhook signature rejection,
@@ -371,15 +413,11 @@ disposable database the gate cannot assume exists. Run it before shipping anythi
 touches persistence. PostgreSQL 16 is installed on Scott's Mac now (Homebrew, no login item -
 start it by hand; the socket directory has to be short, so `-k /tmp/pgs5433`).
 
-Known flake, stopped 2026-08-21. It was measured at one run in four on 2026-08-20 and had
-grown worse: `main` failed 2 runs in 4, in two different race files, always
-`SQLITE_BUSY: database is locked`. `npm test` now passes `--test-concurrency=1`, so the test
-*files* no longer run at once and cannot contend on the shared local SQLite file. Nothing was
-lost by it - every race the app actually cares about is raced inside one file with
-`Promise.all`, which still runs concurrently - and it costs 3.6 seconds (0.9s to 4.5s). This
-is a stopgap, not item 14's fix: the fixtures are still not hermetic, and giving each file its
-own database would let the files run in parallel again. Measured after the change: 5 runs of
-386 tests, 0 failures.
+Known flake, stopped twice. First on 2026-08-21 with `--test-concurrency=1`, which serialized
+the test *files* so they could not contend on the shared local SQLite file. That was always a
+stopgap and it is gone: item 14 gave each file a database of its own, so the files run in
+parallel again with nothing to contend on. The measurements are under item 14 - the short
+version is 6 of 10 runs failing before, 0 of 10 after, and 4.66s down to 0.83s.
 
 Also fixed 2026-08-21, and it had taken the whole gate down: `scripts/refactor-browser-smoke.js`
 and `scripts/capture-screens.js` signed in to the developer area with

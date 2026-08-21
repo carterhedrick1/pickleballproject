@@ -15,6 +15,15 @@ console.log(`Environment: ${isProduction ? 'Production (PostgreSQL)' : 'Local (S
 // anything else - every real deployment - keeps it.
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 
+// Which local file SQLite opens. A relative path resolves against the working directory, which
+// is how this has always behaved and is why each Git worktree already gets its own database.
+//
+// SQLITE_DB_FILE hands a process a database of its own instead. Two callers use it, both so
+// that an assertion cannot be decided by whatever a developer's own pickleball.db happens to
+// contain: the browser smoke's throwaway server (scripts/lib/local-server.js) and every
+// `node --test` file (test/support/isolated-database.mjs).
+const sqliteFile = process.env.SQLITE_DB_FILE || 'pickleball.db';
+
 function postgresSslOption(connectionString) {
   const secure = { rejectUnauthorized: false };
   let parsed;
@@ -37,7 +46,7 @@ if (isProduction) {
   console.log('Using PostgreSQL for production');
 } else {
   const sqlite3 = require('sqlite3').verbose();
-  db = new sqlite3.Database('pickleball.db', (err) => {
+  db = new sqlite3.Database(sqliteFile, (err) => {
     if (err) {
       console.error('Error opening SQLite database:', err);
     } else {

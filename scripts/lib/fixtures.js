@@ -11,11 +11,16 @@
 //
 // Every fixture carries MARKER in its message. Cleanup matches on that AND on a 555 host phone,
 // so an interrupted run can be swept up later without any risk of touching a real game.
+//
+// The helpers that reach past the API into SQLite take the database file to open, because the
+// caller is the only thing that knows which one it started: lib/local-server.js hands the
+// browser smoke a throwaway database and `npm run docs` the shared local one. Both pass
+// `server.dbFile`, which is always set, so neither has to care which it got.
 
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const DB_FILE = path.join(ROOT, 'pickleball.db');
+const DEFAULT_DB_FILE = path.join(ROOT, 'pickleball.db');
 
 const MARKER = '[docs fixture: scripts/capture-screens.js]';
 // Reserved-for-fiction numbers. Nothing is sent to them anyway - the server runs with SMS in
@@ -150,7 +155,9 @@ async function verify(baseUrl, fixtures) {
  * reach this table on their own. The host-facing delivery log still has to be provable, so a
  * row is seeded directly - hashed exactly the way the app hashes recipients.
  */
-function seedSmsEvent({ gameId, eventId, phone, status = 'sent', attempts = 1, error = null }) {
+function seedSmsEvent({
+  gameId, eventId, phone, status = 'sent', attempts = 1, error = null, dbFile = DEFAULT_DB_FILE
+}) {
   const crypto = require('crypto');
   const sqlite3 = require('sqlite3');
   const recipientHash = crypto
@@ -159,7 +166,7 @@ function seedSmsEvent({ gameId, eventId, phone, status = 'sent', attempts = 1, e
     .digest('hex');
 
   return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(DB_FILE, (err) => {
+    const db = new sqlite3.Database(dbFile, (err) => {
       if (err) return reject(err);
       db.run(
         `INSERT INTO sms_events (id, event_id, game_id, recipient_hash, status, attempts, error)
@@ -174,13 +181,13 @@ function seedSmsEvent({ gameId, eventId, phone, status = 'sent', attempts = 1, e
 // Models a player from before host_roster existed: they remain in a fixture game and therefore
 // in the visible roster, but have no separate saved row. The guards keep this helper incapable
 // of touching non-fixture data.
-function removeSavedRosterFixture(hostPhone, playerPhone) {
+function removeSavedRosterFixture(hostPhone, playerPhone, dbFile = DEFAULT_DB_FILE) {
   if (hostPhone !== HOST_PHONE || !/^555555\d{4}$/.test(playerPhone)) {
     return Promise.reject(new Error('Refusing to remove a non-fixture roster row'));
   }
   const sqlite3 = require('sqlite3');
   return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(DB_FILE, (err) => {
+    const db = new sqlite3.Database(dbFile, (err) => {
       if (err) return reject(err);
       db.run(
         'DELETE FROM host_roster WHERE host_phone = ? AND player_phone = ?',
@@ -197,10 +204,10 @@ function removeSavedRosterFixture(hostPhone, playerPhone) {
  * real game even if the marker string were somehow reused. The side tables a fixture run also
  * writes - saved courts and roster entries - are swept by their own narrow criteria.
  */
-function cleanup() {
+function cleanup(dbFile = DEFAULT_DB_FILE) {
   const sqlite3 = require('sqlite3');
   return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(DB_FILE, (err) => {
+    const db = new sqlite3.Database(dbFile, (err) => {
       if (err) return reject(err);
       const where =
         `WHERE host_phone IN (${FIXTURE_PHONES.map(() => '?').join(',')})

@@ -745,11 +745,13 @@ ${body}
     // The screenshot server keeps SMS event logging off, so the delivery log would photograph
     // as an empty panel. These two rows show what a host actually sees in it.
     await fixtures.seedSmsEvent({
-      gameId: fx.open.gameId, eventId: 'upcoming-game-reminder', phone: fx.JOIN_PHONE
+      gameId: fx.open.gameId, eventId: 'upcoming-game-reminder', phone: fx.JOIN_PHONE,
+      dbFile: app.dbFile
     });
     await fixtures.seedSmsEvent({
       gameId: fx.open.gameId, eventId: 'host-player-joined', phone: fx.HOST_PHONE,
-      status: 'failed', attempts: 3, error: 'Carrier rejected the message'
+      status: 'failed', attempts: 3, error: 'Carrier rejected the message',
+      dbFile: app.dbFile
     });
     console.log('3 games plus a game-day and a cancelled-only fixture, shapes verified');
 
@@ -797,7 +799,9 @@ ${body}
     if (KEEP) {
       console.log('\n--keep-fixtures: demo games left in the local database.');
     } else {
-      const removed = await fixtures.cleanup();
+      // Screenshots stay on the shared local database (the browser smoke is the one that gets
+      // a throwaway), so the demo games still have to be swept by their marker.
+      const removed = await fixtures.cleanup(app?.dbFile);
       console.log(`\ncleaned up ${removed} demo game(s) from the local database.`);
     }
   }
