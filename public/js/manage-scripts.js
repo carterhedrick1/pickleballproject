@@ -331,7 +331,7 @@ async function fetchGameData() {
         console.log('[CLIENT] Notification preferences received:', gameData.notificationPreferences);
         
         // Check if game is expired
-        const gameStatus = GameUtils.getGameStatus(gameData);
+        const gameStatus = CentralTime.getGameStatus(gameData);
         const isGameExpired = !gameStatus.canEdit;
         
         console.log('[CLIENT] Game status:', gameStatus);
@@ -342,7 +342,7 @@ async function fetchGameData() {
         document.getElementById('gameManagement').style.display = 'block';
         
         // Show expired warning if needed
-        if (!GameUtils.getGameStatus(gameData).canEdit) {
+        if (!CentralTime.getGameStatus(gameData).canEdit) {
             showExpiredGameWarning(gameStatus.type);
             // Add expired class to disable editing
             document.getElementById('gameManagement').classList.add('expired');
@@ -363,14 +363,14 @@ async function fetchGameData() {
         loadHostRoster();
         
         // Generate share links (only if not expired)
-        if (GameUtils.getGameStatus(gameData).canEdit) {
+        if (CentralTime.getGameStatus(gameData).canEdit) {
             populateShareLinks();
         }
 
         showCreationNotice();
         
         // If game is expired, force switch to Players tab (read-only)
-        if (!GameUtils.getGameStatus(gameData).canEdit) {
+        if (!CentralTime.getGameStatus(gameData).canEdit) {
             // Force switch to Players tab since it's the only useful one for expired games
             setTimeout(() => {
                 openTabFromSelect('Players');
@@ -719,7 +719,7 @@ function populateGameDetails() {
 
 
 async function updateGameDetails() {
-    if (!GameUtils.getGameStatus(gameData).canEdit) {
+    if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended and can no longer be edited.', 'error');
         return;
     }
@@ -833,7 +833,7 @@ async function updateGameDetails() {
 
 
 async function cancelGame() {
-    if (!GameUtils.getGameStatus(gameData).canEdit) {
+    if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has already ended.', 'error');
         return;
     }
@@ -970,13 +970,13 @@ function updateGameSummary() {
     if (waiting) parts.push(`${waiting} waiting`);
     if (out) parts.push(`${out} out`);
 
-    const status = GameUtils.getGameStatus(gameData);
+    const status = CentralTime.getGameStatus(gameData);
     if (status.type === 'cancelled') {
         parts.push('Game cancelled');
     } else if (status.type === 'expired') {
         parts.push('Game ended');
     } else {
-        const countdown = GameUtils.getTimeUntilGame(gameData.date, gameData.time);
+        const countdown = CentralTime.getTimeUntilGame(gameData.date, gameData.time);
         if (countdown) parts.push(countdown === 'Game has started' ? countdown : `starts in ${countdown.replace(' away', '')}`);
     }
 
@@ -1004,13 +1004,13 @@ function updateGameDayCard() {
     if (!card) return;
 
     const untilStart = millisecondsUntilGameStart();
-    const isGameDay = GameUtils.getGameStatus(gameData || {}).canEdit &&
+    const isGameDay = CentralTime.getGameStatus(gameData || {}).canEdit &&
         untilStart !== null &&
         untilStart <= GAME_DAY_WINDOW_MS;
     card.hidden = !isGameDay;
     if (!isGameDay) return;
 
-    const countdown = GameUtils.getTimeUntilGame(gameData.date, gameData.time);
+    const countdown = CentralTime.getTimeUntilGame(gameData.date, gameData.time);
     const when = document.getElementById('gameDayWhen');
     if (when) {
         when.textContent = countdown === 'Game has started'
@@ -1060,7 +1060,7 @@ function populateShareLinks() {
     if (!shareSection || !copyButton) return;
 
     // Check if game is expired or cancelled
-    const gameStatus = GameUtils.getGameStatus(gameData);
+    const gameStatus = CentralTime.getGameStatus(gameData);
     const shouldDisable = !gameStatus.canJoin || gameData.cancelled;
     
     const disabledText = gameData.cancelled ? 'Game Cancelled — Cannot Share' : 'Game Ended — Cannot Share';
@@ -1098,7 +1098,7 @@ function populateShareLinks() {
 // Both send paths need the same two answers: may this invitation still go out, and what does
 // the generator need that the server response does not already spell out?
 function invitationGameData() {
-    if (!GameUtils.getGameStatus(gameData).canEdit) {
+    if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so its invitation can no longer be shared.', 'error');
         return null;
     }

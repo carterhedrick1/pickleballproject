@@ -287,7 +287,7 @@ function clearInviteSelection() {
 // A texted invitation is the only invite path the app can actually vouch for, so the send
 // records itself against the game and the roster below updates from the response.
 async function textInvitations(phones, { confirmTitle, confirmQuestion } = {}) {
-    if (!GameUtils.getGameStatus(gameData).canEdit) {
+    if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so invitations can no longer be sent.', 'error');
         return;
     }
@@ -579,7 +579,7 @@ async function postHostPlayer(player, addTo) {
 }
 
 async function addPlayersFromRoster() {
-    if (!GameUtils.getGameStatus(gameData).canEdit) {
+    if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so players can no longer be added.', 'error');
         return;
     }
@@ -794,7 +794,7 @@ function updatePlayerLists() {
 }
 
 async function addPlayerManually() {
-    if (!GameUtils.getGameStatus(gameData).canEdit) {
+    if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so players can no longer be added.', 'error');
         return;
     }
@@ -1066,7 +1066,7 @@ async function removeWaitlisted(playerId) {
 // Somebody who said OUT and then found a sitter is the most common roster change there is, and
 // until now the only way back in was for the host to retype their name and number by hand.
 async function addOutPlayerBackToGame(playerId) {
-  if (!GameUtils.getGameStatus(gameData).canEdit) {
+  if (!CentralTime.getGameStatus(gameData).canEdit) {
     showStatus('This game has ended, so players can no longer be added.', 'error');
     return;
   }

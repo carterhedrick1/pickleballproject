@@ -34,7 +34,7 @@ function announcementResultText(data) {
 }
 
 async function sendAnnouncement() {
-    if (!GameUtils.getGameStatus(gameData).canEdit) {
+    if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so announcements can no longer be sent.', 'error');
         return;
     }
@@ -112,7 +112,7 @@ function confirmedRecipients() {
 }
 
 function sendQuickMessage(type) {
-    if (!GameUtils.getGameStatus(gameData).canEdit) {
+    if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so announcements can no longer be sent.', 'error');
         return;
     }

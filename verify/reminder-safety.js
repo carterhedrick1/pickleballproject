@@ -18,20 +18,19 @@ const { initializeDatabase } = require(ROOT + '/database/schema');
 const { saveGame } = require(ROOT + '/database/games');
 const { closeDatabaseConnection } = require(ROOT + '/database/context');
 const { checkAndSendReminders } = require(ROOT + '/services/reminders');
-const { getCentralTimeNow } = require(ROOT + '/utils/central-time');
+const { centralWallClock } = require(ROOT + '/public/js/central-time');
 
 let failures = 0;
 const ok = (m) => console.log(`  PASS  ${m}`);
 const bad = (m) => { console.log(`  FAIL  ${m}`); failures++; };
 
 function makeGame(hours, phones) {
-  const t = new Date(getCentralTimeNow().getTime() + hours * 3600 * 1000);
-  const p = (n) => String(n).padStart(2, '0');
+  const { date, time } = centralWallClock(new Date(Date.now() + hours * 3600 * 1000));
   return {
     location: 'Safety Court', organizerName: 'Host', organizerPhone: '',
     organizerPlaying: false,
-    date: `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`,
-    time: `${p(t.getHours())}:${p(t.getMinutes())}`,
+    date,
+    time,
     duration: 90, totalPlayers: 8, message: '', registrationMode: 'fcfs',
     waitlist: [], outPlayers: [], cancelled: false, created: new Date().toISOString(),
     notificationPreferences: {},

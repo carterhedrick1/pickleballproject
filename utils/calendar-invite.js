@@ -6,67 +6,15 @@
 // therefore converted to UTC through the America/Chicago rules in force on that date, which
 // keeps games on either side of a daylight-saving switch correct.
 
-const CENTRAL_TIME_ZONE = 'America/Chicago';
+// This file's two-pass conversion is now the app's one Central Time model, and lives in
+// public/js/central-time.js so the pages can use it too. The name it was known by here is
+// kept for the tests and the .ics builder below.
+const {
+  CENTRAL_TIME_ZONE,
+  wallClockToInstant: centralWallClockToUtc
+} = require('../public/js/central-time');
+
 const DEFAULT_DURATION_MINUTES = 60;
-
-/**
- * How far Central Time sat from UTC at a given instant, in milliseconds (negative).
- */
-function centralOffsetMs(instant) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: CENTRAL_TIME_ZONE,
-    hour12: false,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  }).formatToParts(instant).reduce((values, part) => {
-    values[part.type] = part.value;
-    return values;
-  }, {});
-
-  const asIfUtc = Date.UTC(
-    Number(parts.year),
-    Number(parts.month) - 1,
-    Number(parts.day),
-    Number(parts.hour) % 24,
-    Number(parts.minute),
-    Number(parts.second)
-  );
-  return asIfUtc - instant.getTime();
-}
-
-/**
- * Turns a Central Time wall clock into the instant it actually names.
- * @param {string} dateStr YYYY-MM-DD
- * @param {string} timeStr HH:MM
- * @returns {Date|null} null when either value is unusable
- */
-function centralWallClockToUtc(dateStr, timeStr) {
-  const date = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ''));
-  const time = /^(\d{1,2}):(\d{2})/.exec(String(timeStr || ''));
-  if (!date || !time) return null;
-
-  const hours = Number(time[1]);
-  const minutes = Number(time[2]);
-  if (hours > 23 || minutes > 59) return null;
-
-  const wallClockAsUtc = Date.UTC(
-    Number(date[1]),
-    Number(date[2]) - 1,
-    Number(date[3]),
-    hours,
-    minutes
-  );
-  if (Number.isNaN(wallClockAsUtc)) return null;
-
-  // Two passes: the first offset is read at roughly the right moment, the second at the
-  // instant that offset produces. They differ only for the hour a clock change moves.
-  const firstPass = wallClockAsUtc - centralOffsetMs(new Date(wallClockAsUtc));
-  return new Date(wallClockAsUtc - centralOffsetMs(new Date(firstPass)));
-}
 
 /** iCalendar UTC stamp: 20260811T230000Z */
 function formatUtcStamp(instant) {

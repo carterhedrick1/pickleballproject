@@ -97,7 +97,7 @@
                 .then(async data => {
                     gameData = data;
                     // Check if game is expired or cancelled
-                    const gameStatus = GameUtils.getGameStatus(gameData);
+                    const gameStatus = CentralTime.getGameStatus(gameData);
                     
                     // Display game details
                     document.getElementById('loading').style.display = 'none';
@@ -310,7 +310,7 @@
                         if (oldData !== newData) {
                             gameData = data;
 
-                            renderHero(GameUtils.getGameStatus(gameData));
+                            renderHero(CentralTime.getGameStatus(gameData));
 
                             // Update all the game details - TIMEZONE FIXED
                             document.getElementById('location').textContent = gameData.location;
@@ -950,7 +950,7 @@
                         gameData = updatedData;
                         // Their answer just changed how many spots are left, and the hero is
                         // the first thing they see coming back from the confirmation screen.
-                        renderHero(GameUtils.getGameStatus(gameData));
+                        renderHero(CentralTime.getGameStatus(gameData));
                         updatePlayerList();
                     })
                     .catch(error => {

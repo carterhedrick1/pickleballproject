@@ -80,7 +80,8 @@ photographing the wrong screen.
 ## What is deliberately missing
 
 None of these cover text the app generates while running: player names and rosters, status and
-error messages, and every outbound SMS. That copy lives in `public/js/` and `sms-handler.js`.
+error messages, and every outbound SMS. That copy lives in `public/js/`, and the texts come from
+the message services and the editable rotations behind the developer area.
 The text messages are what most players actually read, so they are the obvious next view to add.
 
 ## Files

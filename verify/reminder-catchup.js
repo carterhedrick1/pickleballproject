@@ -20,21 +20,15 @@ const { hasReminderBeenSent } = require(ROOT + '/database/messaging-reminders');
 const { closeDatabaseConnection } = require(ROOT + '/database/context');
 const { formatTimeForSMS } = require(ROOT + '/utils/sms-format');
 const { checkAndSendReminders } = require(ROOT + '/services/reminders');
-const { getCentralTimeNow } = require(ROOT + '/utils/central-time');
+const { centralWallClock } = require(ROOT + '/public/js/central-time');
 
 let failures = 0;
 const ok = (m) => console.log(`  PASS  ${m}`);
 const bad = (m) => { console.log(`  FAIL  ${m}`); failures++; };
 
-// Build a date/time string N hours from "now" in the same wall-clock frame the reminder
-// system uses, so the test and the code agree on what "12 hours from now" means.
+// A date/time N hours from now, written the way a game stores it: the Central wall clock.
 function offsetGame(hours) {
-  const t = new Date(getCentralTimeNow().getTime() + hours * 3600 * 1000);
-  const p = (n) => String(n).padStart(2, '0');
-  return {
-    date: `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`,
-    time: `${p(t.getHours())}:${p(t.getMinutes())}`,
-  };
+  return centralWallClock(new Date(Date.now() + hours * 3600 * 1000));
 }
 
 const daysAgo = (days) => new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();

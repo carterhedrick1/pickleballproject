@@ -37,7 +37,12 @@ const {
 const { list } = require('../utils/request-validation');
 
 const { acquireGameLock } = require('../utils/game-lock');
-const { isGameUpcoming } = require('../utils/central-time');
+const {
+  isGameUpcoming,
+  isGameRecentlyFinished,
+  hasGameStarted,
+  gameStart
+} = require('../public/js/central-time');
 const { routeFailed } = require('../utils/route-error');
 const { isHost, requireVerifiedHostPhone, requestHostToken } = require('../utils/host-auth');
 const { applyGameUpdate } = require('../utils/game-update');
@@ -60,6 +65,12 @@ const { buildGameCalendar, calendarFileName } = require('../utils/calendar-invit
 // reads; the looser one only refuses a body nobody could have ticked.
 const MAX_INTENDED_INVITEES = 200;
 const MAX_INVITEE_LIST_ENTRIES = 1000;
+
+/** A game's start as epoch milliseconds, with unscheduled games sorting last. */
+function startedAtMs(game) {
+  const start = gameStart(game);
+  return start ? start.getTime() : 0;
+}
 
 function creationRequestId(req) {
   const value = String(req.get('Idempotency-Key') || '').trim();
@@ -655,10 +666,14 @@ module.exports = function mountGameRoutes(app) {
         const gameId = fullGame.gameId;
 
         if (!includeAll) {
-          // Don't include cancelled games older than 7 days
-          const gameDate = new Date(fullGame.date);
-          const daysSinceGame = (new Date() - gameDate) / (1000 * 60 * 60 * 24);
-          if (fullGame.cancelled && daysSinceGame > 7) continue;
+          // Cancelled games drop off a week after they were due to be played. A cancelled game
+          // still in the future stays: its host is the person most likely to be looking for it.
+          // `new Date(fullGame.date)` read the bare YYYY-MM-DD as UTC midnight, up to six hours
+          // from when the game was scheduled; the shared model starts from the Central wall
+          // clock instead.
+          const wellPast = hasGameStarted(fullGame.date, fullGame.time) &&
+            !isGameRecentlyFinished(fullGame.date, fullGame.time, 7);
+          if (fullGame.cancelled && wellPast) continue;
         }
 
         // Who was asked and who never answered, so a host can triage the whole list of games
@@ -691,8 +706,9 @@ module.exports = function mountGameRoutes(app) {
         });
       }
 
-      // Sort by date (newest first)
-      hostGames.sort((a, b) => new Date(b.date) - new Date(a.date));
+      // Newest first, by the moment each game actually starts - so two games on the same day
+      // come back in the order they are played rather than in whatever order the rows arrived.
+      hostGames.sort((a, b) => startedAtMs(b) - startedAtMs(a));
       
       console.log(`[PHONE LOOKUP] Found ${hostGames.length} games for phone ${maskPhone(phoneNumber)}`);
       
@@ -727,11 +743,12 @@ module.exports = function mountGameRoutes(app) {
         const fullGame = await getGame(gameId);
         
         if (fullGame && fullGame.hostPhone === phoneNumber) {
-          const gameDate = new Date(fullGame.date);
-          const daysSinceGame = (new Date() - gameDate) / (1000 * 60 * 60 * 24);
-          
-          // Include games from last 30 days or future games
-          if (daysSinceGame <= 30 || gameDate > new Date()) {
+          // The last thirty days, plus anything still to come. Both halves used to be decided
+          // against UTC midnight of the game's date rather than the hour it starts in Central.
+          const worthLinking = isGameUpcoming(fullGame.date, fullGame.time) ||
+            isGameRecentlyFinished(fullGame.date, fullGame.time, 30);
+
+          if (worthLinking) {
             recentGames.push({
               gameId,
               location: fullGame.location,
@@ -755,9 +772,12 @@ module.exports = function mountGameRoutes(app) {
           const locationText = formatLocationForSMS(game);
           message = `Here's your management link for ${locationText} on ${gameDate} at ${gameTime}:\n\n${game.managementLink}`;
         } else {
-          // Sort by date and get the most recent upcoming game
-          recentGames.sort((a, b) => new Date(a.date) - new Date(b.date));
-          const upcomingGames = recentGames.filter(g => new Date(g.date) >= new Date());
+          // Soonest first, so the host's next game is the one this text names. Comparing bare
+          // dates put a game later today behind one that had already been played.
+          recentGames.sort((a, b) => startedAtMs(a) - startedAtMs(b));
+          const upcomingGames = recentGames.filter(
+            (game) => isGameUpcoming(game.date, game.time)
+          );
           const gameToShow = upcomingGames.length > 0 ? upcomingGames[0] : recentGames[0];
           
           const gameDate = formatDateForSMS(gameToShow.date);
@@ -769,7 +789,7 @@ module.exports = function mountGameRoutes(app) {
         
         const templateGame = recentGames.length === 1
           ? recentGames[0]
-          : recentGames.find(g => new Date(g.date) >= new Date()) || recentGames[0];
+          : recentGames.find((game) => isGameUpcoming(game.date, game.time)) || recentGames[0];
         message = await resolveTextMessage(
           'management-links',
           message,
