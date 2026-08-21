@@ -441,7 +441,7 @@ hardcoding them, so it neither expires nor blocks its own second run.
   and the `tar` that remains is 7.5.22, past the 7.5.20 the critical advisory names. The three
   advisories `npm audit` still reports are devDependencies-only - nodemon 2.x pulling an old
   semver through simple-update-notifier - and clearing them is a nodemon major of its own,
-  not this item.
+  not this item. That major is the last entry below, done 2026-08-21.
 
   No application code changed. sqlite3 6 is N-API rather than NAN, so the binary no longer
   has to match a Node ABI, and the surface `database/` uses is unchanged: `verbose()`,
@@ -511,3 +511,27 @@ hardcoding them, so it neither expires nor blocks its own second run.
   checks the part of a page that still rendered is silent about a module that failed to import.
   Every page came back clean except a pre-existing `/favicon.ico` 404 on demo.html, which
   reproduces identically on unmodified main.
+
+- **nodemon 3.x major upgrade** (the dev-only half left over from P6 item 16) - done
+  2026-08-21. `nodemon@3.1.14`. **`npm audit` now reports 0 vulnerabilities at every
+  severity**, where it reported 3 high; `npm audit --omit=dev` was already 0 and stays 0.
+  The advisories were one old `semver` reached through simple-update-notifier, and nodemon 3
+  takes simple-update-notifier 2, which does not want it.
+
+  Nothing configures nodemon - no `nodemon.json`, no `nodemonConfig`, and `npm run dev` is
+  its only caller - so there was no configuration to migrate. Nothing in the gate uses it.
+
+  The lockfile change is confined to that chain: nodemon 2.0.22 -> 3.1.14,
+  simple-update-notifier 1.1.0 -> 2.0.0, its glob dependencies (minimatch 3 -> 10,
+  brace-expansion, balanced-match, concat-map dropped), and root `semver` 5.7.2 -> 7.8.5.
+  That last one reads alarming and is not: the 5.7.2 belonged to nodemon 2, and with its pin
+  gone the two nested 7.x copies under sqlite3's build chain (node-abi 7.7.2, node-gyp
+  7.8.5) deduped up to one 7.8.5. **The production tree's semver never left 7.x**, and
+  nothing in it runs at request time anyway - semver is there for `prebuild-install`.
+
+  Verified: 421 tests, 103 browser-smoke assertions, and `npm run dev` actually driven -
+  nodemon 3 boots the app on a spare port and restarts it on a file change, which is the
+  whole reason the dependency exists. Render's own command was run rather than assumed:
+  `npm ci --omit=dev` against this lockfile in an empty directory installs 150 packages,
+  reports 0 vulnerabilities, lands the sqlite3 prebuilt binary, and correctly leaves nodemon
+  out.
