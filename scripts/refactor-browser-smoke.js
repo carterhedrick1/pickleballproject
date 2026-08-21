@@ -252,8 +252,12 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       const library = await response.json();
       // The token matters here: notificationPreferences is host-only, so the public
       // response no longer carries it. The manage page strips the token from the URL at
-      // load, so the page's own captured token (via hostAuthHeaders) is the way in.
-      const gameResponse = await fetch('/api/games/' + gameId, { headers: hostAuthHeaders() });
+      // load, so the token it captured is the way in. It used to be read from the page's
+      // hostAuthHeaders(), a function that only existed because the page ran on globals;
+      // ManageApp.state is the seam the page actually offers.
+      const gameResponse = await fetch('/api/games/' + gameId, {
+        headers: { 'X-Host-Token': ManageApp.state.hostToken }
+      });
       const game = await gameResponse.json();
       return {
         gameId,

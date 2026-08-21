@@ -1,17 +1,17 @@
-// communications features for the management page.
+// The Communication tab: announcements, the quick day-of messages, the recipient picker and
+// the delivery log.
+import { gameData, gameId } from './state.js';
+import { request, json } from './api.js';
+import { clear } from './dom.js';
+import ManageRender from './render.js';
+import { showStatus, showConfirmModal, formatDateForDisplay, formatTime } from './game.js';
 
 async function postAnnouncement(message, recipients, { personalityWrapper = false } = {}) {
-    const response = await fetch(
+    const response = await request(
         `/api/games/${gameId}/announcement-individual`,
         {
             method: 'POST',
-            headers: hostAuthHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify({
-                message,
-                recipients,
-                personalityWrapper,
-                token: hostToken
-            })
+            body: { message, recipients, personalityWrapper }
         }
     );
 
@@ -33,7 +33,7 @@ function announcementResultText(data) {
     return `${sent} ${skipped.length === 1 ? 'One person was' : `${skipped.length} people were`} skipped because they are no longer on this game: ${names}.`;
 }
 
-async function sendAnnouncement() {
+export async function sendAnnouncement() {
     if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so announcements can no longer be sent.', 'error');
         return;
@@ -78,7 +78,7 @@ async function sendAnnouncement() {
     }
 }
 
-function quickMessageText(type) {
+export function quickMessageText(type) {
     if (type === 'reminder') {
         // TIMEZONE FIX: Use proper date formatting
         const formattedDate = formatDateForDisplay(gameData.date);
@@ -111,7 +111,7 @@ function confirmedRecipients() {
         }));
 }
 
-function sendQuickMessage(type) {
+export function sendQuickMessage(type) {
     if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so announcements can no longer be sent.', 'error');
         return;
@@ -177,7 +177,7 @@ function groupCheckbox(group) {
     return document.getElementById(group.checkboxId);
 }
 
-function getSelectedRecipients() {
+export function getSelectedRecipients() {
     const recipients = [];
 
     // Only the real group toggles count. The old fallback selectors could bind "send to
@@ -247,7 +247,7 @@ function updateSendToAll() {
     });
 }
 
-function toggleAllPlayers(checked) {
+export function toggleAllPlayers(checked) {
     RECIPIENT_GROUPS.forEach((group) => {
         setCheckboxState(groupCheckbox(group), { checked });
     });
@@ -256,7 +256,7 @@ function toggleAllPlayers(checked) {
     });
 }
 
-function updateGroupSelections() {
+export function updateGroupSelections() {
     RECIPIENT_GROUPS.forEach((group) => {
         const checked = Boolean(groupCheckbox(group)?.checked);
         recipientCheckboxes(group.type).forEach((checkbox) => {
@@ -266,7 +266,7 @@ function updateGroupSelections() {
     updateSendToAll();
 }
 
-function updateIndividualSelection() {
+export function updateIndividualSelection() {
     RECIPIENT_GROUPS.forEach((group) => {
         const boxes = recipientCheckboxes(group.type);
         if (boxes.length === 0) return;
@@ -280,7 +280,7 @@ function updateIndividualSelection() {
     updateSendToAll();
 }
 
-function clearAllRecipientSelections() {
+export function clearAllRecipientSelections() {
     // Nothing selected, so an announcement can never go out to a group the host did not pick.
     setCheckboxState(document.getElementById('sendToAll'), { checked: false });
     RECIPIENT_GROUPS.forEach((group) => {
@@ -291,7 +291,7 @@ function clearAllRecipientSelections() {
     });
 }
 
-function updateGroupCheckboxStyling() {
+export function updateGroupCheckboxStyling() {
     // Style the group checkbox containers
     const groupCheckboxes = RECIPIENT_GROUP_IDS.map(
         (id) => document.getElementById(id)?.parentElement
@@ -365,7 +365,7 @@ const RECIPIENT_GROUP_IDS = [
     ...RECIPIENT_GROUPS.map((group) => group.checkboxId)
 ];
 
-function updatePlayerCheckboxes() {
+export function updatePlayerCheckboxes() {
     const container = document.getElementById('playerCheckboxes');
     if (!container) return;
 
@@ -385,7 +385,7 @@ function updatePlayerCheckboxes() {
         };
     });
 
-    container.innerHTML = '';
+    clear(container);
 
     RECIPIENT_GROUPS.forEach((group) => {
         group.players().forEach((player) => {
@@ -465,7 +465,7 @@ const DELIVERY_STATUS_TEXT = {
     simulated: 'Test mode, not really sent'
 };
 
-async function loadDeliveryLog() {
+export async function loadDeliveryLog() {
     const list = document.getElementById('deliveryLogList');
     const status = document.getElementById('deliveryLogStatus');
     const refresh = document.getElementById('refreshDeliveryLog');
@@ -476,13 +476,13 @@ async function loadDeliveryLog() {
     if (refresh) refresh.disabled = true;
 
     try {
-        const response = await fetch(`/api/games/${gameId}/sms-events`, { headers: hostAuthHeaders() });
+        const response = await request(`/api/games/${gameId}/sms-events`);
         if (!response.ok) throw new Error(`Server returned ${response.status}`);
         const data = await response.json();
         renderDeliveryLog(data.events || [], data.counts || {});
     } catch (error) {
         console.error('Error loading the delivery log:', error);
-        list.innerHTML = '';
+        clear(list);
         status.textContent = 'Could not load the delivery log. Try refreshing it.';
         status.classList.add('error-text');
     } finally {
@@ -493,7 +493,7 @@ async function loadDeliveryLog() {
 function renderDeliveryLog(events, counts) {
     const list = document.getElementById('deliveryLogList');
     const status = document.getElementById('deliveryLogStatus');
-    list.innerHTML = '';
+    clear(list);
 
     if (events.length === 0) {
         status.textContent = 'No texts have gone out for this game yet.';
@@ -549,18 +549,3 @@ function renderDeliveryLog(events, counts) {
     });
 }
 
-window.ManageApp.communications = {
-
-    sendAnnouncement,
-    sendQuickMessage,
-    quickMessageText,
-    loadDeliveryLog,
-    getSelectedRecipients,
-    toggleAllPlayers,
-    updateGroupSelections,
-    updateIndividualSelection,
-    clearAllRecipientSelections,
-    updateGroupCheckboxStyling,
-    updatePlayerCheckboxes
-
-};

@@ -512,7 +512,8 @@
         </div>
     </div>
 
-    <!-- Load our separated JavaScript files -->
+    <!-- Shared with the other pages, so still classic scripts putting their one object on
+         window. Classic scripts run before any module, so the modules below can read them. -->
     <script src="/js/player-capacity.js"></script>
     <script src="/js/invitation-generator.js"></script>
     <script src="/js/slogans.js"></script>
@@ -524,10 +525,8 @@
     <script src="/js/host-verification.js"></script>
     <script src="/js/invite-status.js"></script>
     <script src="/js/central-time.js"></script>
-    <script src="/js/manage-render.js"></script>
-    <script src="/js/manage-scripts.js"></script>
-    <script src="/js/manage-players.js"></script>
-    <script src="/js/manage-communications.js"></script>
-    <script src="/js/manage-media.js"></script>
+    <!-- The management page itself: one module, which imports the rest in the order it needs
+         them. This replaced five script tags whose order silently mattered. -->
+    <script type="module" src="/js/manage/main.js"></script>
 </body>
 </html>

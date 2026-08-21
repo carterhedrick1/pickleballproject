@@ -204,7 +204,7 @@
     /**
      * What a page should say and offer about a game.
      *
-     * The three type names are what game-page.js and manage-scripts.js branch on, so they are
+     * The three type names are what game-page.js and manage/game.js branch on, so they are
      * fixed: 'cancelled', 'expired', 'active'. A game in progress is 'active' - it can still be
      * joined and edited until it ends.
      */

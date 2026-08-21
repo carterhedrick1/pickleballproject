@@ -417,7 +417,8 @@ module.exports = function mountPlayerRoutes(app) {
   app.post('/api/games/:id/manual-player', async (req, res) => {
     const gameId = req.params.id;
     try {
-      const { name, phone, addTo, token } = req.body || {};
+      const token = requestHostToken(req);
+      const { name, phone, addTo } = req.body || {};
       const playerData = validatePlayerData(name, phone);
       // addTo is left unchecked for the same reason action is on the signup route: it is a
       // two-way switch where only 'waitlist' means anything, and the callers in front of it
@@ -522,7 +523,7 @@ module.exports = function mountPlayerRoutes(app) {
     const gameId = req.params.id;
     try {
       const playerId = req.params.playerId;
-      const { token } = req.body;
+      const token = requestHostToken(req);
       const result = await moveToWaitlist(gameId, playerId, token);
       if (result.status === 'game_not_found') {
         return res.status(404).json({ error: 'Game not found' });
@@ -590,7 +591,7 @@ module.exports = function mountPlayerRoutes(app) {
     const gameId = req.params.id;
     try {
       const playerId = req.params.playerId;
-      const { token } = req.body;
+      const token = requestHostToken(req);
       const result = await promoteFromWaitlist(gameId, playerId, token);
       if (result.status === 'game_not_found') {
         return res.status(404).json({ error: 'Game not found' });

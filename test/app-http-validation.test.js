@@ -16,7 +16,20 @@ let server;
 let base;
 let game;
 
-after(() => new Promise((resolve) => server.close(resolve)));
+/** Every game these tests create, so the after hook can take them all away again. */
+const createdGames = [];
+
+after(async () => {
+  // These fixtures are dated 2099, and permanent deletion refuses a game still to be played -
+  // so cancel first. Left behind, they turn up in the local court list and can move the counts
+  // the browser smoke pins.
+  for (const created of createdGames) {
+    const asHost = { 'X-Host-Token': created.hostToken };
+    await req('DELETE', `/api/games/${created.gameId}`, { reason: 'validation test cleanup' }, asHost);
+    await req('DELETE', `/api/games/${created.gameId}/permanent`, null, asHost);
+  }
+  await new Promise((resolve) => server.close(resolve));
+});
 
 async function req(method, path, body, headers = {}) {
   const res = await fetch(base + path, {
@@ -54,6 +67,7 @@ before(async () => {
   const created = await req('POST', '/api/games', gameBody());
   assert.equal(created.status, 201);
   game = created.json;
+  createdGames.push(game);
 });
 
 describe('creating a game: caller errors answer 400', () => {
@@ -61,6 +75,7 @@ describe('creating a game: caller errors answer 400', () => {
     const res = await req('POST', '/api/games', gameBody({ location: 'Second Court' }));
     assert.equal(res.status, 201);
     assert.equal(res.json.totalPlayers, 4);
+    createdGames.push(res.json);
   });
 
   const refused = [

@@ -8,7 +8,7 @@
  *
  * `userMessage` is passed in rather than derived from the error. The frontend reads `error`
  * off these response bodies (`throw new Error(errorData.error || ...)` in
- * public/js/manage-scripts.js), so the wording a host sees must not change.
+ * public/js/manage/game.js), so the wording a host sees must not change.
  */
 const { logAppError } = require('../database/dev');
 
