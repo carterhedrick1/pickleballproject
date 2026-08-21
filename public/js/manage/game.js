@@ -6,6 +6,11 @@
 // everything below either imports what it needs or exports what its neighbours need.
 import { gameData, gameId, hostToken, setGameData } from './state.js';
 import { request, json } from './api.js';
+import * as PageUtils from '../page-utils.js';
+import * as CentralTime from '../central-time.js';
+import * as InviteStatus from '../invite-status.js';
+import * as PlayerCapacity from '../player-capacity.js';
+import * as InvitationGenerator from '../invitation-generator.js';
 
 import {
     loadHostRoster,

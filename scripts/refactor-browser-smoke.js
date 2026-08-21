@@ -1017,7 +1017,10 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
 
     await desktop.goto(`${local.baseUrl}${repeatLink.href}`);
     await cdp.sleep(1200);
-    const repeated = await desktop.evaluate(`(() => {
+    const repeated = await desktop.evaluate(`(async () => {
+      // page-utils.js is a module now rather than a global the create page happened to have
+      // loaded, so the expectation is imported the same way the page imports it.
+      const PageUtils = await import('/js/page-utils.js');
       const nextWeek = PageUtils.nextWeeklyDate('${fx.date}');
       return {
         notice: document.getElementById('repeatNotice').textContent,
@@ -1725,7 +1728,10 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     await mobile.goto(`${local.baseUrl}/game.html?id=${fx.open.gameId}`);
     const gameReady = await mobile.evaluate(`(() => ({
       visible: getComputedStyle(document.getElementById('details')).display !== 'none',
-      pageUtils: typeof PageUtils.formatTime12Hour === 'function',
+      // There is no PageUtils global to look for any more. A 12-hour time on the page is the
+      // stronger proof anyway: it is only there if game-page.js imported page-utils.js and ran
+      // formatTime12Hour, and a failed import would have stopped the module before this.
+      pageUtils: /\\d{1,2}:\\d{2}\\s?(AM|PM)/.test(document.getElementById('details').innerText),
       external: [...document.scripts].some((s) => s.src.endsWith('/js/game-page.js')),
       locationOnly: !document.getElementById('court' + 'Number') &&
         !document.body.innerText.includes(['Court', 'Number'].join(' '))

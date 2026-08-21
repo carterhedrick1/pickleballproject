@@ -1,3 +1,7 @@
+import * as PageUtils from './page-utils.js';
+import * as CentralTime from './central-time.js';
+import * as PlayerIdentity from './player-identity.js';
+
         // TIMEZONE-FIXED JavaScript for game.html
         document.addEventListener('DOMContentLoaded', () => {
             const statusDiv = document.getElementById('status');
