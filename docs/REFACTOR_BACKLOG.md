@@ -433,9 +433,35 @@ The original verify rigs remain for interactive debugging;
 `verify/user-flow.js` now derives its game date and its idempotency key instead of
 hardcoding them, so it neither expires nor blocks its own second run.
 
-### 16. sqlite3 6.x major upgrade
-The 7 remaining `npm audit --omit=dev` advisories (1 critical) are all in sqlite3 5.x's
-install-time toolchain (node-gyp → tar/cacache); nothing in that chain runs while the app
-serves traffic, and production uses PostgreSQL. Upgrading to sqlite3@6 clears them but is
-a native-module major bump: take it as its own task, run the full gate plus the race and
-reminder rigs on macOS, and check Render's build still works.
+- **sqlite3 6.x major upgrade** (was P6 item 16) - done 2026-08-21. `sqlite3@6.0.1`.
+  `npm audit --omit=dev` goes from 7 advisories (1 critical) to **0**: the whole
+  node-gyp → cacache → tar chain those lived in is gone, because sqlite3 6 installs with
+  `prebuild-install` instead of `node-pre-gyp`. 73 packages left the lockfile and 9 arrived,
+  and the `tar` that remains is 7.5.22, past the 7.5.20 the critical advisory names. The three
+  advisories `npm audit` still reports are devDependencies-only - nodemon 2.x pulling an old
+  semver through simple-update-notifier - and clearing them is a nodemon major of its own,
+  not this item.
+
+  No application code changed. sqlite3 6 is N-API rather than NAN, so the binary no longer
+  has to match a Node ABI, and the surface `database/` uses is unchanged: `verbose()`,
+  `new Database(file, cb)`, `run`/`get`/`all`/`prepare`/`finalize`/`close`,
+  `configure('busyTimeout')`, `this.changes` in a run callback, `PRAGMA journal_mode = WAL`,
+  `BEGIN IMMEDIATE`, `json_extract`, and BLOBs arriving as Buffers were each exercised against
+  both versions before the gate was run. The bundled engine moves from SQLite 3.44.2 to 3.52.0.
+
+  Render's build was checked rather than assumed, in the two ways available without a Linux
+  box. The release carries prebuilt binaries for linux-x64 and linux-arm64, glibc and musl,
+  at both N-API levels; `prebuild-install --platform linux --arch x64` fetches
+  `sqlite3-v6.0.1-napi-v6-linux-x64.tar.gz` with a 200 and unpacks a real x86-64 ELF, so the
+  build downloads a binary rather than compiling one. And `npm ci --omit=dev` against this
+  lockfile in an empty directory - which is what Render runs - installs 150 packages and
+  reports 0 vulnerabilities. The `|| node-gyp rebuild` fallback in sqlite3's install script
+  remains if a prebuild is ever missing.
+
+  Worth remembering: production never executes any of this. `require('sqlite3')` sits inside
+  the non-production branch of `database/context.js`, so a PostgreSQL deploy loads the module
+  never. The upgrade is about what the build installs, not about what serves traffic.
+
+  Verified: 421 tests, 103 browser-smoke assertions, `npm run test:pg` 12/12 on real
+  PostgreSQL 16, the three race rigs, all four reminder rigs, roster-locations and all-routes
+  (42 routes, no 500s) - all on macOS against a worktree server, all on sqlite3 6.0.1.
