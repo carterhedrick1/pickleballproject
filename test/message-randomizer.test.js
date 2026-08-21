@@ -1,13 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const { normalizeMessageText } = require('../database/message-rows');
+const { readMigrationCopy } = require('../database/message-seeds');
 const {
-  normalizeMessageText,
-  readMigrationCopy,
   REALIST_INVITATION_OPENING_DRAFTS,
   REALIST_GAME_DETAILS_DRAFTS,
   REALIST_PAGE_MOMENT_DRAFTS
-} = require('../database/message-randomizer');
+} = require('../database/realist-seed-copy');
 const {
   extractTokens,
   validateGeneratedCandidate

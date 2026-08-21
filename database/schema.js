@@ -3,7 +3,7 @@
  *
  *   1. schema     - ordered migrations recorded in `schema_migrations` (./migrations)
  *   2. reference  - the seed courts and the retired-court repair (./seeds)
- *   3. messages   - the Realist message pools (./message-randomizer)
+ *   3. messages   - the Realist message pools (./message-seeds)
  *
  * This file used to be all three at once, as one long list of CREATE TABLE IF NOT EXISTS
  * statements duplicated per dialect. See ./migration-runner.js for why that changed.
@@ -34,7 +34,7 @@ async function initializeDatabase() {
 
     await seedReferenceData();
 
-    const { seedRealistAndMigrateSavedMessages } = require('./message-randomizer');
+    const { seedRealistAndMigrateSavedMessages } = require('./message-seeds');
     const migration = await seedRealistAndMigrateSavedMessages();
     console.log(`Message Randomizer migration ready (${migration.total} vetted messages)`);
   } catch (err) {

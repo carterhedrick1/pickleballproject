@@ -1,5 +1,27 @@
 const { getMessageSurface } = require('../message-surfaces');
 const { formatPhoneNumber } = require('../utils/sms-format');
+const messagePersonalities = require('../database/message-personalities');
+const messageInventory = require('../database/message-inventory');
+const messageTargetRules = require('../database/message-target-rules');
+const messageSelection = require('../database/message-selection');
+
+/**
+ * Every persistence call message selection makes, as one object.
+ *
+ * It is assembled here from the specific repositories rather than being a module that
+ * re-exports a layer: this is the seam the unit tests hand a fake to, so listing the seven
+ * functions by hand is the point - anything selection starts needing has to be added
+ * deliberately, and the tests show exactly what a substitute has to implement.
+ */
+const MESSAGE_STORE = Object.freeze({
+  getPersonality: messagePersonalities.getPersonality,
+  getDefaultPersonality: messagePersonalities.getDefaultPersonality,
+  getSurfaceSetting: messagePersonalities.getSurfaceSetting,
+  listRandomizerMessages: messageInventory.listRandomizerMessages,
+  listTargetRules: messageTargetRules.listTargetRules,
+  getSelectionHistory: messageSelection.getSelectionHistory,
+  recordSelection: messageSelection.recordSelection
+});
 
 const SOURCE_BUCKETS = Object.freeze([
   'exact-target',
@@ -147,7 +169,7 @@ function fallbackResult(fallbackText, surfaceId, personalityId = null, error = n
 }
 
 async function resolveRandomizedMessage({
-  database = require('../database/message-randomizer'),
+  database = MESSAGE_STORE,
   personalityId,
   surfaceId,
   game = null,

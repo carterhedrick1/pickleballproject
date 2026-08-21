@@ -8,10 +8,37 @@ const {
   runGenerationJob
 } = require('../services/message-generation');
 const { resolveRandomizedMessage } = require('../services/message-randomizer');
-// Two reads that are not message-randomizer rows: the protected master roster a target rule
-// has to name a player from, and the game a public /api/random-message call is about.
+// Two reads that are not message rows: the protected master roster a target rule has to name
+// a player from, and the game a public /api/random-message call is about.
 const { getDeveloperRosterSources } = require('../database/dev-rosters');
 const { getGame } = require('../database/games');
+const {
+  listPersonalities,
+  getPersonality,
+  updatePersonality,
+  listSurfaceSettings,
+  updateSurfaceSetting,
+  listCodexPrompts,
+  saveCodexPrompts
+} = require('../database/message-personalities');
+const {
+  listRandomizerMessages,
+  getRandomizerMessage,
+  createRandomizerMessage,
+  updateRandomizerMessage
+} = require('../database/message-inventory');
+const {
+  listTargetRules,
+  getTargetRule,
+  createTargetRule,
+  updateTargetRule,
+  deleteTargetRule
+} = require('../database/message-target-rules');
+const { getRandomizerMetrics } = require('../database/message-selection');
+
+// The two calls saveCodexPromptUpdate makes, so the route passes a real store and the unit
+// test passes a fake one.
+const CODEX_PROMPT_STORE = Object.freeze({ listCodexPrompts, saveCodexPrompts });
 const { formatPhoneNumber } = require('../utils/sms-format');
 const {
   buildDeveloperRosters
@@ -205,6 +232,8 @@ function validateCodexPromptUpdate(body = {}) {
   return { personalityId, surfaceId, isAll, sections, sharedParagraphIndexes };
 }
 
+// Takes the prompt store rather than reaching for it, because test/message-randomizer-routes
+// exercises the all-categories merge against an in-memory fake.
 async function saveCodexPromptUpdate(database, validation) {
   const saved = effectiveCodexPrompts(
     await database.listCodexPrompts(validation.personalityId)
@@ -241,7 +270,7 @@ async function saveCodexPromptUpdate(database, validation) {
   );
 }
 
-async function validateTargetRule(database, body = {}, existing = null) {
+async function validateTargetRule(body = {}, existing = null) {
   const fields = {
     personalityId: body.personalityId ?? existing?.personalityId,
     targetPhone: formatPhoneNumber(body.targetPhone ?? existing?.targetPhone),
@@ -310,11 +339,9 @@ const PUBLIC_RANDOM_MESSAGE_SURFACES = new Set([
 ]);
 
 function mountPublicRandomizerRoutes(app) {
-  const database = require('../database/message-randomizer');
-
   app.get('/api/message-personalities', async (_req, res) => {
     try {
-      const personalities = await database.listPersonalities({ enabledOnly: true });
+      const personalities = await listPersonalities({ enabledOnly: true });
       res.json({
         personalities: personalities.map(({ id, name, description, isDefault }) => ({
           id,
@@ -345,7 +372,6 @@ function mountPublicRandomizerRoutes(app) {
     const gameId = String(req.query.gameId || '').trim() || null;
     const game = gameId ? await getGame(gameId).catch(() => null) : null;
     const result = await resolveRandomizedMessage({
-      database,
       personalityId: req.query.personality || game?.personalityId || null,
       surfaceId,
       game,
@@ -364,18 +390,16 @@ function mountPublicRandomizerRoutes(app) {
 }
 
 function mountDevRandomizerRoutes(app, requireDevAuth) {
-  const database = require('../database/message-randomizer');
-
   app.get('/api/dev/message-randomizer', requireDevAuth, async (_req, res) => {
     try {
-      const personalities = await database.listPersonalities();
+      const personalities = await listPersonalities();
       const rosterSources = await getDeveloperRosterSources();
       const payload = [];
       for (const personality of personalities) {
         const [settings, metrics, savedCodexPrompts] = await Promise.all([
-          database.listSurfaceSettings(personality.id),
-          database.getRandomizerMetrics(personality.id),
-          database.listCodexPrompts(personality.id)
+          listSurfaceSettings(personality.id),
+          getRandomizerMetrics(personality.id),
+          listCodexPrompts(personality.id)
         ]);
         const generationStatuses = await Promise.all(
           MESSAGE_SURFACES.map((surface) => (
@@ -430,9 +454,9 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
     const validation = validateCodexPromptUpdate(req.body);
     if (validation.error) return sendValidationError(res, validation.error);
     try {
-      const personality = await database.getPersonality(validation.personalityId);
+      const personality = await getPersonality(validation.personalityId);
       if (!personality) return res.status(404).json({ error: 'Personality not found.' });
-      const prompts = await saveCodexPromptUpdate(database, validation);
+      const prompts = await saveCodexPromptUpdate(CODEX_PROMPT_STORE, validation);
       res.json({ success: true, prompts });
     } catch (error) {
       console.error('Error saving Codex message prompts:', error);
@@ -444,15 +468,15 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
     const validation = validatePersonalityUpdate(req.body);
     if (validation.error) return sendValidationError(res, validation.error);
     try {
-      const personality = await database.updatePersonality(req.params.id, validation.fields);
+      const personality = await updatePersonality(req.params.id, validation.fields);
       if (!personality) return res.status(404).json({ error: 'Personality not found.' });
       for (const [surfaceId, fields] of Object.entries(validation.surfaces)) {
-        await database.updateSurfaceSetting(req.params.id, surfaceId, fields);
+        await updateSurfaceSetting(req.params.id, surfaceId, fields);
       }
       res.json({
         success: true,
         personality,
-        surfaces: await database.listSurfaceSettings(req.params.id)
+        surfaces: await listSurfaceSettings(req.params.id)
       });
     } catch (error) {
       console.error('Error saving personality:', error);
@@ -474,7 +498,7 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
       if (req.query.locked === 'true' || req.query.locked === 'false') {
         filters.locked = req.query.locked === 'true';
       }
-      res.json({ messages: await database.listRandomizerMessages(filters) });
+      res.json({ messages: await listRandomizerMessages(filters) });
     } catch (error) {
       res.status(500).json({ error: 'Could not load the message library.' });
     }
@@ -484,7 +508,7 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
     const validation = validateMessage(null, req.body, { creating: true });
     if (validation.error) return sendValidationError(res, validation.error);
     try {
-      const message = await database.createRandomizerMessage(validation.fields);
+      const message = await createRandomizerMessage(validation.fields);
       res.status(201).json({ success: true, message });
     } catch (error) {
       const duplicate = /unique|duplicate/i.test(error.message);
@@ -496,11 +520,11 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
 
   app.put('/api/dev/randomizer-messages/:id', requireDevAuth, async (req, res) => {
     try {
-      const existing = await database.getRandomizerMessage(req.params.id);
+      const existing = await getRandomizerMessage(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Message not found.' });
       const validation = validateMessage(existing, req.body);
       if (validation.error) return sendValidationError(res, validation.error);
-      const message = await database.updateRandomizerMessage(req.params.id, validation.fields);
+      const message = await updateRandomizerMessage(req.params.id, validation.fields);
       res.json({ success: true, message });
     } catch (error) {
       const duplicate = /unique|duplicate/i.test(error.message);
@@ -520,14 +544,13 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
       const targetRuleId = req.body?.targetRuleId || null;
       let direction = String(req.body?.direction || '').trim() || null;
       if (targetRuleId) {
-        const rule = await database.getTargetRule(targetRuleId);
+        const rule = await getTargetRule(targetRuleId);
         if (!rule || rule.personalityId !== personalityId || rule.surfaceId !== surfaceId) {
           return sendValidationError(res, 'That target rule does not match this generation request.');
         }
         direction = rule.generationDirection;
       }
       const result = await runGenerationJob({
-        database,
         personalityId,
         surfaceId,
         count,
@@ -552,7 +575,7 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
   app.get('/api/dev/message-target-rules', requireDevAuth, async (req, res) => {
     try {
       res.json({
-        rules: await database.listTargetRules({
+        rules: await listTargetRules({
           personalityId: req.query.personalityId || undefined,
           surfaceId: req.query.surfaceId || undefined
         }),
@@ -565,9 +588,9 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
 
   app.post('/api/dev/message-target-rules', requireDevAuth, async (req, res) => {
     try {
-      const validation = await validateTargetRule(database, req.body);
+      const validation = await validateTargetRule(req.body);
       if (validation.error) return sendValidationError(res, validation.error);
-      const rule = await database.createTargetRule(validation.fields);
+      const rule = await createTargetRule(validation.fields);
       res.status(201).json({ success: true, rule });
     } catch (error) {
       res.status(500).json({ error: 'Could not create the target rule.' });
@@ -576,11 +599,11 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
 
   app.put('/api/dev/message-target-rules/:id', requireDevAuth, async (req, res) => {
     try {
-      const existing = await database.getTargetRule(req.params.id);
+      const existing = await getTargetRule(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Target rule not found.' });
-      const validation = await validateTargetRule(database, req.body, existing);
+      const validation = await validateTargetRule(req.body, existing);
       if (validation.error) return sendValidationError(res, validation.error);
-      const rule = await database.updateTargetRule(req.params.id, validation.fields);
+      const rule = await updateTargetRule(req.params.id, validation.fields);
       res.json({ success: true, rule });
     } catch (error) {
       res.status(500).json({ error: 'Could not update the target rule.' });
@@ -589,7 +612,7 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
 
   app.delete('/api/dev/message-target-rules/:id', requireDevAuth, async (req, res) => {
     try {
-      const removed = await database.deleteTargetRule(req.params.id);
+      const removed = await deleteTargetRule(req.params.id);
       if (!removed) return res.status(404).json({ error: 'Target rule not found.' });
       res.json({ success: true });
     } catch (error) {
@@ -602,7 +625,6 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
     if (!getMessageSurface(surfaceId)) return sendValidationError(res, 'Choose a known surface.');
     try {
       const result = await resolveRandomizedMessage({
-        database,
         personalityId: req.body?.personalityId || null,
         surfaceId,
         game: req.body?.game || null,
@@ -627,7 +649,7 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
 
   app.get('/api/dev/message-randomizer/metrics', requireDevAuth, async (req, res) => {
     try {
-      res.json(await database.getRandomizerMetrics(req.query.personalityId || 'realist'));
+      res.json(await getRandomizerMetrics(req.query.personalityId || 'realist'));
     } catch (error) {
       res.status(500).json({ error: 'Could not load Message Randomizer metrics.' });
     }

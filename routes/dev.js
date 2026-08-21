@@ -43,7 +43,7 @@ const {
   saveCourtImage,
   saveCourtImageToLibrary
 } = require('../database/locations-media');
-const { syncLegacySurfaceMessages } = require('../database/message-randomizer');
+const { syncLegacySurfaceMessages } = require('../database/message-seeds');
 const {
   buildDeveloperRosters,
   chooseDeveloperRosterSource

@@ -16,7 +16,7 @@ const {
   deleteGamePermanently
 } = require('../database/games');
 const { addLocation, getAllPhotoCounts } = require('../database/locations-media');
-const { getPersonality, getDefaultPersonality } = require('../database/message-randomizer');
+const { getPersonality, getDefaultPersonality } = require('../database/message-personalities');
 
 const { sendSMS } = require('../services/sms-client');
 const {
