@@ -147,10 +147,36 @@ migration path for it, and the parity suite is where the SQL would be proven.
   it changes a generated page, so it wants a `--visible` completion, which needs DEV_PASSWORD
   set on Render first. Fold it into the next visible change that regenerates the docs.
 
-### 9. Split `database/message-randomizer.js`
-Row mapping, CRUD, metrics, selection history, seeds, migrations, repairs and legacy sync
-in one file. Split into repositories plus migration/seed modules without changing
-selection behavior.
+- **Split `database/message-randomizer.js`** (was P3 item 9) - done 2026-08-20. The 1,460-line
+  file is gone, replaced by seven modules that each do one thing: `message-rows.js` (the row
+  mappers and `normalizeMessageText`, pure functions with no connection), `message-personalities.js`
+  (personalities, surface settings, Codex prompts), `message-inventory.js` (the message pool),
+  `message-target-rules.js`, `message-selection.js` (history, `recordSelection`, metrics),
+  `message-seeds.js` (the boot-time seeding, migration and repairs) and `realist-seed-copy.js`
+  (the shipped Realist copy, kept apart because it changes for editorial reasons).
+
+  Why the seeds are not migration `003`: every step in `message-seeds.js` already records that
+  it ran by writing a marker into `dev_assets`, and those markers exist in production today.
+  Moving them into the ordered list would make `schema_migrations` the record of "has this
+  run", so every database already carrying a dev_asset marker would seed a second time. The
+  ordered list stays for schema; content seeding keeps its own markers, and `database/schema.js`
+  still calls it as the named message-seeds stage.
+
+  Proof that selection and seeding behaviour did not move: a fresh boot on SQLite produces a
+  byte-identical database before and after (personalities, surface settings, all message rows,
+  and every dev_asset marker with timestamps stripped), the same comparison is identical on
+  real PostgreSQL 16, and booting the new code against a database the old code seeded changes
+  nothing on either engine - the markers still short-circuit. Plus 325 tests, 103 browser-smoke
+  assertions, `npm run test:pg` 12/12, and the five reminder/roster rigs.
+
+  One correction worth recording: the injected `database` parameter on `resolveRandomizedMessage`,
+  `generateFreshMessages`, `queuePoolRefill` and `saveCodexPromptUpdate` looks unused but is
+  not - four unit tests pass a fake through it (as a shorthand `database,` property, which is
+  easy to miss when grepping for `database:`). It is kept, and each service now builds its
+  default from the specific repositories it needs (`MESSAGE_STORE` in
+  `services/message-randomizer.js` and `services/message-generation.js`, `CODEX_PROMPT_STORE`
+  in `routes/message-randomizer.js`). Those objects list their functions by hand on purpose:
+  they are test seams scoped to one service, not a persistence facade.
 
 ## P4. Validation and time handling
 
@@ -205,7 +231,15 @@ timeout so parallel test workers and rigs sharing the file wait instead of faili
 Still hand-run: the promotion-modes rig and the SMS-failure UI rigs (both slower,
 multi-server scenarios), and the PostgreSQL parity suite (`npm run test:pg`), which needs a
 disposable database the gate cannot assume exists. Run it before shipping anything that
-touches persistence. The original verify rigs remain for interactive debugging;
+touches persistence. PostgreSQL 16 is installed on Scott's Mac now (Homebrew, no login item -
+start it by hand; the socket directory has to be short, so `-k /tmp/pgs5433`).
+
+Known flake, measured 2026-08-20: "SMS reply 9 cancels through the signed webhook" in
+`test/app-http-races.test.js` fails roughly one full `npm test` run in four. It is contention
+on the shared local SQLite file between parallel test workers, not a product bug - the same
+file run alone passed 15/15, and the failure rate is identical on `main` with no changes
+applied. It can fail a deployment gate spuriously; rerun to confirm before chasing it. The
+real fix belongs with item 14: give the parallel workers their own databases. The original verify rigs remain for interactive debugging;
 `verify/user-flow.js` now derives its game date and its idempotency key instead of
 hardcoding them, so it neither expires nor blocks its own second run.
 

@@ -48,7 +48,9 @@ ${firstComeMessage}
 `;
 }
 
-async function buildRandomizedInvitation(game, gameId, baseUrl, database = require('../database/message-randomizer')) {
+// `database` is only ever passed by the unit test; leaving it undefined lets the resolver and
+// the refill queue fall back to their own default store.
+async function buildRandomizedInvitation(game, gameId, baseUrl, database) {
   const deterministic = buildDeterministicInvitation(game, gameId, baseUrl);
   const result = await resolveRandomizedMessage({
     database,

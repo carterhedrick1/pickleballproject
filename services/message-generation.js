@@ -1,8 +1,20 @@
 const { getMessageSurface } = require('../message-surfaces');
-const { normalizeMessageText } = require('../database/message-randomizer');
-// Where the "is a generation running" banner is kept. It is a dev asset rather than a
-// randomizer row, so it comes from its own module instead of the injected message store.
+const { normalizeMessageText } = require('../database/message-rows');
+// The "is a generation running" banner is a dev asset rather than a randomizer row.
 const { getDevAsset, saveDevAsset } = require('../database/dev');
+const messagePersonalities = require('../database/message-personalities');
+const messageInventory = require('../database/message-inventory');
+
+/**
+ * The persistence calls generation makes, assembled from the specific repositories. Same seam
+ * as services/message-randomizer.js: the unit tests pass a fake in place of this.
+ */
+const MESSAGE_STORE = Object.freeze({
+  getPersonality: messagePersonalities.getPersonality,
+  getSurfaceSetting: messagePersonalities.getSurfaceSetting,
+  listRandomizerMessages: messageInventory.listRandomizerMessages,
+  createRandomizerMessage: messageInventory.createRandomizerMessage
+});
 
 const PROMPT_VERSION = 'realist-v1';
 const PERMANENT_CONSTRAINTS = Object.freeze([
@@ -217,7 +229,7 @@ async function getGenerationStatus(personalityId, surfaceId) {
 }
 
 async function generateFreshMessages({
-  database = require('../database/message-randomizer'),
+  database = MESSAGE_STORE,
   provider = configuredProvider(),
   personalityId,
   surfaceId,
@@ -335,7 +347,7 @@ async function runGenerationJob(options) {
 }
 
 function queuePoolRefill({
-  database = require('../database/message-randomizer'),
+  database = MESSAGE_STORE,
   personalityId,
   surfaceId
 }) {
