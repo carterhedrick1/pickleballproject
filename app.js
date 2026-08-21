@@ -15,13 +15,11 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const {
-  initializeDatabase,
-  logAppError,
-  isProduction
-} = require('./database');
+const { initializeDatabase } = require('./database/schema');
+const { logAppError } = require('./database/dev');
+const { isProduction } = require('./database/context');
 
-const { handleIncomingSMS } = require('./sms-handler');
+const { handleIncomingSMS } = require('./services/sms-webhook');
 const { requireTextbeltSignature } = require('./utils/textbelt-webhook');
 const { redactTokenInUrl } = require('./utils/host-auth');
 const { checkAndSendReminders } = require('./services/reminders');

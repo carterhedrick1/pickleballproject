@@ -4,7 +4,8 @@
 // of saved rows and everyone with a phone number from the host's games. Keeping that merge here
 // prevents a page from offering somebody whom a later server action then rejects.
 
-const { getGamesByHostPhone, getRosterForHost } = require('../database');
+const { getGamesByHostPhone } = require('../database/games');
+const { getRosterForHost } = require('../database/roster');
 const { formatPhoneNumber } = require('../utils/sms-format');
 
 function buildVisibleHostRoster(hostPhone, rosterRows = [], games = []) {

@@ -48,7 +48,7 @@ ${firstComeMessage}
 `;
 }
 
-async function buildRandomizedInvitation(game, gameId, baseUrl, database = require('../database')) {
+async function buildRandomizedInvitation(game, gameId, baseUrl, database = require('../database/message-randomizer')) {
   const deterministic = buildDeterministicInvitation(game, gameId, baseUrl);
   const result = await resolveRandomizedMessage({
     database,

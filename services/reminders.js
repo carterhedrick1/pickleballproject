@@ -1,11 +1,10 @@
-const {
-  getAllGames,
-  hasReminderBeenSent,
-  markReminderSent
-} = require('../database');
-// Resolve through the compatibility facade so the existing verification seam can replace
-// sendSMS before game-logic loads without ever contacting Textbelt.
-const smsHandler = require('../sms-handler');
+const { getAllGames } = require('../database/games');
+const { hasReminderBeenSent, markReminderSent } = require('../database/messaging-reminders');
+// Held as the module object rather than a destructured function on purpose: the reminder tests
+// and the verify rigs replace sendSMS on services/sms-client, and this call site has to resolve
+// it at call time for that stub to take effect. It is what keeps a reminder run from ever
+// reaching Textbelt in those runs.
+const smsClient = require('./sms-client');
 const { formatDateForSMS, formatTimeForSMS, formatLocationForSMS, maskPhone } = require('../utils/sms-format');
 const { getCentralTimeNow, isGameUpcoming } = require('../utils/central-time');
 const { resolveTextMessage } = require('./text-message-rotation');
@@ -214,7 +213,7 @@ async function checkAndSendReminders() {
               count: priorAttempts + 1,
               at: Date.now()
             });
-            const smsResult = await smsHandler.sendSMS(player.phone, message, gameId, {
+            const smsResult = await smsClient.sendSMS(player.phone, message, gameId, {
               eventId: kind.eventId
             });
 

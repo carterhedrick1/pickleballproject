@@ -1,5 +1,8 @@
 const { getMessageSurface } = require('../message-surfaces');
 const { normalizeMessageText } = require('../database/message-randomizer');
+// Where the "is a generation running" banner is kept. It is a dev asset rather than a
+// randomizer row, so it comes from its own module instead of the injected message store.
+const { getDevAsset, saveDevAsset } = require('../database/dev');
 
 const PROMPT_VERSION = 'realist-v1';
 const PERMANENT_CONSTRAINTS = Object.freeze([
@@ -196,15 +199,15 @@ function statusAssetName(personalityId, surfaceId) {
   return `message-generation-status:${personalityId}:${surfaceId}`;
 }
 
-async function saveGenerationStatus(database, personalityId, surfaceId, status) {
-  await database.saveDevAsset(
+async function saveGenerationStatus(personalityId, surfaceId, status) {
+  await saveDevAsset(
     statusAssetName(personalityId, surfaceId),
     JSON.stringify({ ...status, updatedAt: new Date().toISOString() })
   );
 }
 
-async function getGenerationStatus(database, personalityId, surfaceId) {
-  const asset = await database.getDevAsset(statusAssetName(personalityId, surfaceId));
+async function getGenerationStatus(personalityId, surfaceId) {
+  const asset = await getDevAsset(statusAssetName(personalityId, surfaceId));
   if (!asset) return null;
   try {
     return JSON.parse(asset.content);
@@ -214,7 +217,7 @@ async function getGenerationStatus(database, personalityId, surfaceId) {
 }
 
 async function generateFreshMessages({
-  database = require('../database'),
+  database = require('../database/message-randomizer'),
   provider = configuredProvider(),
   personalityId,
   surfaceId,
@@ -291,7 +294,6 @@ async function generateFreshMessages({
 }
 
 async function runGenerationJob(options) {
-  const database = options.database || require('../database');
   const key = `${options.personalityId}:${options.surfaceId}:${options.targetRuleId || 'general'}`;
   if (generationFlights.has(key)) return generationFlights.get(key);
   const blockedUntil = failureBackoff.get(key) || 0;
@@ -299,7 +301,7 @@ async function runGenerationJob(options) {
     throw new Error('Generation is temporarily paused after a provider failure.');
   }
   const flight = (async () => {
-    await saveGenerationStatus(database, options.personalityId, options.surfaceId, {
+    await saveGenerationStatus(options.personalityId, options.surfaceId, {
       state: 'running',
       startedAt: new Date().toISOString(),
       targetRuleId: options.targetRuleId || null
@@ -307,7 +309,7 @@ async function runGenerationJob(options) {
     try {
       const result = await generateFreshMessages(options);
       failureBackoff.delete(key);
-      await saveGenerationStatus(database, options.personalityId, options.surfaceId, {
+      await saveGenerationStatus(options.personalityId, options.surfaceId, {
         state: 'succeeded',
         lastSuccessAt: new Date().toISOString(),
         accepted: result.accepted.length,
@@ -317,7 +319,7 @@ async function runGenerationJob(options) {
       return result;
     } catch (error) {
       failureBackoff.set(key, Date.now() + 60_000);
-      await saveGenerationStatus(database, options.personalityId, options.surfaceId, {
+      await saveGenerationStatus(options.personalityId, options.surfaceId, {
         state: 'failed',
         lastFailureAt: new Date().toISOString(),
         failureReason: error.message,
@@ -333,7 +335,7 @@ async function runGenerationJob(options) {
 }
 
 function queuePoolRefill({
-  database = require('../database'),
+  database = require('../database/message-randomizer'),
   personalityId,
   surfaceId
 }) {

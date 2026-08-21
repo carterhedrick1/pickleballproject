@@ -8,29 +8,24 @@
 
 const crypto = require('crypto');
 
-const {
-  getGame,
-  recordRosterSighting,
-  getSmsEventById
-} = require('../database');
+const { getGame } = require('../database/games');
+const { recordRosterSighting } = require('../database/roster');
+const { getSmsEventById } = require('../database/sms-events');
 
-const {
-  sendSMS,
-  sendSMSWithRetry,
-  sendOrganizerNotification,
-  formatPhoneNumber,
-  formatDateForSMS,
-  formatTimeForSMS,
-  formatLocationForSMS
-} = require('../sms-handler');
+const { sendSMS, sendSMSWithRetry } = require('../services/sms-client');
+const { sendOrganizerNotification } = require('../services/sms-webhook');
 
-const {
-  validatePlayerData,
-} = require('../game-logic');
+const { validatePlayerData } = require('../domain/player-validation');
 
 const { isGameUpcoming } = require('../utils/central-time');
 const { requestHostToken } = require('../utils/host-auth');
-const { maskPhone } = require('../utils/sms-format');
+const {
+  formatPhoneNumber,
+  formatDateForSMS,
+  formatTimeForSMS,
+  formatLocationForSMS,
+  maskPhone
+} = require('../utils/sms-format');
 const {
   departureAlertType
 } = require('../utils/promotion');

@@ -6,7 +6,7 @@
 // Changing the message copy, the personality, or the host's own alert preferences is not
 // something to text anybody about.
 
-const { formatDateForSMS, formatTimeForSMS, formatLocationForSMS } = require('../sms-handler');
+const { formatDateForSMS, formatTimeForSMS, formatLocationForSMS } = require('../utils/sms-format');
 
 const NOTIFIABLE_FIELDS = Object.freeze(['location', 'date', 'time', 'duration']);
 

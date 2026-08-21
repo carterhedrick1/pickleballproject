@@ -12,8 +12,8 @@ const express = require('express');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 
+const { isProduction } = require('../database/context');
 const {
-  isProduction,
   pingDatabase,
   countRows,
   listDevNotes,
@@ -24,22 +24,26 @@ const {
   logAppError,
   listAppErrors,
   countAppErrors,
-  getSmsEventMetrics,
   pruneAppErrors,
   saveDevAsset,
   getDevAsset,
-  getDevAssetMeta,
+  getDevAssetMeta
+} = require('../database/dev');
+const { getSmsEventMetrics } = require('../database/sms-events');
+const {
   getDeveloperRosterSources,
   updateDeveloperPlayer,
   deleteDeveloperPlayer,
-  deleteDeveloperHost,
+  deleteDeveloperHost
+} = require('../database/dev-rosters');
+const {
   getAllUploadedImages,
   deleteUploadedImage,
   getLocations,
   saveCourtImage,
-  saveCourtImageToLibrary,
-  syncLegacySurfaceMessages
-} = require('../database');
+  saveCourtImageToLibrary
+} = require('../database/locations-media');
+const { syncLegacySurfaceMessages } = require('../database/message-randomizer');
 const {
   buildDeveloperRosters,
   chooseDeveloperRosterSource

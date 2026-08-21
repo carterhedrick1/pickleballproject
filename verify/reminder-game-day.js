@@ -9,15 +9,18 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const { cleanupTestGames } = require('./_cleanup');
 
-const smsHandler = require(ROOT + '/sms-handler');
+const smsClient = require(ROOT + '/services/sms-client');
 let sent = [];
-smsHandler.sendSMS = async (phone, message) => {
+smsClient.sendSMS = async (phone, message) => {
   sent.push({ phone, message });
   return { success: true, stubbed: true };
 };
 
-const db = require(ROOT + '/database');
-const { checkAndSendReminders } = require(ROOT + '/game-logic');
+const { initializeDatabase } = require(ROOT + '/database/schema');
+const { saveGame, getGame } = require(ROOT + '/database/games');
+const { hasReminderBeenSent } = require(ROOT + '/database/messaging-reminders');
+const { closeDatabaseConnection } = require(ROOT + '/database/context');
+const { checkAndSendReminders } = require(ROOT + '/services/reminders');
 const { getCentralTimeNow } = require(ROOT + '/utils/central-time');
 
 let failures = 0;
@@ -51,7 +54,7 @@ const textsTo = (phone) => sent.filter((s) => s.phone === phone).length;
 const messagesTo = (phone) => sent.filter((s) => s.phone === phone).map((s) => s.message);
 
 (async () => {
-  await db.initializeDatabase();
+  await initializeDatabase();
   await new Promise((r) => setTimeout(r, 500));
 
   const stamp = Date.now().toString(36);
@@ -62,11 +65,11 @@ const messagesTo = (phone) => sent.filter((s) => s.phone === phone).map((s) => s
   };
 
   // 12 hours out: inside the 24-hour window, nowhere near the game-day one.
-  await db.saveGame(ids.dayBefore, makeGame(12, '+15554440001'), 'tokA', null);
+  await saveGame(ids.dayBefore, makeGame(12, '+15554440001'), 'tokA', null);
   // 1 hour out: inside the game-day window only.
-  await db.saveGame(ids.soon, makeGame(1, '+15554440002'), 'tokB', null);
+  await saveGame(ids.soon, makeGame(1, '+15554440002'), 'tokB', null);
   // 30 hours out: too early for either.
-  await db.saveGame(ids.early, makeGame(30, '+15554440003'), 'tokC', null);
+  await saveGame(ids.early, makeGame(30, '+15554440003'), 'tokC', null);
 
   console.log('\n=== A game a day away gets the 24-hour reminder, and only that ===');
   sent = [];
@@ -104,9 +107,9 @@ const messagesTo = (phone) => sent.filter((s) => s.phone === phone).map((s) => s
   console.log('\n=== A player reminded a day out still gets the game-day reminder later ===');
   // Same game, moved so that it now starts in an hour: the 24-hour reminder is already
   // logged, so only the second one may go out.
-  const game = await db.getGame(ids.dayBefore);
+  const game = await getGame(ids.dayBefore);
   Object.assign(game, offsetGame(1));
-  await db.saveGame(ids.dayBefore, game, 'tokA', null);
+  await saveGame(ids.dayBefore, game, 'tokA', null);
   sent = [];
   await checkAndSendReminders();
   textsTo('+15554440001') === 1
@@ -122,15 +125,15 @@ const messagesTo = (phone) => sent.filter((s) => s.phone === phone).map((s) => s
     ['game_day', ids.dayBefore, '+15554440001'],
     ['game_day', ids.soon, '+15554440002'],
   ]) {
-    const logged = await db.hasReminderBeenSent(id, phone, type);
+    const logged = await hasReminderBeenSent(id, phone, type);
     logged ? ok(`${type} recorded for ${phone}`) : bad(`${type} missing for ${phone}`);
   }
-  await db.hasReminderBeenSent(ids.soon, '+15554440002', 'twenty_four_hours')
+  await hasReminderBeenSent(ids.soon, '+15554440002', 'twenty_four_hours')
     ? bad('the one-hour game was also logged as a 24-hour reminder')
     : ok('the one-hour game was never counted as a 24-hour reminder');
 
   console.log(`\n=== ${failures} failure(s) ===\n`);
-  await db.closeDatabaseConnection?.();
+  await closeDatabaseConnection?.();
   await cleanupTestGames();
   process.exit(failures ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR:', e); process.exit(1); });

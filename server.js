@@ -14,7 +14,8 @@ assertStartupConfig();
 
 const { createApp } = require('./app');
 const { checkAndSendReminders } = require('./services/reminders');
-const { logAppError, closeDatabaseConnection } = require('./database');
+const { logAppError } = require('./database/dev');
+const { closeDatabaseConnection } = require('./database/context');
 
 const PORT = process.env.PORT || 3001;
 const REMINDER_INTERVAL_MS = 2 * 60 * 1000;

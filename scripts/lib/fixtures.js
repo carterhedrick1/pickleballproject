@@ -55,7 +55,7 @@ async function post(baseUrl, pathname, body) {
 
 // The API takes players as { name }, and the player count as totalPlayers - create.html maps its
 // own "players" field onto that name before posting. Getting either wrong fails quietly: the
-// player is skipped, or totalPlayers lands as null and game-logic silently falls back to 4.
+// player is skipped, or totalPlayers lands as null and the game factory silently falls back to 4.
 const addPlayer = (baseUrl, id, name, action = 'join') =>
   post(baseUrl, `/api/games/${id}/players`, { name, action });
 

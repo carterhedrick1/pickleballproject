@@ -60,7 +60,7 @@ function selectCategoryMessage(
 
 async function loadTextMessageConfig() {
   if (configCache && Date.now() < configCacheExpiresAt) return configCache;
-  const { getDevAsset } = require('../database');
+  const { getDevAsset } = require('../database/dev');
   const saved = await getDevAsset(TEXT_MESSAGE_CONFIG_ASSET_NAME);
   if (!saved) {
     configCache = normalizeDraftConfig();

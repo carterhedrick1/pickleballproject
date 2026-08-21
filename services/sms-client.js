@@ -21,7 +21,7 @@ async function recordSmsResult(to, gameId, eventId, result, attempts = 1, ticket
   if (process.env.SMS_DISABLE_EVENT_LOGGING === '1') return;
   try {
     // Load lazily so the SMS client stays usable in isolated safety tests and during startup.
-    const { logSmsEvent } = require('../database');
+    const { logSmsEvent } = require('../database/sms-events');
     await logSmsEvent({
       // The caller may have handed its ticket to a browser that is waiting to hear how
       // this text turned out, so the row is written under that id rather than a fresh one.

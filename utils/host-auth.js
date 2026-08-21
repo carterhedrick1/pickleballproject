@@ -17,7 +17,7 @@
  * @param {string|undefined} token - the token the caller supplied
  * @returns {boolean} true only when the caller proved they are the host
  */
-const { getGameHostInfo } = require('../database');
+const { getGameHostInfo } = require('../database/games');
 const { verifySessionToken } = require('../services/host-verification');
 
 function formatPhoneNumber(value) {

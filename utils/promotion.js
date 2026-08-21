@@ -1,8 +1,8 @@
 // What happens when somebody gives up a spot.
 //
-// This lives in its own module rather than in game-logic.js because sms-handler.js needs the
-// same rules, and game-logic.js already requires sms-handler.js - putting them there and
-// requiring it back would be a cycle.
+// This lives in its own module because both the game routes and the SMS webhook need the same
+// rules, and each already requires plenty of the other's neighbours - putting the rules in
+// either one and requiring it back would be a cycle.
 //
 // The rule these enforce: automatic promotion happens in first-come-first-served games only.
 // In approval ("waitlist") mode the host picks who plays, so the app must never quietly pick

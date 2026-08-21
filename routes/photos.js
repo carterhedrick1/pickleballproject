@@ -11,10 +11,9 @@ const {
   getPhotosForGame,
   getPhoto,
   deletePhoto,
-  countPhotosForGame,
-  getGame,
-  getGameHostInfo
-} = require('../database');
+  countPhotosForGame
+} = require('../database/locations-media');
+const { getGame, getGameHostInfo } = require('../database/games');
 
 const { routeFailed } = require('../utils/route-error');
 const { isHost, requestHostToken } = require('../utils/host-auth');

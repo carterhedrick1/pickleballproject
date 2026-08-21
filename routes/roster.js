@@ -4,13 +4,10 @@
 // A valid per-game host token may read the roster from that game's management page, but roster
 // edits always require the verified phone session.
 
-const {
-  getGamesByHostPhone,
-  getRosterForHost,
-  upsertRosterEntry
-} = require('../database');
+const { getGamesByHostPhone } = require('../database/games');
+const { getRosterForHost, upsertRosterEntry } = require('../database/roster');
 
-const { formatPhoneNumber } = require('../sms-handler');
+const { formatPhoneNumber } = require('../utils/sms-format');
 const { computeHostStats } = require('../stats');
 const { getVisibleHostRoster } = require('../services/host-roster');
 const { routeFailed } = require('../utils/route-error');
