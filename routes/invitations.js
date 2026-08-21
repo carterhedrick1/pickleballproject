@@ -77,7 +77,8 @@ module.exports = function mountInvitationRoutes(app) {
   app.post('/api/games/:id/invitations', async (req, res) => {
     const gameId = req.params.id;
     try {
-      const { token, playerPhones } = req.body || {};
+      const token = requestHostToken(req);
+      const { playerPhones } = req.body || {};
 
       const game = await getGame(gameId);
       if (!game) return res.status(404).json({ error: 'Game not found' });

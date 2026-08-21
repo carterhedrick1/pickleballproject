@@ -261,12 +261,49 @@ migration path for it, and the parity suite is where the SQL would be proven.
 
 ## P5. Frontend decomposition
 
-### 12. Modularize the management frontend
-`public/js/manage-scripts.js` and friends rely on global load order and 100+ top-level
-functions. Introduce native ES modules, a shared API client (which is also where the
-Authorization-header change in P1 item 2 lands), a state container, per-tab controllers,
-and safe DOM helpers. Remove stale comments like "NEW ENDPOINT" while touching each area.
-No visible UI change.
+- **Modularize the management frontend** (was P5 item 12) - done 2026-08-21.
+  `public/js/manage/` holds the page now: `main.js` (the one entry point and the only start-up
+  sequence), `state.js`, `api.js`, `dom.js`, `render.js`, and one module per tab - `game.js`,
+  `players.js`, `communications.js`, `media.js`. manage.html loads a single
+  `<script type="module">` where it used to load five script tags whose order silently
+  mattered.
+
+  The three shared values (`gameData`, `gameId`, `hostToken`) turned out to be assigned in
+  exactly one file and only read in the others, so they became live-binding exports from
+  `state.js` and no reading call site had to change - 170 references, none of them renamed.
+
+  **The Authorization-header half of P1 item 2 is finished.** `api.js` is the only place that
+  knows how to prove host-ness, and it sends `X-Host-Token`. Ten routes read `req.body.token`
+  directly and now read `requestHostToken`, which still accepts the body and query forms - the
+  SMS management links carry the token by design and a page cached in somebody's browser still
+  posts it in the body. `test/app-http-host-token.test.js` drives every host route with the
+  header, checks each still refuses a stranger holding one, and pins the body and query forms
+  so the compatibility cannot be dropped by accident.
+
+  Deleted rather than moved: `updateGame` (a stub whose body was `// ... rest of your update
+  logic ...`), `loadGameDetails` (no caller), and a DOMContentLoaded block that unchecked every
+  checkbox on the page 200ms after load.
+
+  Two things worth knowing for the next frontend task:
+  - The cross-file coupling was easy to under-count. Functions passed to `addEventListener` by
+    name - `addEventListener('click', addPlayersFromRoster)` - do not look like calls, so a
+    scan for `name(` missed four of them and boot died silently at `setupEventListeners`. The
+    check that found them is a scan for *any* reference to a name another module owns.
+  - The browser smoke called `hostAuthHeaders()` in page context, a page internal that only
+    existed because the page ran on globals. It uses `ManageApp.state.hostToken` now.
+    `window.ManageApp` is still assembled - in `main.js` rather than in four files - because
+    the smoke drives the roster and recipient list through it.
+
+  Not done, deliberately: the shared page libraries (`page-utils`, `central-time`,
+  `invite-status`, `player-capacity`, `invitation-generator`, `host-verification`) are still
+  classic scripts on `window`. They are loaded by every other page too, so converting them is
+  its own task; classic scripts run before any module, so the modules read them safely.
+
+  Proof: 421 tests, 103 browser-smoke assertions, all-routes (42 routes, no 500s), user-flow
+  and roster rigs. Also fixed while chasing a false failure: `test/app-http-validation.test.js`
+  and the new host-token test now cancel and delete their fixture games. They were accumulating
+  in the shared local SQLite file and adding courts to the create page's picker, which is the
+  same class of problem as item 14 below.
 
 ### 13. Split `public/dev.html` (~3,850 lines)
 Extract the ~835 inline CSS lines and ~1,600 inline JS lines into files per tab (auth,

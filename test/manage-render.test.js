@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const ManageRender = require('../public/js/manage-render');
+const ManageRender = require('../public/js/manage/render');
 
 class FakeElement {
   constructor(tag) {

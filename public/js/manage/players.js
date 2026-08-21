@@ -1,4 +1,21 @@
-// players features for the management page.
+// The Players tab: the roster, the waitlist, the "can't make it" list, the saved-roster
+// picker and the invitation sender.
+//
+// The functions it shares with the rest of the page are exported; what it needs from the rest
+// is imported. It used to depend on manage-scripts.js having already run so that showStatus and
+// the three shared values existed as globals.
+import { gameData, gameId } from './state.js';
+import { request, json } from './api.js';
+import { clear, setCounter, emptyNote } from './dom.js';
+import ManageRender from './render.js';
+import {
+    showStatus,
+    showConfirmModal,
+    fetchGameData,
+    updateGameSummary,
+    formatDateForDisplay
+} from './game.js';
+import { updatePlayerCheckboxes } from './communications.js';
 
 let hostRoster = [];
 let hostRosterState = 'idle';
@@ -45,7 +62,7 @@ function renderRosterAddPicker() {
     const actions = document.getElementById('rosterPickerActions');
     if (!list || !status || !actions) return;
 
-    list.innerHTML = '';
+    clear(list);
     status.classList.remove('error-text');
 
     if (hostRosterState === 'loading' || hostRosterState === 'idle') {
@@ -88,7 +105,7 @@ function renderRosterAddPicker() {
     updateRosterSelectionState();
 }
 
-async function loadHostRoster() {
+export async function loadHostRoster() {
     if (!gameData?.hostPhone) {
         hostRoster = [];
         hostRosterState = 'loaded';
@@ -106,11 +123,10 @@ async function loadHostRoster() {
     renderHostRoster();
 
     try {
-        const response = await fetch(`/api/roster/${encodeURIComponent(gameData.hostPhone)}`, {
-            headers: {
-                'X-Game-Id': gameId,
-                'X-Host-Token': hostToken
-            }
+        // The roster route wants to know which game vouches for this host as well as the token,
+        // which the client attaches on its own.
+        const response = await request(`/api/roster/${encodeURIComponent(gameData.hostPhone)}`, {
+            headers: { 'X-Game-Id': gameId }
         });
         if (!response.ok) throw new Error(`Server returned ${response.status}`);
         const data = await response.json();
@@ -163,7 +179,7 @@ function inviteBadge(response, record) {
     return { label: 'No Reply', tone: 'muted' };
 }
 
-function renderInvitePicker() {
+export function renderInvitePicker() {
     const list = document.getElementById('intendedInviteeList');
     const status = document.getElementById('intendedInviteeStatus');
     if (!list || !status) return;
@@ -171,7 +187,7 @@ function renderInvitePicker() {
     // Any roster change redraws this list, and a host part-way through ticking six names must
     // not lose them because somebody joined the game in the meantime.
     const stillTicked = new Set(selectedInviteePhones().map(normalizedPlayerPhone));
-    list.innerHTML = '';
+    clear(list);
     status.classList.remove('error-text');
     renderInviteAddForm();
 
@@ -240,7 +256,7 @@ function renderInvitePicker() {
 // Says out loud how many people are below the fold of the checklist, and keeps saying it as the
 // host scrolls. Reads the live geometry rather than the roster length, so it stays right on a
 // phone (where the list is uncapped and this never shows) and after a window resize.
-function updateInviteOverflowHint() {
+export function updateInviteOverflowHint() {
     const list = document.getElementById('intendedInviteeList');
     const fade = document.getElementById('intendedInviteeFade');
     const more = document.getElementById('intendedInviteeMore');
@@ -286,7 +302,7 @@ function clearInviteSelection() {
 
 // A texted invitation is the only invite path the app can actually vouch for, so the send
 // records itself against the game and the roster below updates from the response.
-async function textInvitations(phones, { confirmTitle, confirmQuestion } = {}) {
+export async function textInvitations(phones, { confirmTitle, confirmQuestion } = {}) {
     if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so invitations can no longer be sent.', 'error');
         return;
@@ -306,10 +322,9 @@ async function textInvitations(phones, { confirmTitle, confirmQuestion } = {}) {
             const sendStartedAt = Date.now();
             try {
                 showStatus(`Texting the invitation to ${people}...`, 'info');
-                const response = await fetch(`/api/games/${gameId}/invitations`, {
+                const response = await request(`/api/games/${gameId}/invitations`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: hostToken, playerPhones })
+                    body: { playerPhones }
                 });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) throw new Error(data.error || 'Could not send the invitations');
@@ -356,7 +371,7 @@ async function textInvitations(phones, { confirmTitle, confirmQuestion } = {}) {
 // Safari reports a dropped response as "Load failed" even when the server finished the work.
 // Read the host-only game back before claiming failure. This never retries a text, so recovering
 // the answer cannot accidentally send somebody the same invitation twice.
-async function recoverInvitationSend(phones, sendStartedAt) {
+export async function recoverInvitationSend(phones, sendStartedAt) {
     const wanted = new Set(phones.map(normalizedPlayerPhone));
     const earliest = sendStartedAt - 5000;
     const retryDelays = [0, 500, 1500];
@@ -364,7 +379,7 @@ async function recoverInvitationSend(phones, sendStartedAt) {
     for (const delay of retryDelays) {
         if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
         try {
-            const response = await fetch(`/api/games/${gameId}`, { headers: hostAuthHeaders() });
+            const response = await request(`/api/games/${gameId}`);
             if (!response.ok) continue;
             const latestGame = await response.json();
             const recent = (latestGame.invitedPlayers || []).filter((person) =>
@@ -390,14 +405,14 @@ async function recoverInvitationSend(phones, sendStartedAt) {
 // invitedPlayers has been stored for a long time without ever being compared against who
 // actually replied. This is that comparison, on the page where a host can act on it: everyone
 // who was asked, what they said, and who still owes an answer.
-function renderInvitations() {
+export function renderInvitations() {
     const list = document.getElementById('invitedList');
     const summary = document.getElementById('inviteSummary');
     const nudgeAll = document.getElementById('nudgeNonResponders');
     if (!list || !summary || !nudgeAll) return;
 
     const { invited, responded, nonResponders, counts } = InviteStatus.inviteStatus(gameData || {});
-    list.innerHTML = '';
+    clear(list);
 
     if (invited.length === 0) {
         summary.textContent = 'Nobody has been invited yet.';
@@ -457,7 +472,7 @@ function renderInvitations() {
 // Copying the invitation is the one path the app cannot verify, so the people ticked at that
 // moment are recorded as invited without any delivery history. The list is replaced wholesale
 // by this endpoint, so it has to be sent as the union with everyone already on it.
-async function recordCopiedInvitees() {
+export async function recordCopiedInvitees() {
     const ticked = selectedInviteePhones();
     if (!ticked.length) return;
 
@@ -465,10 +480,9 @@ async function recordCopiedInvitees() {
     const playerPhones = [...new Set([...existing, ...ticked])];
 
     try {
-        const response = await fetch(`/api/games/${gameId}/invitees`, {
+        const response = await request(`/api/games/${gameId}/invitees`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: hostToken, playerPhones })
+            body: { playerPhones }
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || 'Could not record who you invited');
@@ -497,7 +511,7 @@ function renderInviteAddForm() {
     form.hidden = !(hostRosterState === 'loaded' && hasVerifiedHostSession());
 }
 
-async function addPersonToRoster() {
+export async function addPersonToRoster() {
     const nameInput = document.getElementById('inviteNewName');
     const phoneInput = document.getElementById('inviteNewPhone');
     const status = document.getElementById('inviteAddStatus');
@@ -520,12 +534,12 @@ async function addPersonToRoster() {
     button.disabled = true;
     status.textContent = 'Adding...';
     try {
-        const response = await fetch(
+        const response = await request(
             `/api/roster/${encodeURIComponent(gameData.hostPhone)}/${encodeURIComponent(phone)}`,
             {
                 method: 'PUT',
                 headers: HostVerification.authHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ name })
+                body: { name }
             }
         );
         const data = await response.json().catch(() => ({}));
@@ -558,17 +572,9 @@ async function addPersonToRoster() {
 }
 
 async function postHostPlayer(player, addTo) {
-    const response = await fetch(`/api/games/${gameId}/manual-player`, {
+    const response = await request(`/api/games/${gameId}/manual-player`, {
         method: 'POST',
-        headers: hostAuthHeaders({
-            'Content-Type': 'application/json'
-        }),
-        body: JSON.stringify({
-            name: player.name,
-            phone: player.phone,
-            addTo,
-            token: hostToken
-        })
+        body: { name: player.name, phone: player.phone, addTo }
     });
 
     const data = await response.json().catch(() => ({}));
@@ -578,7 +584,7 @@ async function postHostPlayer(player, addTo) {
     return data;
 }
 
-async function addPlayersFromRoster() {
+export async function addPlayersFromRoster() {
     if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so players can no longer be added.', 'error');
         return;
@@ -653,7 +659,7 @@ function confirmedPlayerMeta(player) {
     return meta;
 }
 
-function updatePlayerLists() {
+export function updatePlayerLists() {
     const confirmedPlayers = document.getElementById('confirmedPlayers');
     const waitlistPlayers = document.getElementById('waitlistPlayers');
     const outPlayersContainer = document.getElementById('outPlayers'); // Add this line
@@ -662,9 +668,9 @@ function updatePlayerLists() {
     const waitlistCount = document.getElementById('waitlistCount');
     
     // Clear existing lists - MAKE SURE TO CLEAR OUT PLAYERS TOO
-    confirmedPlayers.innerHTML = '';
-    waitlistPlayers.innerHTML = '';
-    outPlayersContainer.innerHTML = ''; // Add this line to clear out players
+    clear(confirmedPlayers);
+    clear(waitlistPlayers);
+    clear(outPlayersContainer); // Add this line to clear out players
     
     // Update counts
     playerCount.textContent = gameData.players.length;
@@ -678,14 +684,22 @@ function updatePlayerLists() {
         const total = gameData.totalPlayers;
         // "1/4 player" reads as a fraction of a person - the unit follows the capacity.
         const playerText = total === 1 ? 'player' : 'players';
-        playerCountElement.innerHTML = `<span id="playerCount">${count}</span>/<span id="totalPlayers">${total}</span> ${playerText}`;
+        setCounter(playerCountElement, [
+            { id: 'playerCount', text: String(count) },
+            { text: '/' },
+            { id: 'totalPlayers', text: String(total) },
+            { text: ` ${playerText}` }
+        ]);
     }
 
     const waitlistCountElement = document.querySelector('.player-section.waitlist .player-count');
     if (waitlistCountElement) {
         const count = gameData.waitlist.length;
         const playerText = count === 1 ? 'player' : 'players';
-        waitlistCountElement.innerHTML = `<span id="waitlistCount">${count}</span> ${playerText} waiting`;
+        setCounter(waitlistCountElement, [
+            { id: 'waitlistCount', text: String(count) },
+            { text: ` ${playerText} waiting` }
+        ]);
     }
 
     const outCount = document.getElementById('outCount');
@@ -694,13 +708,16 @@ function updatePlayerLists() {
         const outCountElement = document.querySelector('.player-section.out-players .player-count');
         if (outCountElement) {
             const playerText = count === 1 ? 'player' : 'players';
-            outCountElement.innerHTML = `<span id="outCount">${count}</span> ${playerText} can't make it`;
+            setCounter(outCountElement, [
+                { id: 'outCount', text: String(count) },
+                { text: ` ${playerText} can't make it` }
+            ]);
         }
     }
     
     // Populate confirmed players
     if (gameData.players.length === 0) {
-        confirmedPlayers.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">No players yet</p>';
+        confirmedPlayers.appendChild(emptyNote('No players yet'));
     } else {
         gameData.players.forEach((player) => {
             // The organizer's seat is held by organizerPlaying, which nothing on this page can
@@ -729,7 +746,7 @@ function updatePlayerLists() {
     
     // Populate waitlist
     if (gameData.waitlist.length === 0) {
-        waitlistPlayers.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">Nobody waiting</p>';
+        waitlistPlayers.appendChild(emptyNote('Nobody waiting'));
     } else {
         gameData.waitlist.forEach((player, index) => {
             const waiting = PageUtils.formatDuration(player.joinedAt);
@@ -759,7 +776,7 @@ function updatePlayerLists() {
 
     // Populate out players - FIXED VERSION
     if (!gameData.outPlayers || gameData.outPlayers.length === 0) {
-        outPlayersContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-style: italic;">Nobody marked as out</p>';
+        outPlayersContainer.appendChild(emptyNote('Nobody marked as out'));
     } else {
         gameData.outPlayers.forEach((player) => {
             outPlayersContainer.appendChild(
@@ -793,7 +810,7 @@ function updatePlayerLists() {
     renderInvitePicker();
 }
 
-async function addPlayerManually() {
+export async function addPlayerManually() {
     if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended, so players can no longer be added.', 'error');
         return;
@@ -836,7 +853,7 @@ async function addPlayerManually() {
     }
 }
 
-async function moveToWaitlist(playerId) {
+export async function moveToWaitlist(playerId) {
   try {
     showStatus('Moving player to waitlist...', 'info');
     
@@ -847,14 +864,8 @@ async function moveToWaitlist(playerId) {
     }
     
     // Use new dedicated endpoint
-    const response = await fetch(`/api/games/${gameId}/move-to-waitlist/${playerId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        token: hostToken
-      })
+    const response = await request(`/api/games/${gameId}/move-to-waitlist/${playerId}`, {
+      method: 'POST'
     });
     
     if (!response.ok) {
@@ -884,7 +895,7 @@ async function moveToWaitlist(playerId) {
   }
 }
 
-async function promoteToGame(playerId) {
+export async function promoteToGame(playerId) {
   try {
     // Check if game is full before promoting
     if (gameData.players.length >= parseInt(gameData.totalPlayers)) {
@@ -901,14 +912,8 @@ async function promoteToGame(playerId) {
     }
     
     // Use new dedicated endpoint
-    const response = await fetch(`/api/games/${gameId}/promote-from-waitlist/${playerId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        token: hostToken
-      })
+    const response = await request(`/api/games/${gameId}/promote-from-waitlist/${playerId}`, {
+      method: 'POST'
     });
     
     if (!response.ok) {
@@ -941,7 +946,7 @@ async function promoteToGame(playerId) {
   }
 }
 
-async function removePlayer(playerId) {
+export async function removePlayer(playerId) {
   try {
     // First find the player in the game data
     const player = gameData.players.find(p => p.id === playerId);
@@ -956,9 +961,8 @@ async function removePlayer(playerId) {
         try {
           showStatus('Removing player...', 'info');
           
-          const response = await fetch(`/api/games/${gameId}/players/${playerId}`, {
+          const response = await request(`/api/games/${gameId}/players/${playerId}`, {
             method: 'DELETE',
-            headers: hostAuthHeaders()
           });
           
           if (!response.ok) {
@@ -1007,7 +1011,7 @@ async function removePlayer(playerId) {
   }
 }
 
-async function removeWaitlisted(playerId) {
+export async function removeWaitlisted(playerId) {
   try {
     // First find the player in the waitlist
     const player = gameData.waitlist.find(p => p.id === playerId);
@@ -1022,9 +1026,8 @@ async function removeWaitlisted(playerId) {
         try {
           showStatus('Removing from waitlist...', 'info');
           
-          const response = await fetch(`/api/games/${gameId}/players/${playerId}`, {
+          const response = await request(`/api/games/${gameId}/players/${playerId}`, {
             method: 'DELETE',
-            headers: hostAuthHeaders()
           });
           
           if (!response.ok) {
@@ -1065,7 +1068,7 @@ async function removeWaitlisted(playerId) {
 
 // Somebody who said OUT and then found a sitter is the most common roster change there is, and
 // until now the only way back in was for the host to retype their name and number by hand.
-async function addOutPlayerBackToGame(playerId) {
+export async function addOutPlayerBackToGame(playerId) {
   if (!CentralTime.getGameStatus(gameData).canEdit) {
     showStatus('This game has ended, so players can no longer be added.', 'error');
     return;
@@ -1091,10 +1094,7 @@ async function addOutPlayerBackToGame(playerId) {
 
         // Clearing the "out" entry second means a failure above leaves the roster untouched
         // rather than dropping the player off both lists.
-        await fetch(`/api/games/${gameId}/out-players/${playerId}`, {
-          method: 'DELETE',
-          headers: hostAuthHeaders()
-        });
+        await request(`/api/games/${gameId}/out-players/${playerId}`, { method: 'DELETE' });
 
         await fetchGameData();
 
@@ -1116,7 +1116,7 @@ async function addOutPlayerBackToGame(playerId) {
   );
 }
 
-async function removeOutPlayer(playerId) {
+export async function removeOutPlayer(playerId) {
   try {
     const player = (gameData.outPlayers || []).find((entry) => entry.id === playerId);
     showConfirmModal(
@@ -1126,9 +1126,8 @@ async function removeOutPlayer(playerId) {
         try {
           showStatus('Removing player...', 'info');
           
-          const response = await fetch(`/api/games/${gameId}/out-players/${playerId}`, {
+          const response = await request(`/api/games/${gameId}/out-players/${playerId}`, {
             method: 'DELETE',
-            headers: hostAuthHeaders()
           });
           
           if (!response.ok) {
@@ -1155,24 +1154,3 @@ async function removeOutPlayer(playerId) {
 
 
 
-window.ManageApp.players = {
-
-    updatePlayerLists,
-    loadHostRoster,
-    textInvitations,
-    recoverInvitationSend,
-    renderInvitations,
-    renderInvitePicker,
-    updateInviteOverflowHint,
-    recordCopiedInvitees,
-    addPersonToRoster,
-    addPlayersFromRoster,
-    addPlayerManually,
-    moveToWaitlist,
-    promoteToGame,
-    removePlayer,
-    removeWaitlisted,
-    removeOutPlayer,
-    addOutPlayerBackToGame
-
-};

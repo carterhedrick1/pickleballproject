@@ -267,7 +267,12 @@ module.exports = function mountGameRoutes(app) {
     const gameId = req.params.id;
     const releaseLock = await acquireGameLock(gameId);
     try {
-      const { token, ...submitted } = req.body || {};
+      // The token is read from wherever the caller put it - the management page now sends the
+      // X-Host-Token header - and is still stripped out of the body, because everything left
+      // in `submitted` is treated as a field to apply to the game.
+      const token = requestHostToken(req);
+      const { token: bodyToken, ...submitted } = req.body || {};
+      void bodyToken;
 
       // Field names only: the body carries the host's phone number and private notes,
       // which have no place in a log line.
@@ -407,7 +412,7 @@ module.exports = function mountGameRoutes(app) {
       const gameId = req.params.id;
       const game = await getGame(gameId);
       if (!game) return res.status(404).json({ error: 'Game not found' });
-      if (!isHost(game, req.body && req.body.token)) {
+      if (!isHost(game, requestHostToken(req))) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
       if (game.cancelled) {
@@ -433,7 +438,7 @@ module.exports = function mountGameRoutes(app) {
     try {
       const game = await getGame(gameId);
       if (!game) return res.status(404).json({ error: 'Game not found' });
-      if (!isHost(game, req.body && req.body.token)) {
+      if (!isHost(game, requestHostToken(req))) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
       // The list shape is checked before the entries are: a body sending playerPhones as a
@@ -491,7 +496,8 @@ module.exports = function mountGameRoutes(app) {
     const gameId = req.params.id;
     const releaseLock = await acquireGameLock(gameId);
     try {
-      const { token, hostNotes } = req.body;
+      const token = requestHostToken(req);
+      const { hostNotes } = req.body || {};
 
       const game = await getGame(gameId);
       if (!game) {
@@ -519,7 +525,8 @@ module.exports = function mountGameRoutes(app) {
     const gameId = req.params.id;
     const releaseLock = await acquireGameLock(gameId);
     try {
-      const { token, reason } = req.body || {};
+      const token = requestHostToken(req);
+      const { reason } = req.body || {};
 
       const game = await getGame(gameId);
       if (!game) {
@@ -611,7 +618,7 @@ module.exports = function mountGameRoutes(app) {
     const gameId = req.params.id;
     const releaseLock = await acquireGameLock(gameId);
     try {
-      const { token } = req.body;
+      const token = requestHostToken(req);
 
       const game = await getGame(gameId);
       if (!game) {

@@ -42,7 +42,8 @@ module.exports = function mountAnnouncementRoutes(app) {
   app.post('/api/games/:id/announcement-individual', async (req, res) => {
     try {
       const gameId = req.params.id;
-      const { token, message, recipients, personalityWrapper } = req.body || {};
+      const token = requestHostToken(req);
+      const { message, recipients, personalityWrapper } = req.body || {};
 
       const game = await getGame(gameId);
       if (!game) {

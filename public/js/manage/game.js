@@ -1,19 +1,33 @@
-// manage-scripts.js - All JavaScript for manage.html (TIMEZONE FIXED)
+// The Game Details tab, the page's chrome, and the pieces every tab shares: the status line,
+// the confirmation modal, the tab switching and the game summary.
+//
+// This was manage-scripts.js, which held the page's three shared values as globals and relied
+// on its <script> tag coming before the other four. Those values live in state.js now and
+// everything below either imports what it needs or exports what its neighbours need.
+import { gameData, gameId, hostToken, setGameData } from './state.js';
+import { request, json } from './api.js';
 
-let gameData = null;
-let gameId = '';
-let hostToken = '';
+import {
+    loadHostRoster,
+    textInvitations,
+    recordCopiedInvitees,
+    updatePlayerLists,
+    addPlayerManually,
+    addPersonToRoster,
+    addPlayersFromRoster,
+    updateInviteOverflowHint
+} from './players.js';
+import {
+    sendAnnouncement,
+    sendQuickMessage,
+    toggleAllPlayers,
+    updateGroupSelections,
+    updateGroupCheckboxStyling,
+    loadDeliveryLog
+} from './communications.js';
+import { setupPhotos, setupCourtImages } from './media.js';
 
-window.ManageApp = window.ManageApp || {};
-window.ManageApp.state = {
-    get gameData() { return gameData; },
-    get gameId() { return gameId; },
-    get hostToken() { return hostToken; }
-};
-
-
-
-// TIMEZONE FIX FUNCTIONS
+/** Turns whatever a game carries as its date into the YYYY-MM-DD an <input type="date"> wants. */
 function formatDateForInput(dateStr) {
     // Convert date string to proper format for HTML date input without timezone shift
     if (!dateStr) return '';
@@ -32,7 +46,7 @@ function formatDateForInput(dateStr) {
     return `${year}-${month}-${day}`;
 }
 
-function formatDateForDisplay(dateStr) {
+export function formatDateForDisplay(dateStr) {
     return PageUtils.formatLocalDate(dateStr, {
         weekday: 'long', 
         month: 'long', 
@@ -57,20 +71,6 @@ function toggleManageNotification(element, checkboxId, event) {
     
     // Prevent the event from bubbling up
     event.stopPropagation();
-}
-
-function loadGameDetails(game) {
-    // Set notification preferences and toggle states
-    if (game.notificationPreferences) {
-        const prefs = game.notificationPreferences;
-        
-        // Set checkbox values and toggle visual states
-        setNotificationToggle('notifyGameFull', prefs.gameFull);
-        setNotificationToggle('notifyPlayerJoins', prefs.playerJoins);
-        setNotificationToggle('notifyPlayerCancels', prefs.playerCancels);
-        setNotificationToggle('notifyOneSpotLeft', prefs.oneSpotLeft);
-        setNotificationToggle('notifyWaitlistStarts', prefs.waitlistStarts);
-    }
 }
 
 function setNotificationToggle(checkboxId, isChecked) {
@@ -104,21 +104,6 @@ function setNotificationToggle(checkboxId, isChecked) {
     return true;
 }
 
-async function updateGame() {
-    const updateData = {
-        // ... your existing fields ...
-        notificationPreferences: {
-            gameFull: document.getElementById('notifyGameFull').checked,
-            playerJoins: document.getElementById('notifyPlayerJoins').checked,
-            playerCancels: document.getElementById('notifyPlayerCancels').checked,
-            oneSpotLeft: document.getElementById('notifyOneSpotLeft').checked,
-            waitlistStarts: document.getElementById('notifyWaitlistStarts').checked
-        }
-    };
-    
-    // ... rest of your update logic ...
-}
-
 function formatDateForServer(dateStr) {
     // Ensure date is sent to server in YYYY-MM-DD format without timezone
     if (!dateStr) return '';
@@ -138,7 +123,7 @@ function formatDateForServer(dateStr) {
 }
 
 // Function to toggle collapsible sections
-function toggleCollapsible(sectionId) {
+export function toggleCollapsible(sectionId) {
     const content = document.getElementById(sectionId);
     const header = content.previousElementSibling;
     
@@ -151,73 +136,7 @@ function toggleCollapsible(sectionId) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Get game ID from the URL; the host token comes from the URL once and is then kept
-    // out of it (see captureHostToken), so copying the address bar can no longer hand
-    // control of the game to whoever the URL is pasted to.
-    const urlParams = new URLSearchParams(window.location.search);
-    gameId = urlParams.get('id');
-    hostToken = captureHostToken(gameId, urlParams);
-
-    if (!gameId || !hostToken) {
-        showUnauthorized();
-        return;
-    }
-    
-    fetchGameData();
-
-    // Loaded once rather than with every roster refresh: the log is a look-back, and it has
-    // its own Refresh button for the "I never got the reminder" conversation.
-    loadDeliveryLog();
-
-    // Set up event listeners
-    setupEventListeners();
-
-    setupPhotos();
-    setupCourtImages();
-
-    // Restore the active tab after everything is loaded
-    setTimeout(restoreActiveTab, 100);
-});
-
-const HOST_TOKEN_STORAGE_PREFIX = 'inorout.hostToken.';
-
-/**
- * The management link is the host's key, and it arrives with the token in the query
- * string (that is how the SMS link has always worked, and it keeps working). Once seen,
- * the token is remembered per game on this device and stripped from the address bar, so
- * browser history and copied URLs no longer carry it. A revisit without the token on the
- * same device falls back to the remembered one; a new device needs the SMS link again.
- */
-function captureHostToken(gameId, urlParams) {
-    let token = urlParams.get('token') || '';
-    try {
-        if (token && gameId) {
-            localStorage.setItem(HOST_TOKEN_STORAGE_PREFIX + gameId, token);
-        } else if (!token && gameId) {
-            token = localStorage.getItem(HOST_TOKEN_STORAGE_PREFIX + gameId) || '';
-        }
-    } catch (storageError) {
-        // Storage blocked (private mode): the URL token still runs this page view.
-    }
-    if (urlParams.get('token')) {
-        try {
-            const url = new URL(window.location);
-            url.searchParams.delete('token');
-            history.replaceState(history.state, '', url);
-        } catch (historyError) {
-            // A browser that cannot rewrite the URL simply keeps the old behavior.
-        }
-    }
-    return token;
-}
-
-/** Headers that prove host-ness to the API without putting the token in a URL. */
-function hostAuthHeaders(extra = {}) {
-    return hostToken ? { ...extra, 'X-Host-Token': hostToken } : { ...extra };
-}
-
-function restoreActiveTab() {
+export function restoreActiveTab() {
     // A tab named in the URL wins (new games link straight to Invite), then the tab
     // from the last visit, then Invite - the first job
     // on a fresh game is getting players into it.
@@ -260,7 +179,7 @@ function restoreActiveTab() {
 }
 
 // Function to open tabs
-function openTab(evt, tabName) {
+export function openTab(evt, tabName) {
     // Hide all tabcontent elements
     const tabcontent = document.getElementsByClassName("tabcontent");
     for (let i = 0; i < tabcontent.length; i++) {
@@ -287,7 +206,7 @@ function openTab(evt, tabName) {
     localStorage.setItem('managePageActiveTab', tabName);
 }
 
-function openTabFromSelect(tabName) {
+export function openTabFromSelect(tabName) {
     // Hide all tabcontent elements
     const tabcontent = document.getElementsByClassName("tabcontent");
     for (let i = 0; i < tabcontent.length; i++) {
@@ -314,10 +233,10 @@ function openTabFromSelect(tabName) {
     localStorage.setItem('managePageActiveTab', tabName);
 }
 
-async function fetchGameData() {
+export async function fetchGameData() {
     try {
-        const response = await fetch(`/api/games/${gameId}`, { headers: hostAuthHeaders() });
-        
+        const response = await request(`/api/games/${gameId}`);
+
         if (!response.ok) {
             if (response.status === 403) {
                 showUnauthorized();
@@ -325,8 +244,8 @@ async function fetchGameData() {
             }
             throw new Error('Failed to fetch game data');
         }
-        
-        gameData = await response.json();
+
+        setGameData(await response.json());
         console.log('[CLIENT] Game data received:', gameData);
         console.log('[CLIENT] Notification preferences received:', gameData.notificationPreferences);
         
@@ -403,7 +322,7 @@ function showCreationNotice() {
     // the surface is enabled in the Developer Area.
     const realistLine = document.getElementById('postCreateRealistLine');
     if (realistLine) {
-        fetch(`/api/random-message?surface=post-create-success&gameId=${encodeURIComponent(gameId)}`)
+        request(`/api/random-message?surface=post-create-success&gameId=${encodeURIComponent(gameId)}`)
             .then((response) => (response.ok ? response.json() : null))
             .then((data) => {
                 const text = data && data.text ? String(data.text).trim() : '';
@@ -436,7 +355,7 @@ function showExpiredGameWarning(statusType) {
 }
 
 
-function setupEventListeners() {
+export function setupEventListeners() {
     document.querySelectorAll('[data-tab]').forEach((tab) => {
         tab.addEventListener('click', (event) => openTab(event, tab.dataset.tab));
     });
@@ -718,7 +637,7 @@ function populateGameDetails() {
 
 
 
-async function updateGameDetails() {
+export async function updateGameDetails() {
     if (!CentralTime.getGameStatus(gameData).canEdit) {
         showStatus('This game has ended and can no longer be edited.', 'error');
         return;
@@ -764,26 +683,16 @@ async function updateGameDetails() {
             notificationPreferences: formattedPreferences,
             // The server only acts on this when the court, date, time, or duration actually
             // changed, so leaving it checked never texts anyone about a copy edit.
-            notifyPlayers: document.getElementById('notifyPlayersOfChange')?.checked !== false,
-            token: hostToken
+            notifyPlayers: document.getElementById('notifyPlayersOfChange')?.checked !== false
         };
-        
-        console.log('[CLIENT] Sending update request with data:', updatedData);
-        
-        const response = await fetch(`/api/games/${gameId}`, {
+
+        // Field names only. The body carries the host's own message and their private notes.
+        console.log(`[CLIENT] Sending update request; fields: ${Object.keys(updatedData).join(', ')}`);
+
+        const responseData = await json(`/api/games/${gameId}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updatedData)
+            body: updatedData
         });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to update game');
-        }
-        
-        const responseData = await response.json();
         console.log('[CLIENT] Update response:', responseData);
         
         // Force refresh game data to verify the save
@@ -843,23 +752,10 @@ async function cancelGame() {
         
         showStatus('Cancelling game...', 'info');
         
-        const response = await fetch(`/api/games/${gameId}`, {
+        const data = await json(`/api/games/${gameId}`, {
             method: 'DELETE',
-            headers: hostAuthHeaders({
-                'Content-Type': 'application/json'
-            }),
-            body: JSON.stringify({
-                reason,
-                token: hostToken
-            })
+            body: { reason }
         });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to cancel game');
-        }
-        
-        const data = await response.json();
         console.log('Game cancelled:', data);
         
         // Update UI to show game cancelled
@@ -908,13 +804,13 @@ async function cancelGame() {
     }
 }
 
-function formatTime(timeStr) {
+export function formatTime(timeStr) {
     return PageUtils.formatTime12Hour(timeStr);
 }
 
 // `destructive` decides the colour of the confirm button. Sending an invitation used to offer a
 // red "Confirm", which reads as a warning about the very thing the host came here to do.
-function showConfirmModal(
+export function showConfirmModal(
     title,
     message,
     confirmAction,
@@ -939,14 +835,14 @@ function showConfirmModal(
     modal.style.display = 'block';
 }
 
-function closeModal() {
+export function closeModal() {
     const modal = document.getElementById('confirmModal');
     modal.style.display = 'none';
 }
 
 // The page used to open straight into form fields with nothing saying which game they belong
 // to. This sits outside the tab panes, so the answer travels with the host.
-function updateGameSummary() {
+export function updateGameSummary() {
     const summary = document.getElementById('gameSummary');
     if (!summary || !gameData) return;
 
@@ -1176,7 +1072,7 @@ function fallbackCopyMessage(text) {
     document.body.removeChild(textArea);
 }
 
-function copyToClipboard(elementId) {
+export function copyToClipboard(elementId) {
     const element = document.getElementById(elementId);
     element.select();
     document.execCommand('copy');
@@ -1194,7 +1090,7 @@ function copyToClipboard(elementId) {
     }, 2000);
 }
 
-function showStatus(message, type) {
+export function showStatus(message, type) {
     const statusDiv = document.getElementById('status');
     statusDiv.textContent = message;
     statusDiv.className = `status ${type}`;
@@ -1213,7 +1109,7 @@ function showStatus(message, type) {
     }
 }
 
-function showUnauthorized() {
+export function showUnauthorized() {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('unauthorizedMessage').style.display = 'block';
 }
@@ -1243,25 +1139,16 @@ function showUnauthorized() {
 // silently cancelled the "Confirmed Players" default that updatePlayerCheckboxes sets. The
 // recipient list already renders itself from the roster, so nothing needs to be reset here.
 
-// Add this function to update the group checkbox styling to match individual players
-
-
-
-
-
-
-// Also call the styling function when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    // ... existing DOMContentLoaded code ...
-    
-    // Apply consistent styling after everything is loaded
+/**
+ * The group checkboxes are restyled once after load, on a timer.
+ *
+ * This is the second half of what used to be a pair of DOMContentLoaded blocks at the bottom
+ * of this file - the first of which unchecked every box on the page and was deleted. main.js
+ * calls this during boot now, so the page has one start-up sequence rather than three racing
+ * each other.
+ */
+export function styleGroupCheckboxesAfterLoad() {
     setTimeout(() => {
         updateGroupCheckboxStyling();
     }, 200);
-});
-
-window.ManageApp.core = {
-    fetchGameData,
-    updateGameDetails,
-    showStatus
-};
+}

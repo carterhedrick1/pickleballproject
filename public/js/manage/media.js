@@ -1,3 +1,10 @@
+// The Media tab: the photos players add after a game, and the court image shown at the top of
+// the game page.
+import { gameId } from './state.js';
+import { request, json } from './api.js';
+import { clear } from './dom.js';
+import { showStatus } from './game.js';
+
 // ---------------------------------------------------------------------------
 // Photos
 //
@@ -55,17 +62,17 @@ function resizePhoto(file) {
     });
 }
 
-async function loadPhotos() {
+export async function loadPhotos() {
     const grid = document.getElementById('photoGrid');
     const empty = document.getElementById('photoEmpty');
     if (!grid || !gameId) return;
 
     try {
-        const response = await fetch(`/api/games/${gameId}/photos`);
+        const response = await request(`/api/games/${gameId}/photos`);
         const data = await response.json();
         const photos = data.photos || [];
 
-        grid.innerHTML = '';
+        clear(grid);
         if (empty) empty.style.display = photos.length ? 'none' : 'block';
 
         photos.forEach((photo) => {
@@ -121,9 +128,10 @@ async function uploadPhoto() {
         if (caption) query.set('caption', caption);
         const queryString = query.toString();
 
-        const response = await fetch(`/api/games/${gameId}/photos${queryString ? `?${queryString}` : ''}`, {
+        const response = await request(`/api/games/${gameId}/photos${queryString ? `?${queryString}` : ''}`, {
             method: 'POST',
-            headers: hostAuthHeaders({ 'Content-Type': blob.type || 'image/jpeg' }),
+            raw: true,
+            headers: { 'Content-Type': blob.type || 'image/jpeg' },
             body: blob
         });
 
@@ -148,8 +156,8 @@ async function deletePhoto(photoId) {
     if (!confirm('Remove this photo?')) return;
 
     try {
-        const response = await fetch(
-            `/api/games/${gameId}/photos/${photoId}`, { method: 'DELETE', headers: hostAuthHeaders() }
+        const response = await request(
+            `/api/games/${gameId}/photos/${photoId}`, { method: 'DELETE' }
         );
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
@@ -163,23 +171,23 @@ async function deletePhoto(photoId) {
     }
 }
 
-function setupPhotos() {
+export function setupPhotos() {
     const button = document.getElementById('addPhotoBtn');
     if (button) button.addEventListener('click', uploadPhoto);
     loadPhotos();
 }
 
-async function loadCourtImages() {
+export async function loadCourtImages() {
     const list = document.getElementById('courtImageList');
     if (!list || !gameId) return;
 
     try {
-        const response = await fetch(`/api/games/${gameId}/court-images`);
+        const response = await request(`/api/games/${gameId}/court-images`);
         const data = await response.json();
         const images = data.images || [];
         const selectedId = data.selectedImageId;
 
-        list.innerHTML = '';
+        clear(list);
 
         images.forEach((image) => {
             const wrapper = document.createElement('div');
@@ -237,9 +245,10 @@ async function uploadCourtImage() {
     setCourtImageStatus('Uploading image...');
 
     try {
-        const response = await fetch(`/api/games/${gameId}/court-images`, {
+        const response = await request(`/api/games/${gameId}/court-images`, {
             method: 'POST',
-            headers: hostAuthHeaders({ 'Content-Type': file.type || 'image/jpeg' }),
+            raw: true,
+            headers: { 'Content-Type': file.type || 'image/jpeg' },
             body: file
         });
 
@@ -261,9 +270,9 @@ async function uploadCourtImage() {
 
 async function selectCourtImage(imageId) {
     try {
-        const response = await fetch(
+        const response = await request(
             `/api/games/${gameId}/court-image/${imageId}`,
-            { method: 'PUT', headers: hostAuthHeaders() }
+            { method: 'PUT' }
         );
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
@@ -279,9 +288,9 @@ async function selectCourtImage(imageId) {
 
 async function selectNoCourtImage() {
     try {
-        const response = await fetch(
+        const response = await request(
             `/api/games/${gameId}/court-image-none`,
-            { method: 'PUT', headers: hostAuthHeaders() }
+            { method: 'PUT' }
         );
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
@@ -299,9 +308,9 @@ async function deleteCourtImage(imageId) {
     if (!confirm('Delete this image from the library?')) return;
 
     try {
-        const response = await fetch(
+        const response = await request(
             `/api/games/${gameId}/court-images/${imageId}`,
-            { method: 'DELETE', headers: hostAuthHeaders() }
+            { method: 'DELETE' }
         );
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
@@ -323,15 +332,9 @@ function setCourtImageStatus(message, type) {
     }
 }
 
-function setupCourtImages() {
+export function setupCourtImages() {
     const button = document.getElementById('uploadCourtImageBtn');
     if (button) button.addEventListener('click', uploadCourtImage);
     loadCourtImages();
 }
 
-window.ManageApp.media = {
-    setupPhotos,
-    loadPhotos,
-    setupCourtImages,
-    loadCourtImages
-};
