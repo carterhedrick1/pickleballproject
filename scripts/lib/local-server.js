@@ -19,6 +19,17 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// The password the throwaway server's developer area answers to.
+//
+// It is pinned here rather than read from .env because these scripts are the only thing that
+// signs in to it, and the day a real DEV_PASSWORD was added to the local .env they stopped
+// agreeing: the spawned server took the real one while the scripts, which never load dotenv,
+// went on sending the 'vibe123' default. Every developer-area assertion in the browser smoke
+// and every developer-area screenshot failed on a password mismatch, which took the whole
+// deployment gate down with them. Nothing outside these scripts uses this value - the real
+// local server on 3002 and production both keep reading DEV_PASSWORD as before.
+const DEV_PASSWORD = 'local-scripts-dev-password';
+
 function freePort() {
   return new Promise((resolve, reject) => {
     const srv = net.createServer();
@@ -54,6 +65,7 @@ async function start() {
       PORT: String(port),
       BASE_URL: baseUrl,
       TEXTBELT_API_KEY: '', // rule 1 above - keeps every send in dev mode
+      DEV_PASSWORD, // see the note above: the scripts and this server must agree on it
       // Fixture sends prove the UI behavior but are not real operational events.
       SMS_DISABLE_EVENT_LOGGING: '1',
       // Browser tests and screenshots must stay on their seeded SQLite rows. Without these,
@@ -106,4 +118,4 @@ function countDevModeSends(log) {
   return (log.match(/\[DEV MODE\] SMS would be sent/g) || []).length;
 }
 
-module.exports = { start, countDevModeSends };
+module.exports = { start, countDevModeSends, DEV_PASSWORD };

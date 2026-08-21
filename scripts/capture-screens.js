@@ -207,7 +207,7 @@ const clearHostPhone = async (p) => {
 };
 
 const openDeveloperRosters = async (p) => {
-  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  const password = JSON.stringify(server.DEV_PASSWORD);
   await p.evaluate(`(async () => {
     const response = await fetch('/api/dev/login', {
       method: 'POST',
@@ -231,7 +231,7 @@ const openDeveloperRosters = async (p) => {
 };
 
 const openDeveloperStatus = async (p) => {
-  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  const password = JSON.stringify(server.DEV_PASSWORD);
   await p.evaluate(`(async () => {
     const response = await fetch('/api/dev/login', {
       method: 'POST',
@@ -246,7 +246,7 @@ const openDeveloperStatus = async (p) => {
 };
 
 const openDeveloperMessageRandomizer = async (p) => {
-  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  const password = JSON.stringify(server.DEV_PASSWORD);
   await p.evaluate(`(async () => {
     const response = await fetch('/api/dev/login', {
       method: 'POST',
@@ -299,7 +299,7 @@ const openDeveloperMessageRandomizerPrompts = async (p) => {
 };
 
 const openDeveloperRules = async (p) => {
-  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  const password = JSON.stringify(server.DEV_PASSWORD);
   await p.evaluate(`(async () => {
     const response = await fetch('/api/dev/login', {
       method: 'POST',
@@ -314,7 +314,7 @@ const openDeveloperRules = async (p) => {
 };
 
 const openDeveloperVibeCoder101 = async (p) => {
-  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  const password = JSON.stringify(server.DEV_PASSWORD);
   await p.evaluate(`(async () => {
     const response = await fetch('/api/dev/login', {
       method: 'POST',
@@ -344,7 +344,7 @@ const openDeveloperImages = (fx) => async (p) => {
   // thumbnails without keeping a second decorative image asset in the repository.
   const fixturePath = path.join(ROOT, 'docs', 'screens', 'game-open.webp');
   const imageBase64 = fs.readFileSync(fixturePath).toString('base64');
-  const password = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+  const password = JSON.stringify(server.DEV_PASSWORD);
   await p.evaluate(`(async () => {
     const signIn = await fetch('/api/dev/login', {
       method: 'POST',

@@ -21,7 +21,15 @@ const { acquireGameLock } = require('../utils/game-lock');
 const { findOnGame } = require('../utils/game-audience');
 const { routeFailed } = require('../utils/route-error');
 const { isHost, requestHostToken } = require('../utils/host-auth');
+const { requiredText, list } = require('../utils/request-validation');
 const { resolveTextMessage } = require('../services/text-message-rotation');
+
+// One text per recipient goes out from here, so the list is bounded. A game's whole audience -
+// roster plus waitlist plus everyone who said they were out - never comes near this.
+const MAX_ANNOUNCEMENT_RECIPIENTS = 200;
+// Long enough for anything a host would type into a four-row box, short enough that nobody
+// pays to send a novel one segment at a time.
+const ANNOUNCEMENT_MAX = 1000;
 
 module.exports = function mountAnnouncementRoutes(app) {
   // There used to be a second, group-shaped announcement route here taking includeConfirmed and
@@ -34,8 +42,8 @@ module.exports = function mountAnnouncementRoutes(app) {
   app.post('/api/games/:id/announcement-individual', async (req, res) => {
     try {
       const gameId = req.params.id;
-      const { token, message, recipients, personalityWrapper } = req.body;
-      
+      const { token, message, recipients, personalityWrapper } = req.body || {};
+
       const game = await getGame(gameId);
       if (!game) {
         return res.status(404).json({ error: 'Game not found' });
@@ -45,14 +53,22 @@ module.exports = function mountAnnouncementRoutes(app) {
         return res.status(403).json({ error: 'Unauthorized' });
       }
       
-      if (!message || !message.trim()) {
+      // The two sentences a host can actually reach are unchanged - an empty message and an
+      // empty selection are what the Communication tab produces.
+      if (!message || (typeof message === 'string' && !message.trim())) {
         return res.status(400).json({ error: 'Message is required' });
       }
-      
       if (!recipients || recipients.length === 0) {
         return res.status(400).json({ error: 'At least one recipient is required' });
       }
-      
+
+      // Underneath them, the shapes the page cannot produce and the route used to accept.
+      // recipients arriving as a string passed the length test above and was then iterated
+      // character by character: every "recipient" had no phone, so the host was told the
+      // announcement went to nobody with no explanation of why.
+      requiredText(message, 'The announcement', { max: ANNOUNCEMENT_MAX });
+      list(recipients, 'The recipients', { max: MAX_ANNOUNCEMENT_RECIPIENTS });
+
       let recipientCount = 0;
       const results = [];
       const skipped = [];

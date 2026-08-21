@@ -180,12 +180,39 @@ migration path for it, and the parity suite is where the SQL would be proven.
 
 ## P4. Validation and time handling
 
-### 10. Centralized request validation
-Add shared validators for game creation/updates, player identity, invitations,
-announcements, media metadata and dev configuration at the HTTP boundary: dates, times,
-durations, capacity bounds, registration modes, string/array shapes, phone numbers
-(`isValidUsPhone` in `utils/sms-format.js` is the phone rule). Consistent 400s for caller
-errors.
+- **Centralized request validation** (was P4 item 10) - done 2026-08-21.
+  `utils/request-validation.js` holds the primitives (`requiredText`, `calendarDate`,
+  `clockTime`, `wholeNumber`, `choice`, `list`, `objectBody`, `usPhone`) and one
+  `ValidationError`; `utils/route-error.js` recognises its code and answers 400 with the
+  validator's own sentence, so a rule can throw from anywhere a route already catches.
+  `domain/game-validation.js` builds the create and edit shapes from those primitives and
+  sits in front of `domain/game-factory.js` and `utils/game-update.js`, neither of which
+  changed - they are simply no longer the first thing to see the request.
+  `domain/player-validation.js` throws instead of returning, which is what made the host's
+  manual-add route stop answering a missing name with a 500.
+
+  Bounds are deliberately wider than the forms allow (duration 15-1440 against a form
+  minimum of 30, up to 100 players against a form maximum of 50), so a host filling the form
+  in normally cannot meet one. Existing wording is preserved everywhere a page can actually
+  reach it: the organizer phone sentence, "Player name is required.", "Message is required",
+  "At least one recipient is required", "A 10-digit phone number is required.".
+  `isValidUsPhone` stayed the one phone rule - `usPhone` only adds wording and formatting -
+  and the developer roster editors, which spelled their own `formatPhoneNumber(x).length !==
+  10` version of it, now call it too.
+
+  Three things it fixed rather than tidied: the manual-add 500 above; `POST /api/games`
+  only checking `hostPhone || organizerPhone`, so a valid hostPhone let a broken
+  organizerPhone through and stored it; and the court-image routes calling
+  `decodeURIComponent` on a path parameter Express had already decoded, which turned a court
+  named "50% Off Courts" into a URIError and a 500. Deliberately NOT narrowed: `action` on
+  the signup route and `addTo` on the manual-add route. Both are two-way switches whose
+  callers have sent 'in', 'join', null, 'add' and 'confirmed' over the years, and the HTTP
+  tests caught the attempt.
+
+  Proof: `test/request-validation.test.js` (20), `test/game-validation.test.js` (16) and
+  `test/app-http-validation.test.js` (25 over real HTTP), plus the existing 325 - 386 green.
+  Also `verify/all-routes.js` (42 routes, no 500s), `verify/user-flow.js`,
+  `verify/signup-eligibility.js` and `verify/roster-locations.js` against a worktree server.
 
 ### 11. One canonical Central Time model
 Four time implementations still exist: `utils/central-time.js` (shifted-central model, now
@@ -234,12 +261,27 @@ disposable database the gate cannot assume exists. Run it before shipping anythi
 touches persistence. PostgreSQL 16 is installed on Scott's Mac now (Homebrew, no login item -
 start it by hand; the socket directory has to be short, so `-k /tmp/pgs5433`).
 
-Known flake, measured 2026-08-20: "SMS reply 9 cancels through the signed webhook" in
-`test/app-http-races.test.js` fails roughly one full `npm test` run in four. It is contention
-on the shared local SQLite file between parallel test workers, not a product bug - the same
-file run alone passed 15/15, and the failure rate is identical on `main` with no changes
-applied. It can fail a deployment gate spuriously; rerun to confirm before chasing it. The
-real fix belongs with item 14: give the parallel workers their own databases. The original verify rigs remain for interactive debugging;
+Known flake, stopped 2026-08-21. It was measured at one run in four on 2026-08-20 and had
+grown worse: `main` failed 2 runs in 4, in two different race files, always
+`SQLITE_BUSY: database is locked`. `npm test` now passes `--test-concurrency=1`, so the test
+*files* no longer run at once and cannot contend on the shared local SQLite file. Nothing was
+lost by it - every race the app actually cares about is raced inside one file with
+`Promise.all`, which still runs concurrently - and it costs 3.6 seconds (0.9s to 4.5s). This
+is a stopgap, not item 14's fix: the fixtures are still not hermetic, and giving each file its
+own database would let the files run in parallel again. Measured after the change: 5 runs of
+386 tests, 0 failures.
+
+Also fixed 2026-08-21, and it had taken the whole gate down: `scripts/refactor-browser-smoke.js`
+and `scripts/capture-screens.js` signed in to the developer area with
+`process.env.DEV_PASSWORD || 'vibe123'`, but neither loads dotenv, while the throwaway server
+they spawn does. The day a real `DEV_PASSWORD` was added to the local `.env` the two stopped
+agreeing and every developer-area assertion and screenshot failed on a password mismatch -
+`npm run verify:frontend` and `npm run docs` both. `scripts/lib/local-server.js` now pins a
+`DEV_PASSWORD` for the throwaway server and exports it for the scripts to use, so they agree
+with each other and no longer depend on what a developer keeps in `.env`. The real local
+server on 3002 and production still read `DEV_PASSWORD` as before.
+
+The original verify rigs remain for interactive debugging;
 `verify/user-flow.js` now derives its game date and its idempotency key instead of
 hardcoding them, so it neither expires nor blocks its own second run.
 

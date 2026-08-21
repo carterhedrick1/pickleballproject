@@ -26,6 +26,7 @@ const {
 const { acquireGameLock } = require('../utils/game-lock');
 const { routeFailed } = require('../utils/route-error');
 const { isHost, requestHostToken } = require('../utils/host-auth');
+const { list } = require('../utils/request-validation');
 const { isGameUpcoming } = require('../utils/central-time');
 const { buildDeterministicInvitation } = require('../services/invitation-message');
 const { getVisibleHostRoster } = require('../services/host-roster');
@@ -33,6 +34,9 @@ const { resolveTextMessage } = require('../services/text-message-rotation');
 const { normalizePhone } = require('../public/js/invite-status');
 
 const MAX_INVITES_PER_REQUEST = 50;
+// A far looser bound on the raw list, so the friendly "invite up to 50 at a time" below is
+// still what a host with a big roster reads. This one only refuses a body nobody could tick.
+const MAX_INVITE_LIST_ENTRIES = 500;
 const INVITATION_SEND_CONCURRENCY = 5;
 
 async function mapWithConcurrency(items, limit, mapper) {
@@ -85,8 +89,11 @@ module.exports = function mountInvitationRoutes(app) {
         return res.status(400).json({ error: 'This game has already started, so invitations can no longer be sent.' });
       }
 
+      // The list shape is checked before its entries: playerPhones sent as a bare string used
+      // to be read as an empty selection and answered "Choose at least one person to invite",
+      // which told the caller nothing about what was actually wrong.
       const requested = [...new Set(
-        (Array.isArray(playerPhones) ? playerPhones : [])
+        list(playerPhones || [], 'The people to invite', { max: MAX_INVITE_LIST_ENTRIES })
           .map(formatPhoneNumber)
           .filter((phone) => phone.length === 10)
       )];

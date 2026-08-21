@@ -1082,7 +1082,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     );
 
     await desktop.goto(`${local.baseUrl}/dev.html`);
-    const devPassword = JSON.stringify(process.env.DEV_PASSWORD || 'vibe123');
+    const devPassword = JSON.stringify(server.DEV_PASSWORD);
     const devLogin = await desktop.evaluate(`(async () => {
       const res = await fetch('/api/dev/login', {
         method: 'POST',

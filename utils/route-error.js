@@ -20,6 +20,17 @@ const VERSION_CONFLICT_MESSAGE =
   'This game just changed somewhere else. Refresh the page and try that again.';
 
 function routeFailed(req, res, error, userMessage, status = 500) {
+  // A malformed request is the caller's mistake, not a fault here: it answers 400 with the
+  // wording the validator chose, and it stays out of the Errors tab, which exists to show
+  // Scott what broke on the server. Every route reaches this through its own catch, so a
+  // validator can throw from anywhere - including a helper the route calls - and still land
+  // as the same 400 rather than a 500 with a validation sentence in it.
+  if (error && error.code === 'REQUEST_VALIDATION') {
+    if (res.headersSent) return;
+    res.status(error.status || 400).json({ error: error.message });
+    return;
+  }
+
   if (error && error.code === 'GAME_VERSION_CONFLICT') {
     console.warn(`${req.method} ${req.url} refused a stale write:`, error.message);
     if (res.headersSent) return;
