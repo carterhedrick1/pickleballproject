@@ -24,9 +24,12 @@
 // so a change to the DST rules arrives with the platform's timezone data instead of a patch.
 //
 // This is an ES module the pages import and the server `require()`s. Node has been able to
-// require an ES module since 22.12; production runs 22.14 and there is no `engines` pin, so a
-// Node version below 22.12 on Render would stop the server booting. Worth knowing before
-// changing the build - the same goes for invite-status.js and player-capacity.js.
+// require an ES module since 22.12, so a Node below that on Render would stop the server
+// booting. That is what the `.node-version` file at the repository root is protecting - it
+// pins Render to the Node 22 LTS line, whose oldest release is already past 22.12. The file
+// is only the version string - it cannot hold a comment - so the reasoning is in
+// docs/REFACTOR_BACKLOG.md under the Node pin entry. The same floor applies to
+// invite-status.js and player-capacity.js, which the server also requires.
 const CENTRAL_TIME_ZONE = 'America/Chicago';
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
