@@ -294,10 +294,11 @@ migration path for it, and the parity suite is where the SQL would be proven.
     `window.ManageApp` is still assembled - in `main.js` rather than in four files - because
     the smoke drives the roster and recipient list through it.
 
-  Not done, deliberately: the shared page libraries (`page-utils`, `central-time`,
-  `invite-status`, `player-capacity`, `invitation-generator`, `host-verification`) are still
-  classic scripts on `window`. They are loaded by every other page too, so converting them is
-  its own task; classic scripts run before any module, so the modules read them safely.
+  Not done in that task, deliberately: the shared page libraries (`page-utils`, `central-time`,
+  `invite-status`, `player-capacity`, `invitation-generator`, `host-verification`) were still
+  classic scripts on `window`. They are loaded by every other page too, so converting them was
+  its own task; classic scripts run before any module, so the modules read them safely. That
+  task is the last entry below, done 2026-08-21.
 
   Proof: 421 tests, 103 browser-smoke assertions, all-routes (42 routes, no 500s), user-flow
   and roster rigs. Also fixed while chasing a false failure: `test/app-http-validation.test.js`
@@ -465,3 +466,48 @@ hardcoding them, so it neither expires nor blocks its own second run.
   Verified: 421 tests, 103 browser-smoke assertions, `npm run test:pg` 12/12 on real
   PostgreSQL 16, the three race rigs, all four reminder rigs, roster-locations and all-routes
   (42 routes, no 500s) - all on macOS against a worktree server, all on sqlite3 6.0.1.
+
+- **The shared page libraries are ES modules** (the piece left over from P5 item 12) - done
+  2026-08-21. `page-utils`, `central-time`, `invite-status`, `player-capacity`,
+  `invitation-generator` and `host-verification` no longer put an object on `window`, and
+  neither does `player-identity`, which was the same shape and would otherwise have been the
+  one global `game-page.js` still read. Nothing on any page depends on script order now, so
+  **there is no frontend code left that relies on a `<script>` tag coming before another one.**
+
+  Every consumer imports the namespace - `import * as PageUtils from './page-utils.js'` - so
+  not one of the ~200 call sites changed. `create.js`, `game-page.js` and `my-games.js` became
+  modules, as did the inline scripts in roster.html and stats.html; the manage modules import
+  what they used to read off `window`. create.html and game.html each load one script tag where
+  they loaded three or four, and manage.html loads one where it loaded seven. Modules are
+  deferred, and deferred scripts run before `DOMContentLoaded` fires, so the three page scripts
+  that wrap themselves in a `DOMContentLoaded` listener still start exactly when they did.
+
+  The libraries the server also requires - `central-time`, `invite-status`, `player-capacity`,
+  and `page-utils`/`player-identity` in tests - are now `require()`d as ES modules, which Node
+  supports from 22.12. Production runs 22.14 (read from `/api/dev/status` before starting, not
+  assumed), and there is no `engines` pin, so **if Render's Node ever moves below 22.12 the
+  server will not boot.** That is the one thing to know before changing the build.
+
+  One real coupling fell out of the conversion: `invitation-generator.js` reads `PlayerCapacity`
+  and never declared it. It worked only because manage.html and my-games.html happened to load
+  player-capacity.js first - my-games.html loaded a library its own page script never used, for
+  this. It is an import now.
+
+  Two browser-smoke assertions drove `PageUtils` as a page global and had to move: the repeat
+  date expectation imports it dynamically, and the game page check now looks for a rendered
+  12-hour time, which is stronger - the time is only on the page if game-page.js imported
+  page-utils.js and ran it, and a failed import would have stopped the module first.
+
+  How it was checked, given the warning about mechanical edits: the conversion was a script that
+  only deletes whole wrapper lines, strips four leading spaces, and swaps `return {...}` for the
+  same names in an `export`. Each file was then diffed against its original with indentation
+  normalised away - the only differences are the wrapper lines themselves. On top of that, the
+  four pure libraries were run old-against-new over **6,007 input combinations** (both 2026 DST
+  changes, the midnight-crossing game, empty and malformed dates) with identical results.
+
+  Proof: 421 tests, 103 browser-smoke assertions, `npm run docs:screens` (40 screens),
+  all-routes (42 routes, no 500s) and user-flow against a worktree server. Plus a browser pass
+  over all 14 pages collecting thrown exceptions and console errors, because an assertion that
+  checks the part of a page that still rendered is silent about a module that failed to import.
+  Every page came back clean except a pre-existing `/favicon.ico` 404 on demo.html, which
+  reproduces identically on unmodified main.

@@ -1,3 +1,7 @@
+import * as PageUtils from './page-utils.js';
+import * as HostVerification from './host-verification.js';
+import * as InvitationGenerator from './invitation-generator.js';
+
 let hostPhone = '';
 let loadedGames = [];
 

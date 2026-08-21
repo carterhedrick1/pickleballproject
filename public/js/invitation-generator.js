@@ -1,4 +1,9 @@
 // public/js/invitation-generator.js - Fixed registration mode handling
+//
+// This reads PlayerCapacity to work out how many spots an invitation should advertise. That
+// used to be an implicit dependency on every page loading player-capacity.js first; it is an
+// import now, so the page cannot get the order wrong.
+import * as PlayerCapacity from './player-capacity.js';
 
 /**
  * Generates a complete invitation message for a pickleball game
@@ -289,8 +294,7 @@ function getCurrentGameDataFromStorage() {
     return mostRecentGame;
 }
 
-// Export functions for use in other scripts
-window.InvitationGenerator = {
+export {
     generateInvitationMessage,
     buildInvitationMessage,
     canShareInvitation,

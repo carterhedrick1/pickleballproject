@@ -512,21 +512,12 @@
         </div>
     </div>
 
-    <!-- Shared with the other pages, so still classic scripts putting their one object on
-         window. Classic scripts run before any module, so the modules below can read them. -->
-    <script src="/js/player-capacity.js"></script>
-    <script src="/js/invitation-generator.js"></script>
+    <!-- The site's furniture: a slogan and the shared header and footer, on every page. -->
     <script src="/js/slogans.js"></script>
     <script src="/js/footer.js"></script>
     <script src="/js/header.js"></script>
-    <script src="/js/page-utils.js"></script>
-    <!-- Only for authHeaders(): adding to the saved roster needs the verified phone session,
-         and this keeps the storage keys for it in one place. init() is never called here. -->
-    <script src="/js/host-verification.js"></script>
-    <script src="/js/invite-status.js"></script>
-    <script src="/js/central-time.js"></script>
-    <!-- The management page itself: one module, which imports the rest in the order it needs
-         them. This replaced five script tags whose order silently mattered. -->
+    <!-- The management page itself: one module, which imports the rest - including the shared
+         libraries that used to be six more script tags here, whose order silently mattered. -->
     <script type="module" src="/js/manage/main.js"></script>
 </body>
 </html>

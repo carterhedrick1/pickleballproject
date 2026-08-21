@@ -65,8 +65,9 @@
         </div>
     </div>
 
-    <script src="/js/host-verification.js"></script>
-    <script>
+    <script type="module">
+        import * as HostVerification from '/js/host-verification.js';
+
         let hostPhone = '';
 
         document.addEventListener('DOMContentLoaded', () => {

@@ -1,3 +1,6 @@
+import * as PageUtils from './page-utils.js';
+import * as PlayerCapacity from './player-capacity.js';
+
         document.addEventListener('DOMContentLoaded', () => {
             // Set up form submission
             const gameForm = document.getElementById('gameForm');
