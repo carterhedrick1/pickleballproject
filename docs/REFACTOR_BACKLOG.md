@@ -535,3 +535,34 @@ hardcoding them, so it neither expires nor blocks its own second run.
   `npm ci --omit=dev` against this lockfile in an empty directory installs 150 packages,
   reports 0 vulnerabilities, lands the sqlite3 prebuilt binary, and correctly leaves nodemon
   out.
+
+- **Pin Render to the Node 22 LTS line** - done 2026-08-21. `.node-version` at the repository
+  root contains `22`. This closes the one risk the ES module conversion opened: the server
+  `require()`s three modules under `public/js/`, `require()` of an ES module needs Node 22.12,
+  and nothing was telling Render which Node to install. Production happened to be on 22.14 and
+  would have kept working, but the version was Render's choice rather than ours, and a move
+  below 22.12 stops the server booting rather than degrading it.
+
+  `.node-version` rather than an `engines` field, deliberately. Render reads both, and the
+  precedence between them is not something to guess at when the failure mode is "the site does
+  not come up". `.node-version` is unambiguous, and it is also the option with no local side
+  effect: this Mac runs Node 25, which an `engines: "22.x"` would flag as unsupported on every
+  `npm install`. The bare major rather than an exact version so the line keeps collecting its
+  own security patches; every release on it is already past 22.12, so the floor cannot be
+  crossed from below.
+
+  It moves production from 22.14.0 to 22.23.2, so the app was **run on a real Node 22.23.2**
+  rather than reasoned about: `require()` of the three ES modules returns working namespaces,
+  and against a server booted on it, the migrations apply, `verify:frontend` passes 103/103
+  browser assertions, all-routes hits 42 routes with no 500s, and user-flow and promotion-modes
+  both report 0 failures.
+
+  **Found while doing it, and worth knowing: `npm test` cannot run on Node 22 at all.**
+  `--test-global-setup`, which item 14 added to give each test file its own database, does not
+  exist before Node 23, so the suite dies at `node: bad option` before a single test runs. That
+  is not new and it does not touch production - Render runs `npm ci --omit=dev` and
+  `node server.js`, never the tests - but it does mean **the deployment gate can never be run
+  on the Node version production uses.** The browser smoke can, which is why it is what proved
+  Node 22 above. If that gap ever needs closing, the move is to take production up to the Node
+  the tests need, which is a major upgrade and its own decision - not to give up the per-file
+  test databases.
