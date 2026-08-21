@@ -42,9 +42,13 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
 }
 
 (async () => {
-  const local = await server.start();
+  // An empty database of its own, migrated and seeded at boot the way any new one is. Every
+  // count this file pins - the shipped You're IN messages, the courts in the create page's
+  // picker, the images in the developer inventory - is then decided by the code and the
+  // fixtures below, never by what a developer happens to have saved locally. local.stop()
+  // deletes the whole database afterwards, which is why nothing here sweeps fixture rows.
+  const local = await server.start({ isolatedDatabase: true });
   let browser;
-  let seeded = false;
   try {
     const [createPageResponse, createScriptResponse] = await Promise.all([
       fetch(`${local.baseUrl}/create.html`),
@@ -57,7 +61,6 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     );
 
     const fx = await fixtures.seed(local.baseUrl);
-    seeded = true;
     const verificationRequest = await fetch(`${local.baseUrl}/api/host-verification/request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -326,7 +329,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       phone: fx.JOIN_PHONE,
       status: 'failed',
       attempts: 3,
-      error: 'Carrier rejected the message'
+      error: 'Carrier rejected the message',
+      dbFile: local.dbFile
     });
 
     // Someone who said OUT and left a phone number - the audience for "a spot just opened".
@@ -335,7 +339,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Out Player', phone: '5555550888', action: 'out' })
     });
-    await fixtures.removeSavedRosterFixture(fx.HOST_PHONE, '5555550888');
+    await fixtures.removeSavedRosterFixture(fx.HOST_PHONE, '5555550888', local.dbFile);
 
     // Reproduce the reported group size through the real API. This separate fixture keeps its
     // invitation history from changing the management-screen assertions below.
@@ -1661,8 +1665,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     // (588489c) - the smoke kept passing only because the primary database's saved
     // youre-in-config still held the old count. The expected count now comes from the
     // code's own default list, and each contract asserts separately so a failure names
-    // itself. Note: a saved youre-in-config in the local database still shadows the
-    // defaults; making this fully hermetic is tracked in the refactor backlog.
+    // itself. The shadowing is gone too: this server has a database of its own, so there
+    // is no saved youre-in-config for the defaults to lose to.
     const expectedYoureInMessages = require('../youre-in-messages').DEFAULT_MESSAGES.length;
     assert(
       youreInEditor.messages === expectedYoureInMessages &&
@@ -1798,7 +1802,6 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
     await mobile.close();
   } finally {
     if (browser) await browser.close();
-    if (seeded) await fixtures.cleanup();
     await local.stop();
   }
 })().catch((error) => {

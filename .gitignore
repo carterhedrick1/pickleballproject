@@ -5,6 +5,8 @@ node_modules
 .DS_Store
 # The database plus the -wal/-shm sidecar files WAL journal mode creates
 pickleball.db*
+# One database per `npm test` file, built and removed by test/support/database-template.mjs
+.test-databases/
 PROJECT_NOTES.local.md
 PROJECT_NOTES.local.md.backup-*
 # Backups written by scripts/cleanup-test-games.js before it deletes anything

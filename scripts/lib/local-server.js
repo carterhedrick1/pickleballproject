@@ -13,10 +13,13 @@
 // running is left alone.
 
 const { spawn } = require('child_process');
+const fs = require('fs');
 const net = require('net');
+const os = require('os');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
+const DEFAULT_DB_FILE = path.join(ROOT, 'pickleball.db');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // The password the throwaway server's developer area answers to.
@@ -43,9 +46,20 @@ function freePort() {
 
 /**
  * Boots the app and resolves once /api/health answers.
- * @returns {Promise<{baseUrl:string, port:number, log:()=>string, stop:()=>Promise<void>}>}
+ *
+ * `isolatedDatabase` gives the server an empty SQLite file in a temporary directory, which the
+ * app migrates and seeds at boot exactly as it would any new database. The browser smoke asks
+ * for one so that nothing a developer has saved locally can decide an assertion: a saved
+ * `youre-in-config` used to shadow the shipped defaults the smoke pins its message count to,
+ * and every leftover test game added a court to the create page's picker. Screenshots stay on
+ * the shared database on purpose - `npm run docs` photographs the app a developer actually has.
+ *
+ * `dbFile` is always returned, isolated or not, so callers can hand it to lib/fixtures.js
+ * without having to know which kind of server they asked for.
+ *
+ * @returns {Promise<{baseUrl:string, port:number, dbFile:string, log:()=>string, stop:()=>Promise<void>}>}
  */
-async function start() {
+async function start({ isolatedDatabase = false } = {}) {
   if (process.env.DATABASE_URL) {
     throw new Error(
       'DATABASE_URL is set, which points the app at Postgres (production).\n' +
@@ -58,12 +72,18 @@ async function start() {
   const baseUrl = `http://localhost:${port}`;
   let output = '';
 
+  const scratchDir = isolatedDatabase
+    ? fs.mkdtempSync(path.join(os.tmpdir(), 'inorout-local-server-'))
+    : null;
+  const dbFile = scratchDir ? path.join(scratchDir, 'pickleball.db') : DEFAULT_DB_FILE;
+
   const proc = spawn(process.execPath, [path.join(ROOT, 'server.js')], {
     cwd: ROOT,
     env: {
       ...process.env,
       PORT: String(port),
       BASE_URL: baseUrl,
+      SQLITE_DB_FILE: dbFile,
       TEXTBELT_API_KEY: '', // rule 1 above - keeps every send in dev mode
       DEV_PASSWORD, // see the note above: the scripts and this server must agree on it
       // Fixture sends prove the UI behavior but are not real operational events.
@@ -82,11 +102,14 @@ async function start() {
   const stop = async () => {
     try { proc.kill(); } catch {}
     await sleep(300);
+    // Takes the -wal and -shm sidecars with it. Only ever a directory this call made.
+    if (scratchDir) fs.rmSync(scratchDir, { recursive: true, force: true });
   };
 
   for (let i = 0; i < 60; i++) {
     await sleep(250);
     if (proc.exitCode !== null) {
+      await stop();  // the process is already gone; this is here to remove the scratch directory
       throw new Error(`server.js exited before it was ready:\n${output.slice(-800)}`);
     }
     try {
@@ -99,7 +122,7 @@ async function start() {
           'fixture games against anything but the local database.'
         );
       }
-      return { baseUrl, port, stop, log: () => output };
+      return { baseUrl, port, dbFile, stop, log: () => output };
     } catch (e) {
       if (e.message.startsWith('The app reported')) throw e;
       // not listening yet
