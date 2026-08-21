@@ -1,4 +1,4 @@
-const { getDevAsset } = require('../database');
+const { getDevAsset } = require('../database/dev');
 const youreInMessages = require('../youre-in-messages');
 const {
   formatDateForSMS,

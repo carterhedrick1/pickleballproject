@@ -5,16 +5,21 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const { cleanupTestGames } = require('./_cleanup');
 
-// Patch sendSMS BEFORE game-logic requires it (game-logic destructures at load time).
-const smsHandler = require(ROOT + '/sms-handler');
+// The reminder service holds the sms-client module and resolves sendSMS at call time, so
+// replacing it here is enough - no matter what has already been required.
+const smsClient = require(ROOT + '/services/sms-client');
 let sent = [];
-smsHandler.sendSMS = async (phone, message) => {
+smsClient.sendSMS = async (phone, message) => {
   sent.push({ phone, message });
   return { success: true, stubbed: true };
 };
 
-const db = require(ROOT + '/database');
-const { checkAndSendReminders } = require(ROOT + '/game-logic');
+const { initializeDatabase } = require(ROOT + '/database/schema');
+const { saveGame } = require(ROOT + '/database/games');
+const { hasReminderBeenSent } = require(ROOT + '/database/messaging-reminders');
+const { closeDatabaseConnection } = require(ROOT + '/database/context');
+const { formatTimeForSMS } = require(ROOT + '/utils/sms-format');
+const { checkAndSendReminders } = require(ROOT + '/services/reminders');
 const { getCentralTimeNow } = require(ROOT + '/utils/central-time');
 
 let failures = 0;
@@ -54,7 +59,7 @@ function makeGame(hours, extra = {}) {
 }
 
 (async () => {
-  await db.initializeDatabase();
+  await initializeDatabase();
   await new Promise((r) => setTimeout(r, 500));
 
   const ids = {
@@ -66,11 +71,11 @@ function makeGame(hours, extra = {}) {
   };
 
   // 12h out: well past the old 5-minute window, so the OLD code sent nothing here.
-  await db.saveGame(ids.catchup, makeGame(12), 'tok1', null);
-  await db.saveGame(ids.tooEarly, makeGame(30), 'tok2', null);          // >24h away
-  await db.saveGame(ids.past, makeGame(-5), 'tok3', null);              // already happened
-  await db.saveGame(ids.cancelled, makeGame(10, { cancelled: true }), 'tok4', null);
-  await db.saveGame(ids.today, makeGame(6), 'tok5', null);              // later today, still
+  await saveGame(ids.catchup, makeGame(12), 'tok1', null);
+  await saveGame(ids.tooEarly, makeGame(30), 'tok2', null);          // >24h away
+  await saveGame(ids.past, makeGame(-5), 'tok3', null);              // already happened
+  await saveGame(ids.cancelled, makeGame(10, { cancelled: true }), 'tok4', null);
+  await saveGame(ids.today, makeGame(6), 'tok5', null);              // later today, still
                                                                         // inside the 24-hour window rather than the game-day one
 
   console.log('\n=== Run 1: catch-up should fire for missed reminders ===');
@@ -94,7 +99,7 @@ function makeGame(hours, extra = {}) {
   // Both games are at Test Court, so they are told apart by the start time in the message.
   // Match on the time alone: what follows it is location wording that has changed before.
   const messageFor = (hours) => {
-    const label = smsHandler.formatTimeForSMS(offsetGame(hours).time);
+    const label = formatTimeForSMS(offsetGame(hours).time);
     return r1.find((s) => s.message.includes(`at ${label}`));
   };
 
@@ -123,8 +128,8 @@ function makeGame(hours, extra = {}) {
 
   console.log('\n=== Run 3 (simulating a process restart: in-memory caches cleared) ===');
   // Durable reminder_log must be what prevents resends, not the in-memory cache. This
-  // used to simulate the restart by re-requiring game-logic, whose import wiped the
-  // caches as a side effect; the reset is explicit now.
+  // used to simulate the restart by re-requiring the old game-logic facade, whose import
+  // wiped the caches as a side effect; the reset is explicit now.
   require(ROOT + '/services/reminders').resetReminderState();
   sent = [];
   await checkAndSendReminders();
@@ -136,13 +141,13 @@ function makeGame(hours, extra = {}) {
   console.log('\n=== Games that must never be reminded ===');
   const log = [];
   for (const [label, id] of [['30h away', ids.tooEarly], ['in the past', ids.past], ['cancelled', ids.cancelled]]) {
-    const wasSent = await db.hasReminderBeenSent(id, '+15551110001', 'twenty_four_hours');
+    const wasSent = await hasReminderBeenSent(id, '+15551110001', 'twenty_four_hours');
     wasSent ? bad(`${label} game WAS reminded`) : ok(`${label} game not reminded`);
     log.push(label);
   }
 
   console.log(`\n=== ${failures} failure(s) ===\n`);
-  await db.closeDatabaseConnection?.();
+  await closeDatabaseConnection?.();
   await cleanupTestGames();
   process.exit(failures ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR:', e); process.exit(1); });

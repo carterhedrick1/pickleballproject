@@ -1,4 +1,4 @@
-const { updateGame } = require('../database');
+const { updateGame } = require('../database/games');
 const { acquireGameLock } = require('../utils/game-lock');
 const { isHost } = require('../utils/host-auth');
 const { joinRejection } = require('../domain/join-policy');

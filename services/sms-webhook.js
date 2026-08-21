@@ -5,13 +5,12 @@
 // phone-to-game lookups in services/sms-game-lookup.js, and message building in
 // services/sms-composer.js. What stays here is the orchestration: which handler runs,
 // what it loads, and which texts go out.
+const { getAllGames, getGame } = require('../database/games');
 const {
-  getAllGames,
-  getGame,
   saveLastCommand,
   getLastCommand,
   clearLastCommand
-} = require('../database');
+} = require('../database/messaging-reminders');
 const { departureAlertType } = require('../utils/promotion');
 const { leaveGame } = require('./player-service');
 const { sendSMS, sendSMSWithRetry } = require('./sms-client');

@@ -1,11 +1,9 @@
 const rateLimit = require('express-rate-limit');
 
-const {
-  isProduction,
-  getGamesByHostPhone,
-  getRosterForHost
-} = require('../database');
-const { formatPhoneNumber } = require('../sms-handler');
+const { isProduction } = require('../database/context');
+const { getGamesByHostPhone } = require('../database/games');
+const { getRosterForHost } = require('../database/roster');
+const { formatPhoneNumber } = require('../utils/sms-format');
 const {
   HostVerificationError,
   sendVerificationCode,

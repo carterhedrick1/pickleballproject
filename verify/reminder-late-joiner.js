@@ -9,16 +9,20 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const { cleanupTestGames } = require('./_cleanup');
 
-// Patch sendSMS BEFORE game-logic requires it (game-logic destructures at load time).
-const smsHandler = require(ROOT + '/sms-handler');
+// The reminder service holds the sms-client module and resolves sendSMS at call time, so
+// replacing it here is enough - no matter what has already been required.
+const smsClient = require(ROOT + '/services/sms-client');
 let sent = [];
-smsHandler.sendSMS = async (phone, message) => {
+smsClient.sendSMS = async (phone, message) => {
   sent.push({ phone, message });
   return { success: true, stubbed: true };
 };
 
-const db = require(ROOT + '/database');
-const { checkAndSendReminders } = require(ROOT + '/game-logic');
+const { initializeDatabase } = require(ROOT + '/database/schema');
+const { saveGame, getGame } = require(ROOT + '/database/games');
+const { hasReminderBeenSent } = require(ROOT + '/database/messaging-reminders');
+const { closeDatabaseConnection } = require(ROOT + '/database/context');
+const { checkAndSendReminders } = require(ROOT + '/services/reminders');
 const { getCentralTimeNow } = require(ROOT + '/utils/central-time');
 
 let failures = 0;
@@ -64,13 +68,13 @@ const player = (n, joinedAt = hoursAgo(30)) => ({
 const textsTo = (phone) => sent.filter((s) => s.phone === phone).length;
 
 (async () => {
-  await db.initializeDatabase();
+  await initializeDatabase();
   await new Promise((r) => setTimeout(r, 500));
 
   const gameId = 'test-latejoin-' + Date.now().toString(36);
 
   // A game 12 hours out, so it is already inside the 24-hour reminder window.
-  await db.saveGame(gameId, makeGame(12, [player(1), player(2)]), 'tok-lj', null);
+  await saveGame(gameId, makeGame(12, [player(1), player(2)]), 'tok-lj', null);
 
   console.log('\n=== Run 1: the two players already on the roster get reminded ===');
   sent = [];
@@ -82,9 +86,9 @@ const textsTo = (phone) => sent.filter((s) => s.phone === phone).length;
   // This is the moment the bug is created: every player is now reminded, so the game gets
   // cached as done. A real signup landing here is an ordinary, common event.
   console.log('\n=== A third player joins AFTER everyone else was reminded ===');
-  const game = await db.getGame(gameId);
+  const game = await getGame(gameId);
   game.players.push(player(3));
-  await db.saveGame(gameId, game, 'tok-lj', null);
+  await saveGame(gameId, game, 'tok-lj', null);
   console.log(`     roster is now ${game.players.length} players; +15552220003 has never been texted`);
 
   console.log('\n=== Run 2: the late joiner must still get a reminder ===');
@@ -107,12 +111,12 @@ const textsTo = (phone) => sent.filter((s) => s.phone === phone).length;
   anyResend === 0 ? ok('steady state: no further texts') : bad(`resent ${anyResend} reminders`);
 
   console.log('\n=== A player who joins and is removed again is not texted ===');
-  const g2 = await db.getGame(gameId);
+  const g2 = await getGame(gameId);
   g2.players.push(player(4));
-  await db.saveGame(gameId, g2, 'tok-lj', null);
-  const g3 = await db.getGame(gameId);
+  await saveGame(gameId, g2, 'tok-lj', null);
+  const g3 = await getGame(gameId);
   g3.players = g3.players.filter((p) => p.phone !== '+15552220004');
-  await db.saveGame(gameId, g3, 'tok-lj', null);
+  await saveGame(gameId, g3, 'tok-lj', null);
   sent = [];
   await checkAndSendReminders();
   textsTo('+15552220004') === 0
@@ -122,9 +126,9 @@ const textsTo = (phone) => sent.filter((s) => s.phone === phone).length;
   console.log('\n=== A player who signs up minutes ago is not "reminded" about it ===');
   // The double-text: joining a game already inside the 24-hour window produced a "You're IN"
   // text and then, a couple of minutes later, a reminder about the game they had just chosen.
-  const g4 = await db.getGame(gameId);
+  const g4 = await getGame(gameId);
   g4.players.push(player(5, new Date().toISOString()));
-  await db.saveGame(gameId, g4, 'tok-lj', null);
+  await saveGame(gameId, g4, 'tok-lj', null);
   sent = [];
   await checkAndSendReminders();
   textsTo('+15552220005') === 0
@@ -133,10 +137,10 @@ const textsTo = (phone) => sent.filter((s) => s.phone === phone).length;
 
   console.log('\n=== ...but is reminded once the quiet window has passed ===');
   // Held, not dropped. Backdating the signup is how "three hours later" happens in a test.
-  const g5 = await db.getGame(gameId);
+  const g5 = await getGame(gameId);
   const held = g5.players.find((p) => p.phone === '+15552220005');
   held.joinedAt = hoursAgo(4);
-  await db.saveGame(gameId, g5, 'tok-lj', null);
+  await saveGame(gameId, g5, 'tok-lj', null);
   sent = [];
   await checkAndSendReminders();
   textsTo('+15552220005') === 1
@@ -145,12 +149,12 @@ const textsTo = (phone) => sent.filter((s) => s.phone === phone).length;
 
   console.log('\n=== The durable log agrees with what was sent ===');
   for (const n of [1, 2, 3]) {
-    const logged = await db.hasReminderBeenSent(gameId, `+1555222000${n}`, 'twenty_four_hours');
+    const logged = await hasReminderBeenSent(gameId, `+1555222000${n}`, 'twenty_four_hours');
     logged ? ok(`player ${n} recorded in reminder_log`) : bad(`player ${n} missing from reminder_log`);
   }
 
   console.log(`\n=== ${failures} failure(s) ===\n`);
-  await db.closeDatabaseConnection?.();
+  await closeDatabaseConnection?.();
   await cleanupTestGames();
   process.exit(failures ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR:', e); process.exit(1); });

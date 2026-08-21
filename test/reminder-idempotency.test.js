@@ -3,21 +3,22 @@
 // after a process restart, because the durable reminder_log (not the in-memory cache) is
 // what prevents resends.
 //
-// sendSMS is stubbed through the sms-handler facade (the reminder service resolves it at
-// call time), so nothing is ever texted. Phones use the 555444 prefix so concurrent test
-// files sharing the local SQLite database cannot collide.
+// sendSMS is stubbed on services/sms-client (the reminder service holds the module and
+// resolves sendSMS at call time), so nothing is ever texted. Phones use the 555444 prefix so
+// concurrent test files sharing the local SQLite database cannot collide.
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 
-const smsHandler = require('../sms-handler');
-const realSendSMS = smsHandler.sendSMS;
+const smsClient = require('../services/sms-client');
+const realSendSMS = smsClient.sendSMS;
 const sent = [];
-smsHandler.sendSMS = async (phone, message, gameId, options) => {
+smsClient.sendSMS = async (phone, message, gameId, options) => {
   sent.push({ phone, message, gameId });
   return { success: true, stubbed: true };
 };
 
-const db = require('../database');
+const { initializeDatabase } = require('../database/schema');
+const { saveGame, deleteGamePermanently } = require('../database/games');
 const { checkAndSendReminders, resetReminderState } = require('../services/reminders');
 const { getCentralTimeNow } = require('../utils/central-time');
 
@@ -36,7 +37,7 @@ function offsetGame(hours) {
 }
 
 before(async () => {
-  await db.initializeDatabase();
+  await initializeDatabase();
   const { date, time } = offsetGame(12); // inside the 24h window, outside the game-day one
   const joinedAt = new Date(Date.now() - 4 * 3600 * 1000).toISOString(); // beyond the quiet window
   const game = {
@@ -62,14 +63,14 @@ before(async () => {
     invitedPlayers: [],
     notificationPreferences: {}
   };
-  await db.saveGame(GAME_ID, game, game.hostToken, null);
+  await saveGame(GAME_ID, game, game.hostToken, null);
   resetReminderState();
 });
 
 after(async () => {
-  smsHandler.sendSMS = realSendSMS;
+  smsClient.sendSMS = realSendSMS;
   try {
-    await db.deleteGamePermanently(GAME_ID);
+    await deleteGamePermanently(GAME_ID);
   } catch {}
 });
 

@@ -8,6 +8,10 @@ const {
   runGenerationJob
 } = require('../services/message-generation');
 const { resolveRandomizedMessage } = require('../services/message-randomizer');
+// Two reads that are not message-randomizer rows: the protected master roster a target rule
+// has to name a player from, and the game a public /api/random-message call is about.
+const { getDeveloperRosterSources } = require('../database/dev-rosters');
+const { getGame } = require('../database/games');
 const { formatPhoneNumber } = require('../utils/sms-format');
 const {
   buildDeveloperRosters
@@ -256,7 +260,7 @@ async function validateTargetRule(database, body = {}, existing = null) {
   };
   if (!fields.personalityId) return { error: 'Personality is required.' };
   if (fields.targetPhone.length !== 10) return { error: 'Choose a player with a valid phone number.' };
-  const directory = buildDeveloperRosters(await database.getDeveloperRosterSources());
+  const directory = buildDeveloperRosters(await getDeveloperRosterSources());
   const player = directory.players.find((candidate) => candidate.phone === fields.targetPhone);
   if (!player) return { error: 'Choose a player from the protected master roster.' };
   fields.targetDisplayName = player.name || fields.targetDisplayName;
@@ -306,7 +310,7 @@ const PUBLIC_RANDOM_MESSAGE_SURFACES = new Set([
 ]);
 
 function mountPublicRandomizerRoutes(app) {
-  const database = require('../database');
+  const database = require('../database/message-randomizer');
 
   app.get('/api/message-personalities', async (_req, res) => {
     try {
@@ -339,7 +343,7 @@ function mountPublicRandomizerRoutes(app) {
     const exclude = String(req.query.exclude || '').split(',').filter(Boolean).slice(0, 50);
     const fallbackText = String(req.query.fallback || '');
     const gameId = String(req.query.gameId || '').trim() || null;
-    const game = gameId ? await database.getGame(gameId).catch(() => null) : null;
+    const game = gameId ? await getGame(gameId).catch(() => null) : null;
     const result = await resolveRandomizedMessage({
       database,
       personalityId: req.query.personality || game?.personalityId || null,
@@ -360,12 +364,12 @@ function mountPublicRandomizerRoutes(app) {
 }
 
 function mountDevRandomizerRoutes(app, requireDevAuth) {
-  const database = require('../database');
+  const database = require('../database/message-randomizer');
 
   app.get('/api/dev/message-randomizer', requireDevAuth, async (_req, res) => {
     try {
       const personalities = await database.listPersonalities();
-      const rosterSources = await database.getDeveloperRosterSources();
+      const rosterSources = await getDeveloperRosterSources();
       const payload = [];
       for (const personality of personalities) {
         const [settings, metrics, savedCodexPrompts] = await Promise.all([
@@ -375,7 +379,7 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
         ]);
         const generationStatuses = await Promise.all(
           MESSAGE_SURFACES.map((surface) => (
-            getGenerationStatus(database, personality.id, surface.id)
+            getGenerationStatus(personality.id, surface.id)
           ))
         );
         const settingBySurface = new Map(settings.map((setting) => [setting.surfaceId, setting]));
@@ -540,7 +544,7 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
     const personalityId = String(req.query.personalityId || 'realist');
     const statuses = {};
     for (const surface of MESSAGE_SURFACES) {
-      statuses[surface.id] = await getGenerationStatus(database, personalityId, surface.id);
+      statuses[surface.id] = await getGenerationStatus(personalityId, surface.id);
     }
     res.json({ provider: providerStatus(), statuses });
   });
@@ -552,7 +556,7 @@ function mountDevRandomizerRoutes(app, requireDevAuth) {
           personalityId: req.query.personalityId || undefined,
           surfaceId: req.query.surfaceId || undefined
         }),
-        roster: buildDeveloperRosters(await database.getDeveloperRosterSources()).players
+        roster: buildDeveloperRosters(await getDeveloperRosterSources()).players
       });
     } catch (error) {
       res.status(500).json({ error: 'Could not load target rules.' });

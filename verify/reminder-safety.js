@@ -5,18 +5,19 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const { cleanupTestGames } = require('./_cleanup');
 
-const smsHandler = require(ROOT + '/sms-handler');
+const smsClient = require(ROOT + '/services/sms-client');
 let attempts = [];
-// Single stable wrapper (game-logic captures this reference at require time); behaviour is
-// swapped per test via smsBehavior.
+// One stable wrapper installed once; behaviour is swapped per test via smsBehavior.
 let smsBehavior = async () => ({ success: true, stubbed: true });
-smsHandler.sendSMS = async (phone, message) => {
+smsClient.sendSMS = async (phone, message) => {
   attempts.push({ phone, message, at: Date.now() });
   return smsBehavior(phone, message);
 };
 
-const db = require(ROOT + '/database');
-const { checkAndSendReminders } = require(ROOT + '/game-logic');
+const { initializeDatabase } = require(ROOT + '/database/schema');
+const { saveGame } = require(ROOT + '/database/games');
+const { closeDatabaseConnection } = require(ROOT + '/database/context');
+const { checkAndSendReminders } = require(ROOT + '/services/reminders');
 const { getCentralTimeNow } = require(ROOT + '/utils/central-time');
 
 let failures = 0;
@@ -44,13 +45,13 @@ function makeGame(hours, phones) {
 }
 
 (async () => {
-  await db.initializeDatabase();
+  await initializeDatabase();
   await new Promise((r) => setTimeout(r, 500));
 
   // --- Test A: a number that always fails must stop after MAX_SEND_ATTEMPTS ---
   console.log('\n=== A: permanently failing send is capped (not retried forever) ===');
   const failGame = 'test-safety-fail-' + Date.now().toString(36);
-  await db.saveGame(failGame, makeGame(6, ['+15552220001']), 'tokA', null);
+  await saveGame(failGame, makeGame(6, ['+15552220001']), 'tokA', null);
 
   smsBehavior = async () => ({ success: false, error: 'simulated network failure' });
   attempts = [];
@@ -63,7 +64,7 @@ function makeGame(hours, phones) {
   // --- Test B: overlapping runs must not double-send ---
   console.log('\n=== B: two overlapping checks must not both text the same player ===');
   const raceGame = 'test-safety-race-' + Date.now().toString(36);
-  await db.saveGame(raceGame, makeGame(6, ['+15553330001', '+15553330002']), 'tokB', null);
+  await saveGame(raceGame, makeGame(6, ['+15553330001', '+15553330002']), 'tokB', null);
 
   // Slow send so the second check starts while the first is still awaiting Textbelt.
   smsBehavior = async () => {
@@ -89,7 +90,7 @@ function makeGame(hours, phones) {
   repeats === 0 ? ok('no repeat sends after success') : bad(`resent ${repeats} times`);
 
   console.log(`\n=== ${failures} failure(s) ===\n`);
-  await db.closeDatabaseConnection?.();
+  await closeDatabaseConnection?.();
   await cleanupTestGames();
   process.exit(failures ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR:', e); process.exit(1); });

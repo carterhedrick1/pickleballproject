@@ -8,14 +8,14 @@
 const {
   getGame,
   saveGame
-} = require('../database');
+} = require('../database/games');
 
+const { sendSMS } = require('../services/sms-client');
 const {
-  sendSMS,
   formatDateForSMS,
   formatTimeForSMS,
   formatLocationForSMS
-} = require('../sms-handler');
+} = require('../utils/sms-format');
 
 const { acquireGameLock } = require('../utils/game-lock');
 const { findOnGame } = require('../utils/game-audience');

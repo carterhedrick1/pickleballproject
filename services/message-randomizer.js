@@ -147,7 +147,7 @@ function fallbackResult(fallbackText, surfaceId, personalityId = null, error = n
 }
 
 async function resolveRandomizedMessage({
-  database = require('../database'),
+  database = require('../database/message-randomizer'),
   personalityId,
   surfaceId,
   game = null,

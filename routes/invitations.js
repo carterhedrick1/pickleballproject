@@ -10,22 +10,18 @@
 // not a broadcast list, and a route that texts arbitrary numbers on request is a route that gets
 // used to text arbitrary numbers.
 
-const {
-  getGame,
-  saveGame,
-  getSmsEventsForGame,
-  recipientHash
-} = require('../database');
+const { getGame, saveGame } = require('../database/games');
+const { getSmsEventsForGame, recipientHash } = require('../database/sms-events');
 
 const { describeSmsEvents } = require('../utils/delivery-log');
 
+const { sendSMS } = require('../services/sms-client');
 const {
-  sendSMS,
   formatPhoneNumber,
   formatDateForSMS,
   formatTimeForSMS,
   formatLocationForSMS
-} = require('../sms-handler');
+} = require('../utils/sms-format');
 
 const { acquireGameLock } = require('../utils/game-lock');
 const { routeFailed } = require('../utils/route-error');

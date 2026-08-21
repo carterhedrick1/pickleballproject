@@ -13,26 +13,22 @@ const {
   getGame,
   getAllGames,
   getGamesByHostPhone,
-  deleteGamePermanently,
-  addLocation,
-  getAllPhotoCounts,
-  getPersonality,
-  getDefaultPersonality
-} = require('../database');
+  deleteGamePermanently
+} = require('../database/games');
+const { addLocation, getAllPhotoCounts } = require('../database/locations-media');
+const { getPersonality, getDefaultPersonality } = require('../database/message-randomizer');
 
+const { sendSMS } = require('../services/sms-client');
 const {
-  sendSMS,
   formatPhoneNumber,
   formatDateForSMS,
   formatTimeForSMS,
-  formatLocationForSMS
-} = require('../sms-handler');
-const { maskPhone } = require('../utils/sms-format');
+  formatLocationForSMS,
+  maskPhone,
+  isValidUsPhone
+} = require('../utils/sms-format');
 
-const {
-  createGameData,
-  isValidPhoneNumber
-} = require('../game-logic');
+const { createGameData } = require('../domain/game-factory');
 
 const { acquireGameLock } = require('../utils/game-lock');
 const { isGameUpcoming } = require('../utils/central-time');
@@ -123,7 +119,7 @@ module.exports = function mountGameRoutes(app) {
       
       const hostPhone = req.body.hostPhone || req.body.organizerPhone;
 
-      if (hostPhone && !isValidPhoneNumber(hostPhone)) {
+      if (hostPhone && !isValidUsPhone(hostPhone)) {
         return res.status(400).json({ 
           error: 'Please enter a valid US phone number for the organizer.' 
         });

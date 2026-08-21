@@ -9,8 +9,8 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 
-const db = require('../database');
-const { getGame, saveGame, updateGame, deleteGamePermanently } = db;
+const { initializeDatabase } = require('../database/schema');
+const { getGame, saveGame, updateGame, deleteGamePermanently } = require('../database/games');
 const { sqliteGet } = require('../database/context');
 
 const { updateDeveloperPlayer } = require('../database/dev-rosters');
@@ -59,7 +59,7 @@ function createBarrier(count) {
 }
 
 before(async () => {
-  await db.initializeDatabase();
+  await initializeDatabase();
   for (const id of Object.values(ids)) {
     await deleteGamePermanently(id);
     const game = id === ids.devEdit

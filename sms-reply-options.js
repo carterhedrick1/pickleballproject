@@ -129,7 +129,7 @@ const CONFIG_CACHE_MS = 5000;
 
 async function loadReplyOptionsConfig() {
   if (configCache && Date.now() < configCacheExpiresAt) return configCache;
-  const { getDevAsset } = require('./database');
+  const { getDevAsset } = require('./database/dev');
   const saved = await getDevAsset(REPLY_OPTIONS_ASSET_NAME);
   if (!saved) {
     configCache = normalizeReplyOptionsConfig();

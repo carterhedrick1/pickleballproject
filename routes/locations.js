@@ -3,7 +3,7 @@
 // Courts are remembered as a side effect of creating or editing a game rather than managed
 // directly, so this is only the read side - the writes live with the game routes.
 
-const { getLocations } = require('../database');
+const { getLocations } = require('../database/locations-media');
 const { routeFailed } = require('../utils/route-error');
 
 module.exports = function mountLocationRoutes(app) {

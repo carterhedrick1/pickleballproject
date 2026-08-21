@@ -16,9 +16,9 @@ const {
   getCourtImageFromLibrary,
   deleteCourtImageFromLibrary,
   setGameCourtImage,
-  getGameCourtImageId,
-  getGame
-} = require('../database');
+  getGameCourtImageId
+} = require('../database/locations-media');
+const { getGame } = require('../database/games');
 
 const { routeFailed } = require('../utils/route-error');
 const { isHost, requestHostToken } = require('../utils/host-auth');

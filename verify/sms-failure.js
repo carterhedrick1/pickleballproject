@@ -74,7 +74,7 @@ async function retryPolicyChecks() {
   process.env.TEXTBELT_API_KEY = 'stub-key';    // so sendSMS does not take the dev-mode branch
   process.env.ALLOW_LOCAL_SMS = '1';            // fetch is stubbed below; exercise provider logic
 
-  const { sendSMSWithRetry } = require(ROOT + '/sms-handler');
+  const { sendSMSWithRetry } = require(ROOT + '/services/sms-client');
 
   const realFetch = globalThis.fetch;
   let calls = 0;

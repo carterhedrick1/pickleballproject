@@ -54,7 +54,7 @@ function createBarrier(count) {
  * @param {string} engine - 'SQLite' or 'PostgreSQL', used in the suite name only.
  */
 function registerPersistenceCases(engine) {
-  const db = require('../../database');
+  const { initializeDatabase } = require('../../database/schema');
   const {
     saveGame,
     getGame,
@@ -62,12 +62,10 @@ function registerPersistenceCases(engine) {
     getAllGames,
     getGamesByHostPhone,
     getGameHostInfo,
-    deleteGamePermanently,
-    savePhoto,
-    getPhotosForGame,
-    markReminderSent,
-    hasReminderBeenSent
-  } = db;
+    deleteGamePermanently
+  } = require('../../database/games');
+  const { savePhoto, getPhotosForGame } = require('../../database/locations-media');
+  const { markReminderSent, hasReminderBeenSent } = require('../../database/messaging-reminders');
 
   const created = new Set();
   async function makeGame(name, extra) {
@@ -83,7 +81,7 @@ function registerPersistenceCases(engine) {
     before(async () => {
       // The full boot path: migrations, reference seeds, message seeds. On PostgreSQL this
       // is the first thing that proves the migrations actually run on the real engine.
-      await db.initializeDatabase();
+      await initializeDatabase();
     });
 
     after(async () => {

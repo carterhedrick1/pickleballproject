@@ -7,7 +7,7 @@
 // Known cost, accepted for now: these scan every game in JS because games are stored as
 // whole JSON blobs. At this app's scale (dozens of games) that is fine; SQL-side lookup
 // tables are the refactor backlog's persistence item if scale ever changes.
-const { getGameHostInfo } = require('../database');
+const { getGameHostInfo } = require('../database/games');
 const { isGameUpcoming, isGameRecentlyFinished } = require('../utils/central-time');
 const { maskPhone } = require('../utils/sms-format');
 

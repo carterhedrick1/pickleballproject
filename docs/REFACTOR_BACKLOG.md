@@ -109,10 +109,43 @@ migration path for it, and the parity suite is where the SQL would be proven.
 
 ## P3. Service decomposition
 
-### 8. Finish compatibility-facade migrations
-`database.js`, `sms-handler.js`, and `game-logic.js` are transitional facades; every
-module that loads one loads the whole persistence layer. Move callers to the specific
-repositories/services, then delete the facades.
+- **Finish compatibility-facade migrations** (was P3 item 8) - done 2026-08-20.
+  `database.js`, `sms-handler.js` and `game-logic.js` are deleted. Every caller now names the
+  module it actually wants. Requiring the old facade pulled 15 files under `database/` into
+  whatever loaded it; the same modules now load what they use and nothing else -
+  `utils/route-error.js` 2, `utils/host-auth.js` 2, `services/host-roster.js` 3,
+  `services/sms-client.js` 0 (its one read is a lazy require inside the send path).
+  Three things were more than a rename:
+  - `game-logic.js` was not only a facade. `createGameData` moved to
+    `domain/game-factory.js` and `validatePlayerData` to `domain/player-validation.js`,
+    beside the join rules they belong with. `isValidPhoneNumber` was a one-line alias for
+    `isValidUsPhone` in `utils/sms-format.js`, so callers use that directly, and
+    `checkExistingPlayer`/`addPlayerToGame`/`removePlayerFromGame` were dead wrappers over
+    `domain/player-transitions.js` with no caller anywhere - deleted rather than rehomed.
+  - The reminder SMS stub seam moved. `services/reminders.js` holds the `services/sms-client`
+    module object and resolves `sendSMS` at call time, so `test/reminder-idempotency.test.js`
+    and the four `verify/reminder-*.js` rigs replace it there instead of on the old facade.
+    That seam is the only reason a reminder run never reaches Textbelt; keep it a module
+    property, never a destructured import.
+  - The message-randomizer stack injects a `database` object (`resolveRandomizedMessage`,
+    `generateFreshMessages`, `queuePoolRefill`, `buildRandomizedInvitation`). Its default is
+    now `database/message-randomizer` specifically. The three reads that were not randomizer
+    rows were pulled out of the injected object: generation status is a dev asset
+    (`getGenerationStatus`/`saveGenerationStatus` lost their `database` first parameter and
+    call `database/dev` directly), and the routes read the master roster and a game from
+    `database/dev-rosters` and `database/games`.
+
+  Verified: 325 tests, 103 browser-smoke assertions, and all four reminder rigs plus the
+  roster rig green. Noticed while running the gate and left alone deliberately:
+  `recordSelection` in `database/message-randomizer.js` opens `BEGIN IMMEDIATE` on the shared
+  SQLite connection, so two concurrent signups log "Message Randomizer fallback for youre-in:
+  cannot start a transaction within a transaction" and fall back to the legacy text. It
+  predates this work and belongs to item 9 below, which owns that file.
+
+  One stale reference left on purpose: the copy deck `scripts/extract-copy.js` generates still
+  tells the reader the app's running copy lives in "public/js/ and sms-handler.js". Correcting
+  it changes a generated page, so it wants a `--visible` completion, which needs DEV_PASSWORD
+  set on Render first. Fold it into the next visible change that regenerates the docs.
 
 ### 9. Split `database/message-randomizer.js`
 Row mapping, CRUD, metrics, selection history, seeds, migrations, repairs and legacy sync

@@ -10,7 +10,7 @@
  * off these response bodies (`throw new Error(errorData.error || ...)` in
  * public/js/manage-scripts.js), so the wording a host sees must not change.
  */
-const { logAppError } = require('../database');
+const { logAppError } = require('../database/dev');
 
 // A save refused because the game moved on is not a fault: the caller read an older copy.
 // 409 says exactly that, and the wording tells a host what to do about it. Routes that
