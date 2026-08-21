@@ -1094,7 +1094,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         body: JSON.stringify({ password: ${devPassword} })
       });
       if (res.ok) {
-        showApp();
+        DevDashboard.showApp();
         document.querySelector('[data-tab="slogans"]').click();
       }
       return res.ok;
@@ -1247,7 +1247,9 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         }
       );
       const developerUpload = await developerUploadResponse.json();
-      await loadImages();
+      // Redraw the tab so the upload just made shows up. This used to call the page's own
+      // global loadImages(); the dashboard is modules now, so it goes through the namespace.
+      await DevDashboard.loadImages();
       const apiResponse = await fetch('/api/dev/images');
       const apiData = await apiResponse.json();
       const wantedIds = ${JSON.stringify([

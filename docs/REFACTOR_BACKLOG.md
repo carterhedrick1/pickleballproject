@@ -305,10 +305,46 @@ migration path for it, and the parity suite is where the SQL would be proven.
   in the shared local SQLite file and adding courts to the create page's picker, which is the
   same class of problem as item 14 below.
 
-### 13. Split `public/dev.html` (~3,850 lines)
-Extract the ~835 inline CSS lines and ~1,600 inline JS lines into files per tab (auth,
-notes, messaging editors, rosters, images, errors) plus shared API/render helpers. Avoid
-`innerHTML` interpolation; keep the visible behavior identical.
+- **Split `public/dev.html`** (was P5 item 13) - done 2026-08-21. 3,853 lines down to 1,403 of
+  markup. The 835 lines of CSS are `public/css/dev.css`, unchanged and in the same order, so
+  the cascade is identical. The 1,617 lines of script are `public/js/dev/`: `main.js`,
+  `shared.js` (el, escapeHtml, timeAgo, formatUptime and the two tab lists), `api.js`, and one
+  module per tab - `auth`, `tabs`, `status`, `ideas`, `slogans`, `reply-options`,
+  `text-messages`, `rosters`, `errors`, `images`. dev.html loads one module.
+
+  `api.js` holds the two shapes every tab wrote out longhand: sending JSON (nine call sites,
+  each having to remember the Content-Type header) and what a 401 means here (seven copies of
+  "hide the dashboard, show the sign-in screen" - the cookie lasts thirty days, so any loader
+  can be the one that finds it expired). `message-randomizer-admin.js` stays a classic script:
+  it is a self-contained IIFE with its own helpers, and the dashboard only ever calls
+  `window.MessageRandomizerAdmin.load()`.
+
+  **The `innerHTML` interpolation was audited rather than removed.** Every interpolated value
+  in the remaining templates is one of: passed through `escapeHtml`, a number, an
+  `encodeURIComponent` result, or a server-side constant - `command` comes from
+  `CUSTOM_COMMANDS` in sms-reply-options.js, which the server rejects anything outside of, and
+  the one bare `${message}` in status.js was escaped a line earlier. So there is no escaping
+  gap to fix, and rewriting forty template blocks into DOM building on Scott's operational
+  dashboard would be risk without a bug behind it. Worth doing next time a tab is opened up for
+  another reason; the audit is what makes that a choice rather than an unknown.
+
+  Lesson worth keeping, because it cost three rounds: **do not bulk-edit this code with
+  regular expressions.** A DOTALL non-greedy `fetch(...)` pattern matched across statement
+  boundaries and rewrote a GET as a JSON send; a follow-up pattern renamed the arguments but
+  left the function as `fetch`, so `fetch(url, 'DELETE', {...})` silently did a GET and Delete
+  Host stopped working. The browser smoke caught that one. What found the rest was a
+  line-by-line diff of each module against the original inline segment, normalizing away the
+  edits that were intended - that check belongs in any future split of this kind.
+
+  Two dependency scans were needed, not one. The first stripped template literals before
+  looking for cross-module references, which is precisely where this code calls `escapeHtml`,
+  so two modules were missing that import and their tabs rendered nothing.
+
+  Proof: 421 tests, 103 browser-smoke assertions (which cover sign-in, slogans, reply options,
+  the You're In editor, the roster editors and both delete confirmations), and a scripted
+  browser pass over the idea board - the one write path the smoke does not touch - creating a
+  note, changing its status through the PUT path, reading both back through the API, and
+  deleting it again.
 
 ## P6. Quality gates
 

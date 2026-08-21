@@ -215,7 +215,7 @@ const openDeveloperRosters = async (p) => {
       body: JSON.stringify({ password: ${password} })
     });
     if (!response.ok) throw new Error('Developer sign-in failed');
-    showApp();
+    DevDashboard.showApp();
     document.querySelector('[data-tab="rosters"]').click();
   })()`);
   await cdp.sleep(1400);
@@ -239,7 +239,7 @@ const openDeveloperStatus = async (p) => {
       body: JSON.stringify({ password: ${password} })
     });
     if (!response.ok) throw new Error('Developer sign-in failed');
-    showApp();
+    DevDashboard.showApp();
     document.querySelector('[data-tab="status"]').click();
   })()`);
   await cdp.sleep(900);
@@ -254,7 +254,7 @@ const openDeveloperMessageRandomizer = async (p) => {
       body: JSON.stringify({ password: ${password} })
     });
     if (!response.ok) throw new Error('Developer sign-in failed');
-    showApp();
+    DevDashboard.showApp();
     document.querySelector('[data-tab="message-randomizer"]').click();
   })()`);
   await cdp.sleep(1000);
@@ -307,7 +307,7 @@ const openDeveloperRules = async (p) => {
       body: JSON.stringify({ password: ${password} })
     });
     if (!response.ok) throw new Error('Developer sign-in failed');
-    showApp();
+    DevDashboard.showApp();
     document.querySelector('[data-tab="rules"]').click();
   })()`);
   await cdp.sleep(500);
@@ -322,7 +322,7 @@ const openDeveloperVibeCoder101 = async (p) => {
       body: JSON.stringify({ password: ${password} })
     });
     if (!response.ok) throw new Error('Developer sign-in failed');
-    showApp();
+    DevDashboard.showApp();
     document.querySelector('[data-tab="vibe-coder-101"]').click();
   })()`);
   await cdp.sleep(250);
@@ -365,7 +365,7 @@ const openDeveloperImages = (fx) => async (p) => {
       { method: 'POST', headers: { 'Content-Type': 'image/webp' }, body: bytes }
     );
     if (!courtUpload.ok || !gameUpload.ok) throw new Error('Image fixture upload failed');
-    showApp();
+    DevDashboard.showApp();
     document.querySelector('[data-tab="images"]').click();
   })()`);
   await cdp.sleep(900);
