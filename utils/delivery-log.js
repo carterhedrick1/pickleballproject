@@ -11,7 +11,7 @@ const { SMS_EVENT_DEFINITIONS } = require('../sms-event-catalog');
 
 const EVENT_TITLES = new Map(SMS_EVENT_DEFINITIONS.map((event) => [event.id, event.title]));
 
-const UNKNOWN_RECIPIENT = 'Someone no longer on this game';
+const UNKNOWN_RECIPIENT = 'Name Unavailable';
 
 function knownRecipients(game, hashPhone) {
   const known = new Map();
