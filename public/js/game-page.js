@@ -410,7 +410,7 @@ import * as PlayerIdentity from './player-identity.js';
                     // point of the app, and the help text under the form explains the review.
                     if (joinSectionTitle && joinButton) {
                         joinSectionTitle.textContent = 'Apply For This Game';
-                        joinButton.textContent = 'IN';
+                        joinButton.textContent = 'Apply';
                     }
                     
                     // Show waitlist mode info at top of tips
@@ -554,8 +554,8 @@ import * as PlayerIdentity from './player-identity.js';
                         mood: 'is-waiting',
                         title: "You're On The Waitlist",
                         detail: status.position
-                            ? `Number ${status.position} in line.`
-                            : 'If a spot opens up we’ll text you.',
+                            ? `You’re #${status.position} in line. We’ll text you if a spot becomes available for you.`
+                            : 'We’ll text you if a spot becomes available for you.',
                         action: 'out',
                         actionLabel: 'Leave The Waitlist'
                     };
@@ -804,7 +804,7 @@ import * as PlayerIdentity from './player-identity.js';
                         confirmStatus.textContent = `Application Under Review`;
                     } else {
                         confirmTitle.textContent = "You're On The Waitlist!";
-                        confirmMessage.textContent = `The game is full. If someone cancels, the spot is yours and we'll text you.`;
+                        confirmMessage.textContent = `You’re #${data.position} in line. We’ll text you if a spot becomes available for you.`;
                         confirmStatus.textContent = `Waitlist Position #${data.position}`;
                     }
                 }

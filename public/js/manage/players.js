@@ -1,3 +1,4 @@
+import { currentAttendance } from '../current-attendance.js';
 // The Players tab: the roster, the waitlist, the "can't make it" list, the saved-roster
 // picker and the invitation sender.
 //
@@ -66,6 +67,7 @@ function renderRosterAddPicker() {
     const actions = document.getElementById('rosterPickerActions');
     if (!list || !status || !actions) return;
 
+    const selected = new Set(Array.from(list.querySelectorAll('input:checked'), input => input.value));
     clear(list);
     status.classList.remove('error-text');
 
@@ -105,6 +107,7 @@ function renderRosterAddPicker() {
             ManageRender.createRosterOption(document, player, updateRosterSelectionState)
         );
     });
+    list.querySelectorAll('input').forEach(input => { input.checked = selected.has(input.value); });
     actions.hidden = false;
     updateRosterSelectionState();
 }
@@ -177,6 +180,7 @@ function inviteRecordByPhone() {
 
 /** The one chip that best describes somebody: their answer, or why they still owe you one. */
 function inviteBadge(response, record) {
+    if (response === 'waitlist' && gameData.registrationMode === 'waitlist') return { label: 'Applicant', tone: 'waiting' };
     if (response) return RESPONSE_BADGES[response];
     if (!record) return null;
     if (record.lastTextStatus === 'failed') return { label: 'Text Failed', tone: 'out' };
@@ -292,7 +296,7 @@ function updateInviteSelectionState() {
     const button = document.getElementById('textInvitations');
     if (!button) return;
     const count = selectedInviteePhones().length;
-    button.disabled = count === 0;
+    button.disabled = count === 0 || gameData.cancelled || !CentralTime.isGameUpcoming(gameData.date, gameData.time);
     button.textContent = count === 0
         ? 'Text The Invitation'
         : `Text The Invitation (${count})`;
@@ -307,8 +311,8 @@ function clearInviteSelection() {
 // A texted invitation is the only invite path the app can actually vouch for, so the send
 // records itself against the game and the roster below updates from the response.
 export async function textInvitations(phones, { confirmTitle, confirmQuestion } = {}) {
-    if (!CentralTime.getGameStatus(gameData).canEdit) {
-        showStatus('This game has ended, so invitations can no longer be sent.', 'error');
+    if (gameData.cancelled || !CentralTime.isGameUpcoming(gameData.date, gameData.time)) {
+        showStatus('Invitations are closed for cancelled or started games.', 'error');
         return;
     }
 
@@ -426,7 +430,7 @@ export function renderInvitations() {
 
     const parts = [`${counts.invited} invited`];
     if (counts.confirmed) parts.push(`${counts.confirmed} in`);
-    if (counts.waitlist) parts.push(`${counts.waitlist} waiting`);
+    if (counts.waitlist) parts.push(gameData.registrationMode === 'waitlist' ? `${counts.waitlist} applied` : `${counts.waitlist} waiting`);
     if (counts.out) parts.push(`${counts.out} out`);
     parts.push(counts.noReply ? `${counts.noReply} no reply` : 'everyone replied');
     summary.textContent = parts.join(' · ');
@@ -656,14 +660,20 @@ function confirmedPlayerMeta(player) {
     }
     const promoted = PageUtils.formatTimeAgo(player.promotedAt);
     if (promoted) {
-        meta.push(promoted === 'just now'
-            ? 'Promoted from the waitlist just now'
-            : `Promoted from the waitlist ${promoted}`);
+        const action = gameData.registrationMode === 'waitlist' ? 'Selected by the host' : 'Promoted from the waitlist';
+        meta.push(promoted === 'just now' ? `${action} just now` : `${action} ${promoted}`);
     }
     return meta;
 }
 
 export function updatePlayerLists() {
+    Object.assign(gameData, currentAttendance(gameData));
+    const selecting = gameData.registrationMode === 'waitlist';
+    document.querySelector('.player-section.waitlist .subsection-title').textContent = selecting ? 'Applicants' : 'Waitlist';
+    for (const id of ['sendToWaitlist', 'rosterAddToWaitlist', 'addToWaitlist']) {
+        document.querySelector(`label[for="${id}"]`).textContent = selecting ? 'Applicants' : id === 'sendToWaitlist' ? 'Waitlisted Players' : 'Waitlist';
+    }
+
     const confirmedPlayers = document.getElementById('confirmedPlayers');
     const waitlistPlayers = document.getElementById('waitlistPlayers');
     const outPlayersContainer = document.getElementById('outPlayers'); // Add this line
@@ -702,7 +712,7 @@ export function updatePlayerLists() {
         const playerText = count === 1 ? 'player' : 'players';
         setCounter(waitlistCountElement, [
             { id: 'waitlistCount', text: String(count) },
-            { text: ` ${playerText} waiting` }
+            { text: selecting ? ` ${count === 1 ? 'applicant' : 'applicants'}` : ` ${playerText} waiting` }
         ]);
     }
 
@@ -729,7 +739,7 @@ export function updatePlayerLists() {
             // permanently one player short.
             const actions = player.isOrganizer ? [] : [
                 {
-                    label: 'To Waitlist',
+                    label: selecting ? 'To Applicants' : 'To Waitlist',
                     className: 'btn-secondary',
                     onClick: () => moveToWaitlist(player.id)
                 },
@@ -750,21 +760,21 @@ export function updatePlayerLists() {
     
     // Populate waitlist
     if (gameData.waitlist.length === 0) {
-        waitlistPlayers.appendChild(emptyNote('Nobody waiting'));
+        waitlistPlayers.appendChild(emptyNote(selecting ? 'No applicants yet' : 'Nobody waiting'));
     } else {
         gameData.waitlist.forEach((player, index) => {
             const waiting = PageUtils.formatDuration(player.joinedAt);
             waitlistPlayers.appendChild(ManageRender.createPlayerItem(document, player, {
                 meta: [
-                    `Position: #${index + 1}`,
+                    !selecting && `Position: #${index + 1}`,
                     // Who has been waiting longest is the whole reason a host reads this list.
                     waiting && (waiting === 'just now'
-                        ? 'Joined the waitlist just now'
-                        : `Waiting ${waiting}`)
+                        ? (selecting ? 'Applied just now' : 'Joined the waitlist just now')
+                        : `${selecting ? 'Applied' : 'Waiting'} ${waiting}`)
                 ].filter(Boolean),
                 actions: [
                     {
-                        label: 'Promote',
+                        label: selecting ? 'Select Player' : 'Promote',
                         className: 'btn-secondary',
                         onClick: () => promoteToGame(player.id)
                     },
@@ -859,7 +869,7 @@ export async function addPlayerManually() {
 
 export async function moveToWaitlist(playerId) {
   try {
-    showStatus('Moving player to waitlist...', 'info');
+    showStatus(gameData.registrationMode === 'waitlist' ? 'Moving player to applicants...' : 'Moving player to waitlist...', 'info');
     
     // First find the player in the game data
     const player = gameData.players.find(p => p.id === playerId);
@@ -884,7 +894,7 @@ export async function moveToWaitlist(playerId) {
     await fetchGameData();
     
     // Show status with SMS info
-    let statusMessage = `${player.name} moved to waitlist`;
+    let statusMessage = `${player.name} moved to ${gameData.registrationMode === 'waitlist' ? 'applicants' : 'waitlist'}`;
     if (data.sms && data.sms.success) {
       statusMessage += ' and notified via SMS';
     } else if (data.sms && !data.sms.success) {
@@ -1024,8 +1034,8 @@ export async function removeWaitlisted(playerId) {
     }
     
     showConfirmModal(
-      'Remove From Waitlist',
-      `Are you sure you want to remove ${player.name} from the waitlist?`, 
+      gameData.registrationMode === 'waitlist' ? 'Remove Applicant' : 'Remove From Waitlist',
+      `Are you sure you want to remove ${player.name} from ${gameData.registrationMode === 'waitlist' ? 'the applicants' : 'the waitlist'}?`,
       async () => {
         try {
           showStatus('Removing from waitlist...', 'info');
@@ -1086,7 +1096,7 @@ export async function addOutPlayerBackToGame(playerId) {
 
   const gameIsFull = gameData.players.length >= parseInt(gameData.totalPlayers, 10);
   const destination = gameIsFull ? 'waitlist' : 'add';
-  const destinationLabel = gameIsFull ? 'the waitlist' : 'the confirmed players';
+  const destinationLabel = gameData.registrationMode === 'waitlist' ? 'the applicants' : gameIsFull ? 'the waitlist' : 'the confirmed players';
 
   showConfirmModal(
     'Add Player Back',

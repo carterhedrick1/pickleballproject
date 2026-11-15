@@ -1,3 +1,4 @@
+const { currentAttendance } = require('../public/js/current-attendance');
 /**
  * Who is attached to a game, and in what capacity.
  *
@@ -35,7 +36,7 @@ function findOnGame(game, phone) {
 function textableAudience(game) {
   const audience = [];
   for (const [type, key] of AUDIENCE_GROUPS) {
-    for (const player of game?.[key] || []) {
+    for (const player of currentAttendance(game)[key] || []) {
       if (player && player.phone && !player.isOrganizer) {
         audience.push({ player, type });
       }

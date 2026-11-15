@@ -38,9 +38,9 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'Sent when a player joins a numbered first-come waitlist. The app adds their live position and game details.',
     preview:
-      "You've been added to the waitlist for the pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM. You are #1 on the waitlist. We'll notify you if a spot opens up. Reply 2 for game details, or 9 to cancel.",
+      "You've been added to the waitlist for the pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM. You are #1 on the waitlist. We'll text you if a spot becomes available for you. Reply 2 for game details, or 9 to cancel.",
     defaultDetailsTemplate:
-      "You've been added to the waitlist for the pickleball game at {LOCATION} on {DATE} at {TIME}. You are #{POSITION} on the waitlist. We'll notify you if a spot opens up. Reply 2 for game details, or 9 to cancel.",
+      "You've been added to the waitlist for the pickleball game at {LOCATION} on {DATE} at {TIME}. You are #{POSITION} on the waitlist. We'll text you if a spot becomes available for you. Reply 2 for game details, or 9 to cancel.",
     tokens: ['DEFAULT_TEXT', 'LOCATION', 'DATE', 'TIME', 'POSITION'],
     maxLength: 240,
     detailsMaxLength: DETAILS_MAX_LENGTH
@@ -70,7 +70,7 @@ const TEXT_MESSAGE_CATEGORIES = Object.freeze([
     description:
       'Sent when the organizer moves a confirmed player to the waitlist, selects them, promotes them, or removes them.',
     preview:
-      "You've been moved to the waitlist for the pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM. You are #1 on the waitlist. We'll notify you if a spot opens up. Reply 2 for details, or 9 to cancel.",
+      "You've been moved to the waitlist for the pickleball game at Oak Park Courts on Sat, Aug 1 at 9:00 AM. You are #1 on the waitlist. We'll text you if a spot becomes available for you. Reply 2 for details, or 9 to cancel.",
     previewNote:
       "Selection and promotion use the You're In text. Organizer removal uses registration or waitlist wording.",
     defaultDetailsTemplate: DEFAULT_TEXT_TOKEN,

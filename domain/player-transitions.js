@@ -74,6 +74,14 @@ function describePlayerStatus(game, phone) {
   return { status: 'none' };
 }
 
+function recordWaitlistHistory(game, player) {
+  if (game.registrationMode === 'waitlist') return; // Applications are not numbered waiting.
+  if (!game.waitlistHistory) game.waitlistHistory = [];
+  if (!game.waitlistHistory.some((entry) => player.phone ? entry.phone === player.phone : entry.id === player.id)) {
+    game.waitlistHistory.push({ ...player });
+  }
+}
+
 function joinPlayer(game, playerData, { forceWaitlist = false, id, now } = {}) {
   const existing = findExistingPlayer(game, playerData.phone);
   if (existing) {
@@ -99,6 +107,7 @@ function joinPlayer(game, playerData, { forceWaitlist = false, id, now } = {}) {
   const approvalMode = game.registrationMode === 'waitlist';
 
   if (approvalMode || forceWaitlist || spotsAvailable <= 0) {
+    recordWaitlistHistory(game, player);
     game.waitlist.push(player);
     return transitionResult(game, {
       player,
@@ -265,6 +274,7 @@ function movePlayerToWaitlist(game, playerId) {
 
   if (!game.waitlist) game.waitlist = [];
   const player = game.players.splice(index, 1)[0];
+  recordWaitlistHistory(game, player);
   game.waitlist.push(player);
 
   return transitionResult(game, {

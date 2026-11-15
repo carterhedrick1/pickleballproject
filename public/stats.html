@@ -155,25 +155,27 @@
 
             document.getElementById('summaryCards').innerHTML = [
                 statCard(summary.gamesHosted, 'Games Hosted'),
-                statCard(summary.completed, 'Played'),
+                statCard(summary.completed, 'Finished'),
                 statCard(summary.upcoming, 'Coming Up'),
+                statCard(summary.inProgress || 0, 'In Progress'),
                 statCard(summary.cancelled, 'Cancelled'),
                 statCard(percent(fillRate.average), `Average Fill${fillRate.gamesCounted ? ` (${fillRate.gamesCounted} ${fillRate.gamesCounted === 1 ? 'Game' : 'Games'})` : ''}`),
                 statCard(players.distinctCount, 'Different Players')
             ].join('');
 
             document.getElementById('playersBlock').innerHTML = `
-                <h4 class="section-subtitle" style="font-size:16px;">Plays The Most</h4>
+                <h4 class="section-subtitle" style="font-size:16px;">Most Finished-Game Registrations</h4>
                 ${list(players.top,
                     (p) => `<li>${esc(p.name)} <span class="count">- ${p.games} ${p.games === 1 ? 'game' : 'games'}</span></li>`,
-                    'Nobody has played a game yet.')}
+                    'No confirmed registrations on finished games yet.')}
 
-                <h4 class="section-subtitle" style="font-size:16px;">Waits The Most</h4>
+                <h4 class="section-subtitle" style="font-size:16px;">Recorded Waitlist History</h4>
                 ${list(players.waitlistRegulars,
                     (p) => `<li>${esc(p.name)} <span class="count">- waitlisted ${p.times} ${p.times === 1 ? 'time' : 'times'}</span></li>`,
-                    'Nobody has been on a waitlist yet.')}
+                    'No historical waitlist activity is recorded.')}
 
-                <h4 class="section-subtitle" style="font-size:16px;">Cancels The Most</h4>
+                <p>${players.currentlyWaiting || 0} currently waiting across active first-come games.</p>
+                <h4 class="section-subtitle" style="font-size:16px;">Recorded OUT Responses</h4>
                 ${list(players.outs,
                     (p) => `<li>${esc(p.name)} <span class="count">- out ${p.timesOut} ${p.timesOut === 1 ? 'time' : 'times'}${p.confirmedCancels ? `, ${p.confirmedCancels} after taking a spot` : ''}</span></li>`,
                     'Nobody has pulled out yet.')}

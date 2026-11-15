@@ -1,9 +1,8 @@
 // public/js/invitation-generator.js - Fixed registration mode handling
 //
-// This reads PlayerCapacity to work out how many spots an invitation should advertise. That
-// used to be an implicit dependency on every page loading player-capacity.js first; it is an
-// import now, so the page cannot get the order wrong.
-import * as PlayerCapacity from './player-capacity.js';
+// Server invitations and browser fallbacks share the same availability and registration copy.
+import { invitationAvailability } from './invitation-availability.js';
+import { isGameUpcoming } from './central-time.js';
 
 /**
  * Generates a complete invitation message for a pickleball game
@@ -29,30 +28,6 @@ function generateInvitationMessage(gameData, gameId, baseUrl = null) {
     const formattedDate = formatDateForDisplay(gameData.date);
     const formattedTime = formatTime(gameData.time);
     
-    // Calculate available spots
-    const totalPlayers = parseInt(gameData.totalPlayers);
-    const organizerPlaying = gameData.organizerPlaying !== false; // Default to true if not specified
-    const availableSpots = PlayerCapacity.additionalFromTotal(totalPlayers, organizerPlaying);
-    
-    // Handle singular/plural spots
-    const spotsText = availableSpots === 1 ? 'Spot' : 'Spots';
-
-    // Get registration mode - check multiple possible property names
-    const registrationMode = gameData.registrationMode || gameData.gameMode || 'fcfs';
-    
-    console.log('[INVITATION] Registration mode detected:', registrationMode); // Debug log
-    console.log('[INVITATION] Game data:', gameData); // Debug log
-    
-    // Determine if we should add the "First X to respond are in" message.
-    // Only show for first-come-first-serve mode
-    const isFirstCome = registrationMode === 'fcfs';
-
-    const firstComeMessage = isFirstCome
-        ? `\nFirst ${availableSpots} to respond ${availableSpots === 1 ? 'is' : 'are'} in.`
-        : '';
-    
-    console.log('[INVITATION] First come mode:', isFirstCome, '- Message:', firstComeMessage); // Debug log
-    
     // Build the complete invitation message
     const message = `Let us know if you're IN or OUT for pickleball by clicking the link below:
 
@@ -62,9 +37,8 @@ Location: ${gameData.location}
 Date: ${formattedDate}
 Time: ${formattedTime}
 Duration: ${gameData.duration} minutes
-${spotsText}: ${availableSpots}
+${invitationAvailability(gameData)}
 ${gameData.message ? '\n' + gameData.message : ''}
-${firstComeMessage}
 
 `;
 
@@ -118,21 +92,30 @@ function formatTime(timeStr) {
  * @returns {Promise<string>} The invitation text
  */
 async function buildInvitationMessage(gameData, gameId, baseUrl = null, hostToken = null) {
-    const message = generateInvitationMessage(gameData, gameId, baseUrl);
-    if (!hostToken || typeof fetch !== 'function') return message;
-
-    try {
-        const response = await fetch(`/api/games/${encodeURIComponent(gameId)}/invitation-message`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: hostToken })
+    // Never turn a server refusal or an unknown current roster into a stale invitation.
+    if (hostToken && typeof fetch === 'function') {
+        let response;
+        try {
+            response = await fetch(`/api/games/${encodeURIComponent(gameId)}/invitation-message`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: hostToken })
+            });
+        } catch (_) { /* Try a fresh read for deterministic browser fallback. */ }
+        if (response && response.status < 500) {
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Invitations are unavailable.');
+            if (data.message) return data.message;
+        }
+        const current = await fetch(`/api/games/${encodeURIComponent(gameId)}`, {
+            headers: { 'X-Host-Token': hostToken }, cache: 'no-store'
         });
-        const data = await response.json().catch(() => ({}));
-        if (response.ok && data.message) return data.message;
-    } catch (_error) {
-        // The deterministic client copy is the safe fallback when the endpoint is unavailable.
+        if (!current.ok) throw new Error('Refresh the game before sharing its invitation.');
+        gameData = await current.json();
     }
-    return message;
+    if (gameData.cancelled || !isGameUpcoming(gameData.date, gameData.time)) {
+        throw new Error('Invitations are closed for cancelled or started games.');
+    }
+    return generateInvitationMessage(gameData, gameId, baseUrl);
 }
 
 /** Whether this browser can hand the invitation to the phone's own share sheet. */
@@ -161,7 +144,9 @@ async function shareInvitation(
 ) {
     if (!canShareInvitation()) return false;
 
-    const message = await buildInvitationMessage(gameData, gameId, baseUrl, hostToken);
+    let message;
+    try { message = await buildInvitationMessage(gameData, gameId, baseUrl, hostToken); }
+    catch (error) { showCopyFeedback(buttonId, error.message, true); return false; }
     try {
         await navigator.share({ text: message });
         showCopyFeedback(buttonId, 'Invitation Shared!');
@@ -191,7 +176,9 @@ async function copyInvitationToClipboard(
 ) {
     console.log('[COPY] Copying invitation with game data:', gameData); // Debug log
 
-    const message = await buildInvitationMessage(gameData, gameId, baseUrl, hostToken);
+    let message;
+    try { message = await buildInvitationMessage(gameData, gameId, baseUrl, hostToken); }
+    catch (error) { showCopyFeedback(buttonId, error.message, true); return false; }
 
     try {
         // Try modern clipboard API first

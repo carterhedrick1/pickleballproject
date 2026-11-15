@@ -122,7 +122,8 @@
 
                     <div class="form-group">
                         <label for="players" id="playersLabel">Players Needed (Besides You):</label>
-                        <input type="number" id="players" name="players" value="3" min="1" max="50" required>
+                        <input type="number" id="players" name="players" value="3" min="1" max="50" aria-describedby="capacityHelp" required>
+                            <p id="capacityHelp" class="help-text" aria-live="polite"></p>
                     </div>
 
                     <div class="form-group">
@@ -157,7 +158,7 @@
                                 <div class="notification-content">
                                     <div class="notification-icon"></div>
                                     <div class="notification-text">
-                                        <div class="notification-title">Waitlist Mode</div>
+                                        <div class="notification-title">Host Selects Players</div>
                                         <div class="notification-description">Everyone applies and you choose who's in.</div>
                                     </div>
                                 </div>

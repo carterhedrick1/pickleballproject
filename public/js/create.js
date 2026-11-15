@@ -32,6 +32,7 @@ import * as PlayerCapacity from './player-capacity.js';
                 updatePlayersHelp();
             });
             updatePlayersHelp();
+            document.getElementById('players').addEventListener('input', updatePlayersHelp);
             const ready = setupLocationPicker();
             document.querySelectorAll('[data-checkbox-id]').forEach((element) => {
                 element.addEventListener('click', (event) => {
@@ -143,10 +144,11 @@ import * as PlayerCapacity from './player-capacity.js';
             }
         }
 
-        // The label carries the whole rule, so no helper sentence is needed under it.
+        // Show the total beside the number before the host creates the game.
         function updatePlayersHelp() {
             const organizerPlaying = document.getElementById('organizerPlaying').checked;
             const label = document.getElementById('playersLabel');
+            document.getElementById('capacityHelp').textContent = PlayerCapacity.capacityExplanation(document.getElementById('players').value, organizerPlaying);
             label.textContent = organizerPlaying
                 ? 'Players Needed (Besides You):'
                 : 'Total Players Needed:';

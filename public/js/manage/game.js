@@ -1,3 +1,4 @@
+import { currentAttendance } from '../current-attendance.js';
 // The Game Details tab, the page's chrome, and the pieces every tab shares: the status line,
 // the confirmation modal, the tab switching and the game summary.
 //
@@ -210,6 +211,8 @@ export function openTab(evt, tabName) {
     }
 
     localStorage.setItem('managePageActiveTab', tabName);
+    if (gameData) fetchGameData({ background: true });
+    if (tabName === 'Communication') loadDeliveryLog();
 }
 
 export function openTabFromSelect(tabName) {
@@ -237,9 +240,21 @@ export function openTabFromSelect(tabName) {
         tabSelector.value = tabName;
     }
     localStorage.setItem('managePageActiveTab', tabName);
+    if (gameData) fetchGameData({ background: true });
+    if (tabName === 'Communication') loadDeliveryLog();
 }
 
-export async function fetchGameData() {
+let refreshing = false;
+let deferredRefresh = false;
+const liveLists = '#confirmedPlayers, #waitlistPlayers, #outPlayers, #playerCheckboxes, #intendedInviteeList, #rosterPlayerList';
+export async function fetchGameData({ background = false } = {}) {
+    if (refreshing) return;
+    if (background && document.activeElement?.closest(liveLists)) {
+        deferredRefresh = true;
+        return;
+    }
+    refreshing = true;
+    const firstLoad = !gameData;
     try {
         const response = await request(`/api/games/${gameId}`);
 
@@ -251,7 +266,13 @@ export async function fetchGameData() {
             throw new Error('Failed to fetch game data');
         }
 
-        setGameData(await response.json());
+        const fresh = await response.json();
+        // Focus may have moved into a list while the request was in flight.
+        if (background && document.activeElement?.closest(liveLists)) {
+            deferredRefresh = true;
+            return;
+        }
+        setGameData({ ...fresh, ...currentAttendance(fresh) });
         console.log('[CLIENT] Game data received:', gameData);
         console.log('[CLIENT] Notification preferences received:', gameData.notificationPreferences);
         
@@ -272,11 +293,11 @@ export async function fetchGameData() {
             // Add expired class to disable editing
             document.getElementById('gameManagement').classList.add('expired');
             // Update page title
-            document.title = (gameStatus.type === 'cancelled' ? '[CANCELLED] ' : '[ENDED] ') + document.title;
+            document.title = (gameStatus.type === 'cancelled' ? '[CANCELLED] ' : '[ENDED] ') + 'Manage Your Game - IN or OUT';
         }
         
         // Populate game details (this will set notification preferences).
-        populateGameDetails();
+        if (firstLoad) populateGameDetails();
         updateGameSummary();
         updatePlayerLinkField();
 
@@ -288,14 +309,13 @@ export async function fetchGameData() {
         loadHostRoster();
         
         // Generate share links (only if not expired)
-        if (CentralTime.getGameStatus(gameData).canEdit) {
-            populateShareLinks();
-        }
+        populateShareLinks();
 
-        showCreationNotice();
+        if (firstLoad) showCreationNotice();
+        document.getElementById('attendanceRefreshStatus').textContent = `Updated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
         
         // If game is expired, force switch to Players tab (read-only)
-        if (!CentralTime.getGameStatus(gameData).canEdit) {
+        if (firstLoad && !CentralTime.getGameStatus(gameData).canEdit) {
             // Force switch to Players tab since it's the only useful one for expired games
             setTimeout(() => {
                 openTabFromSelect('Players');
@@ -306,6 +326,9 @@ export async function fetchGameData() {
         console.error('Error:', error);
         showStatus('Error loading game: ' + error.message, 'error');
         document.getElementById('loading').style.display = 'none';
+        document.getElementById('attendanceRefreshStatus').textContent = 'Refresh failed. Try again.';
+    } finally {
+        refreshing = false;
     }
 }
 
@@ -362,6 +385,23 @@ function showExpiredGameWarning(statusType) {
 
 
 export function setupEventListeners() {
+    document.getElementById('players').addEventListener('input', updateOrganizerPlayingCopy);
+    document.getElementById('refreshAttendance').addEventListener('click', () => fetchGameData({ background: true }));
+    document.getElementById('editGameFromSummary').addEventListener('click', () => openTabFromSelect('Details'));
+    window.addEventListener('focus', () => fetchGameData({ background: true }));
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) fetchGameData({ background: true });
+    });
+    document.addEventListener('focusout', () => {
+        if (deferredRefresh) setTimeout(() => {
+            deferredRefresh = false;
+            fetchGameData({ background: true });
+        }, 0);
+    });
+    setInterval(() => {
+        if (!document.hidden) fetchGameData({ background: true });
+    }, 15000);
+
     document.querySelectorAll('[data-tab]').forEach((tab) => {
         tab.addEventListener('click', (event) => openTab(event, tab.dataset.tab));
     });
@@ -561,10 +601,10 @@ export function setupEventListeners() {
 
 
 // The player-count field means "how many others" only while the host is playing, so its label
-// has to follow the tick box rather than waiting for a save. The label carries the whole
-// rule; no helper sentence is needed under it.
+// and its capacity explanation follow the checkbox before saving.
 function updateOrganizerPlayingCopy() {
     const playing = document.getElementById('organizerPlaying')?.checked === true;
+    document.getElementById('capacityHelp').textContent = PlayerCapacity.capacityExplanation(document.getElementById('players').value, playing);
     const label = document.getElementById('playersLabel');
     if (label) {
         label.textContent = playing
@@ -871,7 +911,7 @@ export function updateGameSummary() {
     const out = (gameData.outPlayers || []).length;
 
     const parts = [`${confirmed} of ${total} in`];
-    if (waiting) parts.push(`${waiting} waiting`);
+    if (waiting) parts.push(gameData.registrationMode === 'waitlist' ? `${waiting} ${waiting === 1 ? 'applicant' : 'applicants'}` : `${waiting} waiting`);
     if (out) parts.push(`${out} out`);
 
     const status = CentralTime.getGameStatus(gameData);
@@ -965,10 +1005,10 @@ function populateShareLinks() {
 
     // Check if game is expired or cancelled
     const gameStatus = CentralTime.getGameStatus(gameData);
-    const shouldDisable = !gameStatus.canJoin || gameData.cancelled;
+    const shouldDisable = !gameStatus.canJoin || !CentralTime.isGameUpcoming(gameData.date, gameData.time);
     
-    const disabledText = gameData.cancelled ? 'Game Cancelled — Cannot Share' : 'Game Ended — Cannot Share';
-    const disabledTitle = gameData.cancelled ? 'This game is cancelled, so its invitation can no longer be shared.' : 'This game has ended, so its invitation can no longer be shared.';
+    const disabledText = gameData.cancelled ? 'Game Cancelled — Cannot Share' : 'Invitations Closed';
+    const disabledTitle = gameData.cancelled ? 'This game is cancelled, so its invitation can no longer be shared.' : 'This game has started, so its invitation can no longer be shared.';
     
     function setButtonState(btn, disabled) {
         if (!btn) return;

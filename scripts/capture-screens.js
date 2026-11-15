@@ -539,6 +539,15 @@ function buildScreens(fx) {
     { file: 'game-full', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.full.gameId}`,
       title: 'Game full',
       note: 'Same file, different state: the signup form becomes a waitlist signup.' },
+    { file: 'game-waitlist-second', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.full.gameId}`,
+      title: 'Second In The Waitlist',
+      note: 'Position two gets a conditional text notification promise, not a promise of the next opening.',
+      act: async (p) => {
+        await p.evaluate(`fetch('/api/games/${fx.full.gameId}/players', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'First Waiter', phone: '5555550181' }) })`);
+        await signUpAsPlayer(fx)(p);
+        const copy = await p.evaluate(`document.getElementById('confirmationMessage').textContent`);
+        if (!copy.includes('#2 in line')) throw new Error('Second-waiter screenshot did not reach position two');
+      } },
     { file: 'game-approval', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.approval.gameId}`,
       title: 'Approval mode',
       note: 'The roster is hidden. Everyone applies and waits to be picked.' },
@@ -564,6 +573,10 @@ function buildScreens(fx) {
       title: 'Expanded Text Delivery Log',
       note: 'Show All Texts expands the delivery log to its full height. Show Fewer Texts restores the resizable list.',
       act: async (p) => { await showDeliveryLabels(p, true); } },
+    { file: 'manage-details-phone', of: '/manage.html?id=…&token=…', size: 'phone',
+      url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
+      title: 'Game Details On A Phone',
+      note: 'All four management sections remain visible. Edit Game Details and Refresh Attendance are available beside the game summary; the capacity explanation follows the host playing toggle.', act: clickTab(3) },
     { file: 'manage-details', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
       title: 'Game Details tab',
@@ -571,7 +584,7 @@ function buildScreens(fx) {
     { file: 'manage-approval-roster', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.approval.gameId}&token=${fx.approval.hostToken}`,
       title: 'Players tab on an approval game',
-      note: 'Three applicants waiting. Nobody is confirmed until the host promotes them.', act: clickTab(1) },
+      note: 'Three applicants waiting. Nobody is confirmed until the host selects them.', act: clickTab(1) },
     { file: 'manage-game-day', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.gameDay.gameId}&token=${fx.gameDay.hostToken}`,
       title: 'Game day',
@@ -801,7 +814,7 @@ ${body}
   let browser = null;
   try {
     process.stdout.write('starting a throwaway app ... ');
-    app = await server.start();
+    app = await server.start({ isolatedDatabase: !KEEP });
     console.log(`${app.baseUrl} (SQLite, SMS in dev mode)`);
 
     process.stdout.write('seeding demo games ... ');
@@ -835,7 +848,7 @@ ${body}
     console.log(`\ncapturing ${screens.length} screens at ${PHONE ? 'phone' : 'desktop'} width:`);
     const taken = [];
     for (const s of screens) {
-      const size = SIZE[s.size];
+      const size = s.size === 'phone' ? { w: 390, dsf: 2, q: 72 } : SIZE[s.size];
       const p = await browser.newPage({ width: size.w, deviceScaleFactor: size.dsf });
       try {
         await p.goto(app.baseUrl + s.url);
@@ -865,11 +878,9 @@ ${body}
     if (app) await app.stop();
     if (KEEP) {
       console.log('\n--keep-fixtures: demo games left in the local database.');
-    } else {
-      // Screenshots stay on the shared local database (the browser smoke is the one that gets
-      // a throwaway), so the demo games still have to be swept by their marker.
-      const removed = await fixtures.cleanup(app?.dbFile);
-      console.log(`\ncleaned up ${removed} demo game(s) from the local database.`);
+    } else if (app) {
+      // stop() removes the whole disposable database, including sidecars and fixture logs.
+      console.log('Removed the disposable Screens database.');
     }
   }
 })().catch((e) => {

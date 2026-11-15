@@ -18,6 +18,7 @@ const {
 } = require('../utils/sms-format');
 
 const { acquireGameLock } = require('../utils/game-lock');
+const { normalizePhone } = require('../public/js/invite-status');
 const { findOnGame } = require('../utils/game-audience');
 const { routeFailed } = require('../utils/route-error');
 const { isHost, requestHostToken } = require('../utils/host-auth');
@@ -73,6 +74,7 @@ module.exports = function mountAnnouncementRoutes(app) {
       let recipientCount = 0;
       const results = [];
       const skipped = [];
+      const sentPhones = new Set();
       // Send to each selected recipient
       for (const recipient of recipients) {
         if (!recipient || !recipient.phone) continue;
@@ -84,6 +86,10 @@ module.exports = function mountAnnouncementRoutes(app) {
           skipped.push({ player: recipient.name || recipient.phone, reason: 'not on this game' });
           continue;
         }
+
+        const phoneKey = normalizePhone(listed.player.phone);
+        if (sentPhones.has(phoneKey)) continue;
+        sentPhones.add(phoneKey);
 
         const configuredMessage = personalityWrapper === true ? await resolveTextMessage(
           'organizer-announcement',
@@ -153,6 +159,9 @@ module.exports = function mountAnnouncementRoutes(app) {
       }
       
       const removedPlayer = game.outPlayers.splice(playerIndex, 1)[0];
+      // Clearing a current OUT row (including Add Back) must not erase cancellation statistics.
+      if (!game.cancellationHistory) game.cancellationHistory = [];
+      game.cancellationHistory.push(removedPlayer);
       await saveGame(gameId, game, game.hostToken, game.hostPhone);
       releaseLock();
 

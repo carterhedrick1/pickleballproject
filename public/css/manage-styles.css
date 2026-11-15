@@ -1997,3 +1997,13 @@ button:disabled {
 .photo-status.success {
     color: var(--brand);
 }
+
+/* Keep every management section visible at phone widths, too. */
+.page-manage .mobile-tab-container { display: none !important; }
+.page-manage .tabs-container { display: block !important; }
+.page-manage .tabs { display: flex !important; flex-wrap: wrap; }
+.tabs .tab { flex: 1 1 auto; min-height: 44px; }
+.attendance-refresh { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+#gameSummary button { margin-top: 12px; }
+.player-checkbox-item { cursor: pointer; min-height: 44px; }
+.player-checkbox-item:focus-within { outline: 3px solid var(--brand); outline-offset: 2px; }

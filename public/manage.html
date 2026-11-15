@@ -46,6 +46,7 @@
             <div id="gameSummary" class="game-summary" hidden>
                 <div id="gameSummaryHeadline" class="game-summary-headline"></div>
                 <div id="gameSummaryMeta" class="game-summary-meta"></div>
+                <button type="button" id="editGameFromSummary" class="btn-secondary">Edit Game Details</button>
             </div>
 
             <!-- Inside 24 hours the host stops recruiting and starts running the game, so the two
@@ -62,9 +63,13 @@
                 <button type="button" id="gameDayLog" class="game-day-link">See What Was Sent</button>
             </div>
 
+            <div class="attendance-refresh">
+                <button type="button" id="refreshAttendance" class="btn-secondary">Refresh Attendance</button>
+                <span id="attendanceRefreshStatus" role="status"></span>
+            </div>
             <!-- Mobile Tab Selection -->
             <div class="mobile-tab-container">
-                <select id="tabSelector" class="mobile-tab-selector">
+                <select aria-label="Management Section" id="tabSelector" class="mobile-tab-selector">
                     <option value="Invite">Invite</option>
                     <option value="Players">Players</option>
                     <option value="Communication">Communication</option>
@@ -177,7 +182,8 @@
 
                         <div class="form-group">
                             <label id="playersLabel" for="players">Players Needed (Besides You):</label>
-                            <input type="number" id="players" name="players" min="1" max="50" required>
+                            <input type="number" id="players" name="players" min="1" max="50" aria-describedby="capacityHelp" required>
+                            <p id="capacityHelp" class="help-text" aria-live="polite"></p>
                         </div>
                         
                         <div class="form-group">
