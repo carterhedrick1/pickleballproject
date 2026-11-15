@@ -110,14 +110,19 @@ const clickTab = (i) => async (p) => {
   await cdp.sleep(1000);
 };
 
-// Show both an OUT confirmation and an unmatched recipient using the real log formatter.
+// Show an OUT confirmation, a country-code match, and an unmatched recipient using the formatter.
 // These screenshot-only records are simulated; no text is sent or delivery claimed.
 const showDeliveryLabels = async (p) => {
   const hashPhone = (phone) => `fixture:${phone}`;
-  const log = describeSmsEvents({ outPlayers: [{ name: 'Casey Morgan', phone: '5555550188' }] }, [
+  const log = describeSmsEvents({
+    outPlayers: [{ name: 'Casey Morgan', phone: '5555550188' }],
+    invitedPlayers: [{ name: 'Jordan Blake', phone: '5555550190' }]
+  }, [
     { eventId: 'player-cancelled', recipientHash: hashPhone('5555550188'),
       status: 'simulated', attempts: 1, sentAt: new Date().toISOString() },
     { eventId: 'game-details-requested', recipientHash: hashPhone('5555550189'),
+      status: 'simulated', attempts: 1, sentAt: new Date().toISOString() },
+    { eventId: 'game-details-requested', recipientHash: hashPhone('15555550190'),
       status: 'simulated', attempts: 1, sentAt: new Date().toISOString() }
   ], hashPhone);
   await p.evaluate(`(() => {
@@ -134,7 +139,8 @@ const showDeliveryLabels = async (p) => {
     await loadDeliveryLog();
   })()`);
   const labels = await p.evaluate(`document.getElementById('deliveryLogList').textContent`);
-  if (!labels.includes('Player Is Out') || !labels.includes('Name Unavailable')) {
+  if (!labels.includes('Player Is Out') || !labels.includes('Name Unavailable') ||
+      !labels.includes('Jordan Blake')) {
     throw new Error('The delivery log did not show the clarified labels');
   }
 };

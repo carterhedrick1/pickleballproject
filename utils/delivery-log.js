@@ -17,10 +17,18 @@ function knownRecipients(game, hashPhone) {
   const known = new Map();
   const remember = (person, role) => {
     if (!person || !person.phone) return;
-    const hash = hashPhone(person.phone);
-    // First mention wins, so somebody's current role beats an older one.
-    if (!known.has(hash)) {
-      known.set(hash, { name: person.name || person.phone, phone: person.phone, role });
+    const digits = String(person.phone).replace(/\D/g, '');
+    const formats = [person.phone];
+    // Incoming replies include +1 while saved US numbers often have ten digits. Match both
+    // historical hashes without rewriting telemetry or treating other country codes as US.
+    if (digits.length === 10) formats.push(`1${digits}`);
+    if (digits.length === 11 && digits.startsWith('1')) formats.push(digits.slice(1));
+    for (const phone of formats) {
+      const hash = hashPhone(phone);
+      // First mention wins, so somebody's current role beats an older one in either format.
+      if (!known.has(hash)) {
+        known.set(hash, { name: person.name || person.phone, phone: person.phone, role });
+      }
     }
   };
 
