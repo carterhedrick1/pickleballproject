@@ -56,6 +56,44 @@ describe('delivery log', () => {
     assert.equal(events[0].role, null);
   });
 
+  it('matches incoming US reply numbers to ten-digit saved contacts', () => {
+    const { events } = describeSmsEvents(game(), [
+      row('+1 (555) 555-9104', { eventId: 'game-details-requested' }),
+      row('+1 (555) 555-9100', { eventId: 'game-details-requested' })
+    ], hashPhone);
+
+    assert.deepEqual(events.map(({ name, role }) => ({ name, role })), [
+      { name: 'Alex', role: 'invited' },
+      { name: 'Scott', role: 'organizer' }
+    ]);
+  });
+
+  it('matches older ten-digit logs when saved contacts include the US country code', () => {
+    const { events } = describeSmsEvents(game({
+      players: [{ name: 'Jamie', phone: '+1 (555) 555-9101' }]
+    }), [row('5555559101')], hashPhone);
+
+    assert.equal(events[0].name, 'Jamie');
+    assert.equal(events[0].phone, '+1 (555) 555-9101');
+  });
+
+  it('keeps current roles ahead of older roles across US number formats', () => {
+    const { events } = describeSmsEvents(game({
+      players: [{ name: 'Casey', phone: '+15555559103' }]
+    }), [row('5555559103'), row('+15555559103')], hashPhone);
+
+    assert.deepEqual(events.map((event) => event.role), ['confirmed', 'confirmed']);
+  });
+
+  it('does not drop other country codes to guess a recipient', () => {
+    const { events } = describeSmsEvents(game({
+      invitedPlayers: [{ name: 'International Guest', phone: '+44 20 7946 0958' }]
+    }), [row('2079460958'), row('+442079460958')], hashPhone);
+
+    assert.equal(events[0].name, UNKNOWN_RECIPIENT);
+    assert.equal(events[1].name, 'International Guest');
+  });
+
   it('never returns a recipient hash to the page', () => {
     const result = describeSmsEvents(game(), [row('5555559101')], hashPhone);
 
