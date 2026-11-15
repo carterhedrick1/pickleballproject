@@ -19,7 +19,16 @@ function additionalFromTotal(totalPlayers, organizerPlaying) {
     );
 }
 
+function capacityExplanation(additional, playing) {
+    const count = toWholeNumber(additional);
+    const total = totalFromAdditional(count, playing);
+    return playing
+        ? `You + ${count} ${count === 1 ? 'other' : 'others'} = ${total} total players.`
+        : `${total} total players. You are hosting, not playing.`;
+}
+
 export {
+    capacityExplanation,
     totalFromAdditional,
     additionalFromTotal
 };

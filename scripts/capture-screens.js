@@ -539,6 +539,13 @@ function buildScreens(fx) {
     { file: 'game-full', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.full.gameId}`,
       title: 'Game full',
       note: 'Same file, different state: the signup form becomes a waitlist signup.' },
+    { file: 'game-waitlist-second', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.full.gameId}`,
+      title: 'Second In The Waitlist',
+      note: 'Position two gets a conditional text notification promise, not a promise of the next opening.',
+      act: async (p) => {
+        await p.evaluate(`fetch('/api/games/${fx.full.gameId}/players', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'First Waiter', phone: '5555550181' }) })`);
+        await signUpAsPlayer(fx)(p);
+      } },
     { file: 'game-approval', of: '/game.html?id=…', size: 'narrow', url: `/game.html?id=${fx.approval.gameId}`,
       title: 'Approval mode',
       note: 'The roster is hidden. Everyone applies and waits to be picked.' },
@@ -564,6 +571,10 @@ function buildScreens(fx) {
       title: 'Expanded Text Delivery Log',
       note: 'Show All Texts expands the delivery log to its full height. Show Fewer Texts restores the resizable list.',
       act: async (p) => { await showDeliveryLabels(p, true); } },
+    { file: 'manage-details-phone', of: '/manage.html?id=…&token=…', size: 'narrow',
+      url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
+      title: 'Game Details On A Phone',
+      note: 'All four management sections remain visible. Edit Game Details and Refresh Attendance are available beside the game summary; the capacity explanation follows the host playing toggle.', act: clickTab(3) },
     { file: 'manage-details', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
       title: 'Game Details tab',
@@ -571,7 +582,7 @@ function buildScreens(fx) {
     { file: 'manage-approval-roster', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.approval.gameId}&token=${fx.approval.hostToken}`,
       title: 'Players tab on an approval game',
-      note: 'Three applicants waiting. Nobody is confirmed until the host promotes them.', act: clickTab(1) },
+      note: 'Three applicants waiting. Nobody is confirmed until the host selects them.', act: clickTab(1) },
     { file: 'manage-game-day', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.gameDay.gameId}&token=${fx.gameDay.hostToken}`,
       title: 'Game day',
@@ -801,7 +812,7 @@ ${body}
   let browser = null;
   try {
     process.stdout.write('starting a throwaway app ... ');
-    app = await server.start();
+    app = await server.start({ isolatedDatabase: true });
     console.log(`${app.baseUrl} (SQLite, SMS in dev mode)`);
 
     process.stdout.write('seeding demo games ... ');

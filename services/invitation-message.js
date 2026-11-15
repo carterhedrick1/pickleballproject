@@ -1,3 +1,4 @@
+const { invitationAvailability } = require('../public/js/invitation-availability');
 const { resolveRandomizedMessage } = require('./message-randomizer');
 const { queuePoolRefill } = require('./message-generation');
 
@@ -27,12 +28,6 @@ function additionalPlayers(game) {
 
 function buildDeterministicInvitation(game, gameId, baseUrl) {
   const gameLink = `${String(baseUrl).replace(/\/+$/, '')}/game.html?id=${gameId}`;
-  const availableSpots = additionalPlayers(game);
-  const spotsText = availableSpots === 1 ? 'Spot' : 'Spots';
-  const isFirstCome = (game.registrationMode || 'fcfs') === 'fcfs';
-  const firstComeMessage = isFirstCome
-    ? `\nFirst ${availableSpots} to respond ${availableSpots === 1 ? 'is' : 'are'} in.`
-    : '';
   return `Let us know if you're IN or OUT for pickleball by clicking the link below:
 
 ${gameLink}
@@ -41,9 +36,8 @@ Location: ${game.location}
 Date: ${formatInvitationDate(game.date)}
 Time: ${formatInvitationTime(game.time)}
 Duration: ${game.duration} minutes
-${spotsText}: ${availableSpots}
+${invitationAvailability(game)}
 ${game.message ? `\n${game.message}` : ''}
-${firstComeMessage}
 
 `;
 }

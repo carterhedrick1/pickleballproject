@@ -1,3 +1,4 @@
+const { currentAttendance } = require('../public/js/current-attendance');
 // The game itself: creating one, reading it, editing it, cancelling it, and the host's own
 // history of games by phone number.
 //
@@ -212,7 +213,7 @@ module.exports = function mountGameRoutes(app) {
       // Only a caller holding the matching token gets host-only fields. Everyone
       // else (anyone with the shareable game link) gets the game without them.
       if (token && token === game.hostToken) {
-        return res.json(game);
+        return res.json({ ...game, ...currentAttendance(game) });
       }
 
       // hostNotes are the host's private reminders ("gate code 4417") - never public.
@@ -225,11 +226,13 @@ module.exports = function mountGameRoutes(app) {
         hostPhone,
         organizerPhone,
         notificationPreferences,
+        waitlistHistory,
+        cancellationHistory,
         ...publicGame
       } = game;
       publicGame.players = (game.players || []).map(({ name, isOrganizer }) => ({ name, isOrganizer }));
       publicGame.waitlist = (game.waitlist || []).map(({ name }) => ({ name }));
-      publicGame.outPlayers = (game.outPlayers || []).map(({ name }) => ({ name }));
+      publicGame.outPlayers = currentAttendance(game).outPlayers.map(({ name }) => ({ name }));
       res.json(publicGame);
     } catch (error) {
       routeFailed(req, res, error, 'Failed to fetch game');
@@ -417,6 +420,9 @@ module.exports = function mountGameRoutes(app) {
       }
       if (game.cancelled) {
         return res.status(400).json({ error: "This game is cancelled, so there's no invitation to copy." });
+      }
+      if (!isGameUpcoming(game.date, game.time)) {
+        return res.status(400).json({ error: 'This game has already started, so invitations are closed.' });
       }
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       const result = await buildRandomizedInvitation(game, gameId, baseUrl);

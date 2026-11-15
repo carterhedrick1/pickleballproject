@@ -196,7 +196,7 @@ function gameCard(game) {
         <div class="card-actions">
             <a class="btn btn-primary" href="${game.managementLink}">Manage</a>
             ${isPast ? `<a class="btn" href="${repeatGameLink(game)}">Run It Again</a>` : ''}
-            <button type="button" class="btn" id="copyButton-${game.gameId}">Copy Invitation</button>
+            <button type="button" class="btn" id="copyButton-${game.gameId}" ${isPast ? 'disabled title="Invitations are closed for this game"' : ''}>Copy Invitation</button>
             <button type="button" class="btn" data-notes-toggle>Notes</button>
             ${canDelete ? '<button type="button" class="btn btn-danger" data-delete>Delete</button>' : ''}
         </div>
@@ -275,20 +275,11 @@ async function deleteGame(game, button, statusEl) {
 }
 
 function copyInvitation(game) {
-    // The generator wants the game shape create.html stores, not the summary the
-    // history endpoint returns, so map the fields across.
-    const gameData = {
-        location: game.location,
-        date: game.date,
-        time: game.time,
-        duration: game.duration,
-        totalPlayers: game.totalPlayers,
-        organizerPlaying: game.organizerPlaying,
-        registrationMode: game.registrationMode
-    };
+    const gameData = { ...game };
+    const token = new URLSearchParams((game.managementLink || '').split('?')[1] || '').get('token');
 
     if (typeof InvitationGenerator !== 'undefined' && InvitationGenerator.copyInvitationToClipboard) {
-        InvitationGenerator.copyInvitationToClipboard(gameData, game.gameId, 'copyButton-' + game.gameId);
+        InvitationGenerator.copyInvitationToClipboard(gameData, game.gameId, 'copyButton-' + game.gameId, null, token);
     } else {
         showStatus('Could not copy the invitation. Please try again.', 'error');
     }

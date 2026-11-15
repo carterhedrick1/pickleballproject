@@ -59,7 +59,8 @@ function freePort() {
  *
  * @returns {Promise<{baseUrl:string, port:number, dbFile:string, log:()=>string, stop:()=>Promise<void>}>}
  */
-async function start({ isolatedDatabase = false } = {}) {
+async function start({ isolatedDatabase = false, recordSmsEvents = false } = {}) {
+  if (recordSmsEvents && !isolatedDatabase) throw new Error('SMS test logs require an isolated database');
   if (process.env.DATABASE_URL) {
     throw new Error(
       'DATABASE_URL is set, which points the app at Postgres (production).\n' +
@@ -87,7 +88,7 @@ async function start({ isolatedDatabase = false } = {}) {
       TEXTBELT_API_KEY: '', // rule 1 above - keeps every send in dev mode
       DEV_PASSWORD, // see the note above: the scripts and this server must agree on it
       // Fixture sends prove the UI behavior but are not real operational events.
-      SMS_DISABLE_EVENT_LOGGING: '1',
+      SMS_DISABLE_EVENT_LOGGING: recordSmsEvents ? '0' : '1',
       // Browser tests and screenshots must stay on their seeded SQLite rows. Without these,
       // local Developer tools default to live production data for day-to-day operational use.
       DEV_ROSTER_SOURCE: 'local',

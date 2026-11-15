@@ -17,6 +17,7 @@
     "verify:court-images": "node verify/court-images.js",
     "verify:routes": "node verify/all-routes.js",
     "verify:stats": "node verify/stats.js",
+    "verify:experience": "node scripts/player-host-walkthrough.js",
     "verify:sms": "node verify/sms-cancel.js",
     "verify:webhook-auth": "node verify/webhook-auth.js",
     "verify:signup-eligibility": "node verify/signup-eligibility.js",

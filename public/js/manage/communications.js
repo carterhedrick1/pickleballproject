@@ -182,21 +182,6 @@ function groupCheckbox(group) {
 export function getSelectedRecipients() {
     const recipients = [];
 
-    // Only the real group toggles count. The old fallback selectors could bind "send to
-    // players" to any checked checkbox on the page, including a notification preference
-    // toggle that has nothing to do with this announcement.
-    RECIPIENT_GROUPS.forEach((group) => {
-        if (!groupCheckbox(group)?.checked) return;
-        group.players().forEach((player) => {
-            recipients.push({
-                id: player.id,
-                phone: player.phone,
-                name: player.name,
-                type: group.type
-            });
-        });
-    });
-
     // Individual picks live inside the recipient list only. Scanning the whole document swept
     // in unrelated checkboxes such as the notification preferences.
     const individualContainer = document.getElementById('playerCheckboxes');
@@ -207,7 +192,7 @@ export function getSelectedRecipients() {
     playerCheckboxes.forEach(checkbox => {
         // Only add if not already included from group selection and has required data
         if (checkbox.dataset?.phone && checkbox.dataset?.name) {
-            const existingRecipient = recipients.find(r => r.id === checkbox.value);
+            const existingRecipient = recipients.find(r => r.phone === checkbox.dataset.phone);
             if (!existingRecipient) {
                 recipients.push({
                     id: checkbox.value,
@@ -240,12 +225,13 @@ function setCheckboxState(checkbox, { checked, indeterminate = false }) {
     checkbox.indeterminate = indeterminate;
 }
 
-// "All Players" is on when every group is on, part-way when some are.
+// All Players reflects the actual eligible checkboxes, including partially selected groups.
 function updateSendToAll() {
-    const states = RECIPIENT_GROUPS.map((group) => Boolean(groupCheckbox(group)?.checked));
+    const boxes = recipientCheckboxes();
+    const all = boxes.length > 0 && boxes.every(box => box.checked);
     setCheckboxState(document.getElementById('sendToAll'), {
-        checked: states.every(Boolean),
-        indeterminate: !states.every(Boolean) && states.some(Boolean)
+        checked: all,
+        indeterminate: !all && boxes.some(box => box.checked)
     });
 }
 
@@ -256,6 +242,7 @@ export function toggleAllPlayers(checked) {
     recipientCheckboxes().forEach((checkbox) => {
         checkbox.checked = checked;
     });
+    updateIndividualSelection();
 }
 
 export function updateGroupSelections() {
@@ -271,7 +258,10 @@ export function updateGroupSelections() {
 export function updateIndividualSelection() {
     RECIPIENT_GROUPS.forEach((group) => {
         const boxes = recipientCheckboxes(group.type);
-        if (boxes.length === 0) return;
+        if (boxes.length === 0) {
+            setCheckboxState(groupCheckbox(group), { checked: false });
+            return;
+        }
         const allChecked = boxes.every((checkbox) => checkbox.checked);
         const anyChecked = boxes.some((checkbox) => checkbox.checked);
         setCheckboxState(groupCheckbox(group), {
@@ -378,15 +368,6 @@ export function updatePlayerCheckboxes() {
         Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
             .map((checkbox) => checkbox.value)
     );
-    const groupState = {};
-    RECIPIENT_GROUP_IDS.forEach((id) => {
-        const checkbox = document.getElementById(id);
-        groupState[id] = {
-            checked: Boolean(checkbox && checkbox.checked),
-            indeterminate: Boolean(checkbox && checkbox.indeterminate)
-        };
-    });
-
     clear(container);
 
     RECIPIENT_GROUPS.forEach((group) => {
@@ -433,7 +414,7 @@ export function updatePlayerCheckboxes() {
     if (firstRender) {
         // A fresh page starts with the confirmed players as the default audience.
         container.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
-            checkbox.checked = false;
+            checkbox.checked = checkbox.dataset.type === 'confirmed';
         });
         RECIPIENT_GROUP_IDS.forEach((id) => {
             const checkbox = document.getElementById(id);
@@ -442,19 +423,14 @@ export function updatePlayerCheckboxes() {
                 checkbox.indeterminate = false;
             }
         });
+        updateIndividualSelection();
         return;
     }
 
     container.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
         checkbox.checked = selectedIds.has(checkbox.value);
     });
-    RECIPIENT_GROUP_IDS.forEach((id) => {
-        const checkbox = document.getElementById(id);
-        if (checkbox) {
-            checkbox.checked = groupState[id].checked;
-            checkbox.indeterminate = groupState[id].indeterminate;
-        }
-    });
+    updateIndividualSelection();
 }
 
 
@@ -462,7 +438,9 @@ export function updatePlayerCheckboxes() {
 // "I never got the reminder" is a question the host could not answer until now, even though
 // every attempt has been recorded all along.
 const DELIVERY_STATUS_TEXT = {
-    sent: 'Delivered',
+    sent: 'Sent',
+    delivered: 'Delivered',
+    pending: 'Pending',
     failed: 'Did not send',
     simulated: 'Test mode, not really sent'
 };
@@ -511,18 +489,10 @@ function renderDeliveryLog(events, counts) {
         return;
     }
 
-    const failed = counts.failed || 0;
-    const simulated = counts.simulated || 0;
-    const total = `${events.length} ${events.length === 1 ? 'text' : 'texts'}`;
-    if (failed) {
-        status.textContent = `${total}, ${failed} of which did not go through.`;
-    } else if (simulated === events.length) {
-        // Only a local or test server records simulated sends, and calling those "delivered"
-        // would be a lie the host could act on.
-        status.textContent = `${total}, all in test mode. Nothing was really sent.`;
-    } else {
-        status.textContent = `${total}, all delivered.`;
-    }
+    const summary = ['sent', 'delivered', 'failed', 'pending', 'simulated']
+        .filter(key => counts[key])
+        .map(key => `${counts[key]} ${key === 'simulated' ? 'simulated (not sent)' : key}`);
+    status.textContent = `${events.length} texts: ${summary.join(', ')}. Sent means accepted by the text service, not confirmed handset delivery or reading.`;
 
     events.forEach((event) => {
         const row = document.createElement('div');

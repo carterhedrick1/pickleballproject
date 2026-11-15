@@ -8,8 +8,8 @@
 // partly knowable, it says so in `notes` rather than quietly presenting a half-truth - and the
 // stats that still need data the app does not record are left as nulls under `parked`.
 
-const { isGameUpcoming } = require('./public/js/central-time');
-const { inviteStatus } = require('./public/js/invite-status');
+const { isGameUpcoming, hasGameEnded } = require('./public/js/central-time');
+const { inviteStatus, normalizePhone } = require('./public/js/invite-status');
 
 /**
  * Invited-versus-replied, counted only from games where the app texted the invitation itself.
@@ -59,7 +59,7 @@ function summarizeInvitations(games = []) {
 /** People are identified by phone. Failing that, by lowercased name - two phoneless "daves"
  *  in different games are treated as one person, which is the best guess available. */
 function identityKey(person) {
-  if (person.phone) return `p:${person.phone}`;
+  if (person.phone) return `p:${normalizePhone(person.phone)}`;
   if (person.name) return `n:${person.name.trim().toLowerCase()}`;
   return null;
 }
@@ -98,7 +98,7 @@ function topEntries(counts, displayNames, limit, countKey = 'games') {
 function emptyStats(phone) {
   return {
     phoneNumber: phone,
-    summary: { gamesHosted: 0, upcoming: 0, completed: 0, cancelled: 0 },
+    summary: { gamesHosted: 0, upcoming: 0, inProgress: 0, completed: 0, cancelled: 0 },
     fillRate: { average: null, gamesCounted: 0 },
     players: { distinctCount: 0, top: [], waitlistRegulars: [], outs: [] },
     signupSpeed: [],
@@ -123,7 +123,7 @@ function computeHostStats(phone, games = [], roster = []) {
     return zeroed;
   }
 
-  const summary = { gamesHosted: games.length, upcoming: 0, completed: 0, cancelled: 0 };
+  const summary = { gamesHosted: games.length, upcoming: 0, inProgress: 0, completed: 0, cancelled: 0 };
   const completedGames = [];
 
   for (const game of games) {
@@ -131,6 +131,8 @@ function computeHostStats(phone, games = [], roster = []) {
       summary.cancelled += 1;
     } else if (isGameUpcoming(game.date, game.time)) {
       summary.upcoming += 1;
+    } else if (!hasGameEnded(game.date, game.time, game.duration)) {
+      summary.inProgress += 1;
     } else {
       summary.completed += 1;
       completedGames.push(game);
@@ -169,7 +171,7 @@ function computeHostStats(phone, games = [], roster = []) {
       if (!key || (organizerPhone && player.phone === organizerPhone)) continue;
       everyone.add(key);
       noteName(key, player);
-      bump(playerGames, key);
+      if (completedGames.includes(game)) bump(playerGames, key);
 
       // How quickly people sign up once a game is posted. First-come games only: in approval
       // mode people apply against a deadline the host set, which is a different thing entirely.
@@ -187,13 +189,31 @@ function computeHostStats(phone, games = [], roster = []) {
       if (!key || (organizerPhone && player.phone === organizerPhone)) continue;
       everyone.add(key);
       noteName(key, player);
-      bump(waitlistCounts, key);
+
+    }
+
+    // Use evidence we have, including promotion markers on older games. Never infer that
+    // every confirmed player was once waiting. Applications are a separate registration mode.
+    if (game.registrationMode !== 'waitlist') {
+      const historical = [
+        ...(game.waitlistHistory || []), ...(game.waitlist || []),
+        ...(game.players || []).filter(p => p.promotedAt),
+        ...[...(game.outPlayers || []), ...(game.cancellationHistory || [])].filter(p => p.wasWaitlisted)
+      ];
+      const seen = new Set();
+      for (const person of historical) {
+        const key = identityKey(person);
+        if (!key || seen.has(key) || person.phone === organizerPhone) continue;
+        seen.add(key);
+        noteName(key, person);
+        bump(waitlistCounts, key);
+      }
     }
 
     // Legacy games contain duplicate out entries for the same person, from before these were
     // deduped on write. Collapse them per game so an old game cannot inflate somebody's count.
     const countedOuts = new Set();
-    for (const player of game.outPlayers || []) {
+    for (const player of [...(game.outPlayers || []), ...(game.cancellationHistory || [])]) {
       const key = identityKey(player);
       if (!key || countedOuts.has(key)) continue;
       if (organizerPhone && player.phone === organizerPhone) continue;
@@ -265,7 +285,10 @@ function computeHostStats(phone, games = [], roster = []) {
   const invitations = summarizeInvitations(games);
 
   // Honest caveats, shown on the page rather than buried here.
-  const notes = [];
+  const notes = [
+    'Finished-game rosters count confirmed registrations after a non-cancelled game ended, not verified attendance.',
+    'Waitlist history counts games with recorded first-come waiting or promotion evidence, including players later promoted. Older waiting activity may be missing; host-selected applications are excluded.'
+  ];
   if (invitations.gamesCounted) {
     notes.push('Invited-versus-replied only counts invitations the app texted for you. An invitation you copied and pasted somewhere else cannot be tracked.');
   }
@@ -286,6 +309,7 @@ function computeHostStats(phone, games = [], roster = []) {
     players: {
       distinctCount: everyone.size,
       top: topEntries(playerGames, displayNames, 5),
+      currentlyWaiting: games.filter(g => g.registrationMode !== 'waitlist' && !g.cancelled && !hasGameEnded(g.date, g.time, g.duration)).reduce((sum, g) => sum + (g.waitlist || []).length, 0),
       waitlistRegulars: topEntries(waitlistCounts, displayNames, 5, 'times'),
       outs
     },

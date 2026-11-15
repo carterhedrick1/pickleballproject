@@ -95,6 +95,12 @@ class Browser {
         }
         return res.result?.value;
       },
+      addInitScript(source) { return browser.send('Page.addScriptToEvaluateOnNewDocument', { source }, sessionId); },
+      bringToFront() { return browser.send('Page.bringToFront', {}, sessionId); },
+      async pressKey(key, code, windowsVirtualKeyCode) {
+        await browser.send('Input.dispatchKeyEvent', { type: 'keyDown', key, code, windowsVirtualKeyCode }, sessionId);
+        await browser.send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode }, sessionId);
+      },
       async size() {
         return this.evaluate(
           '[document.documentElement.scrollWidth, document.documentElement.scrollHeight]');

@@ -509,7 +509,8 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         label: document.getElementById('playersLabel').textContent,
         // The stray timer that used to uncheck every box 200ms after load is gone, so the
         // default audience survives.
-        recipientDefault: document.getElementById('sendToPlayers').checked
+        recipientDefault: document.getElementById('sendToPlayers').checked ===
+          (document.querySelectorAll('#playerCheckboxes input[data-type="confirmed"]').length > 0)
       };
       toggle.checked = false;
       toggle.dispatchEvent(new Event('change', { bubbles: true }));
@@ -761,6 +762,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
 
       // A half-built recipient list must survive the roster poll that runs every refresh.
       groups.forEach((group) => { group.checked = false; group.indeterminate = false; });
+      boxes.forEach(box => { box.checked = false; });
       boxes[0].checked = true;
       const chosen = boxes[0].value;
       ManageApp.players.updatePlayerLists();
@@ -780,7 +782,7 @@ async function uploadGamePhoto(baseUrl, game, bytes, contentType, caption) {
         rendered: boxes.length,
         kept: kept.join('|'),
         chosen,
-        groupsStillOff: groups.every((group) => !group.checked),
+        groupsStillOff: !document.getElementById('sendToAll').checked,
         strayRecipients
       };
     })()`);

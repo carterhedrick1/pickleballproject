@@ -62,17 +62,17 @@ function createPlayerItem(document, player, { meta = [], actions = [], badge = n
 }
 
 function createRecipientOption(document, player, type, onChange) {
-    const item = element(document, 'div', `player-checkbox-item ${type}`);
+    const item = element(document, 'label', `player-checkbox-item ${type}`);
     const input = element(document, 'input', 'player-checkbox');
     input.type = 'checkbox';
-    input.value = player.id;
+    input.value = player.phone || player.id;
     input.dataset.phone = player.phone;
     input.dataset.name = player.name;
     input.dataset.type = type;
     input.addEventListener('change', onChange);
     input.style.cssText =
         'width: 18px !important; height: 18px !important; margin: 0 !important; flex-shrink: 0 !important;';
-    const label = element(document, 'label', '', player.name || '');
+    const label = element(document, 'span', '', player.name || player.phone || '');
     label.style.cssText =
         'margin: 0 !important; cursor: pointer !important; flex: 1 !important; font-size: inherit !important; line-height: inherit !important;';
     item.appendChild(input);
