@@ -19,7 +19,7 @@ smsClient.sendSMS = async (phone, message) => {
 const { initializeDatabase } = require(ROOT + '/database/schema');
 const { saveGame, getGame } = require(ROOT + '/database/games');
 const { hasReminderBeenSent } = require(ROOT + '/database/messaging-reminders');
-const { closeDatabaseConnection } = require(ROOT + '/database/context');
+const { sqliteRun, closeDatabaseConnection } = require(ROOT + '/database/context');
 const { checkAndSendReminders } = require(ROOT + '/services/reminders');
 const { centralWallClock } = require(ROOT + '/public/js/central-time');
 
@@ -100,8 +100,10 @@ const messagesTo = (phone) => sent.filter((s) => s.phone === phone).map((s) => s
   resent === 0 ? ok('steady state: no further texts') : bad(`resent ${resent}`);
 
   console.log('\n=== A player reminded a day out still gets the game-day reminder later ===');
-  // Same game, moved so that it now starts in an hour: the 24-hour reminder is already
-  // logged, so only the second one may go out.
+  // Same game, moved so that it now starts in an hour. Age the earlier reminder too,
+  // since the three-hour quiet period deliberately blocks reminders sent close together.
+  await sqliteRun("UPDATE reminder_log SET sent_at = datetime('now', '-4 hours') WHERE game_id = ?", [ids.dayBefore]);
+  require(ROOT + '/services/reminders').resetReminderState();
   const game = await getGame(ids.dayBefore);
   Object.assign(game, offsetGame(1));
   await saveGame(ids.dayBefore, game, 'tokA', null);

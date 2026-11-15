@@ -467,6 +467,14 @@ const DELIVERY_STATUS_TEXT = {
     simulated: 'Test mode, not really sent'
 };
 
+export function toggleDeliveryLog() {
+    const list = document.getElementById('deliveryLogList');
+    const toggle = document.getElementById('toggleDeliveryLog');
+    const expanded = list.classList.toggle('is-expanded');
+    toggle.setAttribute('aria-expanded', String(expanded));
+    toggle.textContent = expanded ? 'Show Fewer Texts' : 'Show All Texts';
+}
+
 export async function loadDeliveryLog() {
     const list = document.getElementById('deliveryLogList');
     const status = document.getElementById('deliveryLogStatus');
@@ -496,6 +504,7 @@ function renderDeliveryLog(events, counts) {
     const list = document.getElementById('deliveryLogList');
     const status = document.getElementById('deliveryLogStatus');
     clear(list);
+    document.getElementById('toggleDeliveryLog').hidden = events.length === 0;
 
     if (events.length === 0) {
         status.textContent = 'No texts have gone out for this game yet.';

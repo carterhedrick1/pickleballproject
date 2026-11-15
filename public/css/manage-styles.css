@@ -997,8 +997,21 @@ button:active {
     display: grid;
     gap: 8px;
     margin: 16px 0;
-    max-height: 340px;
+    height: 340px;
+    min-height: 120px;
+    align-content: start;
     overflow-y: auto;
+    resize: vertical;
+    padding-bottom: 16px;
+}
+
+.delivery-log-list:empty {
+    display: none;
+}
+
+.delivery-log-list.is-expanded {
+    height: auto !important;
+    resize: none;
 }
 
 .delivery-row {

@@ -28,7 +28,8 @@ import {
     toggleAllPlayers,
     updateGroupSelections,
     updateGroupCheckboxStyling,
-    loadDeliveryLog
+    loadDeliveryLog,
+    toggleDeliveryLog
 } from './communications.js';
 import { setupPhotos, setupCourtImages } from './media.js';
 
@@ -398,6 +399,8 @@ export function setupEventListeners() {
             updateOrganizerPlayingCopy();
         });
     }
+
+    document.getElementById('toggleDeliveryLog')?.addEventListener('click', toggleDeliveryLog);
 
     const refreshDeliveryLog = document.getElementById('refreshDeliveryLog');
     if (refreshDeliveryLog) {
