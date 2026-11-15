@@ -34,9 +34,9 @@ const SMS_EVENT_DEFINITIONS = Object.freeze([
   },
   {
     id: 'player-cancelled',
-    title: 'Player Cancellation Confirmed',
+    title: 'Player Is Out',
     recipient: 'Departing Player',
-    description: 'A player cancels from the web page or by replying 9 and receives confirmation.'
+    description: 'A player says they are out from the web page or by replying 9 and receives confirmation.'
   },
   {
     id: 'upcoming-game-reminder',

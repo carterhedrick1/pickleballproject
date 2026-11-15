@@ -22,6 +22,7 @@ const path = require('path');
 const cdp = require('./lib/cdp');
 const server = require('./lib/local-server');
 const fixtures = require('./lib/fixtures');
+const { describeSmsEvents } = require('../utils/delivery-log');
 const { page, escapeHtml: esc, generatedNote } = require('./lib/doc-shell');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -107,6 +108,35 @@ const returnAsRememberedPlayer = (fx) => async (p) => {
 const clickTab = (i) => async (p) => {
   await p.evaluate(`document.querySelectorAll('.tab')[${i}].click()`);
   await cdp.sleep(1000);
+};
+
+// Show both an OUT confirmation and an unmatched recipient using the real log formatter.
+// These screenshot-only records are simulated; no text is sent or delivery claimed.
+const showDeliveryLabels = async (p) => {
+  const hashPhone = (phone) => `fixture:${phone}`;
+  const log = describeSmsEvents({ outPlayers: [{ name: 'Casey Morgan', phone: '5555550188' }] }, [
+    { eventId: 'player-cancelled', recipientHash: hashPhone('5555550188'),
+      status: 'simulated', attempts: 1, sentAt: new Date().toISOString() },
+    { eventId: 'game-details-requested', recipientHash: hashPhone('5555550189'),
+      status: 'simulated', attempts: 1, sentAt: new Date().toISOString() }
+  ], hashPhone);
+  await p.evaluate(`(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (url, options) => String(url).includes('/sms-events')
+      ? Promise.resolve(new Response(JSON.stringify(${JSON.stringify(log)}), {
+          headers: { 'Content-Type': 'application/json' }
+        }))
+      : originalFetch(url, options);
+  })()`);
+  await clickTab(2)(p);
+  await p.evaluate(`(async () => {
+    const { loadDeliveryLog } = await import('/js/manage/communications.js');
+    await loadDeliveryLog();
+  })()`);
+  const labels = await p.evaluate(`document.getElementById('deliveryLogList').textContent`);
+  if (!labels.includes('Player Is Out') || !labels.includes('Name Unavailable')) {
+    throw new Error('The delivery log did not show the clarified labels');
+  }
 };
 
 /**
@@ -510,7 +540,7 @@ function buildScreens(fx) {
     { file: 'manage-communication', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
       title: 'Communication tab',
-      note: 'Announce to everyone or one person, plus the quick reminder and location buttons.', act: clickTab(2) },
+      note: 'Announce to everyone or one person, plus reminders and the delivery log. Player Is Out confirms an OUT response; Name Unavailable means the recipient could not be matched to a name.', act: showDeliveryLabels },
     { file: 'manage-details', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
       title: 'Game Details tab',
