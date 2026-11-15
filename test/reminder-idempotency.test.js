@@ -18,8 +18,10 @@ smsClient.sendSMS = async (phone, message, gameId, options) => {
 };
 
 const { initializeDatabase } = require('../database/schema');
-const { saveGame, deleteGamePermanently } = require('../database/games');
+const { saveGame, getGame, deleteGamePermanently } = require('../database/games');
 const { checkAndSendReminders, resetReminderState } = require('../services/reminders');
+const { sqliteRun } = require('../database/context');
+const { hasRecentReminder } = require('../database/messaging-reminders');
 const { centralWallClock } = require('../public/js/central-time');
 
 const GAME_ID = 'gate-reminder-idem-test';
@@ -87,5 +89,43 @@ describe('reminder idempotency', () => {
     const countBefore = mine().length;
     await checkAndSendReminders();
     assert.equal(mine().length, countBefore, 'restart did not resend');
+  });
+});
+
+
+describe('spacing between automatic reminder kinds', () => {
+  it('holds a game-day reminder sent ten minutes after the upcoming reminder, even after restart', async () => {
+    const game = await getGame(GAME_ID);
+    Object.assign(game, offsetGame(1.9));
+    await saveGame(GAME_ID, game, game.hostToken, null);
+    await sqliteRun("UPDATE reminder_log SET sent_at = datetime('now', '-10 minutes') WHERE game_id = ?", [GAME_ID]);
+    resetReminderState();
+    const beforeCount = mine().length;
+    await checkAndSendReminders();
+    assert.equal(mine().length, beforeCount);
+  });
+
+  it('still reminds a player who has not received an earlier reminder', async () => {
+    await sqliteRun('DELETE FROM reminder_log WHERE game_id = ? AND player_phone = ?', [GAME_ID, PHONES[1]]);
+    const beforeCount = mine().length;
+    await checkAndSendReminders();
+    assert.deepEqual(mine().slice(beforeCount).map((message) => message.phone), [PHONES[1]]);
+  });
+
+  it('reconsiders a held player after the three-hour gap passes', async () => {
+    await sqliteRun("UPDATE reminder_log SET sent_at = datetime('now', '-4 hours') WHERE game_id = ? AND player_phone = ?", [GAME_ID, PHONES[0]]);
+    const beforeCount = mine().length;
+    await checkAndSendReminders();
+    assert.deepEqual(mine().slice(beforeCount).map((message) => message.phone), [PHONES[0]]);
+    assert.match(mine().at(-1).message, /starts at/);
+  });
+
+  it('compares stored UTC times precisely at the quiet-window boundary and scopes to the game', async () => {
+    const boundary = '2026-11-15 18:00:00';
+    await sqliteRun('UPDATE reminder_log SET sent_at = ? WHERE game_id = ?', [boundary, GAME_ID]);
+    const boundaryMs = Date.parse('2026-11-15T18:00:00Z');
+    assert.equal(await hasRecentReminder(GAME_ID, PHONES[0], boundaryMs - 1), true);
+    assert.equal(await hasRecentReminder(GAME_ID, PHONES[0], boundaryMs), false);
+    assert.equal(await hasRecentReminder('another-game', PHONES[0], boundaryMs - 1), false);
   });
 });

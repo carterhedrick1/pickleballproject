@@ -1,5 +1,5 @@
 const { getAllGames } = require('../database/games');
-const { hasReminderBeenSent, markReminderSent } = require('../database/messaging-reminders');
+const { hasReminderBeenSent, hasRecentReminder, markReminderSent } = require('../database/messaging-reminders');
 // Held as the module object rather than a destructured function on purpose: the reminder tests
 // and the verify rigs replace sendSMS on services/sms-client, and this call site has to resolve
 // it at call time for that stub to take effect. It is what keeps a reminder run from ever
@@ -23,6 +23,10 @@ let reminderCheckInProgress = false;
 // player stays quiet for a while after their last signup text.
 const RECENT_SIGNUP_QUIET_HOURS = 3;
 const RECENT_SIGNUP_QUIET_MS = RECENT_SIGNUP_QUIET_HOURS * 60 * 60 * 1000;
+
+// A catch-up reminder just before the two-hour boundary must not be followed by another
+// automatic reminder minutes later. Keep the same quiet period between reminder kinds.
+const RECENT_REMINDER_QUIET_MS = 3 * 60 * 60 * 1000;
 
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 
@@ -174,6 +178,16 @@ async function checkAndSendReminders() {
 
             let alreadySent;
             try {
+              const cachedRecentReminder = REMINDER_KINDS.some((other) => {
+                const sentAt = remindedPlayersCache.get(`${gameId}|${other.type}|${player.phone}`);
+                return sentAt != null && now.getTime() - sentAt < RECENT_REMINDER_QUIET_MS;
+              });
+              if (cachedRecentReminder || await hasRecentReminder(
+                gameId, player.phone, now.getTime() - RECENT_REMINDER_QUIET_MS
+              )) {
+                outstanding++;
+                continue;
+              }
               alreadySent = await hasReminderBeenSent(
                 gameId,
                 player.phone,

@@ -469,7 +469,9 @@
                     <section class="delivery-log" aria-labelledby="deliveryLogTitle">
                         <h3 class="subsection-title" id="deliveryLogTitle">Text Delivery Log</h3>
                         <div id="deliveryLogStatus" class="roster-picker-status" aria-live="polite">Loading the delivery log...</div>
-                        <div id="deliveryLogList" class="delivery-log-list"></div>
+                        <p class="form-help-text" id="deliveryLogHelp">Drag the bottom-right corner to resize the list, or show all texts at once.</p>
+                        <button type="button" id="toggleDeliveryLog" class="btn-secondary" aria-controls="deliveryLogList" aria-expanded="false" hidden>Show All Texts</button>
+                        <div id="deliveryLogList" class="delivery-log-list" role="region" aria-labelledby="deliveryLogTitle" aria-describedby="deliveryLogHelp" tabindex="0"></div>
                         <button type="button" id="refreshDeliveryLog" class="btn-secondary">Refresh The Log</button>
                     </section>
 

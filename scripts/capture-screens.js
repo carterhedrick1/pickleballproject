@@ -112,7 +112,7 @@ const clickTab = (i) => async (p) => {
 
 // Show an OUT confirmation, a country-code match, and an unmatched recipient using the formatter.
 // These screenshot-only records are simulated; no text is sent or delivery claimed.
-const showDeliveryLabels = async (p) => {
+const showDeliveryLabels = async (p, expanded = false) => {
   const hashPhone = (phone) => `fixture:${phone}`;
   const log = describeSmsEvents({
     outPlayers: [{ name: 'Casey Morgan', phone: '5555550188' }],
@@ -124,7 +124,11 @@ const showDeliveryLabels = async (p) => {
       status: 'simulated', attempts: 1, sentAt: new Date().toISOString() },
     { eventId: 'game-details-requested', recipientHash: hashPhone('15555550190'),
       status: 'simulated', attempts: 1, sentAt: new Date().toISOString() }
-  ], hashPhone);
+  ].concat(Array.from({ length: 8 }, (_, index) => ({
+    eventId: index % 2 ? 'upcoming-game-reminder' : 'game-day-reminder',
+    recipientHash: hashPhone('15555550190'), status: 'simulated', attempts: 1,
+    sentAt: new Date(Date.now() - (index + 1) * 4 * 3600000).toISOString()
+  }))), hashPhone);
   await p.evaluate(`(() => {
     const originalFetch = window.fetch.bind(window);
     window.fetch = (url, options) => String(url).includes('/sms-events')
@@ -138,6 +142,14 @@ const showDeliveryLabels = async (p) => {
     const { loadDeliveryLog } = await import('/js/manage/communications.js');
     await loadDeliveryLog();
   })()`);
+  if (expanded) {
+    const fits = await p.evaluate(`(() => {
+      document.getElementById('toggleDeliveryLog').click();
+      const list = document.getElementById('deliveryLogList');
+      return list.clientHeight > 340 && list.scrollHeight <= list.clientHeight;
+    })()`);
+    if (!fits) throw new Error('The expanded delivery log still clips texts');
+  }
   const labels = await p.evaluate(`document.getElementById('deliveryLogList').textContent`);
   if (!labels.includes('Player Is Out') || !labels.includes('Name Unavailable') ||
       !labels.includes('Jordan Blake')) {
@@ -546,7 +558,12 @@ function buildScreens(fx) {
     { file: 'manage-communication', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
       title: 'Communication tab',
-      note: 'Announce to everyone or one person, plus reminders and the delivery log. Player Is Out confirms an OUT response; Name Unavailable means the recipient could not be matched to a name.', act: showDeliveryLabels },
+      note: 'Announce to everyone or one person, plus reminders and a delivery log you can resize or expand with Show All Texts. Player Is Out confirms an OUT response; Name Unavailable means the recipient could not be matched to a name.', act: showDeliveryLabels },
+    { file: 'manage-delivery-expanded', of: '/manage.html?id=…&token=…', size: 'tall',
+      url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
+      title: 'Expanded Text Delivery Log',
+      note: 'Show All Texts expands the delivery log to its full height. Show Fewer Texts restores the resizable list.',
+      act: async (p) => { await showDeliveryLabels(p, true); } },
     { file: 'manage-details', of: '/manage.html?id=…&token=…', size: 'wide',
       url: `/manage.html?id=${fx.open.gameId}&token=${fx.open.hostToken}`,
       title: 'Game Details tab',

@@ -95,6 +95,25 @@ async function hasReminderBeenSent(gameId, playerPhone, reminderType) {
   }
 }
 
+// Compare UTC timestamps in the database so this protection survives process restarts.
+async function hasRecentReminder(gameId, playerPhone, sinceMs) {
+  const since = new Date(sinceMs).toISOString().replace('T', ' ').replace('Z', '');
+  if (isProduction) {
+    return withPgClient(async (client) => {
+      const result = await client.query(
+        'SELECT 1 FROM reminder_log WHERE game_id = $1 AND player_phone = $2 AND sent_at > $3 LIMIT 1',
+        [gameId, playerPhone, since]
+      );
+      return result.rows.length > 0;
+    });
+  }
+  const row = await sqliteGet(
+    'SELECT 1 FROM reminder_log WHERE game_id = ? AND player_phone = ? AND sent_at > ? LIMIT 1',
+    [gameId, playerPhone, since]
+  );
+  return !!row;
+}
+
 async function markReminderSent(gameId, playerPhone, reminderType) {
   try {
     if (isProduction) {
@@ -122,5 +141,6 @@ module.exports = {
   getLastCommand,
   clearLastCommand,
   hasReminderBeenSent,
+  hasRecentReminder,
   markReminderSent
 };
